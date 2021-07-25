@@ -1,0 +1,8 @@
+local a1 = 0x450
+local a2 = 43
+local a3 = 43.4
+local a4 = 0.2e10
+
+local b1 = "hello"
+local b2 = 'world'
+local b3 = `hello {b2} { wo382+ }`
