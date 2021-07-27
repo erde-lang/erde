@@ -19,42 +19,21 @@ local begin_loop, end_loop = scope.begin_loop, scope.end_loop
 local insideloop = scope.insideloop
 
 -- -----------------------------------------------------------------------------
--- Helpers
+-- Legacy Helpers (DO NOT TOUCH)
 -- -----------------------------------------------------------------------------
-
--- creates an error message for the input string
-local function syntaxerror(errorinfo, pos, msg)
-  local l, c = lineno(errorinfo.subject, pos)
-  local error_msg = '%s:%d:%d: syntax error, %s'
-  return string.format(error_msg, errorinfo.filename, l, c, msg)
-end
 
 -- gets the farthest failure position
 local function getffp(s, i, t)
   return t.ffp or i, t
 end
 
--- gets the table that contains the error information
-local function geterrorinfo()
+local function report_error()
   return Cmt(Carg(1), getffp) * (C(V('OneWord')) + Cc('EOF')) / function(t, u)
     t.unexpected = u
     return t
+  end / function(t)
+    return 'ERROR', t
   end
-end
-
--- creates an errror message using the farthest failure position
-local function errormsg()
-  return geterrorinfo() / function(t)
-    local p = t.ffp or 1
-    local msg = "unexpected '%s', expecting %s"
-    msg = string.format(msg, t.unexpected, t.expected)
-    return nil, syntaxerror(t, p, msg)
-  end
-end
-
--- reports a syntactic error
-local function report_error()
-  return errormsg()
 end
 
 -- sets the farthest failure position and the expected tokens
@@ -170,17 +149,76 @@ local function fix_str(str)
   return str
 end
 
+-- -----------------------------------------------------------------------------
+-- Extended Pattern Helpers
+-- -----------------------------------------------------------------------------
+
+local function exact(pattern, n)
+  return (pattern ^ n) ^ -n
+end
+
+local function pad(pattern, min_spaces)
+  min_spaces = min_spaces or 0
+  return (space ^ min_spaces) * pattern * (space ^ min_spaces)
+end
+
+local function symbol(s)
+  return pad(P(s))
+end
+
+-- -----------------------------------------------------------------------------
+-- List Helpers
+-- -----------------------------------------------------------------------------
+
+local function list(pattern, separator)
+  separator = separator or symbol(',')
+  return pattern * (separator * pattern) ^ 0
+end
+
+local function join(patterns, separator)
+  if #patterns == 0 then
+    return P(true)
+  end
+
+  local joined = patterns[1]
+  for i = 2, #patterns do
+    joined = joined * separator * patterns[i]
+  end
+  return joined
+end
+
+local function sum(patterns)
+  if #patterns == 0 then
+    return P(true)
+  end
+
+  local summed = patterns[1]
+  for i = 2, #patterns do
+    summed = summed + patterns[i]
+  end
+  return summed
+end
+
+-- -----------------------------------------------------------------------------
+-- Misc Helpers
+-- -----------------------------------------------------------------------------
+
 local function keyword(s)
-  return P(s) * -V('WordChar')
+  return P(s) * -V('WordChar') * V('Skip')
+end
+
+local function tag(tag, pattern)
+  return Ct(Cg(Cp(), 'pos') * Cg(Cc(tag), 'tag') * pattern)
 end
 
 -- -----------------------------------------------------------------------------
 -- Grammar
 -- -----------------------------------------------------------------------------
 
-return {
+return P({
   V('Lua'),
   Lua = V('Shebang') ^ -1 * V('Skip') * V('Chunk') * -1 + report_error(),
+  Shebang = P('#') * (P(1) - P('\n')) ^ 0 * P('\n'),
 
   --
   -- Syntax
@@ -190,7 +228,6 @@ return {
   Block = taggedCap('Block', V('StatList') * V('RetStat') ^ -1),
   StatList = (symb(';') + V('Stat')) ^ 0,
 
-
   --
   -- Words
   --
@@ -199,10 +236,13 @@ return {
 
   Keyword = keyword('and') + keyword('break') + keyword('do') + keyword('else') + keyword('elseif') + keyword('end') + keyword('false') + keyword('for') + keyword('function') + keyword('goto') + keyword('if') + keyword('in') + keyword('local') + keyword('nil') + keyword('not') + keyword('or') + keyword('repeat') + keyword('return') + keyword('then') + keyword('true') + keyword('until') + keyword('while'),
 
-  Identifier = (alpha + P('_')) * V('WordChar') ^ 0,
-  Id = taggedCap('Id', token(V('Name'), 'Name')),
+  Identifier = -V('Keyword') * C((alpha + P('_')) * V('WordChar') ^ 0),
+  IdentifierList = V('Identifier') * (pad(',') * V('Identifier')) ^ 0,
 
+  -- TODO: deprecate
+  Id = taggedCap('Id', token(V('Name'), 'Name')),
   Name = -V('Keyword') * C(V('Identifier')) * -V('WordChar'),
+  NameList = sepby1(V('Id'), symb(','), 'NameList'),
 
   --
   -- Operations
@@ -258,7 +298,7 @@ return {
   -- Loops
   --
 
-  ForBody = kw('do') * V('Block'),
+  ForBody = keyword('do') * V('Block'),
   ForNum = taggedCap(
     'Fornum',
     V('Id')
@@ -314,23 +354,12 @@ return {
     end
     return t1
   end,
-  ParList = V('NameList') * (symb(',') * symb('...') * taggedCap('Dots', Cp())) ^ -1 / function(t, v)
-    if v then
-      table.insert(t, v)
-    end
-    return t
-  end + symb('...') * taggedCap('Dots', Cp()) / function(v)
-    return { v }
-  end + P(true) / function()
-    return {}
-  end,
+
   -- Cc({}) generates a strange bug when parsing [[function t:a() end ; function t.a() end]]
   -- the bug is to add the parameter self to the second function definition
   --FuncBody = taggedCap("Function", symb("(") * (V"ParList" + Cc({})) * symb(")") * V"Block" * kw("end"));
-  FuncBody = taggedCap(
-    'Function',
-    symb('(') * V('ParList') * symb(')') * V('Block') * kw('end')
-  ),
+  FuncBody = taggedCap('Function', V('Parameters') * V('Block') * kw('end')),
+
   FuncStat = taggedCap('Set', kw('function') * V('FuncName') * V('FuncBody')) / function(t)
     if t[1].is_method then
       table.insert(t[2][1], 1, { tag = 'Id', [1] = 'self' })
@@ -339,11 +368,28 @@ return {
     t[2] = { t[2] }
     return t
   end,
+
   LocalFunc = taggedCap('Localrec', kw('function') * V('Id') * V('FuncBody')) / function(t)
     t[1] = { t[1] }
     t[2] = { t[2] }
     return t
   end,
+
+  FunctionDef = kw('function') * V('FuncBody'),
+
+  Args = tag('Args', list(V('Identifier'))),
+  OptArgs = list(V('Identifier') * symbol('=') * (V('Expr') + V('Identifier'))),
+  VarArgs = tag('VarArgs', symbol('...') * V('Identifier') ^ 0),
+  Parameters = symbol('(') * sum({
+    join({ V('Args'), V('OptArgs'), V('VarArgs') }, symbol(',')),
+    join({ V('Args'), V('OptArgs') }, symbol(',')),
+    join({ V('Args'), V('VarArgs') }, symbol(',')),
+    join({ V('OptArgs'), V('VarArgs') }, symbol(',')),
+    V('Args'),
+    V('OptArgs'),
+    V('VarArgs'),
+    P(true),
+  }) * symbol(')'),
 
   --
   -- Expressions
@@ -443,7 +489,6 @@ return {
   --
 
   Var = V('Id'),
-  FunctionDef = kw('function') * V('FuncBody'),
   FieldSep = symb(',') + symb(';'),
   Field = taggedCap(
     'Pair',
@@ -454,7 +499,6 @@ return {
   ) + V('Expr'),
   FieldList = (V('Field') * (V('FieldSep') * V('Field')) ^ 0 * V('FieldSep') ^ -1) ^ -1,
   Constructor = taggedCap('Table', symb('{') * V('FieldList') * symb('}')),
-  NameList = sepby1(V('Id'), symb(','), 'NameList'),
   LocalAssign = taggedCap(
     'Local',
     V('NameList') * ((symb('=') * V('ExpList')) + Ct(Cc()))
@@ -492,7 +536,6 @@ return {
   Number = C(V('Hex') + V('Float') + V('Int')) / function(n)
     return tonumber(n)
   end,
-  Shebang = P('#') * (P(1) - P('\n')) ^ 0 * P('\n'),
   -- for error reporting
   OneWord = V('Name') + V('Number') + V('String') + V('Keyword') + P('...') + P(1),
-}
+})

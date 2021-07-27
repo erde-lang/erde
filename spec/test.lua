@@ -1,7 +1,7 @@
 package.path = '/home/bsuth/projects/luascript/src/?.lua;' .. package.path
 
 local inspect = require('inspect')
-local ls = require('luascript')
+local parser = require('parser')
 
 local function read_file(path)
   local file = io.open(path, 'r')
@@ -16,7 +16,6 @@ local function read_file(path)
   return content
 end
 
-local ast, env = ls.parse(read_file('./test_input.lua', 'test_input.lua'))
+local ast, cap = parser.parse(read_file('./test_input.lua', 'test_input.lua'))
 
-print(inspect(ast))
--- print(inspect(env.errorinfo))
+print(inspect(ast), inspect(cap))
