@@ -2,6 +2,7 @@ local grammar = {}
 
 local lpeg = require('lpeg')
 local scope = require('__scope')
+local _ = require('utils')
 
 lpeg.locale(lpeg)
 
@@ -176,6 +177,8 @@ local function list(pattern, separator)
 end
 
 local function join(patterns, separator)
+  separator = separator or symbol(',')
+
   if #patterns == 0 then
     return P(true)
   end
@@ -377,19 +380,27 @@ return P({
 
   FunctionDef = kw('function') * V('FuncBody'),
 
-  Args = tag('Args', list(V('Identifier'))),
-  OptArgs = list(V('Identifier') * symbol('=') * (V('Expr') + V('Identifier'))),
+  Arg = V('Identifier'),
+  Args = tag('Args', list(V('Arg') - V('OptArg'))),
+  OptArg = V('Arg') * symbol('=') * V('Expr'),
+  OptArgs = tag('OptArgs', list(V('OptArg'))),
   VarArgs = tag('VarArgs', symbol('...') * V('Identifier') ^ 0),
-  Parameters = symbol('(') * sum({
-    join({ V('Args'), V('OptArgs'), V('VarArgs') }, symbol(',')),
-    join({ V('Args'), V('OptArgs') }, symbol(',')),
-    join({ V('Args'), V('VarArgs') }, symbol(',')),
-    join({ V('OptArgs'), V('VarArgs') }, symbol(',')),
-    V('Args'),
-    V('OptArgs'),
-    V('VarArgs'),
-    P(true),
-  }) * symbol(')'),
+
+  Parameters = tag(
+    'Parameters',
+    _.reduce({
+      join({ V('Args'), V('OptArgs'), V('VarArgs') }),
+      join({ V('Args'), V('OptArgs') }),
+      join({ V('Args'), V('VarArgs') }),
+      join({ V('OptArgs'), V('VarArgs') }),
+      V('Args'),
+      V('OptArgs'),
+      V('VarArgs'),
+      P(true),
+    }, function(pattern, subpattern)
+      return pattern + symbol('(') * subpattern * symbol(')')
+    end, P(false))
+  ),
 
   --
   -- Expressions
