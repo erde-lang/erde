@@ -1,17 +1,26 @@
-local grammar = {}
-
 local lpeg = require('lpeg')
+local lspeg = require('lspeg')
+
 local scope = require('__scope')
 local _ = require('utils')
 
 lpeg.locale(lpeg)
+local E, P, S, V = lpeg.E, lpeg.P, lpeg.S, lpeg.V
+local C, Carg, Cb, Cc, Cf, Cg, Cmt, Cp, Ct = lpeg.C,
+  lpeg.Carg,
+  lpeg.Cb,
+  lpeg.Cc,
+  lpeg.Cf,
+  lpeg.Cg,
+  lpeg.Cmt,
+  lpeg.Cp,
+  lpeg.Ct
+local alpha, digit, alnum, space, xdigit =
+  lpeg.alpha, lpeg.digit, lpeg.alnum, lpeg.space, lpeg.xdigit
 
-local P, S, V = lpeg.P, lpeg.S, lpeg.V
-local C, Carg, Cb, Cc = lpeg.C, lpeg.Carg, lpeg.Cb, lpeg.Cc
-local Cf, Cg, Cmt, Cp, Ct = lpeg.Cf, lpeg.Cg, lpeg.Cmt, lpeg.Cp, lpeg.Ct
-local alpha, digit, alnum = lpeg.alpha, lpeg.digit, lpeg.alnum
-local xdigit = lpeg.xdigit
-local space = lpeg.space
+local E, W = lspeg.E, lspeg.W
+local L, Lj = lspeg.L, lspeg.Lj
+local T = lspeg.T
 
 local lineno = scope.lineno
 local new_scope, end_scope = scope.new_scope, scope.end_scope
@@ -151,67 +160,11 @@ local function fix_str(str)
 end
 
 -- -----------------------------------------------------------------------------
--- Extended Pattern Helpers
--- -----------------------------------------------------------------------------
-
-local function exact(pattern, n)
-  return (pattern ^ n) ^ -n
-end
-
-local function pad(pattern, min_spaces)
-  min_spaces = min_spaces or 0
-  return (space ^ min_spaces) * pattern * (space ^ min_spaces)
-end
-
-local function symbol(s)
-  return pad(P(s))
-end
-
--- -----------------------------------------------------------------------------
--- List Helpers
--- -----------------------------------------------------------------------------
-
-local function list(pattern, separator)
-  separator = separator or symbol(',')
-  return pattern * (separator * pattern) ^ 0
-end
-
-local function join(patterns, separator)
-  separator = separator or symbol(',')
-
-  if #patterns == 0 then
-    return P(true)
-  end
-
-  local joined = patterns[1]
-  for i = 2, #patterns do
-    joined = joined * separator * patterns[i]
-  end
-  return joined
-end
-
-local function sum(patterns)
-  if #patterns == 0 then
-    return P(true)
-  end
-
-  local summed = patterns[1]
-  for i = 2, #patterns do
-    summed = summed + patterns[i]
-  end
-  return summed
-end
-
--- -----------------------------------------------------------------------------
 -- Misc Helpers
 -- -----------------------------------------------------------------------------
 
 local function keyword(s)
   return P(s) * -V('WordChar') * V('Skip')
-end
-
-local function tag(tag, pattern)
-  return Ct(Cg(Cp(), 'pos') * Cg(Cc(tag), 'tag') * pattern)
 end
 
 -- -----------------------------------------------------------------------------
@@ -237,10 +190,33 @@ return P({
 
   WordChar = alnum + P('_'),
 
-  Keyword = keyword('and') + keyword('break') + keyword('do') + keyword('else') + keyword('elseif') + keyword('end') + keyword('false') + keyword('for') + keyword('function') + keyword('goto') + keyword('if') + keyword('in') + keyword('local') + keyword('nil') + keyword('not') + keyword('or') + keyword('repeat') + keyword('return') + keyword('then') + keyword('true') + keyword('until') + keyword('while'),
-
+  Keyword = _.reduce({
+    'and',
+    'break',
+    'do',
+    'else',
+    'elseif',
+    'end',
+    'false',
+    'for',
+    'function',
+    'goto',
+    'if',
+    'in',
+    'local',
+    'nil',
+    'not',
+    'or',
+    'repeat',
+    'return',
+    'then',
+    'true',
+    'until',
+    'while',
+  }, function(keywords, keyword)
+    return keywords + W(keyword)
+  end, P(false)),
   Identifier = -V('Keyword') * C((alpha + P('_')) * V('WordChar') ^ 0),
-  IdentifierList = V('Identifier') * (pad(',') * V('Identifier')) ^ 0,
 
   -- TODO: deprecate
   Id = taggedCap('Id', token(V('Name'), 'Name')),
@@ -251,16 +227,16 @@ return P({
   -- Operations
   --
 
-  OrOp = kw('or') / 'or',
-  AndOp = kw('and') / 'and',
+  OrOp = W('or') / 'or',
+  AndOp = W('and') / 'and',
   RelOp = symb('~=') / 'ne' + symb('==') / 'eq' + symb('<=') / 'le' + symb('>=') / 'ge' + symb('<') / 'lt' + symb('>') / 'gt',
-  BOrOp = symb('|') / 'bor',
-  BXorOp = symb('~') / 'bxor',
-  BAndOp = symb('&') / 'band',
-  ShiftOp = symb('<<') / 'shl' + symb('>>') / 'shr',
-  ConOp = symb('..') / 'concat',
-  AddOp = symb('+') / 'add' + symb('-') / 'sub',
-  MulOp = symb('*') / 'mul' + symb('//') / 'idiv' + symb('/') / 'div' + symb('%') / 'mod',
+  BOrOp = W('|') / 'bor',
+  BXorOp = W('~') / 'bxor',
+  BAndOp = W('&') / 'band',
+  ShiftOp = W('<<') / 'shl' + W('>>') / 'shr',
+  ConOp = W('..') / 'concat',
+  AddOp = W('+') / 'add' + symb('-') / 'sub',
+  MulOp = W('*') / 'mul' + symb('//') / 'idiv' + symb('/') / 'div' + symb('%') / 'mod',
   UnOp = kw('not') / 'not' + symb('-') / 'unm' + symb('#') / 'len' + symb('~') / 'bnot',
   PowOp = symb('^') / 'pow',
 
@@ -301,7 +277,7 @@ return P({
   -- Loops
   --
 
-  ForBody = keyword('do') * V('Block'),
+  ForBody = W('do') * V('Block'),
   ForNum = taggedCap(
     'Fornum',
     V('Id')
@@ -381,26 +357,31 @@ return P({
   FunctionDef = kw('function') * V('FuncBody'),
 
   Arg = V('Identifier'),
-  Args = tag('Args', list(V('Arg') - V('OptArg'))),
-  OptArg = V('Arg') * symbol('=') * V('Expr'),
-  OptArgs = tag('OptArgs', list(V('OptArg'))),
-  VarArgs = tag('VarArgs', symbol('...') * V('Identifier') ^ 0),
+  Args = T('Args', L(V('Arg') - V('OptArg'))),
+  OptArg = V('Arg') * W('=') * V('Expr'),
+  OptArgs = T('OptArgs', L(V('OptArg'))),
+  VarArgs = T('VarArgs', W('...') * V('Identifier') ^ 0),
 
-  Parameters = tag(
+  Parameters = T(
     'Parameters',
     _.reduce({
-      join({ V('Args'), V('OptArgs'), V('VarArgs') }),
-      join({ V('Args'), V('OptArgs') }),
-      join({ V('Args'), V('VarArgs') }),
-      join({ V('OptArgs'), V('VarArgs') }),
+      Lj({ V('Args'), V('OptArgs'), V('VarArgs') }),
+      Lj({ V('Args'), V('OptArgs') }),
+      Lj({ V('Args'), V('VarArgs') }),
+      Lj({ V('OptArgs'), V('VarArgs') }),
       V('Args'),
       V('OptArgs'),
       V('VarArgs'),
       P(true),
     }, function(pattern, subpattern)
-      return pattern + symbol('(') * subpattern * symbol(')')
+      return pattern + W('(') * subpattern * W(')')
     end, P(false))
   ),
+
+  UnnamedFunction = W('function') * V('Parameters') * V('Block') * W('end'),
+  FatArrowFunction = V('Parameters') * W('=>') * V('Expr'),
+  SkinnyArrowFunction = V('Parameters') * W('->') * V('Expr'),
+  AnonymousFunction = V('UnnamedFunction') + V('SkinnyArrowFunction') + V('FatArrowFunction'),
 
   --
   -- Expressions
