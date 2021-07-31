@@ -160,14 +160,6 @@ local function fix_str(str)
 end
 
 -- -----------------------------------------------------------------------------
--- Misc Helpers
--- -----------------------------------------------------------------------------
-
-local function keyword(s)
-  return P(s) * -V('WordChar') * V('Skip')
-end
-
--- -----------------------------------------------------------------------------
 -- Grammar
 -- -----------------------------------------------------------------------------
 
@@ -182,6 +174,22 @@ return P({
 
   Chunk = V('Block'),
   Block = taggedCap('Block', V('StatList') * V('RetStat') ^ -1),
+
+  Stat = _.reduce({
+    'IfStat',
+    'WhileStat',
+    'DoStat',
+    'ForStat',
+    'RepeatStat',
+    'FuncStat',
+    'LocalStat',
+    'LabelStat',
+    'BreakStat',
+    'GoToStat',
+    'ExprStat',
+  }, function(Stat, SubStat)
+    return Stat + V(SubStat)
+  end, P(false)),
   StatList = (symb(';') + V('Stat')) ^ 0,
 
   --
@@ -216,6 +224,7 @@ return P({
   }, function(keywords, keyword)
     return keywords + W(keyword)
   end, P(false)),
+
   Identifier = -V('Keyword') * C((alpha + P('_')) * V('WordChar') ^ 0),
 
   -- TODO: deprecate
@@ -224,24 +233,14 @@ return P({
   NameList = sepby1(V('Id'), symb(','), 'NameList'),
 
   --
-  -- Operations
-  --
-
-  OrOp = W('or') / 'or',
-  AndOp = W('and') / 'and',
-  RelOp = symb('~=') / 'ne' + symb('==') / 'eq' + symb('<=') / 'le' + symb('>=') / 'ge' + symb('<') / 'lt' + symb('>') / 'gt',
-  BOrOp = W('|') / 'bor',
-  BXorOp = W('~') / 'bxor',
-  BAndOp = W('&') / 'band',
-  ShiftOp = W('<<') / 'shl' + W('>>') / 'shr',
-  ConOp = W('..') / 'concat',
-  AddOp = W('+') / 'add' + symb('-') / 'sub',
-  MulOp = W('*') / 'mul' + symb('//') / 'idiv' + symb('/') / 'div' + symb('%') / 'mod',
-  UnOp = kw('not') / 'not' + symb('-') / 'unm' + symb('#') / 'len' + symb('~') / 'bnot',
-  PowOp = symb('^') / 'pow',
-
-  --
   -- Strings
+  --
+  -- TODO: LongString magic docs
+  -- TODO: rename LongStringId?
+  -- TODO: doc / workaraound string escaped char fixing?
+  --
+  -- http://www.inf.puc-rio.br/~roberto/lpeg
+  -- Example: Lua's long strings
   --
 
   EscapedChar = P('\\') * P(1),
@@ -250,16 +249,34 @@ return P({
   DoubleQuoteString = P('"') * C((V('EscapedChar') + (P(1) - P('"'))) ^ 0) * P('"'),
   ShortString = V('SingleQuoteString') + V('DoubleQuoteString'),
 
-  LongString = V('Open') * C((P(1) - V('CloseEQ')) ^ 0) * V('Close') / function(s, o)
-    return s
-  end,
+  LongStringStart = '[' * Cg(P('=') ^ 0, 'LongStringId') * '[',
+  LongStringEnd = ']' * P('=') ^ 0 * ']',
+  LongStringIdCheck = Cmt(
+    V('LongStringEnd') * Cb('LongStringId'),
+    function(s, i, a, b)
+      return a == b
+    end
+  ),
+  LongString = V('LongStringStart') * C((P(1) - V('LongStringEnd')) ^ 0) * V('LongStringEnd'),
 
   String = V('LongString') + (V('ShortString') / function(s)
-    return fix_str(s)
+    return s
+      :gsub('\\a', '\a')
+      :gsub('\\b', '\b')
+      :gsub('\\f', '\f')
+      :gsub('\\n', '\n')
+      :gsub('\\r', '\r')
+      :gsub('\\t', '\t')
+      :gsub('\\v', '\v')
+      :gsub('\\\\', '\\')
+      :gsub('\\"', '"')
+      :gsub("\\'", "'")
+      :gsub('\\[', '[')
+      :gsub('\\]', ']')
   end),
 
   --
-  -- Conditionals
+  -- Logic Flow
   --
 
   IfStat = taggedCap(
@@ -272,10 +289,6 @@ return P({
       * (kw('else') * V('Block')) ^ -1
       * kw('end')
   ),
-
-  --
-  -- Loops
-  --
 
   ForBody = W('do') * V('Block'),
   ForNum = taggedCap(
@@ -378,10 +391,27 @@ return P({
     end, P(false))
   ),
 
-  UnnamedFunction = W('function') * V('Parameters') * V('Block') * W('end'),
-  FatArrowFunction = V('Parameters') * W('=>') * V('Expr'),
-  SkinnyArrowFunction = V('Parameters') * W('->') * V('Expr'),
-  AnonymousFunction = V('UnnamedFunction') + V('SkinnyArrowFunction') + V('FatArrowFunction'),
+  AnonymousFunction = W('function') * V('Parameters') * V('Block') * W('end'),
+  FatLambda = V('Parameters') * W('=>') * V('Expr'),
+  SkinnyLambda = V('Parameters') * W('->') * V('Expr'),
+  FunctionExpression = V('AnonymousFunction') + V('SkinnyLambda') + V('FatLambda'),
+
+  --
+  -- Operations
+  --
+
+  OrOp = W('or'),
+  AndOp = W('and'),
+  RelOp = W('~=') / 'ne' + W('==') / 'eq' + W('<=') / 'le' + W('>=') / 'ge' + W('<') / 'lt' + W('>') / 'gt',
+  BOrOp = W('|') / 'bor',
+  BXorOp = W('~') / 'bxor',
+  BAndOp = W('&') / 'band',
+  ShiftOp = W('<<') / 'shl' + W('>>') / 'shr',
+  ConOp = W('..') / 'concat',
+  AddOp = W('+') / 'add' + W('-') / 'sub',
+  MulOp = W('*') / 'mul' + W('//') / 'idiv' + W('/') / 'div' + W('%') / 'mod',
+  UnOp = W('not') / 'not' + W('-') / 'unm' + W('#') / 'len' + W('~') / 'bnot',
+  PowOp = W('^') / 'pow',
 
   --
   -- Expressions
@@ -399,6 +429,7 @@ return P({
   SubExpr_6 = chainl1(V('SubExpr_7'), V('BAndOp')),
   SubExpr_7 = chainl1(V('SubExpr_8'), V('ShiftOp')),
   SubExpr_8 = V('SubExpr_9') * V('ConOp') * V('SubExpr_8') / binaryop + V('SubExpr_9'),
+
   SubExpr_9 = chainl1(V('SubExpr_10'), V('AddOp')),
   SubExpr_10 = chainl1(V('SubExpr_11'), V('MulOp')),
   SubExpr_11 = V('UnOp') * V('SubExpr_11') / unaryop + V('SubExpr_12'),
@@ -474,7 +505,10 @@ return P({
   -- Other
   --
 
-  Skip = (V('Space') + V('Comment')) ^ 0,
+  Comment = P('--') * V('LongString') / function()
+    return
+  end + P('--') * (P(1) - P('\n')) ^ 0,
+  Skip = (space + V('Comment')) ^ 0,
 
   --
   -- TODO
@@ -509,18 +543,7 @@ return P({
       * symb(';') ^ -1
   ),
   Assignment = ((symb(',') * V('SuffixedExp')) ^ 1) ^ -1 * symb('=') * V('ExpList'),
-  Stat = V('IfStat') + V('WhileStat') + V('DoStat') + V('ForStat') + V('RepeatStat') + V('FuncStat') + V('LocalStat') + V('LabelStat') + V('BreakStat') + V('GoToStat') + V('ExprStat'),
   -- lexer
-  Space = space ^ 1,
-  Equals = P('=') ^ 0,
-  Open = '[' * Cg(V('Equals'), 'init') * '[' * P('\n') ^ -1,
-  Close = ']' * C(V('Equals')) * ']',
-  CloseEQ = Cmt(V('Close') * Cb('init'), function(s, i, a, b)
-    return a == b
-  end),
-  Comment = P('--') * V('LongString') / function()
-    return
-  end + P('--') * (P(1) - P('\n')) ^ 0,
   Hex = (P('0x') + P('0X')) * xdigit ^ 1,
   Expo = S('eE') * S('+-') ^ -1 * digit ^ 1,
   Float = (((digit ^ 1 * P('.') * digit ^ 0) + (P('.') * digit ^ 1)) * V('Expo') ^ -1) + (digit ^ 1 * V('Expo')),
