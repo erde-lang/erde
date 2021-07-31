@@ -294,19 +294,16 @@ return P({
   GenericFor = L(V('Identifier')) * W('in') * L(V('Expr')),
   For = W('for') * (V('NumericFor') + V('GenericFor')) * W('do') * V('Block') * W('end'),
 
-  DoStat = kw('do') * V('Block') * kw('end') / function(t)
-    t.tag = 'Do'
-    return t
-  end,
+  DoStat = W('do') * T('Do', V('Block')) * W('end'),
 
-  WhileStat = taggedCap(
+  WhileStat = T(
     'While',
-    kw('while') * V('Expr') * kw('do') * V('Block') * kw('end')
+    W('while') * V('Expr') * W('do') * V('Block') * W('end')
   ),
 
-  RepeatStat = taggedCap(
+  RepeatStat = T(
     'Repeat',
-    kw('repeat') * V('Block') * kw('until') * V('Expr')
+    W('repeat') * V('Block') * W('until') * V('Expr')
   ),
 
   --
@@ -378,8 +375,8 @@ return P({
   ),
 
   AnonymousFunction = W('function') * V('Parameters') * V('Block') * W('end'),
-  FatLambda = V('Parameters') * W('=>') * V('Expr'),
-  SkinnyLambda = V('Parameters') * W('->') * V('Expr'),
+  FatLambda = T('FatLambda', V('Parameters') * W('=>') * V('Expr')),
+  SkinnyLambda = T('SkinnyLambda', V('Parameters') * W('->') * V('Expr')),
   FunctionExpression = V('AnonymousFunction') + V('SkinnyLambda') + V('FatLambda'),
 
   --
@@ -403,7 +400,7 @@ return P({
   -- Expressions
   --
 
-  Expr = V('SubExpr_1'),
+  Expr = V('SubExpr_1') + V('FunctionExpression'),
 
   PrimaryExp = V('Var') + taggedCap('Paren', symb('(') * V('Expr') * symb(')')),
 
