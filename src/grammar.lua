@@ -176,10 +176,10 @@ return P({
   Block = taggedCap('Block', V('StatList') * V('RetStat') ^ -1),
 
   Stat = _.reduce({
-    'IfStat',
+    'If',
     'WhileStat',
     'DoStat',
-    'ForStat',
+    'For',
     'RepeatStat',
     'FuncStat',
     'LocalStat',
@@ -279,34 +279,20 @@ return P({
   -- Logic Flow
   --
 
-  IfStat = taggedCap(
+  If = T(
     'If',
-    kw('if')
+    W('if')
       * V('Expr')
-      * kw('then')
+      * W('then')
       * V('Block')
-      * (kw('elseif') * V('Expr') * kw('then') * V('Block')) ^ 0
-      * (kw('else') * V('Block')) ^ -1
-      * kw('end')
+      * (W('elseif') * V('Expr') * W('then') * V('Block')) ^ 0
+      * (W('else') * V('Block')) ^ -1
+      * W('end')
   ),
 
-  ForBody = W('do') * V('Block'),
-  ForNum = taggedCap(
-    'Fornum',
-    V('Id')
-      * symb('=')
-      * V('Expr')
-      * symb(',')
-      * V('Expr')
-      * (symb(',') * V('Expr')) ^ -1
-      * V('ForBody')
-  ),
-  ForGen = taggedCap(
-    'Forin',
-    V('NameList') * kw('in') * V('ExpList') * V('ForBody')
-  ),
-
-  ForStat = kw('for') * (V('ForNum') + V('ForGen')) * kw('end'),
+  NumericFor = V('Identifier') * W('=') * V('Expr') * symb(',') * V('Expr') * (W(',') * V('Expr')) ^ -1,
+  GenericFor = L(V('Identifier')) * W('in') * L(V('Expr')),
+  For = W('for') * (V('NumericFor') + V('GenericFor')) * W('do') * V('Block') * W('end'),
 
   DoStat = kw('do') * V('Block') * kw('end') / function(t)
     t.tag = 'Do'

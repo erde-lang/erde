@@ -28,6 +28,14 @@ end
 --
 
 function lspeg.W(pattern)
+  return (space ^ 0) * pattern * (space ^ 0)
+end
+
+--
+-- Word Capture
+--
+
+function lspeg.Wc(pattern)
   return (space ^ 0) * C(pattern) * (space ^ 0)
 end
 
