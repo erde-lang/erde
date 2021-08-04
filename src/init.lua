@@ -1,17 +1,6 @@
-local grammar = require('syntax')
+local syntax = require('syntax')
 
-return {
-  parse = function(subject)
-    lpeg.setmaxstack(1000)
+-- TODO: more utilities
+-- writing/reading files, minification, etc
 
-    local cap = {}
-    local ast = grammar:match(subject, nil, cap)
-
-    return ast, cap
-  end,
-
-  compile = function(ast)
-    print(inspect(ast))
-    return ''
-  end,
-}
+return syntax
