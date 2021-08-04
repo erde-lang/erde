@@ -1,25 +1,26 @@
 local lpeg = require('lpeg')
-
 lpeg.locale(lpeg)
-local P = lpeg.P
-local C, Cc, Cg, Cp, Ct = lpeg.C, lpeg.Cc, lpeg.Cg, lpeg.Cp, lpeg.Ct
-local space = lpeg.space
 
 -- -----------------------------------------------------------------------------
--- Module
+-- Environment
 -- -----------------------------------------------------------------------------
 
-local lspeg = {}
+local env = {}
+setmetatable(env, { __index = _G })
+
+for k, v in pairs(lpeg) do
+  env[k] = v
+end
 
 -- -----------------------------------------------------------------------------
--- Extended Pattern Helpers
+-- Extended PatternHelpers
 -- -----------------------------------------------------------------------------
 
 --
 -- Exact
 --
 
-function lspeg.E(pattern, n)
+function env.E(pattern, n)
   return (pattern ^ n) ^ -n
 end
 
@@ -27,16 +28,16 @@ end
 -- Word
 --
 
-function lspeg.W(pattern)
-  return (space ^ 0) * pattern * (space ^ 0)
+function env.W(pattern)
+  return (lpeg.space ^ 0) * pattern * (lpeg.space ^ 0)
 end
 
 --
 -- Word Capture
 --
 
-function lspeg.Wc(pattern)
-  return (space ^ 0) * C(pattern) * (space ^ 0)
+function env.Wc(pattern)
+  return (lpeg.space ^ 0) * C(pattern) * (lpeg.space ^ 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -47,8 +48,8 @@ end
 -- List
 --
 
-function lspeg.L(pattern, separator)
-  separator = separator or lspeg.W(',')
+function env.L(pattern, separator)
+  separator = separator or env.W(',')
   return pattern * (separator * pattern) ^ 0
 end
 
@@ -56,11 +57,11 @@ end
 -- List Join
 --
 
-function lspeg.Lj(patterns, separator)
-  separator = separator or lspeg.W(',')
+function env.Lj(patterns, separator)
+  separator = separator or env.W(',')
 
   if #patterns == 0 then
-    return P(true)
+    return lpeg.P(true)
   end
 
   local joined = patterns[1]
@@ -71,15 +72,15 @@ function lspeg.Lj(patterns, separator)
 end
 
 -- -----------------------------------------------------------------------------
--- Macros
+-- Merge
 -- -----------------------------------------------------------------------------
 
 --
--- Macro
+-- Merge
 --
 
-function lspeg.M(patterns, macro, value)
-  local result = value or P(false)
+function env.M(patterns, macro, value)
+  local result = value or lpeg.P(false)
 
   for i, pattern in ipairs(patterns) do
     result = macro(pattern, value)
@@ -89,13 +90,13 @@ function lspeg.M(patterns, macro, value)
 end
 
 --
--- Macro Sum
+-- Merge Sum
 --
 
-function lspeg.Ms(patterns)
-  return lspeg.M(patterns, function(pattern, sum)
+function env.Ms(patterns)
+  return env.M(patterns, function(pattern, sum)
     return sum + pattern
-  end, P(false))
+  end, lpeg.P(false))
 end
 
 -- -----------------------------------------------------------------------------
@@ -106,12 +107,16 @@ end
 -- Tag
 --
 
-function lspeg.T(tag, pattern)
-  return Ct(Cg(Cp(), 'position') * Cg(Cc(tag), 'tag') * pattern)
+function env.T(tag, pattern)
+  return lpeg.Ct(
+    lpeg.Cg(lpeg.Cp(), 'position') * lpeg.Cg(lpeg.Cc(tag), 'tag') * pattern
+  )
 end
 
 -- -----------------------------------------------------------------------------
--- Return
+-- Return (Environment Loader)
 -- -----------------------------------------------------------------------------
 
-return lspeg
+return function()
+  setfenv(2, env)
+end

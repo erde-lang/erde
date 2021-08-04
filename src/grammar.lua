@@ -2,10 +2,9 @@ local lpeg = require('lpeg')
 local lspeg = require('lspeg')
 
 local scope = require('__scope')
-local _ = require('utils')
 
 lpeg.locale(lpeg)
-local E, P, S, V = lpeg.E, lpeg.P, lpeg.S, lpeg.V
+local P, S, V = lpeg.P, lpeg.S, lpeg.V
 local C, Carg, Cb, Cc, Cf, Cg, Cmt, Cp, Ct = lpeg.C,
   lpeg.Carg,
   lpeg.Cb,
@@ -19,6 +18,7 @@ local alpha, digit, alnum, space, xdigit =
   lpeg.alpha, lpeg.digit, lpeg.alnum, lpeg.space, lpeg.xdigit
 
 local E, W = lspeg.E, lspeg.W
+local M, Ms = lspeg.M, lspeg.Ms
 local L, Lj = lspeg.L, lspeg.Lj
 local T = lspeg.T
 
@@ -81,11 +81,11 @@ local function kw(str)
 end
 
 local function taggedCap(tag, pat)
-  return Ct(Cg(Cp(), 'pos') * Cg(Cc(tag), 'tag') * pat)
+  return Ct(Cg(Cp(), 'position') * Cg(Cc(tag), 'tag') * pat)
 end
 
 local function unaryop(op, e)
-  return { tag = 'Op', pos = e.pos, [1] = op, [2] = e }
+  return { tag = 'Op', position = e.position, [1] = op, [2] = e }
 end
 
 local function binaryop(e1, op, e2)
@@ -111,19 +111,19 @@ local function binaryop(e1, op, e2)
     or op == 'and'
     or op == 'or'
   then
-    return { tag = 'Op', pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
+    return { tag = 'Op', position = e1.position, [1] = op, [2] = e1, [3] = e2 }
   elseif op == 'ne' then
     return unaryop('not', {
       tag = 'Op',
-      pos = e1.pos,
+      position = e1.position,
       [1] = 'eq',
       [2] = e1,
       [3] = e2,
     })
   elseif op == 'gt' then
-    return { tag = 'Op', pos = e1.pos, [1] = 'lt', [2] = e2, [3] = e1 }
+    return { tag = 'Op', position = e1.position, [1] = 'lt', [2] = e2, [3] = e1 }
   elseif op == 'ge' then
-    return { tag = 'Op', pos = e1.pos, [1] = 'le', [2] = e2, [3] = e1 }
+    return { tag = 'Op', position = e1.position, [1] = 'le', [2] = e2, [3] = e1 }
   end
 end
 
@@ -175,21 +175,19 @@ return P({
   Chunk = V('Block'),
   Block = taggedCap('Block', V('StatList') * V('RetStat') ^ -1),
 
-  Stat = _.reduce({
-    'If',
-    'WhileStat',
-    'DoStat',
-    'For',
-    'RepeatStat',
-    'FuncStat',
-    'LocalStat',
-    'LabelStat',
-    'BreakStat',
-    'GoToStat',
-    'ExprStat',
-  }, function(Stat, SubStat)
-    return Stat + V(SubStat)
-  end, P(false)),
+  Stat = Ms({
+    V('If'),
+    V('WhileStat'),
+    V('DoStat'),
+    V('For'),
+    V('RepeatStat'),
+    V('FuncStat'),
+    V('LocalStat'),
+    V('LabelStat'),
+    V('BreakStat'),
+    V('GoToStat'),
+    V('ExprStat'),
+  }),
   StatList = (symb(';') + V('Stat')) ^ 0,
 
   --
@@ -198,32 +196,30 @@ return P({
 
   WordChar = alnum + P('_'),
 
-  Keyword = _.reduce({
-    'and',
-    'break',
-    'do',
-    'else',
-    'elseif',
-    'end',
-    'false',
-    'for',
-    'function',
-    'goto',
-    'if',
-    'in',
-    'local',
-    'nil',
-    'not',
-    'or',
-    'repeat',
-    'return',
-    'then',
-    'true',
-    'until',
-    'while',
-  }, function(keywords, keyword)
-    return keywords + W(keyword)
-  end, P(false)),
+  Keyword = Ms({
+    W('and'),
+    W('break'),
+    W('do'),
+    W('else'),
+    W('elseif'),
+    W('end'),
+    W('false'),
+    W('for'),
+    W('function'),
+    W('goto'),
+    W('if'),
+    W('in'),
+    W('local'),
+    W('nil'),
+    W('not'),
+    W('or'),
+    W('repeat'),
+    W('return'),
+    W('then'),
+    W('true'),
+    W('until'),
+    W('while'),
+  }),
 
   Identifier = -V('Keyword') * C((alpha + P('_')) * V('WordChar') ^ 0),
 
@@ -231,6 +227,18 @@ return P({
   Id = taggedCap('Id', token(V('Name'), 'Name')),
   Name = -V('Keyword') * C(V('Identifier')) * -V('WordChar'),
   NameList = sepby1(V('Id'), symb(','), 'NameList'),
+
+  --
+  -- Numbers
+  --
+
+  Hex = (P('0x') + P('0X')) * xdigit ^ 1,
+  Exponent = S('eE') * S('+-') ^ -1 * digit ^ 1,
+  Float = (((digit ^ 1 * P('.') * digit ^ 0) + (P('.') * digit ^ 1)) * V('Exponent') ^ -1) + (digit ^ 1 * V('Exponent')),
+  Int = digit ^ 1,
+  Number = C(V('Hex') + V('Float') + V('Int')) / function(n)
+    return tonumber(n)
+  end,
 
   --
   -- Strings
@@ -276,6 +284,21 @@ return P({
   end),
 
   --
+  -- Tables
+  --
+
+  Field = Ms({
+    W('[') * V('Expr') * W(']') * W('=') * V('Expr'),
+    V('Identifier') * W('=') * V('Expr'),
+    V('Expr'),
+  }),
+
+  Table = T('Table', W('{') * L(V('Field'), W(',') + W(';')) * W('}')),
+  TableNumberIndex = W('[') * V('Expr') * W(']'),
+  TableStringIndex = W('.') * V('Identifier'),
+  TableMethodIndex = W(':') * V('Identifier'),
+
+  --
   -- Logic Flow
   --
 
@@ -301,10 +324,7 @@ return P({
     W('while') * V('Expr') * W('do') * V('Block') * W('end')
   ),
 
-  RepeatStat = T(
-    'Repeat',
-    W('repeat') * V('Block') * W('until') * V('Expr')
-  ),
+  RepeatStat = T('Repeat', W('repeat') * V('Block') * W('until') * V('Expr')),
 
   --
   -- Functions
@@ -319,13 +339,19 @@ return P({
     V('Id') * (symb('.') * taggedCap('String', token(V('Name'), 'Name'))) ^ 0,
     function(t1, t2)
       if t2 then
-        return { tag = 'Index', pos = t1.pos, [1] = t1, [2] = t2 }
+        return { tag = 'Index', position = t1.position, [1] = t1, [2] = t2 }
       end
       return t1
     end
   ) * (symb(':') * taggedCap('String', token(V('Name'), 'Name'))) ^ -1 / function(t1, t2)
     if t2 then
-      return { tag = 'Index', pos = t1.pos, is_method = true, [1] = t1, [2] = t2 }
+      return {
+        tag = 'Index',
+        position = t1.position,
+        is_method = true,
+        [1] = t1,
+        [2] = t2,
+      }
     end
     return t1
   end,
@@ -358,26 +384,29 @@ return P({
   OptArgs = T('OptArgs', L(V('OptArg'))),
   VarArgs = T('VarArgs', W('...') * V('Identifier') ^ 0),
 
-  Parameters = T(
-    'Parameters',
-    _.reduce({
-      Lj({ V('Args'), V('OptArgs'), V('VarArgs') }),
-      Lj({ V('Args'), V('OptArgs') }),
-      Lj({ V('Args'), V('VarArgs') }),
-      Lj({ V('OptArgs'), V('VarArgs') }),
-      V('Args'),
-      V('OptArgs'),
-      V('VarArgs'),
-      P(true),
-    }, function(pattern, subpattern)
-      return pattern + W('(') * subpattern * W(')')
-    end, P(false))
-  ),
+  Parameters = M({
+    Lj({ V('Args'), V('OptArgs'), V('VarArgs') }),
+    Lj({ V('Args'), V('OptArgs') }),
+    Lj({ V('Args'), V('VarArgs') }),
+    Lj({ V('OptArgs'), V('VarArgs') }),
+    V('Args'),
+    V('OptArgs'),
+    V('VarArgs'),
+    P(true),
+  }, function(pattern, Parameters)
+    return Parameters + W('(') * pattern * W(')')
+  end),
 
   AnonymousFunction = W('function') * V('Parameters') * V('Block') * W('end'),
   FatLambda = T('FatLambda', V('Parameters') * W('=>') * V('Expr')),
   SkinnyLambda = T('SkinnyLambda', V('Parameters') * W('->') * V('Expr')),
   FunctionExpression = V('AnonymousFunction') + V('SkinnyLambda') + V('FatLambda'),
+
+  CallParameters = Ms({
+    symb('(') * L(V('Expression')) * symb(')'),
+    V('Constructor'),
+    V('String'),
+  }),
 
   --
   -- Operations
@@ -441,13 +470,13 @@ return P({
     function(t1, t2)
       if t2 then
         if t2.tag == 'Call' or t2.tag == 'Invoke' then
-          local t = { tag = t2.tag, pos = t1.pos, [1] = t1 }
+          local t = { tag = t2.tag, position = t1.position, [1] = t1 }
           for k, v in ipairs(t2) do
             table.insert(t, v)
           end
           return t
         else
-          return { tag = 'Index', pos = t1.pos, [1] = t1, [2] = t2[1] }
+          return { tag = 'Index', position = t1.position, [1] = t1, [2] = t2[1] }
         end
       end
       return t1
@@ -470,8 +499,8 @@ return P({
         end
       end
       vl.tag = 'VarList'
-      vl.pos = vl[1].pos
-      return true, { tag = 'Set', pos = vl.pos, [1] = vl, [2] = el }
+      vl.position = vl[1].position
+      return true, { tag = 'Set', position = vl.position, [1] = vl, [2] = el }
     end) * V('Assignment'))) + (V('SuffixedExp') * (Cc(function(s)
       if s.tag == 'Call' or s.tag == 'Invoke' then
         return true, s
@@ -484,13 +513,34 @@ return P({
     end
   ),
 
+  CallExpression = V('PrimaryExp') + Ms({
+    V('TableNumberIndex'),
+    V('TableStringIndex'),
+    V('TableNumberIndex') * V('CallParameters'),
+    V('CallParameters'),
+  }),
+
+  Value = Ms({
+    W('nil'),
+    W('true'),
+    W('false'),
+    V('Number'),
+    V('String'),
+    V('Constructor'),
+    W('...'),
+    V('FunctionDef'),
+    V('SuffixedExp'),
+  }),
+
   --
   -- Other
   --
 
-  Comment = P('--') * V('LongString') / function()
+  ShortComment = P('--') * (P(1) - P('\n')) ^ 0,
+  LongComment = P('--') * V('LongString') / function()
     return
-  end + P('--') * (P(1) - P('\n')) ^ 0,
+  end,
+  Comment = V('LongComment') + V('ShortComment'),
   Skip = (space + V('Comment')) ^ 0,
 
   --
@@ -526,14 +576,7 @@ return P({
       * symb(';') ^ -1
   ),
   Assignment = ((symb(',') * V('SuffixedExp')) ^ 1) ^ -1 * symb('=') * V('ExpList'),
-  -- lexer
-  Hex = (P('0x') + P('0X')) * xdigit ^ 1,
-  Expo = S('eE') * S('+-') ^ -1 * digit ^ 1,
-  Float = (((digit ^ 1 * P('.') * digit ^ 0) + (P('.') * digit ^ 1)) * V('Expo') ^ -1) + (digit ^ 1 * V('Expo')),
-  Int = digit ^ 1,
-  Number = C(V('Hex') + V('Float') + V('Int')) / function(n)
-    return tonumber(n)
-  end,
+
   -- for error reporting
   OneWord = V('Name') + V('Number') + V('String') + V('Keyword') + P('...') + P(1),
 })
