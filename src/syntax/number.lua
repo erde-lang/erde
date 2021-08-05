@@ -4,7 +4,7 @@ return {
   grammar = {
     Hex = (P('0x') + P('0X')) * xdigit ^ 1,
     Exponent = S('eE') * S('+-') ^ -1 * digit ^ 1,
-    Float = Ms({
+    Decimal = Ms({
       ((digit ^ 1 * P('.') * digit ^ 0) + (P('.') * digit ^ 1)) * V('Exponent') ^ -1,
       digit ^ 1 * V('Exponent'),
     }),

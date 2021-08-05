@@ -9,7 +9,10 @@ local env = {}
 setmetatable(env, { __index = _G })
 
 for k, v in pairs(lpeg) do
-  env[k] = v
+  -- Do not override globals! For examples, lpeg.print exists...
+  if _G[k] == nil then
+    env[k] = v
+  end
 end
 
 -- -----------------------------------------------------------------------------

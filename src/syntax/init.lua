@@ -1,3 +1,4 @@
+require('env')()
 local number = require('syntax.number')
 
 -- -----------------------------------------------------------------------------
@@ -24,43 +25,46 @@ local grammar = P(merge({
   number.grammar,
   {
     V('Lua'),
-    Lua = V('Shebang') ^ -1 * V('Skip') * V('Chunk') * -1 + report_error(),
-    Shebang = P('#') * (P(1) - P('\n')) ^ 0 * P('\n'),
-    Chunk = V('Block'),
+    Lua = V('Number'),
   },
 }))
+
+function parse(subject)
+  lpeg.setmaxstack(1000)
+
+  local cap = {}
+  local ast = grammar:match(subject, nil, cap)
+
+  return ast, cap
+end
 
 -- -----------------------------------------------------------------------------
 -- Compiler
 -- -----------------------------------------------------------------------------
 
 local compiler = merge({
-  number.grammar,
+  number.compiler,
 })
+
+function compile(ast)
+  local compiled = ''
+
+  for i, v in ipairs(ast) do
+    compiled = compiled .. compile(v)
+  end
+
+  if type(compiler[ast.tag]) == 'function' then
+    compiled = compiled .. compiler[ast.tag](ast)
+  end
+
+  return compiled
+end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
 return {
-  parse = function(subject)
-    lpeg.setmaxstack(1000)
-
-    local cap = {}
-    local ast = grammar:match(subject, nil, cap)
-
-    return ast, cap
-  end,
-
-  compile = function(ast)
-    local compiled = ''
-
-    for k, v in ast do
-      if type(compiler[v.tag]) == 'function' then
-        compiled = compiled .. compiler[v.tag](v)
-      end
-    end
-
-    return compiled
-  end,
+  parse = parse,
+  compile = compile,
 }
