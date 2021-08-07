@@ -1,4 +1,4 @@
-# name
+# Kale
 
 ## Syntax
 
@@ -8,6 +8,36 @@
 local x = 1
 const y = {}
 ```
+
+### Logic flow
+
+#### If else
+
+Similar to go, but uses elseif like lua:
+
+```
+if n > 0 {
+
+} elseif n < 0 {
+
+} else {
+
+}
+```
+
+#### For loop
+
+There is no for loop. Instead, use Array constructors + macros:
+
+```
+[]{4}::Ipairs () => {
+
+}
+```
+
+#### While Loop
+
+TODO
 
 ### Tables
 
@@ -147,3 +177,22 @@ const x = [0]{2}
 // { {}, {}, {} }
 const x = [{}]{3}
 ```
+
+#### Macros
+
+- Pairs
+- IPairs
+- KPairs
+- Map
+- IMap
+- KMap
+- Filter
+- IFilter
+- KFilter
+- Reduce
+- IReduce
+- KReduce
+
+## Conventions
+
+- All functions / macros are UpperCamelCase

@@ -1,0 +1,12 @@
+t[3, 5]::Iter () => {
+
+}
+
+const Yell = (x, y = 4, ...rest) => {
+  []::Loop(true, () => {
+    print "infinite loop"
+  })
+
+  Regex(/^[0-9]+$/):Test "hi"
+  DoBlah(x, y)
+}
