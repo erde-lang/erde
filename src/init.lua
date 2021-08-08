@@ -1,28 +1,12 @@
-local grammar = require('grammar')
-local syntax = require('syntax')
-
--- -----------------------------------------------------------------------------
--- Parse
--- -----------------------------------------------------------------------------
-
-function parse(subject)
-  lpeg.setmaxstack(1000)
-
-  local cap = {}
-  local ast = grammar:match(subject, nil, cap)
-
-  return ast, cap
-end
-
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-local compiler = merge({
-    Number = function(v)
-      return v.value
-    end,
-})
+local compiler = {
+  Number = function(v)
+    return v.value
+  end,
+}
 
 function compile(ast)
   local compiled = ''
@@ -43,6 +27,6 @@ end
 -- -----------------------------------------------------------------------------
 
 return {
-  parse = parse,
+  parse = require('grammar'),
   compile = compile,
 }

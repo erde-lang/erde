@@ -6,6 +6,8 @@
 
 ```
 local x = 1
+
+// maybe?
 const y = {}
 ```
 
