@@ -1,5 +1,6 @@
 local inspect = require('inspect')
 local lpeg = require('lpeg')
+local _ = require('utils.ldash')
 lpeg.locale(lpeg)
 
 -- -----------------------------------------------------------------------------
@@ -62,25 +63,15 @@ function Join(patterns, separator)
   return joined
 end
 
-function Reduce(patterns, fn, value)
-  local result = value or P(false)
-
-  for i, pattern in ipairs(patterns) do
-    result = fn(pattern, value)
-  end
-
-  return result
-end
-
 function Sum(patterns)
-  return Reduce(patterns, function(pattern, sum)
+  return _.Reduce(patterns, function(sum, pattern)
     return sum + pattern
   end, P(false))
 end
 
 function Flag(pattern)
   return C(pattern) / function(capture)
-    return capture:len() > 0
+    return #capture > 0
   end
 end
 
@@ -88,6 +79,16 @@ function Mark(pattern)
   local position = Cg(Cp(), 'position')
   local value = Cg(pattern, 'capture')
   return Ct(position * value)
+end
+
+function Demand(pattern)
+  return pattern + Cc('__KALE_ERROR__') / function(capture)
+    if capture == '__KALE_ERROR__' then
+      error('test')
+    else
+      return capture
+    end
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -99,15 +100,14 @@ local grammar = P({
   Lua = V('Block'),
 
   Block = V('Statement') ^ 0 / function(...)
-    local compiled = ''
-
-    for i, v in ipairs({ ... }) do
-      if v.compiled then
-        compiled = compiled .. ' ' .. v.compiled
-      end
-    end
-
-    return { compiled = compiled }
+    return {
+      compiled = _.Join(
+        _.Map({ ... }, function(v)
+          return v.compiled
+        end),
+        ' '
+      ),
+    }
   end,
 
   Statement = Pad(Sum({
@@ -128,14 +128,20 @@ local grammar = P({
   })),
 
   Id = Mark(-V('Keyword') * (alpha + P('_')) * (alnum + P('_') ^ 0)),
-  Expr = Mark(V('Number')),
 
-  Declaration = Flag(Pad('local') ^ -1) * V('Id') * (Pad('=') * V('Expr')) ^ -1 / function(isLocal, id, expr)
-    if isLocal then
-      return { compiled = ([[local %s = %s]]):format(id.capture, expr.capture) }
-    else
-      return { compiled = ([[%s = %s]]):format(id.capture, expr.capture) }
-    end
+  Expr = Mark(Sum({
+    V('Number'),
+    V('Id'),
+  })),
+
+  Declaration = Flag(Pad('local') ^ -1) * V('Id') * (Pad('=') * Demand(V('Expr')) ^ -1) / function(isLocal, id, expr)
+    return {
+      compiled = ('%s%s%s'):format(
+        isLocal and 'local ' or '',
+        id.capture,
+        expr and (' = %s'):format(expr.capture) or ''
+      ),
+    }
   end,
 
   Literal = Sum({
@@ -150,41 +156,28 @@ local grammar = P({
   --
 
   Exponent = S('eE') * S('+-') ^ -1 * digit ^ 1,
-  Decimal = (digit ^ 0 + P(true)) * P('.') * digit ^ 1,
-  Hex = (P('0x') + P('0X')) * xdigit ^ 1,
   Float = Sum({
-    V('Decimal') * V('Exponent') ^ -1,
+    (digit ^ 0 + P(true)) * P('.') * digit ^ 1 * V('Exponent') ^ -1,
     digit ^ 1 * V('Exponent'),
   }),
+
   Int = digit ^ 1,
+  Hex = (P('0x') + P('0X')) * xdigit ^ 1,
+
   Number = V('Hex') + V('Float') + V('Int'),
 
   --
   -- Strings
   --
-  -- TODO: LongString magic docs
-  -- TODO: rename LongStringId?
-  -- TODO: doc / workaraound string escaped char fixing?
-  --
-  -- http://www.inf.puc-rio.br/~roberto/lpeg
-  -- Example: Lua's long strings
-  --
 
   EscapedChar = P('\\') * P(1),
 
-  SingleQuoteString = P("'") * C((V('EscapedChar') + (P(1) - P("'"))) ^ 0) * P("'"),
-  DoubleQuoteString = P('"') * C((V('EscapedChar') + (P(1) - P('"'))) ^ 0) * P('"'),
+  SingleQuoteString = P("'") * (V('EscapedChar') + (P(1) - P("'"))) ^ 0 * P("'"),
+  DoubleQuoteString = P('"') * (V('EscapedChar') + (P(1) - P('"'))) ^ 0 * P('"'),
   ShortString = V('SingleQuoteString') + V('DoubleQuoteString'),
 
-  LongStringStart = '[' * Cg(P('=') ^ 0, 'LongStringId') * '[',
-  LongStringEnd = ']' * P('=') ^ 0 * ']',
-  LongStringIdCheck = Cmt(
-    V('LongStringEnd') * Cb('LongStringId'),
-    function(s, i, a, b)
-      return a == b
-    end
-  ),
-  LongString = V('LongStringStart') * C((P(1) - V('LongStringEnd')) ^ 0) * V('LongStringEnd'),
+  Interpolation = P('{') * V('Space') * V('Expr') * V('Space') * P('}'),
+  LongString = '`' * (V('EscapedChar') + V('Interpolation') + (P(1) - P('`'))) ^ 0 * '`',
 
   String = V('LongString') + (V('ShortString') / function(s)
     return s

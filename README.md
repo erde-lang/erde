@@ -2,6 +2,25 @@
 
 ## Syntax
 
+### Strings
+
+Similar to JS
+
+```
+local x = `
+  this is a
+  multiline
+  string
+`
+
+// interpolation, but without '$'
+local greeting = "hello"
+local y = `{greeting} world!`
+
+// Can use table length operator:
+print(#'this is a string')
+```
+
 ### Variables
 
 ```
@@ -73,6 +92,23 @@ const { hello, cake } = t
 const [a1, a2], { hello, cake } = t
 ```
 
+#### Casting
+
+Can cast to ipairs or kpairs:
+
+```
+const t = {
+  hello: "world",
+  123,
+}
+
+// { 123 }
+const tarray = t[]
+
+// { hello: "world" }
+const tmap = t{}
+```
+
 ### Functions
 
 #### Declaration
@@ -98,27 +134,6 @@ const MyFunction = () => "hello world"
 
 // prints "hello world"
 print(MyFunction())
-```
-
-#### Optional Parentheses
-
-Parentheses are optional if there is only 1 parameter. This holds for both
-declaration AND invocation:
-
-```
-const MyFunction = x => 2 * x
-
-print(MyFunction 2)
-```
-
-Exception: Single parameter in declaration is either optional or variadic.
-
-```
-// bad: no optional
-const MyFunction = x = 2 => 2 * x
-
-// bad: no variadic
-const MyFunction = ...x => 2 * x
 ```
 
 #### Optional Params
@@ -194,6 +209,21 @@ const x = [{}]{3}
 - Reduce
 - IReduce
 - KReduce
+- Meta
+
+```
+const t = {
+  key: "value",
+  456,
+}
+
+const str = t[]::Join " "
+
+t::[]Pairs(() => {
+
+})
+  ::
+```
 
 ## Conventions
 
