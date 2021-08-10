@@ -109,15 +109,21 @@ end
 
 function Subgrammar(patterns)
   return _.map(patterns, function(pattern, rule)
-    return pattern / function(...)
-      local node = _.merge({
-        { rule = rule },
-        _.filter({ ... }, function(capture)
-          return capture ~= nil
-        end),
-      })
-      return #node > 0 and node or nil
-    end
+    return Product({
+      Cmt(P(true), function(subject, position)
+        return true, { position = position }
+      end) * pattern / function(position, ...)
+        local node = _.merge({
+          { rule = rule },
+          position,
+          _.filter({ ... }, function(capture)
+            return capture ~= nil
+          end),
+        })
+        print(inspect(node))
+        return #node > 0 and node or nil
+      end,
+    })
   end)
 end
 
@@ -176,7 +182,6 @@ local atoms = Subgrammar({
     P("'") * (V('EscapedChar') + (P(1) - P("'"))) ^ 0 * P("'"), -- single quote
     P('"') * (V('EscapedChar') + (P(1) - P('"'))) ^ 0 * P('"'), -- double quote
   }) / function(s)
-    print(inspect(s))
     return s
     -- return s
     --   :gsub('\\a', '\a')
@@ -224,10 +229,15 @@ local molecules = Subgrammar({
 -- -----------------------------------------------------------------------------
 
 local organisms = Subgrammar({
+  Kale = V('Block'),
+  Block = V('Statement') ^ 0,
+  Statement = Pad(Sum({
+    V('Declaration'),
+  })),
   Declaration = Product({
     Flag(Pad('local') ^ -1),
-    Mark(V('Id')),
-    Pad('=') * Demand(Mark(V('Expr'))) ^ -1,
+    V('Id'),
+    Pad('=') * Demand(V('Expr')) ^ -1,
   }),
 })
 
@@ -236,17 +246,10 @@ local organisms = Subgrammar({
 -- -----------------------------------------------------------------------------
 
 local grammar = P(_.merge({
+  { V('Kale') },
   atoms,
   molecules,
   organisms,
-  {
-    V('Lua'),
-    Lua = V('Block'),
-    Block = V('Statement') ^ 0,
-    Statement = Pad(Sum({
-      V('Declaration'),
-    })),
-  },
 }))
 
 -- -----------------------------------------------------------------------------
