@@ -32,6 +32,7 @@ local state = {}
 function state.reset()
   state.line = 0
   state.column = 0
+  state.colstart = 0
 end
 
 function state.newline()
@@ -103,10 +104,6 @@ end
 -- Parse Helpers
 -- -----------------------------------------------------------------------------
 
-function Nil()
-  return nil
-end
-
 function Subgrammar(patterns)
   return _.map(patterns, function(pattern, rule)
     return Product({
@@ -120,7 +117,7 @@ function Subgrammar(patterns)
             return capture ~= nil
           end),
         })
-        print(inspect(node))
+
         return #node > 0 and node or nil
       end,
     })
@@ -147,7 +144,7 @@ local atoms = Subgrammar({
     P('return'),
   })),
 
-  Id = -V('Keyword') * (alpha + P('_')) * (alnum + P('_') ^ 0),
+  Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_') ^ 0)),
 
   --
   -- Number
@@ -155,14 +152,14 @@ local atoms = Subgrammar({
 
   Integer = digit ^ 1,
   Exponent = S('eE') * S('+-') ^ -1 * V('Integer'),
-  Number = Sum({
+  Number = C(Sum({
     Sum({ -- float
       digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
       V('Integer') * V('Exponent'),
     }),
     (P('0x') + P('0X')) * xdigit ^ 1, -- hex
     V('Integer'),
-  }),
+  })),
 
   --
   -- Strings
@@ -202,7 +199,7 @@ local atoms = Subgrammar({
   -- Misc
   --
 
-  Space = (S('\n') / state.newline + space) ^ 0 / Nil,
+  Space = (P('\n') / state.newline + space) ^ 0,
 })
 
 -- -----------------------------------------------------------------------------
@@ -235,7 +232,7 @@ local organisms = Subgrammar({
     V('Declaration'),
   })),
   Declaration = Product({
-    Flag(Pad('local') ^ -1),
+    C(Pad('local') ^ -1),
     V('Id'),
     Pad('=') * Demand(V('Expr')) ^ -1,
   }),

@@ -1,10 +1,30 @@
+local inspect = require('inspect')
 local _ = require('utils.underscore')
+
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+function isnode(node)
+  return type(node) == 'table' and type(node.rule) == 'string'
+end
+
+function echo(value)
+  return value
+end
 
 -- -----------------------------------------------------------------------------
 -- Atoms
 -- -----------------------------------------------------------------------------
 
 local atoms = {
+  Id = echo,
+  Number = echo,
+  String = echo,
+
+  Keyword = function(node)
+  end,
+
   Interpolation = function(node)
   end,
 
@@ -16,22 +36,26 @@ local atoms = {
 -- Molecules
 -- -----------------------------------------------------------------------------
 
-local molecules = {}
+local molecules = {
+  Expr = echo,
+}
 
 -- -----------------------------------------------------------------------------
 -- Organisms
 -- -----------------------------------------------------------------------------
 
 local organisms = {
+  Kale = echo,
+  Block = function(...)
+    return _.join({...}, '\n')
+  end,
+  Statement = echo,
   Declaration = function(isLocal, id, expr)
-    return {
-      compiled = ('%s%s%s'):format(
-        isLocal and 'local ' or '',
-        id.capture,
-        expr and (' = %s'):format(expr.capture) or ''
-      ),
-      pretty = '',
-    }
+    return ('%s%s%s'):format(
+      #isLocal > 0 and 'local ' or '',
+      id,
+      expr and (' = %s'):format(expr) or ''
+    )
   end,
 }
 
@@ -46,9 +70,15 @@ local compiler = _.merge({
 })
 
 local function compile(node)
-  return type(compiler[node.rule]) ~= 'function' and '' or compiler[node.rule](unpack(_.map(node, function(subnode)
-    return compile(subnode)
-  end, ipairs)))
+  if not isnode(node) then
+    return subnode
+  elseif type(compiler[node.rule]) ~= 'function' then
+    error('No compiler for rule: ' .. node.rule)
+  else
+    return compiler[node.rule](unpack(_.map(node, function(subnode)
+      return isnode(subnode) and compile(subnode) or subnode
+    end, ipairs)))
+  end
 end
 
 -- -----------------------------------------------------------------------------
