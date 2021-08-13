@@ -51,9 +51,9 @@ if n > 0 {
 There is no for loop. Instead, use Array constructors + macros:
 
 ```
-[]{4}::Ipairs () => {
+[]{4}::IPairs(() => {
 
-}
+})
 ```
 
 #### While Loop
@@ -136,11 +136,16 @@ const MyFunction = () => "hello world"
 print(MyFunction())
 ```
 
-#### Optional Params
+#### Optional Params / Varargs
 
 ```
 const MyFunction = (x = 4)
+const MyFunction = (x = 4, ...)
+const MyFunction = (x = 4, ...children, y)
 ```
+
+Optional params AND varargs may appear anywhere, but varargs may ONLY appear
+once. Varargs can have names
 
 ### Oddities
 

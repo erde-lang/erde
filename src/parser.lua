@@ -130,7 +130,7 @@ end
 
 local atoms = Subgrammar({
   --
-  -- Id
+  -- Core
   --
 
   Keyword = Pad(Sum({
@@ -165,12 +165,12 @@ local atoms = Subgrammar({
   -- Strings
   --
 
-  EscapedChar = P('\\') * P(1),
+  EscapedChar = C(P('\\') * P(1)),
 
-  Interpolation = P('{') * Demand(Pad(V('Expr'))) * P('}'),
+  Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
   LongString = Product({
     '`',
-    (V('EscapedChar') + V('Interpolation') + (P(1) - P('`'))) ^ 0,
+    (V('EscapedChar') + V('Interpolation') + C(P(1) - P('`'))) ^ 0,
     '`',
   }),
 
@@ -196,6 +196,33 @@ local atoms = Subgrammar({
   end,
 
   --
+  -- Functions
+  --
+
+  OptArg = V('Id') * Pad('=') * V('Expr'),
+  VarArgs = Pad('...') * V('Id') ^ 0,
+  Parameters = Product({
+    (V('OptArg') + V('Id')) ^ 0,
+    V('VarArgs') ^ -1,
+    (V('OptArg') + V('Id')) ^ 0,
+  }),
+
+  Function = Product({
+    V('Parameters') + V('Id'),
+    Pad('=>'),
+    V('Expr') + (Pad('{') + V('Block') + Pad('}')),
+  }),
+
+  --
+  -- Logic Flow
+  --
+
+  If = Pad('if') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
+  ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
+  Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
+  IfStatement = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
+
+  --
   -- Misc
   --
 
@@ -208,15 +235,15 @@ local atoms = Subgrammar({
 
 local molecules = Subgrammar({
   Literal = Sum({
-    Pad('true'),
-    Pad('false'),
+    Pad(C('true')),
+    Pad(C('false')),
     V('Number'),
     V('String'),
   }),
 
   Expr = Sum({
-    V('Number'),
-    V('String'),
+    V('Function'),
+    V('Literal'),
     V('Id'),
   }),
 })
@@ -230,6 +257,7 @@ local organisms = Subgrammar({
   Block = V('Statement') ^ 0,
   Statement = Pad(Sum({
     V('Declaration'),
+    V('IfStatement'),
   })),
   Declaration = Product({
     C(Pad('local') ^ -1),

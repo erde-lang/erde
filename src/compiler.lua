@@ -18,17 +18,74 @@ end
 -- -----------------------------------------------------------------------------
 
 local atoms = {
+  --
+  -- Core
+  --
+
   Id = echo,
+  Keyword = function()
+  end,
+  Bool = echo,
+
+  --
+  -- Number
+  --
+
   Number = echo,
+
+  --
+  -- Strings
+  --
+
+  EscapedChar = echo,
+
+  Interpolation = function(value)
+    return { value = ('tostring(%s)'):format(value) }
+  end,
+  -- TODO make sure the string doesn't use [==[. Should almost never happen but
+  -- need to account for it nonetheless
+  -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
+  LongString = function(...)
+    return ('[==[%s]==]'):format(_.join(
+      _.map({ ... }, function(v)
+        return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
+      end, ipairs),
+      ''
+    ))
+  end,
+
   String = echo,
 
-  Keyword = function(node)
+  --
+  -- Functions
+  --
+
+  OptArg = function(id, expr)
+    return { id = id, default = expr }
   end,
 
-  Interpolation = function(node)
+  VarArgs = function(id)
+    return { id = id, varargs = true }
   end,
 
-  LongString = function(node)
+  Parameters = function()
+  end,
+
+  --
+  -- Logic Flow
+  --
+
+  If = function(expr, block)
+    return ('if %s then %s'):format(expr, block)
+  end,
+  ElseIf = function(expr, block)
+    return ('elseif %s then %s'):format(expr, block)
+  end,
+  Else = function(block)
+    return ('else %s'):format(block)
+  end,
+  IfStatement = function(...)
+    return _.join({ ... }, ' ') .. ' end'
   end,
 }
 
@@ -37,6 +94,7 @@ local atoms = {
 -- -----------------------------------------------------------------------------
 
 local molecules = {
+  Literal = echo,
   Expr = echo,
 }
 
@@ -47,15 +105,15 @@ local molecules = {
 local organisms = {
   Kale = echo,
   Block = function(...)
-    return _.join({...}, '\n')
+    return _.join({ ... }, '\n')
   end,
   Statement = echo,
   Declaration = function(isLocal, id, expr)
-    return ('%s%s%s'):format(
+    return _.join({
       #isLocal > 0 and 'local ' or '',
       id,
-      expr and (' = %s'):format(expr) or ''
-    )
+      expr and (' = %s'):format(expr) or '',
+    }, '')
   end,
 }
 

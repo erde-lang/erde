@@ -5,4 +5,17 @@ local a4 = 0.2e10
 
 local b1 = "hello"
 local b2 = 'world'
-local b3 = `hello {b2} { wo382+ }`
+local b3 = `hello ]]`
+local b4 = `hello {b2} { wo382+ }`
+local b5 = `
+  multi
+  line
+`
+
+if true {
+  x = 4
+} elseif false {
+  x = 4
+} else {
+  x = 4
+}
