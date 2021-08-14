@@ -1,5 +1,5 @@
 local inspect = require('inspect')
-local _ = require('utils.underscore')
+local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -9,8 +9,8 @@ function isnode(node)
   return type(node) == 'table' and type(node.rule) == 'string'
 end
 
-function echo(value)
-  return value
+function echo(...)
+  return ...
 end
 
 -- -----------------------------------------------------------------------------
@@ -23,8 +23,7 @@ local atoms = {
   --
 
   Id = echo,
-  Keyword = function()
-  end,
+  Keyword = function() end,
   Bool = echo,
 
   --
@@ -42,16 +41,15 @@ local atoms = {
   Interpolation = function(value)
     return { value = ('tostring(%s)'):format(value) }
   end,
+
   -- TODO make sure the string doesn't use [==[. Should almost never happen but
   -- need to account for it nonetheless
   -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
-    return ('[==[%s]==]'):format(_.join(
-      _.map({ ... }, function(v)
-        return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
-      end, ipairs),
-      ''
-    ))
+    local interpolate = function(v)
+      return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
+    end
+    return ('[==[%s]==]'):format(supertable({ ... }):map(interpolate):join(''))
   end,
 
   String = echo,
@@ -60,15 +58,40 @@ local atoms = {
   -- Functions
   --
 
-  OptArg = function(id, expr)
-    return { id = id, default = expr }
-  end,
+  Arg = function(id) return { id = id } end,
+  OptArg = function(id, expr) return { id = id, default = expr } end,
+  VarArgs = function(id) return { id = id, varargs = true } end,
 
-  VarArgs = function(id)
-    return { id = id, varargs = true }
-  end,
+  ArgList = echo,
+  OptArgList = echo,
+  Parameters = function(...) return { ... } end,
 
-  Parameters = function()
+  FunctionBody = echo,
+  SkinnyFunction = function(...) return false, ... end,
+  FatFunction = function(...) return true, ... end,
+  Function = function(fat, params, body)
+    if body == nil then
+      return ('function(%s) %s end'):format(fat and 'self' or '', params)
+    end
+
+    local varargs = params[#params].varargs and table.remove(params)
+
+    local ids = supertable(
+      fat and { 'self' },
+      supertable(params):map(function(param) return param.id end),
+      varargs and { '...' }
+    ):join(',')
+
+    local prebody = supertable(params)
+      :filter(function(param) return param.default end)
+      :map(function(param)
+        return ('if %s == nil then %s = %s end')
+          :format(param.id, param.id, param.default)
+        end)
+      :push(varargs and ('local %s = {...}'):format(varargs.id) or nil)
+      :join(' ')
+
+    return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
   --
@@ -78,14 +101,17 @@ local atoms = {
   If = function(expr, block)
     return ('if %s then %s'):format(expr, block)
   end,
+
   ElseIf = function(expr, block)
     return ('elseif %s then %s'):format(expr, block)
   end,
+
   Else = function(block)
     return ('else %s'):format(block)
   end,
-  IfStatement = function(...)
-    return _.join({ ... }, ' ') .. ' end'
+
+  IfElse = function(...)
+    return supertable({ ... }, { 'end' }):join(' ')
   end,
 }
 
@@ -105,15 +131,15 @@ local molecules = {
 local organisms = {
   Kale = echo,
   Block = function(...)
-    return _.join({ ... }, '\n')
+    return supertable({ ... }):join('\n')
   end,
   Statement = echo,
   Declaration = function(isLocal, id, expr)
-    return _.join({
+    return supertable({
       #isLocal > 0 and 'local ' or '',
       id,
       expr and (' = %s'):format(expr) or '',
-    }, '')
+    }):join('')
   end,
 }
 
@@ -121,11 +147,7 @@ local organisms = {
 -- Compiler
 -- -----------------------------------------------------------------------------
 
-local compiler = _.merge({
-  atoms,
-  molecules,
-  organisms,
-})
+local compiler = supertable(atoms, molecules, organisms)
 
 local function compile(node)
   if not isnode(node) then
@@ -133,9 +155,12 @@ local function compile(node)
   elseif type(compiler[node.rule]) ~= 'function' then
     error('No compiler for rule: ' .. node.rule)
   else
-    return compiler[node.rule](unpack(_.map(node, function(subnode)
-      return isnode(subnode) and compile(subnode) or subnode
-    end, ipairs)))
+    return compiler[node.rule](unpack(node:ipairs():reduce(function(args, subnode)
+      return args:push(unpack(isnode(subnode)
+        and { compile(subnode) }
+        or { subnode }
+      ))
+    end, supertable())))
   end
 end
 
