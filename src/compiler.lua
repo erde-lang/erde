@@ -79,8 +79,8 @@ local atoms = {
   end,
 
   Function = function(params, body)
-    if #params == 0 then
-      return ('function() %s end'):format(body)
+    if body == nil then
+      return ('function() %s end'):format(params)
     end
 
     local varargs = params[#params].varargs and table.remove(params)
