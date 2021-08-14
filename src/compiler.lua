@@ -1,5 +1,5 @@
 local inspect = require('inspect')
-local _ = require('utils.underscore')
+local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -9,6 +9,7 @@ function isnode(node)
   return type(node) == 'table' and type(node.rule) == 'string'
 end
 
+-- TODO: FIXME
 function echo(...)
   return ...
 end
@@ -42,16 +43,15 @@ local atoms = {
   Interpolation = function(value)
     return { value = ('tostring(%s)'):format(value) }
   end,
+
   -- TODO make sure the string doesn't use [==[. Should almost never happen but
   -- need to account for it nonetheless
   -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
-    return ('[==[%s]==]'):format(_.join(
-      _.map({ ... }, function(v)
-        return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
-      end, ipairs),
-      ''
-    ))
+    local interpolate = function(value)
+      return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
+    end
+    return ('[==[%s]==]'):format(supertable(...):map(interpolate):join(''))
   end,
 
   String = echo,
@@ -85,6 +85,7 @@ local atoms = {
 
     local varargs = params[#params].varargs and table.remove(params)
 
+    -- TODO: supertables
     local ids = (function()
       local ids = params[1].id
       for i = 2, #params do
@@ -118,14 +119,17 @@ local atoms = {
   If = function(expr, block)
     return ('if %s then %s'):format(expr, block)
   end,
+
   ElseIf = function(expr, block)
     return ('elseif %s then %s'):format(expr, block)
   end,
+
   Else = function(block)
     return ('else %s'):format(block)
   end,
+
   IfStatement = function(...)
-    return _.join({ ... }, ' ') .. ' end'
+    return supertable(..., 'end'):join(' ')
   end,
 }
 
@@ -145,15 +149,15 @@ local molecules = {
 local organisms = {
   Kale = echo,
   Block = function(...)
-    return _.join({ ... }, '\n')
+    return supertable(...):join('\n')
   end,
   Statement = echo,
   Declaration = function(isLocal, id, expr)
-    return _.join({
+    return supertable(
       #isLocal > 0 and 'local ' or '',
       id,
-      expr and (' = %s'):format(expr) or '',
-    }, '')
+      expr and (' = %s'):format(expr) or ''
+    ):join('')
   end,
 }
 
@@ -161,11 +165,7 @@ local organisms = {
 -- Compiler
 -- -----------------------------------------------------------------------------
 
-local compiler = _.merge({
-  atoms,
-  molecules,
-  organisms,
-})
+local compiler = supertable(atoms, molecules, organisms)
 
 local function compile(node)
   if not isnode(node) then
@@ -173,9 +173,9 @@ local function compile(node)
   elseif type(compiler[node.rule]) ~= 'function' then
     error('No compiler for rule: ' .. node.rule)
   else
-    return compiler[node.rule](unpack(_.map(node, function(subnode)
+    return compiler[node.rule](node:ipairs():map(function(subnode)
       return isnode(subnode) and compile(subnode) or subnode
-    end, ipairs)))
+    end))
   end
 end
 

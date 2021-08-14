@@ -3,7 +3,7 @@ local lpeg = require('lpeg')
 lpeg.locale(lpeg)
 
 local compiler = require('compiler')
-local _ = require('utils.underscore')
+local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
 -- Environment
@@ -31,6 +31,8 @@ local state = {}
 
 function state.reset()
   state.line = 0
+
+  -- TODO: actually use this
   state.column = 0
   state.colstart = 0
 end
@@ -51,14 +53,14 @@ function List(pattern, separator)
   return pattern * (separator * pattern) ^ 0
 end
 
-function Sum(patterns)
-  return _.reduce(patterns, function(sum, pattern)
+function Sum(...)
+  return supertable(...):reduce(function(sum, pattern)
     return sum + pattern
   end, P(false))
 end
 
-function Product(patterns)
-  return _.reduce(patterns, function(product, pattern)
+function Product(...)
+  return supertable(...):reduce(function(product, pattern)
     return product * pattern
   end, P(true))
 end
@@ -66,6 +68,7 @@ end
 function Demand(pattern)
   return pattern + Cc('__KALE_ERROR__') / function(capture)
     if capture == '__KALE_ERROR__' then
+      -- TODO: actually do something
       error('test')
     else
       return capture
@@ -78,22 +81,18 @@ end
 -- -----------------------------------------------------------------------------
 
 function Subgrammar(patterns)
-  return _.map(patterns, function(pattern, rule)
-    return Product({
-      Cmt(P(true), function(subject, position)
-        return true, { position = position }
-      end) * pattern / function(position, ...)
-        local node = _.merge({
-          { rule = rule },
-          position,
-          _.filter({ ... }, function(capture)
-            return capture ~= nil
-          end),
-        })
-
-        return #node > 0 and node or nil
-      end,
-    })
+  return supertable(patterns):map(function(pattern)
+    return Cmt(P(true), function(_, position)
+      return true, position
+    end) * pattern / function(position, ...)
+      local node = supertable(
+        { rule = rule, position = position },
+        supertable(...):filter(function(value)
+          return value ~= nil
+        end)
+      )
+      return #node > 0 and node or nil
+    end
   end)
 end
 
@@ -106,7 +105,7 @@ local atoms = Subgrammar({
   -- Core
   --
 
-  Keyword = Pad(Sum({
+  Keyword = Pad(Sum(
     P('local'),
     P('if'),
     P('elseif'),
@@ -114,8 +113,8 @@ local atoms = Subgrammar({
     P('false'),
     P('true'),
     P('nil'),
-    P('return'),
-  })),
+    P('return')
+  )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
   Space = (P('\n') / state.newline + space) ^ 0,
@@ -126,14 +125,14 @@ local atoms = Subgrammar({
 
   Integer = digit ^ 1,
   Exponent = S('eE') * S('+-') ^ -1 * V('Integer'),
-  Number = C(Sum({
-    Sum({ -- float
+  Number = C(Sum(
+    Sum( -- float
       digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
-      V('Integer') * V('Exponent'),
-    }),
+      V('Integer') * V('Exponent')
+    ),
     (P('0x') + P('0X')) * xdigit ^ 1, -- hex
-    V('Integer'),
-  })),
+    V('Integer')
+  )),
 
   --
   -- Strings
@@ -142,17 +141,17 @@ local atoms = Subgrammar({
   EscapedChar = C(P('\\') * P(1)),
 
   Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
-  LongString = Product({
+  LongString = Product(
     '`',
     (V('EscapedChar') + V('Interpolation') + C(P(1) - P('`'))) ^ 0,
-    '`',
-  }),
+    '`'
+  ),
 
-  String = Sum({
+  String = Sum(
     V('LongString'),
     P("'") * (V('EscapedChar') + (P(1) - P("'"))) ^ 0 * P("'"), -- single quote
-    P('"') * (V('EscapedChar') + (P(1) - P('"'))) ^ 0 * P('"'), -- double quote
-  }) / function(s)
+    P('"') * (V('EscapedChar') + (P(1) - P('"'))) ^ 0 * P('"') -- double quote
+  ) / function(s)
     return s
     -- return s
     --   :gsub('\\a', '\a')
@@ -179,17 +178,17 @@ local atoms = Subgrammar({
   OptArgs = List(V('OptArg'), Pad(',')),
   VarArgs = Pad('...') * V('Id') ^ 0,
 
-  Parameters = Sum({
+  Parameters = Sum(
     V('Args') * (Pad(',') * V('OptArgs')) ^ -1 * (Pad(',') * V('VarArgs')) ^ -1,
     V('OptArgs') * (Pad(',') * V('VarArgs')) ^ -1,
-    V('VarArgs') ^ -1,
-  }),
+    V('VarArgs') ^ -1
+  ),
 
-  Function = Product({
+  Function = Product(
     Pad('(') * V('Parameters') * Pad(',') ^ -1 * Pad(')'),
     Pad('=>'),
-    V('Expr') + (Pad('{') * V('Block') * Pad('}')),
-  }),
+    V('Expr') + (Pad('{') * V('Block') * Pad('}'))
+  ),
 
   --
   -- Logic Flow
@@ -206,18 +205,8 @@ local atoms = Subgrammar({
 -- -----------------------------------------------------------------------------
 
 local molecules = Subgrammar({
-  Literal = Sum({
-    Pad(C('true')),
-    Pad(C('false')),
-    V('Number'),
-    V('String'),
-  }),
-
-  Expr = Sum({
-    V('Function'),
-    V('Literal'),
-    V('Id'),
-  }),
+  Literal = Sum(Pad(C('true')), Pad(C('false')), V('Number'), V('String')),
+  Expr = Sum(V('Function'), V('Literal'), V('Id')),
 })
 
 -- -----------------------------------------------------------------------------
@@ -227,33 +216,20 @@ local molecules = Subgrammar({
 local organisms = Subgrammar({
   Kale = V('Block'),
   Block = V('Statement') ^ 0,
+  Statement = Pad(Sum(V('Declaration'), V('IfStatement'))),
 
-  Statement = Pad(Sum({
-    V('Declaration'),
-    V('IfStatement'),
-  })),
-
-  Declaration = Product({
+  Declaration = Product(
     C(Pad('local') ^ -1),
     V('Id'),
-    (Pad('=') * Demand(V('Expr'))) ^ -1,
-  }),
+    (Pad('=') * Demand(V('Expr'))) ^ -1
+  ),
 })
-
--- -----------------------------------------------------------------------------
--- Grammar
--- -----------------------------------------------------------------------------
-
-local grammar = P(_.merge({
-  { V('Kale') },
-  atoms,
-  molecules,
-  organisms,
-}))
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
+
+local grammar = P(supertable({ V('Kale') }, atoms, molecules, organisms))
 
 return function(subject)
   lpeg.setmaxstack(1000)
