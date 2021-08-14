@@ -9,8 +9,8 @@ function isnode(node)
   return type(node) == 'table' and type(node.rule) == 'string'
 end
 
-function echo(value)
-  return value
+function echo(...)
+  return ...
 end
 
 -- -----------------------------------------------------------------------------
@@ -60,15 +60,55 @@ local atoms = {
   -- Functions
   --
 
+  Arg = function(id)
+    return { id = id }
+  end,
+  Args = echo,
+
   OptArg = function(id, expr)
     return { id = id, default = expr }
   end,
+  OptArgs = echo,
 
   VarArgs = function(id)
     return { id = id, varargs = true }
   end,
 
-  Parameters = function()
+  Parameters = function(...)
+    return { ... }
+  end,
+
+  Function = function(params, body)
+    if #params == 0 then
+      return ('function() %s end'):format(body)
+    end
+
+    local varargs = params[#params].varargs and table.remove(params)
+
+    local ids = (function()
+      local ids = params[1].id
+      for i = 2, #params do
+        ids = ids .. ',' .. params[i].id
+      end
+      return ids .. (varargs and ',...' or '')
+    end)()
+
+    local prebody = (function()
+      local prebody = varargs and ('local %s = {...}'):format(varargs.id) or ''
+      for i, param in ipairs(params) do
+        if param.default then
+          prebody = ('%s if %s == nil then %s = %s end'):format(
+            prebody,
+            param.id,
+            param.id,
+            param.default
+          )
+        end
+      end
+      return prebody
+    end)()
+
+    return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
   --

@@ -15,7 +15,11 @@ local b5 = `
 if true {
   x = 4
 } elseif false {
-  x = 4
+  x = 5
 } else {
-  x = 4
+  x = 10
+} 
+
+local hello = (x, y = 3) => {
+  local x = 4
 }

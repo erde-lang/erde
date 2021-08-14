@@ -48,22 +48,7 @@ function Pad(pattern)
 end
 
 function List(pattern, separator)
-  separator = separator or Pad(',')
   return pattern * (separator * pattern) ^ 0
-end
-
-function Join(patterns, separator)
-  separator = separator or Pad(',')
-
-  if #patterns == 0 then
-    return P(true)
-  end
-
-  local joined = patterns[1]
-  for i = 2, #patterns do
-    joined = joined * separator * patterns[i]
-  end
-  return joined
 end
 
 function Sum(patterns)
@@ -76,18 +61,6 @@ function Product(patterns)
   return _.reduce(patterns, function(product, pattern)
     return product * pattern
   end, P(true))
-end
-
-function Flag(pattern)
-  return C(pattern) / function(capture)
-    return #capture > 0
-  end
-end
-
-function Mark(pattern)
-  local position = Cg(Cp(), 'position')
-  local value = Cg(pattern, 'capture')
-  return Ct(position * value)
 end
 
 function Demand(pattern)
@@ -144,7 +117,8 @@ local atoms = Subgrammar({
     P('return'),
   })),
 
-  Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_') ^ 0)),
+  Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
+  Space = (P('\n') / state.newline + space) ^ 0,
 
   --
   -- Number
@@ -199,18 +173,22 @@ local atoms = Subgrammar({
   -- Functions
   --
 
+  Arg = V('Id'),
+  Args = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArg = V('Id') * Pad('=') * V('Expr'),
+  OptArgs = List(V('OptArg'), Pad(',')),
   VarArgs = Pad('...') * V('Id') ^ 0,
-  Parameters = Product({
-    (V('OptArg') + V('Id')) ^ 0,
+
+  Parameters = Sum({
+    V('Args') * (Pad(',') * V('OptArgs')) ^ -1 * (Pad(',') * V('VarArgs')) ^ -1,
+    V('OptArgs') * (Pad(',') * V('VarArgs')) ^ -1,
     V('VarArgs') ^ -1,
-    (V('OptArg') + V('Id')) ^ 0,
   }),
 
   Function = Product({
-    V('Parameters') + V('Id'),
+    Pad('(') * V('Parameters') * Pad(',') ^ -1 * Pad(')'),
     Pad('=>'),
-    V('Expr') + (Pad('{') + V('Block') + Pad('}')),
+    V('Expr') + (Pad('{') * V('Block') * Pad('}')),
   }),
 
   --
@@ -221,12 +199,6 @@ local atoms = Subgrammar({
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfStatement = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
-
-  --
-  -- Misc
-  --
-
-  Space = (P('\n') / state.newline + space) ^ 0,
 })
 
 -- -----------------------------------------------------------------------------
@@ -255,14 +227,16 @@ local molecules = Subgrammar({
 local organisms = Subgrammar({
   Kale = V('Block'),
   Block = V('Statement') ^ 0,
+
   Statement = Pad(Sum({
     V('Declaration'),
     V('IfStatement'),
   })),
+
   Declaration = Product({
     C(Pad('local') ^ -1),
     V('Id'),
-    Pad('=') * Demand(V('Expr')) ^ -1,
+    (Pad('=') * Demand(V('Expr'))) ^ -1,
   }),
 })
 
