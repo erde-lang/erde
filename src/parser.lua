@@ -15,7 +15,6 @@ local supertable = require('supertable')
 local env = setmetatable({}, { __index = _G })
 
 for k, v in pairs(lpeg) do
-  -- Do not override globals! For examples, lpeg.print exists...
   if _G[k] == nil then
     env[k] = v
   end
@@ -54,13 +53,13 @@ function List(pattern, separator)
 end
 
 function Sum(...)
-  return supertable(...):reduce(function(sum, pattern)
+  return supertable({ ... }):reduce(function(sum, pattern)
     return sum + pattern
   end, P(false))
 end
 
 function Product(...)
-  return supertable(...):reduce(function(product, pattern)
+  return supertable({ ... }):reduce(function(product, pattern)
     return product * pattern
   end, P(true))
 end
@@ -81,13 +80,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function Subgrammar(patterns)
-  return supertable(patterns):map(function(pattern)
+  return supertable(patterns):map(function(pattern, rule)
     return Cmt(P(true), function(_, position)
       return true, position
     end) * pattern / function(position, ...)
       local node = supertable(
         { rule = rule, position = position },
-        supertable(...):filter(function(value)
+        supertable({ ... }):filter(function(value)
           return value ~= nil
         end)
       )
@@ -216,6 +215,7 @@ local molecules = Subgrammar({
 local organisms = Subgrammar({
   Kale = V('Block'),
   Block = V('Statement') ^ 0,
+  -- Statement = Pad(Sum(V('Declaration'), V('IfStatement'))),
   Statement = Pad(Sum(V('Declaration'), V('IfStatement'))),
 
   Declaration = Product(

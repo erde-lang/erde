@@ -48,10 +48,10 @@ local atoms = {
   -- need to account for it nonetheless
   -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
-    local interpolate = function(value)
+    local interpolate = function(v)
       return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
     end
-    return ('[==[%s]==]'):format(supertable(...):map(interpolate):join(''))
+    return ('[==[%s]==]'):format(supertable({ ... }):map(interpolate):join(''))
   end,
 
   String = echo,
@@ -129,7 +129,7 @@ local atoms = {
   end,
 
   IfStatement = function(...)
-    return supertable(..., 'end'):join(' ')
+    return supertable({ ... }, { 'end' }):join(' ')
   end,
 }
 
@@ -149,15 +149,15 @@ local molecules = {
 local organisms = {
   Kale = echo,
   Block = function(...)
-    return supertable(...):join('\n')
+    return supertable({ ... }):join('\n')
   end,
   Statement = echo,
   Declaration = function(isLocal, id, expr)
-    return supertable(
+    return supertable({
       #isLocal > 0 and 'local ' or '',
       id,
-      expr and (' = %s'):format(expr) or ''
-    ):join('')
+      expr and (' = %s'):format(expr) or '',
+    }):join('')
   end,
 }
 
@@ -173,9 +173,9 @@ local function compile(node)
   elseif type(compiler[node.rule]) ~= 'function' then
     error('No compiler for rule: ' .. node.rule)
   else
-    return compiler[node.rule](node:ipairs():map(function(subnode)
+    return compiler[node.rule](unpack(node:ipairs():map(function(subnode)
       return isnode(subnode) and compile(subnode) or subnode
-    end))
+    end)))
   end
 end
 

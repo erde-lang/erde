@@ -1,3 +1,5 @@
+local inspect = require('inspect')
+
 -- -----------------------------------------------------------------------------
 -- Supertable
 -- -----------------------------------------------------------------------------
@@ -6,13 +8,9 @@ local supertable = {}
 
 function constructor(...)
   local t = {}
-  for _, value in ipairs({ ... }) do
-    if type(value) == 'table' then
-      for key, subvalue in pairs(value) do
-        t[type(key) == 'string' and key or #t + 1] = subvalue
-      end
-    else
-      table.insert(t, value)
+  for _, init in ipairs({ ... }) do
+    for key, value in pairs(init) do
+      t[type(key) == 'string' and key or #t + 1] = value
     end
   end
   return setmetatable(t, { __index = supertable })
