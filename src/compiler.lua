@@ -9,7 +9,6 @@ function isnode(node)
   return type(node) == 'table' and type(node.rule) == 'string'
 end
 
--- TODO: FIXME
 function echo(...)
   return ...
 end
@@ -24,8 +23,7 @@ local atoms = {
   --
 
   Id = echo,
-  Keyword = function()
-  end,
+  Keyword = function() end,
   Bool = echo,
 
   --
@@ -85,29 +83,18 @@ local atoms = {
 
     local varargs = params[#params].varargs and table.remove(params)
 
-    -- TODO: supertables
-    local ids = (function()
-      local ids = params[1].id
-      for i = 2, #params do
-        ids = ids .. ',' .. params[i].id
-      end
-      return ids .. (varargs and ',...' or '')
-    end)()
+    local ids = supertable(params, varargs and { '...' } or nil)
+      :map(function(param) return param.id end)
+      :join(',')
 
-    local prebody = (function()
-      local prebody = varargs and ('local %s = {...}'):format(varargs.id) or ''
-      for i, param in ipairs(params) do
-        if param.default then
-          prebody = ('%s if %s == nil then %s = %s end'):format(
-            prebody,
-            param.id,
-            param.id,
-            param.default
-          )
-        end
-      end
-      return prebody
-    end)()
+    local prebody = supertable(params)
+      :filter(function(param) return param.default end)
+      :map(function(param)
+        return ('if %s == nil then %s = %s end')
+          :format(param.id, param.id, param.default)
+        end)
+      :push(varargs and ('local %s = {...}'):format(varargs.id) or nil)
+      :join(' ')
 
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,

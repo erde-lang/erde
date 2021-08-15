@@ -29,14 +29,12 @@ setfenv(1, env)
 local state = {}
 
 function state.reset()
-  state.line = 0
-
-  -- TODO: actually use this
-  state.column = 0
+  state.line = 1
   state.colstart = 0
 end
 
-function state.newline()
+function state.newline(position)
+  state.colstart = position
   state.line = state.line + 1
 end
 
@@ -65,10 +63,12 @@ function Product(...)
 end
 
 function Demand(pattern)
-  return pattern + Cc('__KALE_ERROR__') / function(capture)
+  return pattern + Cc('__KALE_ERROR__') * Cp() / function(capture, position)
     if capture == '__KALE_ERROR__' then
-      -- TODO: actually do something
-      error('test')
+      error(('Line %s, Column %s: Error'):format(
+        state.line,
+        position - state.colstart
+      ))
     else
       return capture
     end
@@ -81,9 +81,7 @@ end
 
 function Subgrammar(patterns)
   return supertable(patterns):map(function(pattern, rule)
-    return Cmt(P(true), function(_, position)
-      return true, position
-    end) * pattern / function(position, ...)
+    return Cp() * pattern / function(position, ...)
       local node = supertable(
         { rule = rule, position = position },
         supertable({ ... }):filter(function(value)
@@ -116,7 +114,7 @@ local atoms = Subgrammar({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
-  Space = (P('\n') / state.newline + space) ^ 0,
+  Space = (P('\n') * (Cp() / state.newline) + space) ^ 0,
 
   --
   -- Number
@@ -233,9 +231,7 @@ local grammar = P(supertable({ V('Kale') }, atoms, molecules, organisms))
 
 return function(subject)
   lpeg.setmaxstack(1000)
-
   state.reset()
   local ast = grammar:match(subject, nil, {})
-
   return ast or {}, state
 end
