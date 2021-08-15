@@ -141,11 +141,8 @@ print(MyFunction())
 ```
 const MyFunction = (x = 4)
 const MyFunction = (x = 4, ...)
-const MyFunction = (x = 4, ...children, y)
+const MyFunction = (x = 4, ...children)
 ```
-
-Optional params AND varargs may appear anywhere, but varargs may ONLY appear
-once. Varargs can have names
 
 ### Oddities
 
@@ -227,7 +224,6 @@ const str = t[]::Join " "
 t::[]Pairs(() => {
 
 })
-  ::
 ```
 
 ## Conventions
