@@ -170,29 +170,30 @@ local atoms = Subgrammar({
   --
 
   Arg = V('Id'),
-  Args = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArg = V('Id') * Pad('=') * V('Expr'),
-  OptArgs = List(V('OptArg'), Pad(',')),
   VarArgs = Pad('...') * V('Id') ^ 0,
 
-  Parameters = Sum(
-    Product(
-      List(V('Arg') - V('OptArg'), Pad(',')),
-      (Pad(',') * List(V('OptArg'), Pad(','))) ^ -1,
-      (Pad(',') * V('VarArgs')) ^ -1
+  ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
+  OptArgList = List(V('OptArg'), Pad(',')),
+  Parameters = Product(
+    Pad('('),
+    Sum(
+      Product(
+        V('ArgList'),
+        (Pad(',') * V('OptArgList')) ^ -1,
+        (Pad(',') * V('VarArgs')) ^ -1
+      ),
+      V('OptArgList') * (Pad(',') * V('VarArgs')) ^ -1,
+      V('VarArgs') ^ -1
     ),
-    Product(
-      List(V('OptArg'), Pad(',')),
-      (Pad(',') * V('VarArgs')) ^ -1
-    ),
-    V('VarArgs') ^ -1
+    Pad(',') ^ -1,
+    Pad(')')
   ),
 
-  Function = Product(
-    Pad('(') * V('Parameters') * Pad(',') ^ -1 * Pad(')'),
-    Pad('=>'),
-    V('Expr') + (Pad('{') * V('Block') * Pad('}'))
-  ),
+  FunctionBody = V('Expr') + (Pad('{') * V('Block') * Pad('}')),
+  SkinnyFunction = V('Parameters') * Pad('->') * V('FunctionBody'),
+  FatFunction = V('Parameters') * Pad('=>') * V('FunctionBody'),
+  Function = V('SkinnyFunction') + V('FatFunction'),
 
   --
   -- Logic Flow
@@ -201,7 +202,7 @@ local atoms = Subgrammar({
   If = Pad('if') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
-  IfStatement = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
+  IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
 })
 
 -- -----------------------------------------------------------------------------
@@ -220,8 +221,7 @@ local molecules = Subgrammar({
 local organisms = Subgrammar({
   Kale = V('Block'),
   Block = V('Statement') ^ 0,
-  -- Statement = Pad(Sum(V('Declaration'), V('IfStatement'))),
-  Statement = Pad(Sum(V('Declaration'), V('IfStatement'))),
+  Statement = Pad(Sum(V('Declaration'), V('IfElse'))),
 
   Declaration = Product(
     C(Pad('local') ^ -1),

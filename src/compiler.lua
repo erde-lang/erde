@@ -58,34 +58,29 @@ local atoms = {
   -- Functions
   --
 
-  Arg = function(id)
-    return { id = id }
-  end,
-  Args = echo,
+  Arg = function(id) return { id = id } end,
+  OptArg = function(id, expr) return { id = id, default = expr } end,
+  VarArgs = function(id) return { id = id, varargs = true } end,
 
-  OptArg = function(id, expr)
-    return { id = id, default = expr }
-  end,
-  OptArgs = echo,
+  ArgList = echo,
+  OptArgList = echo,
+  Parameters = function(...) return { ... } end,
 
-  VarArgs = function(id)
-    return { id = id, varargs = true }
-  end,
-
-  Parameters = function(...)
-    return { ... }
-  end,
-
-  Function = function(params, body)
+  FunctionBody = echo,
+  SkinnyFunction = function(...) return false, ... end,
+  FatFunction = function(...) return true, ... end,
+  Function = function(fat, params, body)
     if body == nil then
-      return ('function() %s end'):format(params)
+      return ('function(%s) %s end'):format(fat and 'self' or '', params)
     end
 
     local varargs = params[#params].varargs and table.remove(params)
 
-    local ids = supertable(params, varargs and { '...' } or nil)
-      :map(function(param) return param.id end)
-      :join(',')
+    local ids = supertable(
+      fat and { 'self' },
+      supertable(params):map(function(param) return param.id end),
+      varargs and { '...' }
+    ):join(',')
 
     local prebody = supertable(params)
       :filter(function(param) return param.default end)
@@ -115,7 +110,7 @@ local atoms = {
     return ('else %s'):format(block)
   end,
 
-  IfStatement = function(...)
+  IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
 }
@@ -160,9 +155,12 @@ local function compile(node)
   elseif type(compiler[node.rule]) ~= 'function' then
     error('No compiler for rule: ' .. node.rule)
   else
-    return compiler[node.rule](unpack(node:ipairs():map(function(subnode)
-      return isnode(subnode) and compile(subnode) or subnode
-    end)))
+    return compiler[node.rule](unpack(node:ipairs():reduce(function(args, subnode)
+      return args:push(unpack(isnode(subnode)
+        and { compile(subnode) }
+        or { subnode }
+      ))
+    end, supertable())))
   end
 end
 

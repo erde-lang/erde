@@ -20,7 +20,7 @@ if true {
   x = 10
 } 
 
-local hello = () => {
+local hello = () -> {
   local x = 4
 }
 

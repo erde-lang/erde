@@ -9,8 +9,10 @@ local supertable = {}
 function constructor(...)
   local t = {}
   for _, init in ipairs({ ... }) do
-    for key, value in pairs(init) do
-      t[type(key) == 'string' and key or #t + 1] = value
+    if type(init) == 'table' then
+      for key, value in pairs(init) do
+        t[type(key) == 'string' and key or #t + 1] = value
+      end
     end
   end
   return setmetatable(t, { __index = supertable })
