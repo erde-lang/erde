@@ -176,8 +176,15 @@ local atoms = Subgrammar({
   VarArgs = Pad('...') * V('Id') ^ 0,
 
   Parameters = Sum(
-    V('Args') * (Pad(',') * V('OptArgs')) ^ -1 * (Pad(',') * V('VarArgs')) ^ -1,
-    V('OptArgs') * (Pad(',') * V('VarArgs')) ^ -1,
+    Product(
+      List(V('Arg') - V('OptArg'), Pad(',')),
+      (Pad(',') * List(V('OptArg'), Pad(','))) ^ -1,
+      (Pad(',') * V('VarArgs')) ^ -1
+    ),
+    Product(
+      List(V('OptArg'), Pad(',')),
+      (Pad(',') * V('VarArgs')) ^ -1
+    ),
     V('VarArgs') ^ -1
   ),
 
