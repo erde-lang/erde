@@ -55,6 +55,14 @@ local atoms = {
   String = echo,
 
   --
+  -- Table
+  --
+
+  TableStringField = function(expr) return ('[%s]'):format(expr) end,
+  TableField = function(key, value) return ('%s = %s'):format(key, value) end,
+  Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
+
+  --
   -- Functions
   --
 

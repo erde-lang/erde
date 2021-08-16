@@ -64,7 +64,7 @@ TODO
 
 #### Declaring
 
-Same as lua
+No semicolon delimiter, use ':' instead of '='.
 
 ```
 const t = {
@@ -73,6 +73,16 @@ const t = {
 
   31415,
   "test",
+}
+```
+
+Can use arbitrary strings as indexes:
+
+```
+const hello = 'hello'
+
+const t = {
+  `{hello}`: world
 }
 ```
 
@@ -113,7 +123,7 @@ const tmap = t{}
 
 #### Declaration
 
-All functions are arrow functions.
+All functions are arrow functions. Params MUST be wrapped in parentheses.
 
 ```
 const MyFunction = () => {
