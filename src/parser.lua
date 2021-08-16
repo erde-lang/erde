@@ -164,6 +164,19 @@ local atoms = Subgrammar({
     --   :gsub('\\[', '[')
     --   :gsub('\\]', ']')
   end,
+  
+  --
+  -- Table
+  --
+
+  TableStringField = V('String'),
+  TableField = (V('TableStringField') + V('Id')) * Pad(':') * V('Expr'),
+  Table = Product(
+    Pad('{'),
+    List(V('TableField') + V('Expr'), Pad(',')),
+    Pad(',') ^ -1,
+    Pad('}')
+  ),
 
   --
   -- Functions
@@ -211,7 +224,7 @@ local atoms = Subgrammar({
 
 local molecules = Subgrammar({
   Literal = Sum(Pad(C('true')), Pad(C('false')), V('Number'), V('String')),
-  Expr = Sum(V('Function'), V('Literal'), V('Id')),
+  Expr = Sum(V('Function'), V('Table'), V('Literal'), V('Id')),
 })
 
 -- -----------------------------------------------------------------------------

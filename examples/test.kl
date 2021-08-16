@@ -28,3 +28,7 @@ local hello = (x, y = 3, z = 2, ...test) => {
   local x = 4
 }
 
+local y = {
+  `{hello}`: true,
+  test: 'hi',
+}
