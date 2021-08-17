@@ -222,6 +222,7 @@ local atoms = Subgrammar({
   --
 
   Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
 })
 
 -- -----------------------------------------------------------------------------
@@ -240,6 +241,7 @@ local molecules = Subgrammar({
 
   Expr = Sum(
     V('Ternary'),
+    V('NullCoalescence'),
     V('Function'),
     V('Table'),
     V('Literal'),
