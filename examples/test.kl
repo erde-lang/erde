@@ -32,3 +32,9 @@ local y = {
   `{hello}`: true,
   test: 'hi',
 }
+
+local [a, b] = y
+local { a, b } = y
+
+local z = a ? 4
+local y = a ? b : c

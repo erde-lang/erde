@@ -216,6 +216,12 @@ local atoms = Subgrammar({
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
+
+  --
+  -- Operators
+  --
+
+  Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
 })
 
 -- -----------------------------------------------------------------------------
@@ -224,7 +230,21 @@ local atoms = Subgrammar({
 
 local molecules = Subgrammar({
   Literal = Sum(Pad(C('true')), Pad(C('false')), V('Number'), V('String')),
-  Expr = Sum(V('Function'), V('Table'), V('Literal'), V('Id')),
+
+  Condition = Sum(
+    V('Function'),
+    V('Table'),
+    V('Literal'),
+    V('Id')
+  ),
+
+  Expr = Sum(
+    V('Ternary'),
+    V('Function'),
+    V('Table'),
+    V('Literal'),
+    V('Id')
+  ),
 })
 
 -- -----------------------------------------------------------------------------
@@ -234,7 +254,30 @@ local molecules = Subgrammar({
 local organisms = Subgrammar({
   Kale = V('Block'),
   Block = V('Statement') ^ 0,
-  Statement = Pad(Sum(V('Declaration'), V('IfElse'))),
+  Statement = Pad(Sum(
+    V('ArrayDestructure'),
+    V('MapDestructure'),
+    V('Declaration'),
+    V('IfElse')
+  )),
+
+  ArrayDestructure = Product(
+    C(Pad('local') ^ -1),
+    Pad('['),
+    List(V('Id'), Pad(',')),
+    Pad(']'),
+    Pad('='),
+    Demand(V('Expr'))
+  ),
+
+  MapDestructure = Product(
+    C(Pad('local') ^ -1),
+    Pad('{'),
+    List(V('Id'), Pad(',')),
+    Pad('}'),
+    Pad('='),
+    Demand(V('Expr'))
+  ),
 
   Declaration = Product(
     C(Pad('local') ^ -1),

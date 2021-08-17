@@ -121,6 +121,18 @@ local atoms = {
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
+
+  --
+  -- Operators
+  --
+
+  Ternary = function(condition, iftrue, iffalse)
+    return ('(function if %s then return %s %s end)()'):format(
+      condition,
+      iftrue,
+      iffalse and ('else return %s'):format(iffalse) or ''
+    )
+  end,
 }
 
 -- -----------------------------------------------------------------------------
@@ -129,6 +141,7 @@ local atoms = {
 
 local molecules = {
   Literal = echo,
+  Condition = echo,
   Expr = echo,
 }
 
@@ -142,6 +155,33 @@ local organisms = {
     return supertable({ ... }):join('\n')
   end,
   Statement = echo,
+
+  ArrayDestructure = function(isLocal, ...)
+    local ids = supertable({ ... })
+    local _, expr = ids:pop()
+    return ids:map(function(id, index)
+      return ('%s%s = %s[%d]'):format(
+        #isLocal > 0 and 'local ' or '',
+        id,
+        expr,
+        index
+      )
+    end):join('\n')
+  end,
+
+  MapDestructure = function(isLocal, ...)
+    local ids = supertable({ ... })
+    local _, expr = ids:pop()
+    return ids:map(function(id)
+      return ('%s%s = %s.%s'):format(
+        #isLocal > 0 and 'local ' or '',
+        id,
+        expr,
+        id
+      )
+    end):join('\n')
+  end,
+
   Declaration = function(isLocal, id, expr)
     return supertable({
       #isLocal > 0 and 'local ' or '',

@@ -1,5 +1,14 @@
 # Kale
 
+# TODO
+
+- Ternary
+- Null coalescence
+- Optional chaining
+- 0 index tables
+- Macros
+- While loop?
+
 ## Syntax
 
 ### Strings
@@ -44,6 +53,11 @@ if n > 0 {
 } else {
 
 }
+
+// Maybe inline statements like go?
+if x = myfunc(); x > 0 {
+
+}
 ```
 
 #### For loop
@@ -61,6 +75,8 @@ There is no for loop. Instead, use Array constructors + macros:
 TODO
 
 ### Tables
+
+Tables are 0-indexed.
 
 #### Declaring
 
@@ -87,6 +103,10 @@ const t = {
 ```
 
 #### Destructuring
+
+For now, nested destructuring is not supported, but is strongly considered for
+the future. This can become pretty unreadable so want this to be community
+driven.
 
 ```
 const t = {...}
@@ -229,7 +249,7 @@ const t = {
   456,
 }
 
-const str = t[]::Join " "
+const str = t[]::Join(" ")
 
 t::[]Pairs(() => {
 
