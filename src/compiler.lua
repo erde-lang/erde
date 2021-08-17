@@ -127,11 +127,20 @@ local atoms = {
   --
 
   Ternary = function(condition, iftrue, iffalse)
-    return ('(function if %s then return %s %s end)()'):format(
+    return ('(function() if %s then return %s %s end)()'):format(
       condition,
       iftrue,
       iffalse and ('else return %s'):format(iffalse) or ''
     )
+  end,
+
+  NullCoalescence = function(default, backup)
+    return ([[
+      (function()
+        local __KALE_TMP__ = %s
+        if __KALE_TMP__ ~= nil then return __KALE_TMP__ else return %s end
+      )()
+    ]]):format(default, backup)
   end,
 }
 
