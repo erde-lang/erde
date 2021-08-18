@@ -13,6 +13,12 @@ function echo(...)
   return ...
 end
 
+function binop(op)
+  return function(...)
+    return table.concat({...}, op)
+  end
+end
+
 -- -----------------------------------------------------------------------------
 -- Atoms
 -- -----------------------------------------------------------------------------
@@ -101,7 +107,13 @@ local atoms = {
 
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
+}
 
+-- -----------------------------------------------------------------------------
+-- Molecules
+-- -----------------------------------------------------------------------------
+
+local molecules = {
   --
   -- Logic Flow
   --
@@ -127,8 +139,28 @@ local atoms = {
   end,
 
   --
+  -- Expressions
+  --
+
+  AtomExpr = echo,
+  MoleculeExpr = echo,
+  OrganismExpr = echo,
+  Expr = function(...) return table.concat({...}, '') end,
+
+  --
   -- Operators
   --
+
+  And = binop('and'),
+  Or = binop('or'),
+
+  Addition = binop('+'),
+  Subtraction = binop('-'),
+  Multiplication = binop('*'),
+  Division = binop('/'),
+  Modulo = binop('%'),
+
+  Binop = echo,
 
   Ternary = function(condition, iftrue, iffalse)
     return ('(function() if %s then return %s %s end)()'):format(
@@ -146,16 +178,6 @@ local atoms = {
       )()
     ]]):format(default, backup)
   end,
-}
-
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
-
-local molecules = {
-  Literal = echo,
-  Condition = echo,
-  Expr = echo,
 }
 
 -- -----------------------------------------------------------------------------

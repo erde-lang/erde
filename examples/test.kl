@@ -28,7 +28,7 @@ local hello = () -> {
 local blah = (x, y = 3, z = 2, ...test) => {
   local x = 99
   local h = 98
-  return
+  return h
 }
 
 local y = {
@@ -39,6 +39,8 @@ local y = {
 local [a, b] = y
 local { a, b } = y
 
-local z = a ? 4
-local y = a ? b : c
-local z = a ?? 54
+local x = y + 3 * ((9 + 9))
+
+local x = 2 + 3 ? 4 : 9
+local x = 99 ? y
+local x = 88 ?? z

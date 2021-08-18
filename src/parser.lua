@@ -53,8 +53,9 @@ function Pad(pattern)
   return V('Space') * pattern * V('Space')
 end
 
-function List(pattern, separator)
-  return pattern * (separator * pattern) ^ 0
+function List(pattern, separator, threshold)
+  threshold = threshold or 0
+  return pattern * (separator * pattern) ^ threshold
 end
 
 function Sum(...)
@@ -80,6 +81,14 @@ function Demand(pattern)
       return capture
     end
   end
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule Helpers
+-- -----------------------------------------------------------------------------
+
+function Binop(op)
+  return V('AtomExpr') * Pad(op) * V('Expr')
 end
 
 -- -----------------------------------------------------------------------------
@@ -121,7 +130,9 @@ local atoms = Subgrammar({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
-  Space = (P('\n') * (Cp() / state.newline) + space) ^ 0,
+
+  Newline = P('\n') * (Cp() / state.newline),
+  Space = (V('Newline') + space) ^ 0,
 
   --
   -- Number
@@ -142,7 +153,7 @@ local atoms = Subgrammar({
   -- Strings
   --
 
-  EscapedChar = C(P('\\') * P(1)),
+  EscapedChar = C(V('Newline') + P('\\') * P(1)),
 
   Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
   LongString = Product(
@@ -214,7 +225,13 @@ local atoms = Subgrammar({
   SkinnyFunction = V('Parameters') * Pad('->') * V('FunctionBody'),
   FatFunction = V('Parameters') * Pad('=>') * V('FunctionBody'),
   Function = V('SkinnyFunction') + V('FatFunction'),
+})
 
+-- -----------------------------------------------------------------------------
+-- Molecules
+-- -----------------------------------------------------------------------------
+
+local molecules = Subgrammar({
   --
   -- Logic Flow
   --
@@ -227,35 +244,57 @@ local atoms = Subgrammar({
   Return = Pad('return') * V('Expr') ^ -1 * C(P(true)), -- NOTE1
 
   --
+  -- Expressions
+  --
+
+  AtomExpr = Sum(
+    V('Function'),
+    V('Table'),
+    V('Id'),
+    V('String'),
+    V('Number'),
+    Pad(C('true')),
+    Pad(C('false'))
+  ),
+
+  MoleculeExpr = Sum(
+    V('Binop'),
+    V('AtomExpr')
+  ),
+
+  OrganismExpr = Sum(
+    V('Ternary'),
+    V('NullCoalescence'),
+    V('MoleculeExpr')
+  ),
+
+  Expr = V('OrganismExpr') + Pad(C('(')) * V('Expr') * Pad(C(')')),
+
+  --
   -- Operators
   --
 
-  Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
-})
+  LogicalAnd = Binop('&&'),
+  LogicalOr = Binop('||'),
 
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
+  Addition = Binop('+'),
+  Subtraction = Binop('-'),
+  Multiplication = Binop('*'),
+  Division = Binop('/'),
+  Modulo = Binop('%'),
 
-local molecules = Subgrammar({
-  Literal = Sum(Pad(C('true')), Pad(C('false')), V('Number'), V('String')),
-
-  Condition = Sum(
-    V('Function'),
-    V('Table'),
-    V('Literal'),
-    V('Id')
+  Binop = Sum(
+    V('LogicalAnd'),
+    V('LogicalOr'),
+    V('Addition'),
+    V('Subtraction'),
+    V('Multiplication'),
+    V('Division'),
+    V('Modulo')
   ),
 
-  Expr = Sum(
-    V('Ternary'),
-    V('NullCoalescence'),
-    V('Function'),
-    V('Table'),
-    V('Literal'),
-    V('Id')
-  ),
+  Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalescence = V('MoleculeExpr') * Pad('??') * V('Expr'),
 })
 
 -- -----------------------------------------------------------------------------
