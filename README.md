@@ -1,13 +1,18 @@
 # Kale
 
-# TODO
+## TODO
 
-- Ternary
-- Null coalescence
+- Binary operators
+- Function calls
 - Optional chaining
 - 0 index tables
 - Macros
 - While loop?
+
+## Long Term TODO
+
+- Formatter
+- Source maps?
 
 ## Syntax
 

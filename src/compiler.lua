@@ -122,6 +122,10 @@ local atoms = {
     return supertable({ ... }, { 'end' }):join(' ')
   end,
 
+  Return = function(expr)
+    return ('return %s'):format(expr or '')
+  end,
+
   --
   -- Operators
   --
