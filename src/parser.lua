@@ -229,7 +229,14 @@ local atoms = Subgrammar({
   --
   -- Operators
   --
-
+  
+  And = V('Expr') * Pad('&&') * V('Expr'),
+  Or = V('Expr') * Pad('||') * V('Expr'),
+  Addition = V('Expr') * Pad('+') * V('Expr'),
+  Subtraction = V('Expr') * Pad('-') * V('Expr'),
+  Multiplication = V('Expr') * Pad('-') * V('Expr'),
+  Division = V('Expr') * Pad('/') * V('Expr'),
+  Modulo = V('Number') * Pad('%') * V('Number'),
   Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
   NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
 })

@@ -130,6 +130,13 @@ local atoms = {
   -- Operators
   --
 
+  And = function(lhs, rhs) return ('%s and %s'):format(lhs, rhs) end,
+  Or = function(lhs, rhs) return ('%s or %s'):format(lhs, rhs) end,
+  Addition = function(lhs, rhs) return ('%s + %s'):format(lhs, rhs) end,
+  Subtraction = function(lhs, rhs) return ('%s - %s'):format(lhs, rhs) end,
+  Multiplication = function(lhs, rhs) return ('%s * %s'):format(lhs, rhs) end,
+  Division = function(lhs, rhs) return ('%s / %s'):format(lhs, rhs) end,
+  Modulo = function(lhs, rhs) return ('%s %% %s'):format(lhs, rhs) end,
   Ternary = function(condition, iftrue, iffalse)
     return ('(function() if %s then return %s %s end)()'):format(
       condition,
@@ -137,7 +144,6 @@ local atoms = {
       iffalse and ('else return %s'):format(iffalse) or ''
     )
   end,
-
   NullCoalescence = function(default, backup)
     return ([[
       (function()
