@@ -22,10 +22,13 @@ if true {
 
 local hello = () -> {
   local x = 4
+  return x
 }
 
-local hello = (x, y = 3, z = 2, ...test) => {
-  local x = 4
+local blah = (x, y = 3, z = 2, ...test) => {
+  local x = 99
+  local h = 98
+  return
 }
 
 local y = {

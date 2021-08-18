@@ -6,6 +6,13 @@ local compiler = require('compiler')
 local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
+-- Notes
+--
+-- NOTE1: C(P(true)) is used in this rule to ensure this rule actually captures
+-- something, otherwise it will not be placed in the AST.
+-- -----------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
 -- Environment
 --
 -- Sets the fenv so that we don't have to prefix everything with `lpeg.` and
@@ -217,6 +224,8 @@ local atoms = Subgrammar({
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
 
+  Return = Pad('return') * V('Expr') ^ -1 * C(P(true)), -- NOTE1
+
   --
   -- Operators
   --
@@ -260,6 +269,7 @@ local organisms = Subgrammar({
     V('ArrayDestructure'),
     V('MapDestructure'),
     V('Declaration'),
+    V('Return'),
     V('IfElse')
   )),
 
