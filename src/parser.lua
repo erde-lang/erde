@@ -53,8 +53,9 @@ function Pad(pattern)
   return V('Space') * pattern * V('Space')
 end
 
-function List(pattern, separator)
-  return pattern * (separator * pattern) ^ 0
+function List(pattern, separator, threshold)
+  threshold = threshold or 0
+  return pattern * (separator * pattern) ^ threshold
 end
 
 function Sum(...)
@@ -214,7 +215,13 @@ local atoms = Subgrammar({
   SkinnyFunction = V('Parameters') * Pad('->') * V('FunctionBody'),
   FatFunction = V('Parameters') * Pad('=>') * V('FunctionBody'),
   Function = V('SkinnyFunction') + V('FatFunction'),
+})
 
+-- -----------------------------------------------------------------------------
+-- Molecules
+-- -----------------------------------------------------------------------------
+
+local molecules = Subgrammar({
   --
   -- Logic Flow
   --
@@ -227,42 +234,48 @@ local atoms = Subgrammar({
   Return = Pad('return') * V('Expr') ^ -1 * C(P(true)), -- NOTE1
 
   --
-  -- Operators
+  -- Expressions
   --
-  
-  And = V('Expr') * Pad('&&') * V('Expr'),
-  Or = V('Expr') * Pad('||') * V('Expr'),
-  Addition = V('Expr') * Pad('+') * V('Expr'),
-  Subtraction = V('Expr') * Pad('-') * V('Expr'),
-  Multiplication = V('Expr') * Pad('-') * V('Expr'),
-  Division = V('Expr') * Pad('/') * V('Expr'),
-  Modulo = V('Number') * Pad('%') * V('Number'),
-  Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
-})
 
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
+  NumberExpr = V('Number') + V('Id'),
+  StringExpr = V('String') + V('Id'),
 
-local molecules = Subgrammar({
-  Literal = Sum(Pad(C('true')), Pad(C('false')), V('Number'), V('String')),
-
-  Condition = Sum(
-    V('Function'),
-    V('Table'),
-    V('Literal'),
-    V('Id')
+  LiteralExpr = Sum(
+    Pad(C('true')),
+    Pad(C('false')),
+    V('Number'),
+    V('String')
   ),
+
 
   Expr = Sum(
-    V('Ternary'),
-    V('NullCoalescence'),
+    -- V('Ternary'),
+    -- V('NullCoalescence'),
+    V('Addition'),
     V('Function'),
     V('Table'),
-    V('Literal'),
+    V('LiteralExpr'),
     V('Id')
   ),
+
+  --
+  -- Operators
+  --
+
+  
+  -- And = V('Expr') * Pad('&&') * V('Expr'),
+  -- Or = V('Expr') * Pad('||') * V('Expr'),
+  AdditionCore = V('NumberExpr') * (Pad('+') * V('Addition')) ^ 1,
+  Addition = Sum(
+    Pad('(') * V('Addition') * Demand(Pad(')')),
+    V('AdditionCore')
+  ),
+  -- Subtraction = V('Expr') * Pad('-') * V('Expr'),
+  -- Multiplication = V('Expr') * Pad('-') * V('Expr'),
+  -- Division = V('Expr') * Pad('/') * V('Expr'),
+  -- Modulo = V('Number') * Pad('%') * V('Number'),
+  -- Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  -- NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
 })
 
 -- -----------------------------------------------------------------------------

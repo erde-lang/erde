@@ -4,6 +4,8 @@
 
 - Binary operators
 - Function calls
+- Function optional paren (one arg)
+- Error messages
 - Optional chaining
 - 0 index tables
 - Macros

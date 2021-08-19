@@ -39,7 +39,4 @@ local y = {
 local [a, b] = y
 local { a, b } = y
 
-local z = a ? 4
-local y = a ? b : c
-local z = a ?? 54
-
+local x = (y + 2) + 1

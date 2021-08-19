@@ -101,7 +101,13 @@ local atoms = {
 
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
+}
 
+-- -----------------------------------------------------------------------------
+-- Molecules
+-- -----------------------------------------------------------------------------
+
+local molecules = {
   --
   -- Logic Flow
   --
@@ -127,12 +133,22 @@ local atoms = {
   end,
 
   --
+  -- Expressions
+  --
+
+  NumberExpr = echo,
+  StringExpr = echo,
+  LiteralExpr = echo,
+  Expr = echo,
+
+  --
   -- Operators
   --
 
   And = function(lhs, rhs) return ('%s and %s'):format(lhs, rhs) end,
   Or = function(lhs, rhs) return ('%s or %s'):format(lhs, rhs) end,
-  Addition = function(lhs, rhs) return ('%s + %s'):format(lhs, rhs) end,
+  AdditionCore = function(...) return table.concat({...}, ' + ') end,
+  Addition = echo,
   Subtraction = function(lhs, rhs) return ('%s - %s'):format(lhs, rhs) end,
   Multiplication = function(lhs, rhs) return ('%s * %s'):format(lhs, rhs) end,
   Division = function(lhs, rhs) return ('%s / %s'):format(lhs, rhs) end,
@@ -152,16 +168,6 @@ local atoms = {
       )()
     ]]):format(default, backup)
   end,
-}
-
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
-
-local molecules = {
-  Literal = echo,
-  Condition = echo,
-  Expr = echo,
 }
 
 -- -----------------------------------------------------------------------------
