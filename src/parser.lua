@@ -53,6 +53,10 @@ function Pad(pattern)
   return V('Space') * pattern * V('Space')
 end
 
+function Binop(op)
+  return V('AtomExpr') * Pad(op) * V('Expr')
+end
+
 function List(pattern, separator, threshold)
   threshold = threshold or 0
   return pattern * (separator * pattern) ^ threshold
@@ -237,7 +241,7 @@ local molecules = Subgrammar({
   -- Expressions
   --
 
-  SimpleExpr = Sum(
+  AtomExpr = Sum(
     V('Function'),
     V('Table'),
     V('Id'),
@@ -247,31 +251,44 @@ local molecules = Subgrammar({
     Pad(C('false'))
   ),
 
-  Expr = Sum(
-    -- V('Ternary'),
-    -- V('NullCoalescence'),
-    V('Addition'),
-    V('Subtraction'),
-    V('Multiplication'),
-    V('Division'),
-    V('Modulo'),
-    V('SimpleExpr')
+  MoleculeExpr = Sum(
+    V('Binop'),
+    V('AtomExpr')
   ),
+
+  OrganismExpr = Sum(
+    V('Ternary'),
+    V('NullCoalescence'),
+    V('MoleculeExpr')
+  ),
+
+  Expr = V('OrganismExpr'),
 
   --
   -- Operators
   --
 
-  
-  -- And = V('Expr') * Pad('&&') * V('Expr'),
-  -- Or = V('Expr') * Pad('||') * V('Expr'),
-  Addition = V('SimpleExpr') * (Pad('+') * V('Expr')) ^ 1,
-  Subtraction = V('SimpleExpr') * (Pad('-') * V('Expr')) ^ 1,
-  Multiplication = V('SimpleExpr') * (Pad('*') * V('Expr')) ^ 1,
-  Division = V('SimpleExpr') * (Pad('/') * V('Expr')) ^ 1,
-  Modulo = V('SimpleExpr') * (Pad('%') * V('Expr')) ^ 1,
-  -- Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  -- NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
+  LogicalAnd = Binop('&&'),
+  LogicalOr = Binop('||'),
+
+  Addition = Binop('+'),
+  Subtraction = Binop('-'),
+  Multiplication = Binop('*'),
+  Division = Binop('/'),
+  Modulo = Binop('%'),
+
+  Binop = Sum(
+    V('LogicalAnd'),
+    V('LogicalOr'),
+    V('Addition'),
+    V('Subtraction'),
+    V('Multiplication'),
+    V('Division'),
+    V('Modulo')
+  ),
+
+  Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalescence = V('MoleculeExpr') * Pad('??') * V('Expr'),
 })
 
 -- -----------------------------------------------------------------------------

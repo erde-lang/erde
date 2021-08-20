@@ -15,7 +15,7 @@ end
 
 function binop(op)
   return function(...)
-    return '('..table.concat({...}, op)..')'
+    return table.concat({...}, op)
   end
 end
 
@@ -142,20 +142,26 @@ local molecules = {
   -- Expressions
   --
 
-  SimpleExpr = echo,
+  AtomExpr = echo,
+  MoleculeExpr = echo,
+  OrganismExpr = echo,
   Expr = echo,
 
   --
   -- Operators
   --
 
-  And = function(lhs, rhs) return ('%s and %s'):format(lhs, rhs) end,
-  Or = function(lhs, rhs) return ('%s or %s'):format(lhs, rhs) end,
+  And = binop('and'),
+  Or = binop('or'),
+
   Addition = binop('+'),
   Subtraction = binop('-'),
   Multiplication = binop('*'),
   Division = binop('/'),
   Modulo = binop('%'),
+
+  Binop = echo,
+
   Ternary = function(condition, iftrue, iffalse)
     return ('(function() if %s then return %s %s end)()'):format(
       condition,
@@ -163,6 +169,7 @@ local molecules = {
       iffalse and ('else return %s'):format(iffalse) or ''
     )
   end,
+
   NullCoalescence = function(default, backup)
     return ([[
       (function()
