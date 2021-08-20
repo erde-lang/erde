@@ -237,25 +237,25 @@ local molecules = Subgrammar({
   -- Expressions
   --
 
-  NumberExpr = V('Number') + V('Id'),
-  StringExpr = V('String') + V('Id'),
-
-  LiteralExpr = Sum(
-    Pad(C('true')),
-    Pad(C('false')),
+  SimpleExpr = Sum(
+    V('Function'),
+    V('Table'),
+    V('Id'),
+    V('String'),
     V('Number'),
-    V('String')
+    Pad(C('true')),
+    Pad(C('false'))
   ),
-
 
   Expr = Sum(
     -- V('Ternary'),
     -- V('NullCoalescence'),
     V('Addition'),
-    V('Function'),
-    V('Table'),
-    V('LiteralExpr'),
-    V('Id')
+    V('Subtraction'),
+    V('Multiplication'),
+    V('Division'),
+    V('Modulo'),
+    V('SimpleExpr')
   ),
 
   --
@@ -265,15 +265,11 @@ local molecules = Subgrammar({
   
   -- And = V('Expr') * Pad('&&') * V('Expr'),
   -- Or = V('Expr') * Pad('||') * V('Expr'),
-  AdditionCore = V('NumberExpr') * (Pad('+') * V('Addition')) ^ 1,
-  Addition = Sum(
-    Pad('(') * V('Addition') * Demand(Pad(')')),
-    V('AdditionCore')
-  ),
-  -- Subtraction = V('Expr') * Pad('-') * V('Expr'),
-  -- Multiplication = V('Expr') * Pad('-') * V('Expr'),
-  -- Division = V('Expr') * Pad('/') * V('Expr'),
-  -- Modulo = V('Number') * Pad('%') * V('Number'),
+  Addition = V('SimpleExpr') * (Pad('+') * V('Expr')) ^ 1,
+  Subtraction = V('SimpleExpr') * (Pad('-') * V('Expr')) ^ 1,
+  Multiplication = V('SimpleExpr') * (Pad('*') * V('Expr')) ^ 1,
+  Division = V('SimpleExpr') * (Pad('/') * V('Expr')) ^ 1,
+  Modulo = V('SimpleExpr') * (Pad('%') * V('Expr')) ^ 1,
   -- Ternary = V('Condition') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
   -- NullCoalescence = V('Condition') * Pad('??') * V('Expr'),
 })

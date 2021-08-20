@@ -13,6 +13,12 @@ function echo(...)
   return ...
 end
 
+function binop(op)
+  return function(...)
+    return '('..table.concat({...}, op)..')'
+  end
+end
+
 -- -----------------------------------------------------------------------------
 -- Atoms
 -- -----------------------------------------------------------------------------
@@ -136,9 +142,7 @@ local molecules = {
   -- Expressions
   --
 
-  NumberExpr = echo,
-  StringExpr = echo,
-  LiteralExpr = echo,
+  SimpleExpr = echo,
   Expr = echo,
 
   --
@@ -147,12 +151,11 @@ local molecules = {
 
   And = function(lhs, rhs) return ('%s and %s'):format(lhs, rhs) end,
   Or = function(lhs, rhs) return ('%s or %s'):format(lhs, rhs) end,
-  AdditionCore = function(...) return table.concat({...}, ' + ') end,
-  Addition = echo,
-  Subtraction = function(lhs, rhs) return ('%s - %s'):format(lhs, rhs) end,
-  Multiplication = function(lhs, rhs) return ('%s * %s'):format(lhs, rhs) end,
-  Division = function(lhs, rhs) return ('%s / %s'):format(lhs, rhs) end,
-  Modulo = function(lhs, rhs) return ('%s %% %s'):format(lhs, rhs) end,
+  Addition = binop('+'),
+  Subtraction = binop('-'),
+  Multiplication = binop('*'),
+  Division = binop('/'),
+  Modulo = binop('%'),
   Ternary = function(condition, iftrue, iffalse)
     return ('(function() if %s then return %s %s end)()'):format(
       condition,
