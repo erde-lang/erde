@@ -3,13 +3,14 @@
 ## TODO
 
 - Binary operators
-- Function calls
-- Function optional paren (one arg)
 - Error messages
+- Function calls
+- Function optional paren (one arg, include destructuring!)
 - Optional chaining
-- 0 index tables
+- 0 index tables???
 - Macros
 - While loop?
+- table casting?
 
 ## Long Term TODO
 

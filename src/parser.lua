@@ -41,6 +41,7 @@ function state.reset()
 end
 
 function state.newline(position)
+  print(position)
   state.colstart = position
   state.line = state.line + 1
 end
@@ -51,10 +52,6 @@ end
 
 function Pad(pattern)
   return V('Space') * pattern * V('Space')
-end
-
-function Binop(op)
-  return V('AtomExpr') * Pad(op) * V('Expr')
 end
 
 function List(pattern, separator, threshold)
@@ -85,6 +82,18 @@ function Demand(pattern)
       return capture
     end
   end
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule Helpers
+-- -----------------------------------------------------------------------------
+
+function Binop(op)
+  return V('AtomExpr') * Pad(op) * V('Expr')
+end
+
+function SubExpr(...)
+  return C(Pad('(') ^ 0) * Sum(...) * C(Pad('(') ^ 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -126,7 +135,9 @@ local atoms = Subgrammar({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
-  Space = (P('\n') * (Cp() / state.newline) + space) ^ 0,
+
+  Newline = P('\n') * (Cp() / state.newline),
+  Space = (V('Newline') + space) ^ 0,
 
   --
   -- Number
@@ -147,7 +158,7 @@ local atoms = Subgrammar({
   -- Strings
   --
 
-  EscapedChar = C(P('\\') * P(1)),
+  EscapedChar = C(V('Newline') + P('\\') * P(1)),
 
   Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
   LongString = Product(
@@ -241,7 +252,7 @@ local molecules = Subgrammar({
   -- Expressions
   --
 
-  AtomExpr = Sum(
+  AtomExpr = SubExpr(
     V('Function'),
     V('Table'),
     V('Id'),
@@ -251,12 +262,12 @@ local molecules = Subgrammar({
     Pad(C('false'))
   ),
 
-  MoleculeExpr = Sum(
+  MoleculeExpr = SubExpr(
     V('Binop'),
     V('AtomExpr')
   ),
 
-  OrganismExpr = Sum(
+  OrganismExpr = SubExpr(
     V('Ternary'),
     V('NullCoalescence'),
     V('MoleculeExpr')
