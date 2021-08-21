@@ -2,83 +2,115 @@ local inspect = require('inspect')
 local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
--- Helpers
+-- Compile Helpers
 -- -----------------------------------------------------------------------------
 
-function isnode(node)
-  return type(node) == 'table' and type(node.rule) == 'string'
+local function noop()
 end
 
-function echo(...)
+local function echo(...)
   return ...
 end
 
-function binop(op)
+local function concat(sep)
   return function(...)
-    return table.concat({...}, op)
+    return table.concat({...}, sep)
   end
 end
 
+local function template(s)
+  return function(...)
+    return s:format(...)
+  end
+end
+
+local function pack(...)
+  return { ... }
+end
+
 -- -----------------------------------------------------------------------------
--- Atoms
+-- Rule Sets
 -- -----------------------------------------------------------------------------
 
-local atoms = {
-  --
-  -- Core
-  --
-
+local Core = {
   Id = echo,
-  Keyword = function() end,
+  Keyword = noop,
   Bool = echo,
+}
 
-  --
-  -- Number
-  --
-
+local Numbers = {
   Number = echo,
+}
 
-  --
-  -- Strings
-  --
-
+local Strings = {
   EscapedChar = echo,
 
   Interpolation = function(value)
-    return { value = ('tostring(%s)'):format(value) }
+    return {
+      interpolation = true,
+      value = ('tostring(%s)'):format(value),
+    }
   end,
 
   -- TODO make sure the string doesn't use [==[. Should almost never happen but
   -- need to account for it nonetheless
   -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
-    local interpolate = function(v)
-      return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
-    end
-    return ('[==[%s]==]'):format(supertable({ ... }):map(interpolate):join(''))
+    return ('[==[%s]==]'):format(supertable({ ... })
+      :map(function(v)
+        return v.interpolation
+          and (']==]..%s..[==['):format(v.value)
+          or v
+      end)
+      :join()
+    )
   end,
 
   String = echo,
+}
 
-  --
-  -- Table
-  --
-
-  TableStringField = function(expr) return ('[%s]'):format(expr) end,
-  TableField = function(key, value) return ('%s = %s'):format(key, value) end,
+local Tables = {
+  StringTableKey = template('[%s]'),
+  MapTableField = template('%s = %s'),
+  InlineTableField = function(id) return ('%s = %s'):format(id, id) end,
+  TableField = echo,
   Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
 
-  --
-  -- Functions
-  --
+  ArrayDestructure = function(isLocal, ...)
+    local ids = supertable({ ... })
+    local _, expr = ids:pop()
+    return ids:map(function(id, index)
+      return ('%s%s = %s[%d]'):format(
+        #isLocal > 0 and 'local ' or '',
+        id,
+        expr,
+        index
+      )
+    end):join('\n')
+  end,
 
+  MapDestructure = function(isLocal, ...)
+    local ids = supertable({ ... })
+    local _, expr = ids:pop()
+    return ids:map(function(id)
+      return ('%s%s = %s.%s'):format(
+        #isLocal > 0 and 'local ' or '',
+        id,
+        expr,
+        id
+      )
+    end):join('\n')
+  end,
+}
+
+local Functions = {
   Arg = function(id) return { id = id } end,
   OptArg = function(id, expr) return { id = id, default = expr } end,
   VarArgs = function(id) return { id = id, varargs = true } end,
 
   ArgList = echo,
   OptArgList = echo,
-  Parameters = function(...) return { ... } end,
+  Params = pack,
 
   FunctionBody = echo,
   SkinnyFunction = function(...) return false, ... end,
@@ -107,58 +139,49 @@ local atoms = {
 
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
+
+  FunctionCallArgList = concat(','),
+  FunctionCallParams = concat(),
+
+  ExprCall = concat(),
+  SkinnyFunctionCall = concat(),
+  FatFunctionCall = concat(),
+  FunctionCall = echo,
 }
 
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
-
-local molecules = {
-  --
-  -- Logic Flow
-  --
-
-  If = function(expr, block)
-    return ('if %s then %s'):format(expr, block)
-  end,
-
-  ElseIf = function(expr, block)
-    return ('elseif %s then %s'):format(expr, block)
-  end,
-
-  Else = function(block)
-    return ('else %s'):format(block)
-  end,
+local LogicFlow = {
+  If = template('if %s then %s'),
+  ElseIf = template('elseif %s then %s'),
+  Else = template('else %s'),
 
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
 
-  Return = function(expr)
-    return ('return %s'):format(expr or '')
-  end,
+  Return = concat(' '),
+}
 
-  --
-  -- Expressions
-  --
-
+local Expressions = {
   AtomExpr = echo,
   MoleculeExpr = echo,
   OrganismExpr = echo,
-  Expr = function(...) return table.concat({...}, '') end,
+  Expr = echo,
 
-  --
-  -- Operators
-  --
+  IndexableExpr = concat(),
+  DotIndexExpr = concat(),
+  BracketIndexExpr = concat(),
+  IndexExpr = echo,
+}
 
-  And = binop('and'),
-  Or = binop('or'),
+local Operators = {
+  And = concat('and'),
+  Or = concat('or'),
 
-  Addition = binop('+'),
-  Subtraction = binop('-'),
-  Multiplication = binop('*'),
-  Division = binop('/'),
-  Modulo = binop('%'),
+  Addition = concat('+'),
+  Subtraction = concat('-'),
+  Multiplication = concat('*'),
+  Division = concat('/'),
+  Modulo = concat('%'),
 
   Binop = echo,
 
@@ -172,50 +195,19 @@ local molecules = {
 
   NullCoalescence = function(default, backup)
     return ([[
-      (function()
-        local __KALE_TMP__ = %s
-        if __KALE_TMP__ ~= nil then return __KALE_TMP__ else return %s end
-      )()
+    (function()
+    local __KALE_TMP__ = %s
+    if __KALE_TMP__ ~= nil then return __KALE_TMP__ else return %s end
+    )()
     ]]):format(default, backup)
   end,
 }
 
--- -----------------------------------------------------------------------------
--- Organisms
--- -----------------------------------------------------------------------------
-
-local organisms = {
-  Kale = echo,
+local Blocks = {
   Block = function(...)
     return supertable({ ... }):join('\n')
   end,
   Statement = echo,
-
-  ArrayDestructure = function(isLocal, ...)
-    local ids = supertable({ ... })
-    local _, expr = ids:pop()
-    return ids:map(function(id, index)
-      return ('%s%s = %s[%d]'):format(
-        #isLocal > 0 and 'local ' or '',
-        id,
-        expr,
-        index
-      )
-    end):join('\n')
-  end,
-
-  MapDestructure = function(isLocal, ...)
-    local ids = supertable({ ... })
-    local _, expr = ids:pop()
-    return ids:map(function(id)
-      return ('%s%s = %s.%s'):format(
-        #isLocal > 0 and 'local ' or '',
-        id,
-        expr,
-        id
-      )
-    end):join('\n')
-  end,
 
   Declaration = function(isLocal, id, expr)
     return supertable({
@@ -230,7 +222,21 @@ local organisms = {
 -- Compiler
 -- -----------------------------------------------------------------------------
 
-local compiler = supertable(atoms, molecules, organisms)
+local compiler = supertable(
+  Blocks,
+  Operators,
+  Expressions,
+  LogicFlow,
+  Functions,
+  Tables,
+  Strings,
+  Numbers,
+  Core
+)
+
+local function isnode(node)
+  return type(node) == 'table' and type(node.rule) == 'string'
+end
 
 local function compile(node)
   if not isnode(node) then

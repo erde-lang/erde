@@ -2,15 +2,20 @@
 
 ## TODO
 
-- Binary operators
-- Error messages
 - Function calls
 - Function optional paren (one arg, include destructuring!)
-- Optional chaining
-- 0 index tables???
+- rename IndexableExpr...
+- comments
+- Error messages
+- Switch case
+- While loop
+- table casting
 - Macros
-- While loop?
-- table casting?
+- order of operations?
+- expr index (index chaining: a.b.c)
+- Optional chaining
+- rename to Orbit? (.ob file ext)
+- unary operators
 
 ## Long Term TODO
 
@@ -82,9 +87,22 @@ There is no for loop. Instead, use Array constructors + macros:
 
 TODO
 
-### Tables
+#### Switch case
 
-Tables are 0-indexed.
+Similar to golang. No break required. Switch statements CAN return values
+
+```
+local x = switch myenum {
+  case 1:
+    return 'hello'
+  case 2:
+    return 'world'
+  default:
+    return 'empty'
+}
+```
+
+### Tables
 
 #### Declaring
 
