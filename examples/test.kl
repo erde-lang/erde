@@ -39,7 +39,7 @@ local y = {
 local [a, b] = y
 local { a, b } = y
 
-local x = y + 3 * 9 + 9
+local x = y + 3 * ((9 + 9))
 
 local x = 2 + 3 ? 4 : 9
 local x = 99 ? y

@@ -41,7 +41,6 @@ function state.reset()
 end
 
 function state.newline(position)
-  print(position)
   state.colstart = position
   state.line = state.line + 1
 end
@@ -90,10 +89,6 @@ end
 
 function Binop(op)
   return V('AtomExpr') * Pad(op) * V('Expr')
-end
-
-function SubExpr(...)
-  return C(Pad('(') ^ 0) * Sum(...) * C(Pad('(') ^ 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -252,7 +247,7 @@ local molecules = Subgrammar({
   -- Expressions
   --
 
-  AtomExpr = SubExpr(
+  AtomExpr = Sum(
     V('Function'),
     V('Table'),
     V('Id'),
@@ -262,18 +257,18 @@ local molecules = Subgrammar({
     Pad(C('false'))
   ),
 
-  MoleculeExpr = SubExpr(
+  MoleculeExpr = Sum(
     V('Binop'),
     V('AtomExpr')
   ),
 
-  OrganismExpr = SubExpr(
+  OrganismExpr = Sum(
     V('Ternary'),
     V('NullCoalescence'),
     V('MoleculeExpr')
   ),
 
-  Expr = V('OrganismExpr'),
+  Expr = V('OrganismExpr') + Pad(C('(')) * V('Expr') * Pad(C(')')),
 
   --
   -- Operators

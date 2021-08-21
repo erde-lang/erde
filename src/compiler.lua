@@ -142,10 +142,10 @@ local molecules = {
   -- Expressions
   --
 
-  AtomExpr = function(...) return table.concat({...}, '') end,
-  MoleculeExpr = function(...) return table.concat({...}, '') end,
-  OrganismExpr = function(...) return table.concat({...}, '') end,
-  Expr = echo,
+  AtomExpr = echo,
+  MoleculeExpr = echo,
+  OrganismExpr = echo,
+  Expr = function(...) return table.concat({...}, '') end,
 
   --
   -- Operators
