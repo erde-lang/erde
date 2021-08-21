@@ -53,6 +53,15 @@ function Pad(pattern)
   return V('Space') * pattern * V('Space')
 end
 
+function Wrap(pattern, surrounders)
+  local wrapped = Pad(C('(')) * V(rule) * Pad(C(')'))
+end
+
+function Group(rule, pattern, strict)
+  local wrapped = Pad(C('(')) * V(rule) * Pad(C(')'))
+  return strict and wrapped or pattern + wrapped
+end
+
 function List(pattern, separator, threshold)
   threshold = threshold or 0
   return pattern * (separator * pattern) ^ threshold
@@ -92,10 +101,10 @@ function Binop(op)
 end
 
 -- -----------------------------------------------------------------------------
--- Parse Helpers
+-- Rule Sets
 -- -----------------------------------------------------------------------------
 
-function Subgrammar(patterns)
+function RuleSet(patterns)
   return supertable(patterns):map(function(pattern, rule)
     return Cp() * pattern / function(position, ...)
       local node = supertable(
@@ -109,15 +118,7 @@ function Subgrammar(patterns)
   end)
 end
 
--- -----------------------------------------------------------------------------
--- Atoms
--- -----------------------------------------------------------------------------
-
-local atoms = Subgrammar({
-  --
-  -- Core
-  --
-
+local Core = RuleSet({
   Keyword = Pad(Sum(
     P('local'),
     P('if'),
@@ -133,11 +134,9 @@ local atoms = Subgrammar({
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
+})
 
-  --
-  -- Number
-  --
-
+local Numbers = RuleSet({
   Integer = digit ^ 1,
   Exponent = S('eE') * S('+-') ^ -1 * V('Integer'),
   Number = C(Sum(
@@ -148,11 +147,9 @@ local atoms = Subgrammar({
     (P('0x') + P('0X')) * xdigit ^ 1, -- hex
     V('Integer')
   )),
+})
 
-  --
-  -- Strings
-  --
-
+local Strings = RuleSet({
   EscapedChar = C(V('Newline') + P('\\') * P(1)),
 
   Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
@@ -182,10 +179,13 @@ local atoms = Subgrammar({
     --   :gsub('\\[', '[')
     --   :gsub('\\]', ']')
   end,
-  
-  --
-  -- Table
-  --
+})
+
+local Tables = RuleSet({
+  TableIndex = Product(
+    Pad('(') * (V('Table') + V('AnyExpr')) * Pad(')') + V('Id'),
+    Pad('.') * V('Id') + Pad('[') * V('Expr') * Pad(']')
+  ),
 
   TableStringField = V('String'),
   TableField = (V('TableStringField') + V('Id')) * Pad(':') * V('Expr'),
@@ -196,10 +196,26 @@ local atoms = Subgrammar({
     Pad('}')
   ),
 
-  --
-  -- Functions
-  --
+  ArrayDestructure = Product(
+    C(Pad('local') ^ -1),
+    Pad('['),
+    List(V('Id'), Pad(',')),
+    Pad(']'),
+    Pad('='),
+    Demand(V('Expr'))
+  ),
 
+  MapDestructure = Product(
+    C(Pad('local') ^ -1),
+    Pad('{'),
+    List(V('Id'), Pad(',')),
+    Pad('}'),
+    Pad('='),
+    Demand(V('Expr'))
+  ),
+})
+
+local Functions = RuleSet({
   Arg = V('Id'),
   OptArg = V('Id') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ 0,
@@ -225,27 +241,32 @@ local atoms = Subgrammar({
   SkinnyFunction = V('Parameters') * Pad('->') * V('FunctionBody'),
   FatFunction = V('Parameters') * Pad('=>') * V('FunctionBody'),
   Function = V('SkinnyFunction') + V('FatFunction'),
+
+  -- FunctionCallParams = Pad('(') * V('ArgList') * Pad(')'),
+  -- BaseFunctionCall = V('Id') * V('FunctionCallParams'),
+  -- SkinnyFunctionCall = V('TableAccess') * V('FunctionCallParams'),
+  -- FatFunctionCall = V('TableAccess') * Pad(':') * V('Id') * V('FunctionCallParams'),
+  -- IIFE = Pad('(') * V('Function') * Pad(')') * Pad('(') * Pad(')'),
+  -- FunctionCall = Sum(
+  --   V('IIFE'),
+  --   V('FatFunctionCall'),
+  --   V('SkinnyFunction'),
+  --   V('BaseFunctionCall')
+  -- ),
+  FunctionCall = P(false),
 })
 
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
-
-local molecules = Subgrammar({
-  --
-  -- Logic Flow
-  --
-
+local LogicFlow = RuleSet({
   If = Pad('if') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
 
   Return = Pad('return') * V('Expr') ^ -1 * C(P(true)), -- NOTE1
+})
 
-  --
-  -- Expressions
-  --
+local Expressions = RuleSet({
+  AnyExpr = Group('AnyExpr', V('FunctionCall') + V('TableIndex') + V('Id')),
 
   AtomExpr = Sum(
     V('Function'),
@@ -259,6 +280,7 @@ local molecules = Subgrammar({
 
   MoleculeExpr = Sum(
     V('Binop'),
+    V('FunctionCall'),
     V('AtomExpr')
   ),
 
@@ -268,12 +290,10 @@ local molecules = Subgrammar({
     V('MoleculeExpr')
   ),
 
-  Expr = V('OrganismExpr') + Pad(C('(')) * V('Expr') * Pad(C(')')),
+  Expr = Group('Expr', V('OrganismExpr')),
+})
 
-  --
-  -- Operators
-  --
-
+local Operators = RuleSet({
   LogicalAnd = Binop('&&'),
   LogicalOr = Binop('||'),
 
@@ -297,38 +317,17 @@ local molecules = Subgrammar({
   NullCoalescence = V('MoleculeExpr') * Pad('??') * V('Expr'),
 })
 
--- -----------------------------------------------------------------------------
--- Organisms
--- -----------------------------------------------------------------------------
-
-local organisms = Subgrammar({
-  Kale = V('Block'),
+local Blocks = RuleSet({
   Block = V('Statement') ^ 0,
+
   Statement = Pad(Sum(
+    V('FunctionCall'),
     V('ArrayDestructure'),
     V('MapDestructure'),
     V('Declaration'),
     V('Return'),
     V('IfElse')
   )),
-
-  ArrayDestructure = Product(
-    C(Pad('local') ^ -1),
-    Pad('['),
-    List(V('Id'), Pad(',')),
-    Pad(']'),
-    Pad('='),
-    Demand(V('Expr'))
-  ),
-
-  MapDestructure = Product(
-    C(Pad('local') ^ -1),
-    Pad('{'),
-    List(V('Id'), Pad(',')),
-    Pad('}'),
-    Pad('='),
-    Demand(V('Expr'))
-  ),
 
   Declaration = Product(
     C(Pad('local') ^ -1),
@@ -338,10 +337,21 @@ local organisms = Subgrammar({
 })
 
 -- -----------------------------------------------------------------------------
--- Return
+-- Grammar
 -- -----------------------------------------------------------------------------
 
-local grammar = P(supertable({ V('Kale') }, atoms, molecules, organisms))
+local grammar = P(supertable(
+  { V('Block') },
+  Blocks,
+  Operators,
+  Expressions,
+  LogicFlow,
+  Functions,
+  Tables,
+  Strings,
+  Numbers,
+  Core
+))
 
 return function(subject)
   lpeg.setmaxstack(1000)

@@ -2,15 +2,16 @@
 
 ## TODO
 
-- Binary operators
-- Error messages
 - Function calls
 - Function optional paren (one arg, include destructuring!)
-- Optional chaining
-- 0 index tables???
-- Macros
-- While loop?
+- IIFE
+- Error messages
+- table access
+- table inline assignment (like moonscript)
 - table casting?
+- Macros
+- While loop
+- Optional chaining
 
 ## Long Term TODO
 
@@ -83,8 +84,6 @@ There is no for loop. Instead, use Array constructors + macros:
 TODO
 
 ### Tables
-
-Tables are 0-indexed.
 
 #### Declaring
 

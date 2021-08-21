@@ -13,6 +13,10 @@ function echo(...)
   return ...
 end
 
+function concat(...)
+  return table.concat({ ... })
+end
+
 function binop(op)
   return function(...)
     return table.concat({...}, op)
@@ -20,28 +24,20 @@ function binop(op)
 end
 
 -- -----------------------------------------------------------------------------
--- Atoms
+-- Rule Sets
 -- -----------------------------------------------------------------------------
 
-local atoms = {
-  --
-  -- Core
-  --
-
+local Core = {
   Id = echo,
   Keyword = function() end,
   Bool = echo,
+}
 
-  --
-  -- Number
-  --
-
+local Numbers = {
   Number = echo,
+}
 
-  --
-  -- Strings
-  --
-
+local Strings = {
   EscapedChar = echo,
 
   Interpolation = function(value)
@@ -59,19 +55,43 @@ local atoms = {
   end,
 
   String = echo,
+}
 
-  --
-  -- Table
-  --
+local Tables = {
+  TableAccess = echo,
 
   TableStringField = function(expr) return ('[%s]'):format(expr) end,
   TableField = function(key, value) return ('%s = %s'):format(key, value) end,
   Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
 
-  --
-  -- Functions
-  --
+  ArrayDestructure = function(isLocal, ...)
+    local ids = supertable({ ... })
+    local _, expr = ids:pop()
+    return ids:map(function(id, index)
+      return ('%s%s = %s[%d]'):format(
+        #isLocal > 0 and 'local ' or '',
+        id,
+        expr,
+        index
+      )
+    end):join('\n')
+  end,
 
+  MapDestructure = function(isLocal, ...)
+    local ids = supertable({ ... })
+    local _, expr = ids:pop()
+    return ids:map(function(id)
+      return ('%s%s = %s.%s'):format(
+        #isLocal > 0 and 'local ' or '',
+        id,
+        expr,
+        id
+      )
+    end):join('\n')
+  end,
+}
+
+local Functions = {
   Arg = function(id) return { id = id } end,
   OptArg = function(id, expr) return { id = id, default = expr } end,
   VarArgs = function(id) return { id = id, varargs = true } end,
@@ -107,17 +127,16 @@ local atoms = {
 
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
+
+  FunctionCallParams = concat,
+  BaseFunctionCall = concat,
+  SkinnyFunctionCall = concat,
+  FatFunctionCall = concat,
+  IIFE = concat,
+  FunctionCall = concat,
 }
 
--- -----------------------------------------------------------------------------
--- Molecules
--- -----------------------------------------------------------------------------
-
-local molecules = {
-  --
-  -- Logic Flow
-  --
-
+local LogicFlow = {
   If = function(expr, block)
     return ('if %s then %s'):format(expr, block)
   end,
@@ -137,20 +156,16 @@ local molecules = {
   Return = function(expr)
     return ('return %s'):format(expr or '')
   end,
+}
 
-  --
-  -- Expressions
-  --
-
+local Expressions = {
   AtomExpr = echo,
   MoleculeExpr = echo,
   OrganismExpr = echo,
-  Expr = function(...) return table.concat({...}, '') end,
+  Expr = concat,
+}
 
-  --
-  -- Operators
-  --
-
+local Operators = {
   And = binop('and'),
   Or = binop('or'),
 
@@ -172,50 +187,19 @@ local molecules = {
 
   NullCoalescence = function(default, backup)
     return ([[
-      (function()
-        local __KALE_TMP__ = %s
-        if __KALE_TMP__ ~= nil then return __KALE_TMP__ else return %s end
-      )()
+    (function()
+    local __KALE_TMP__ = %s
+    if __KALE_TMP__ ~= nil then return __KALE_TMP__ else return %s end
+    )()
     ]]):format(default, backup)
   end,
 }
 
--- -----------------------------------------------------------------------------
--- Organisms
--- -----------------------------------------------------------------------------
-
-local organisms = {
-  Kale = echo,
+local Blocks = {
   Block = function(...)
     return supertable({ ... }):join('\n')
   end,
   Statement = echo,
-
-  ArrayDestructure = function(isLocal, ...)
-    local ids = supertable({ ... })
-    local _, expr = ids:pop()
-    return ids:map(function(id, index)
-      return ('%s%s = %s[%d]'):format(
-        #isLocal > 0 and 'local ' or '',
-        id,
-        expr,
-        index
-      )
-    end):join('\n')
-  end,
-
-  MapDestructure = function(isLocal, ...)
-    local ids = supertable({ ... })
-    local _, expr = ids:pop()
-    return ids:map(function(id)
-      return ('%s%s = %s.%s'):format(
-        #isLocal > 0 and 'local ' or '',
-        id,
-        expr,
-        id
-      )
-    end):join('\n')
-  end,
 
   Declaration = function(isLocal, id, expr)
     return supertable({
@@ -230,7 +214,17 @@ local organisms = {
 -- Compiler
 -- -----------------------------------------------------------------------------
 
-local compiler = supertable(atoms, molecules, organisms)
+local compiler = supertable(
+  Blocks,
+  Operators,
+  Expressions,
+  LogicFlow,
+  Functions,
+  Tables,
+  Strings,
+  Numbers,
+  Core
+)
 
 local function compile(node)
   if not isnode(node) then
