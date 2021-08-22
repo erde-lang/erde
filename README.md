@@ -2,15 +2,18 @@
 
 ## TODO
 
+- table inline assignment (like moonscript)
+- table casting?
 - Function calls
 - Function optional paren (one arg, include destructuring!)
 - IIFE
 - Error messages
-- table access
-- table inline assignment (like moonscript)
-- table casting?
-- Macros
+- comments
+- Switch case
 - While loop
+- Macros
+- order of operations?
+- expr index (index chaining: a.b.c)
 - Optional chaining
 
 ## Long Term TODO
@@ -82,6 +85,21 @@ There is no for loop. Instead, use Array constructors + macros:
 #### While Loop
 
 TODO
+
+#### Switch case
+
+Similar to golang. No break required. Switch statements CAN return values
+
+```
+local x = switch myenum {
+  case 1:
+    return 'hello'
+  case 2:
+    return 'world'
+  default:
+    return 'empty'
+}
+```
 
 ### Tables
 

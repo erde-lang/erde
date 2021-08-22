@@ -53,15 +53,6 @@ function Pad(pattern)
   return V('Space') * pattern * V('Space')
 end
 
-function Wrap(pattern, surrounders)
-  local wrapped = Pad(C('(')) * V(rule) * Pad(C(')'))
-end
-
-function Group(rule, pattern, strict)
-  local wrapped = Pad(C('(')) * V(rule) * Pad(C(')'))
-  return strict and wrapped or pattern + wrapped
-end
-
 function List(pattern, separator, threshold)
   threshold = threshold or 0
   return pattern * (separator * pattern) ^ threshold
@@ -182,11 +173,6 @@ local Strings = RuleSet({
 })
 
 local Tables = RuleSet({
-  TableIndex = Product(
-    Pad('(') * (V('Table') + V('AnyExpr')) * Pad(')') + V('Id'),
-    Pad('.') * V('Id') + Pad('[') * V('Expr') * Pad(']')
-  ),
-
   TableStringField = V('String'),
   TableField = (V('TableStringField') + V('Id')) * Pad(':') * V('Expr'),
   Table = Product(
@@ -266,8 +252,6 @@ local LogicFlow = RuleSet({
 })
 
 local Expressions = RuleSet({
-  AnyExpr = Group('AnyExpr', V('FunctionCall') + V('TableIndex') + V('Id')),
-
   AtomExpr = Sum(
     V('Function'),
     V('Table'),
@@ -279,6 +263,7 @@ local Expressions = RuleSet({
   ),
 
   MoleculeExpr = Sum(
+    V('IndexExpr'),
     V('Binop'),
     V('FunctionCall'),
     V('AtomExpr')
@@ -290,7 +275,15 @@ local Expressions = RuleSet({
     V('MoleculeExpr')
   ),
 
-  Expr = Group('Expr', V('OrganismExpr')),
+  Expr = Sum(
+    V('OrganismExpr'),
+    Pad(C('(')) * V('Expr') * Pad(C(')'))
+  ),
+
+  IndexableExpr = Pad('(') * V('Expr') * Pad(')') + V('Id'),
+  DotIndexExpr = V('IndexableExpr') * Pad('.') * V('Id'),
+  BracketIndexExpr = V('IndexableExpr') * Pad('[') * V('Expr') * Pad(']'),
+  IndexExpr = V('DotIndexExpr') + V('BracketIndexExpr'),
 })
 
 local Operators = RuleSet({

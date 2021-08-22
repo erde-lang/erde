@@ -58,8 +58,6 @@ local Strings = {
 }
 
 local Tables = {
-  TableAccess = echo,
-
   TableStringField = function(expr) return ('[%s]'):format(expr) end,
   TableField = function(key, value) return ('%s = %s'):format(key, value) end,
   Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
@@ -163,6 +161,13 @@ local Expressions = {
   MoleculeExpr = echo,
   OrganismExpr = echo,
   Expr = concat,
+
+  IndexableExpr = echo,
+  DotIndexExpr = function(indexable, id)
+    return ('(%s).%s'):format(indexable, id)
+  end,
+  BracketIndexExpr = echo,
+  IndexExpr = echo,
 }
 
 local Operators = {

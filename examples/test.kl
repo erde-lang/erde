@@ -36,6 +36,8 @@ local y = {
   test: 'hi',
 }
 
+local x = y.a
+
 local [a, b] = y
 local { a, b } = y
 
