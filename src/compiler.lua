@@ -58,8 +58,10 @@ local Strings = {
 }
 
 local Tables = {
-  TableStringField = function(expr) return ('[%s]'):format(expr) end,
-  TableField = function(key, value) return ('%s = %s'):format(key, value) end,
+  StringTableKey = function(expr) return ('[%s]'):format(expr) end,
+  MapTableField = function(key, value) return ('%s = %s'):format(key, value) end,
+  InlineTableField = function(id) return ('%s = %s'):format(id, id) end,
+  TableField = echo,
   Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
 
   ArrayDestructure = function(isLocal, ...)

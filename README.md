@@ -2,7 +2,6 @@
 
 ## TODO
 
-- table inline assignment (like moonscript)
 - table casting?
 - Function calls
 - Function optional paren (one arg, include destructuring!)

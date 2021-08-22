@@ -173,14 +173,11 @@ local Strings = RuleSet({
 })
 
 local Tables = RuleSet({
-  TableStringField = V('String'),
-  TableField = (V('TableStringField') + V('Id')) * Pad(':') * V('Expr'),
-  Table = Product(
-    Pad('{'),
-    List(V('TableField') + V('Expr'), Pad(',')),
-    Pad(',') ^ -1,
-    Pad('}')
-  ),
+  StringTableKey = V('String'),
+  MapTableField = (V('StringTableKey') + V('Id')) * Pad(':') * V('Expr'),
+  InlineTableField = Pad(P(':') * V('Id')),
+  TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
+  Table = Pad('{') * List(V('TableField'), Pad(',')) * Pad(',') ^ -1 * Pad('}'),
 
   ArrayDestructure = Product(
     C(Pad('local') ^ -1),
