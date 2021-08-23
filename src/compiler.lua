@@ -200,8 +200,8 @@ local Operators = {
   NullCoalescence = function(default, backup)
     return ([[
     (function()
-    local __KALE_TMP__ = %s
-    if __KALE_TMP__ ~= nil then return __KALE_TMP__ else return %s end
+    local __ORBIT_TMP__ = %s
+    if __ORBIT_TMP__ ~= nil then return __ORBIT_TMP__ else return %s end
     )()
     ]]):format(default, backup)
   end,

@@ -1,4 +1,4 @@
-# Kale
+# Orbit
 
 ## TODO
 
@@ -8,11 +8,10 @@
 - While loop
 - table casting
 - Macros
-- order of operations?
-- expr index (IndexableExpr, index chaining: a.b.c)
 - Optional chaining
-- rename to Orbit? (.ob file ext)
 - unary operators
+- expr index (IndexableExpr, index chaining: a.b.c)
+  - order of operations?
 
 ## Long Term TODO
 
