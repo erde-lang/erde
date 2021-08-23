@@ -17,6 +17,19 @@ function concat(...)
   return table.concat({ ... })
 end
 
+function noop()
+end
+
+function template(s)
+  return function(...)
+    return s:format(...)
+  end
+end
+
+function pack(...)
+  return { ... }
+end
+
 function binop(op)
   return function(...)
     return table.concat({...}, op)
@@ -29,7 +42,7 @@ end
 
 local Core = {
   Id = echo,
-  Keyword = function() end,
+  Keyword = noop,
   Bool = echo,
 }
 
@@ -41,25 +54,32 @@ local Strings = {
   EscapedChar = echo,
 
   Interpolation = function(value)
-    return { value = ('tostring(%s)'):format(value) }
+    return {
+      interpolation = true,
+      value = ('tostring(%s)'):format(value),
+    }
   end,
 
   -- TODO make sure the string doesn't use [==[. Should almost never happen but
   -- need to account for it nonetheless
   -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
-    local interpolate = function(v)
-      return type(v) == 'string' and v or (']==]..%s..[==['):format(v.value)
-    end
-    return ('[==[%s]==]'):format(supertable({ ... }):map(interpolate):join(''))
+    return ('[==[%s]==]'):format(supertable({ ... })
+      :map(function(v)
+        return v.interpolation
+          and (']==]..%s..[==['):format(v.value)
+          or v
+      end)
+      :join()
+    )
   end,
 
   String = echo,
 }
 
 local Tables = {
-  StringTableKey = function(expr) return ('[%s]'):format(expr) end,
-  MapTableField = function(key, value) return ('%s = %s'):format(key, value) end,
+  StringTableKey = template('[%s]'),
+  MapTableField = template('%s = %s'),
   InlineTableField = function(id) return ('%s = %s'):format(id, id) end,
   TableField = echo,
   Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
@@ -98,7 +118,7 @@ local Functions = {
 
   ArgList = echo,
   OptArgList = echo,
-  Parameters = function(...) return { ... } end,
+  Params = pack,
 
   FunctionBody = echo,
   SkinnyFunction = function(...) return false, ... end,
@@ -128,26 +148,17 @@ local Functions = {
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
-  FunctionCallParams = concat,
-  BaseFunctionCall = concat,
-  SkinnyFunctionCall = concat,
-  FatFunctionCall = concat,
-  IIFE = concat,
-  FunctionCall = concat,
+  FunctionCallParams = echo,
+  ExprCall = echo,
+  SkinnyFunctionCall = echo,
+  FatFunctionCall = echo,
+  FunctionCall = echo,
 }
 
 local LogicFlow = {
-  If = function(expr, block)
-    return ('if %s then %s'):format(expr, block)
-  end,
-
-  ElseIf = function(expr, block)
-    return ('elseif %s then %s'):format(expr, block)
-  end,
-
-  Else = function(block)
-    return ('else %s'):format(block)
-  end,
+  If = template('if %s then %s'),
+  ElseIf = template('elseif %s then %s'),
+  Else = template('else %s'),
 
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
@@ -162,12 +173,10 @@ local Expressions = {
   AtomExpr = echo,
   MoleculeExpr = echo,
   OrganismExpr = echo,
-  Expr = concat,
+  Expr = echo,
 
   IndexableExpr = echo,
-  DotIndexExpr = function(indexable, id)
-    return ('(%s).%s'):format(indexable, id)
-  end,
+  DotIndexExpr = template('%s.%s'),
   BracketIndexExpr = echo,
   IndexExpr = echo,
 }

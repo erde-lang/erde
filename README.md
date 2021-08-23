@@ -2,18 +2,18 @@
 
 ## TODO
 
-- table casting?
 - Function calls
 - Function optional paren (one arg, include destructuring!)
-- IIFE
-- Error messages
 - comments
+- Error messages
 - Switch case
 - While loop
+- table casting
 - Macros
 - order of operations?
 - expr index (index chaining: a.b.c)
 - Optional chaining
+- rename to Orbit? (.ob file ext)
 
 ## Long Term TODO
 

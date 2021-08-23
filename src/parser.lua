@@ -205,7 +205,7 @@ local Functions = RuleSet({
 
   ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArgList = List(V('OptArg'), Pad(',')),
-  Parameters = Product(
+  Params = Product(
     Pad('('),
     Sum(
       Product(
@@ -221,22 +221,19 @@ local Functions = RuleSet({
   ),
 
   FunctionBody = V('Expr') + (Pad('{') * V('Block') * Pad('}')),
-  SkinnyFunction = V('Parameters') * Pad('->') * V('FunctionBody'),
-  FatFunction = V('Parameters') * Pad('=>') * V('FunctionBody'),
+  SkinnyFunction = V('Params') * Pad('->') * V('FunctionBody'),
+  FatFunction = V('Params') * Pad('=>') * V('FunctionBody'),
   Function = V('SkinnyFunction') + V('FatFunction'),
 
-  -- FunctionCallParams = Pad('(') * V('ArgList') * Pad(')'),
-  -- BaseFunctionCall = V('Id') * V('FunctionCallParams'),
-  -- SkinnyFunctionCall = V('TableAccess') * V('FunctionCallParams'),
-  -- FatFunctionCall = V('TableAccess') * Pad(':') * V('Id') * V('FunctionCallParams'),
-  -- IIFE = Pad('(') * V('Function') * Pad(')') * Pad('(') * Pad(')'),
-  -- FunctionCall = Sum(
-  --   V('IIFE'),
-  --   V('FatFunctionCall'),
-  --   V('SkinnyFunction'),
-  --   V('BaseFunctionCall')
-  -- ),
-  FunctionCall = P(false),
+  FunctionCallParams = Pad('(') * (V('ArgList') * Pad(',') ^ -1) ^ -1 * Pad(')'),
+  ExprCall = V('IndexableExpr') * V('FunctionCallParams'),
+  SkinnyFunctionCall = V('IndexableExpr') * Pad('.') * V('Id') * V('FunctionCallParams'),
+  FatFunctionCall = V('IndexableExpr') * Pad(':') * V('Id') * V('FunctionCallParams'),
+  FunctionCall = Sum(
+    V('FatFunctionCall'),
+    V('SkinnyFunction'),
+    V('ExprCall')
+  ),
 })
 
 local LogicFlow = RuleSet({
@@ -260,6 +257,7 @@ local Expressions = RuleSet({
   ),
 
   MoleculeExpr = Sum(
+    V('FunctionCall'),
     V('IndexExpr'),
     V('Binop'),
     V('FunctionCall'),
