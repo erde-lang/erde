@@ -48,6 +48,12 @@ local x = 2 + 3 ? 4 : 9
 local x = 99 ? y
 local x = 88 ?? z
 
+// my comment
+/* this is an inline comment */
+/*
+this is a
+multiline comment */
+
 local a = test()
 local a = abc.myfunc(x, c)
 local a = abb:mymethod(x)
