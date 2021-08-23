@@ -49,28 +49,32 @@ end
 -- Grammar Helpers
 -- -----------------------------------------------------------------------------
 
-function Pad(pattern)
+local function Pad(pattern)
   return V('Space') * pattern * V('Space')
 end
 
-function List(pattern, separator, threshold)
+local function PadC(pattern)
+  return V('Space') * C(pattern) * V('Space')
+end
+
+local function List(pattern, separator, threshold)
   threshold = threshold or 0
   return pattern * (separator * pattern) ^ threshold
 end
 
-function Sum(...)
+local function Sum(...)
   return supertable({ ... }):reduce(function(sum, pattern)
     return sum + pattern
   end, P(false))
 end
 
-function Product(...)
+local function Product(...)
   return supertable({ ... }):reduce(function(product, pattern)
     return product * pattern
   end, P(true))
 end
 
-function Demand(pattern)
+local function Demand(pattern)
   return pattern + Cc('__KALE_ERROR__') * Cp() / function(capture, position)
     if capture == '__KALE_ERROR__' then
       error(('Line %s, Column %s: Error'):format(
@@ -227,8 +231,8 @@ local Functions = RuleSet({
 
   FunctionCallParams = Pad('(') * (V('ArgList') * Pad(',') ^ -1) ^ -1 * Pad(')'),
   ExprCall = V('IndexableExpr') * V('FunctionCallParams'),
-  SkinnyFunctionCall = V('IndexableExpr') * Pad('.') * V('Id') * V('FunctionCallParams'),
-  FatFunctionCall = V('IndexableExpr') * Pad(':') * V('Id') * V('FunctionCallParams'),
+  SkinnyFunctionCall = V('IndexableExpr') * PadC('.') * V('Id') * V('FunctionCallParams'),
+  FatFunctionCall = V('IndexableExpr') * PadC(':') * V('Id') * V('FunctionCallParams'),
   FunctionCall = Sum(
     V('FatFunctionCall'),
     V('SkinnyFunction'),
@@ -242,7 +246,7 @@ local LogicFlow = RuleSet({
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
 
-  Return = Pad('return') * V('Expr') ^ -1 * C(P(true)), -- NOTE1
+  Return = PadC('return') * V('Expr') ^ -1,
 })
 
 local Expressions = RuleSet({
@@ -252,8 +256,8 @@ local Expressions = RuleSet({
     V('Id'),
     V('String'),
     V('Number'),
-    Pad(C('true')),
-    Pad(C('false'))
+    PadC('true'),
+    PadC('false')
   ),
 
   MoleculeExpr = Sum(
@@ -275,9 +279,9 @@ local Expressions = RuleSet({
     Pad(C('(')) * V('Expr') * Pad(C(')'))
   ),
 
-  IndexableExpr = Pad('(') * V('Expr') * Pad(')') + V('Id'),
-  DotIndexExpr = V('IndexableExpr') * Pad('.') * V('Id'),
-  BracketIndexExpr = V('IndexableExpr') * Pad('[') * V('Expr') * Pad(']'),
+  IndexableExpr = PadC('(') * V('Expr') * PadC(')') + V('Id'),
+  DotIndexExpr = V('IndexableExpr') * PadC('.') * V('Id'),
+  BracketIndexExpr = V('IndexableExpr') * PadC('[') * V('Expr') * PadC(']'),
   IndexExpr = V('DotIndexExpr') + V('BracketIndexExpr'),
 })
 

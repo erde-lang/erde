@@ -2,38 +2,30 @@ local inspect = require('inspect')
 local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
--- Helpers
+-- Compile Helpers
 -- -----------------------------------------------------------------------------
 
-function isnode(node)
-  return type(node) == 'table' and type(node.rule) == 'string'
+local function noop()
 end
 
-function echo(...)
+local function echo(...)
   return ...
 end
 
-function concat(...)
-  return table.concat({ ... })
+local function concat(sep)
+  return function(...)
+    return table.concat({...}, sep)
+  end
 end
 
-function noop()
-end
-
-function template(s)
+local function template(s)
   return function(...)
     return s:format(...)
   end
 end
 
-function pack(...)
+local function pack(...)
   return { ... }
-end
-
-function binop(op)
-  return function(...)
-    return table.concat({...}, op)
-  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -148,10 +140,16 @@ local Functions = {
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
-  FunctionCallParams = echo,
-  ExprCall = echo,
-  SkinnyFunctionCall = echo,
-  FatFunctionCall = echo,
+  FunctionCallParams = function(...)
+    return ('(%s)'):format(
+      supertable({ ... })
+        :map(function(v) return type(v) == 'table' and v.id or v end)
+        :join(',')
+    )
+  end,
+  ExprCall = concat(),
+  SkinnyFunctionCall = concat(),
+  FatFunctionCall = concat(),
   FunctionCall = echo,
 }
 
@@ -164,9 +162,7 @@ local LogicFlow = {
     return supertable({ ... }, { 'end' }):join(' ')
   end,
 
-  Return = function(expr)
-    return ('return %s'):format(expr or '')
-  end,
+  Return = concat(' '),
 }
 
 local Expressions = {
@@ -175,21 +171,21 @@ local Expressions = {
   OrganismExpr = echo,
   Expr = echo,
 
-  IndexableExpr = echo,
-  DotIndexExpr = template('%s.%s'),
-  BracketIndexExpr = echo,
+  IndexableExpr = concat(),
+  DotIndexExpr = concat(),
+  BracketIndexExpr = concat(),
   IndexExpr = echo,
 }
 
 local Operators = {
-  And = binop('and'),
-  Or = binop('or'),
+  And = concat('and'),
+  Or = concat('or'),
 
-  Addition = binop('+'),
-  Subtraction = binop('-'),
-  Multiplication = binop('*'),
-  Division = binop('/'),
-  Modulo = binop('%'),
+  Addition = concat('+'),
+  Subtraction = concat('-'),
+  Multiplication = concat('*'),
+  Division = concat('/'),
+  Modulo = concat('%'),
 
   Binop = echo,
 
@@ -241,6 +237,10 @@ local compiler = supertable(
   Numbers,
   Core
 )
+
+local function isnode(node)
+  return type(node) == 'table' and type(node.rule) == 'string'
+end
 
 local function compile(node)
   if not isnode(node) then
