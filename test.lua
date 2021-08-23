@@ -26,5 +26,5 @@ end
 local input = read_file('./examples/test.kl')
 local ast, state = kale.parse(input)
 print('STATE: ', inspect(state))
--- print('AST: ', inspect(ast))
+print('AST: ', inspect(ast))
 print('LUA: ', kale.compile(ast))

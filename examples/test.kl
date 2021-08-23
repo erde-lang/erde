@@ -49,5 +49,5 @@ local x = 99 ? y
 local x = 88 ?? z
 
 local a = test()
-local a = test:mymethod(x)
-local a = test.myfunc(x, c)
+local a = abc.myfunc(x, c)
+local a = abb:mymethod(x)

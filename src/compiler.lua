@@ -140,13 +140,9 @@ local Functions = {
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
-  FunctionCallParams = function(...)
-    return ('(%s)'):format(
-      supertable({ ... })
-        :map(function(v) return type(v) == 'table' and v.id or v end)
-        :join(',')
-    )
-  end,
+  FunctionCallArgList = concat(','),
+  FunctionCallParams = concat(),
+
   ExprCall = concat(),
   SkinnyFunctionCall = concat(),
   FatFunctionCall = concat(),

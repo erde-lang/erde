@@ -6,13 +6,6 @@ local compiler = require('compiler')
 local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
--- Notes
---
--- NOTE1: C(P(true)) is used in this rule to ensure this rule actually captures
--- something, otherwise it will not be placed in the AST.
--- -----------------------------------------------------------------------------
-
--- -----------------------------------------------------------------------------
 -- Environment
 --
 -- Sets the fenv so that we don't have to prefix everything with `lpeg.` and
@@ -229,13 +222,15 @@ local Functions = RuleSet({
   FatFunction = V('Params') * Pad('=>') * V('FunctionBody'),
   Function = V('SkinnyFunction') + V('FatFunction'),
 
-  FunctionCallParams = Pad('(') * (V('ArgList') * Pad(',') ^ -1) ^ -1 * Pad(')'),
+  FunctionCallArgList = (List(V('Id'), Pad(',')) * Pad(',') ^ -1) ^ -1,
+  FunctionCallParams = PadC('(') * V('FunctionCallArgList') * PadC(')'),
+
   ExprCall = V('IndexableExpr') * V('FunctionCallParams'),
-  SkinnyFunctionCall = V('IndexableExpr') * PadC('.') * V('Id') * V('FunctionCallParams'),
+  SkinnyFunctionCall = V('DotIndexExpr') * V('FunctionCallParams'),
   FatFunctionCall = V('IndexableExpr') * PadC(':') * V('Id') * V('FunctionCallParams'),
   FunctionCall = Sum(
     V('FatFunctionCall'),
-    V('SkinnyFunction'),
+    V('SkinnyFunctionCall'),
     V('ExprCall')
   ),
 })
@@ -264,7 +259,6 @@ local Expressions = RuleSet({
     V('FunctionCall'),
     V('IndexExpr'),
     V('Binop'),
-    V('FunctionCall'),
     V('AtomExpr')
   ),
 
@@ -274,10 +268,7 @@ local Expressions = RuleSet({
     V('MoleculeExpr')
   ),
 
-  Expr = Sum(
-    V('OrganismExpr'),
-    Pad(C('(')) * V('Expr') * Pad(C(')'))
-  ),
+  Expr = V('OrganismExpr') + PadC('(') * V('Expr') * PadC(')'),
 
   IndexableExpr = PadC('(') * V('Expr') * PadC(')') + V('Id'),
   DotIndexExpr = V('IndexableExpr') * PadC('.') * V('Id'),

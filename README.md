@@ -4,6 +4,7 @@
 
 - Function calls
 - Function optional paren (one arg, include destructuring!)
+- rename IndexableExpr...
 - comments
 - Error messages
 - Switch case
@@ -14,6 +15,7 @@
 - expr index (index chaining: a.b.c)
 - Optional chaining
 - rename to Orbit? (.ob file ext)
+- unary operators
 
 ## Long Term TODO
 
