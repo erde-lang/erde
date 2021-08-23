@@ -2,17 +2,14 @@
 
 ## TODO
 
-- Function calls
 - Function optional paren (one arg, include destructuring!)
-- rename IndexableExpr...
-- comments
 - Error messages
 - Switch case
 - While loop
 - table casting
 - Macros
 - order of operations?
-- expr index (index chaining: a.b.c)
+- expr index (IndexableExpr, index chaining: a.b.c)
 - Optional chaining
 - rename to Orbit? (.ob file ext)
 - unary operators

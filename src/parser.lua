@@ -122,6 +122,10 @@ local Core = RuleSet({
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
+
+  SingleLineComment = P('//') * (P(1) - V('Newline')) ^ 0,
+  MultiLineComment = P('/*') * (P(1) - P('*/')) ^ 0 * P('*/'),
+  Comment = V('SingleLineComment') + V('MultiLineComment'),
 })
 
 local Numbers = RuleSet({
@@ -309,11 +313,12 @@ local Blocks = RuleSet({
     V('MapDestructure'),
     V('Declaration'),
     V('Return'),
-    V('IfElse')
+    V('IfElse'),
+    V('Comment')
   )),
 
   Declaration = Product(
-    C(Pad('local') ^ -1),
+    PadC('local') ^ -1,
     V('Id'),
     (Pad('=') * Demand(V('Expr'))) ^ -1
   ),

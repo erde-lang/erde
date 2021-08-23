@@ -36,6 +36,10 @@ local Core = {
   Id = echo,
   Keyword = noop,
   Bool = echo,
+
+  SingleLineComment = noop,
+  MultiLineComment = noop,
+  Comment = noop,
 }
 
 local Numbers = {
