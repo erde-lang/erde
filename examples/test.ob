@@ -31,6 +31,10 @@ local blah = (x, y = 3, z = 2, ...test) => {
   return h
 }
 
+local blah2 = x -> {
+  return 4
+}
+
 local y = {
   `{hello}`: true,
   test: 'hi',
@@ -40,7 +44,7 @@ local y = {
 local x = y.a
 
 local [a, b] = y
-local { a, b } = y
+local { :a, :b } = y
 
 local x = y + 3 * ((9 + 9))
 

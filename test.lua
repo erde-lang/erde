@@ -26,5 +26,5 @@ end
 local input = read_file('./examples/test.ob')
 local ast, state = orbit.parse(input)
 print('STATE: ', inspect(state))
-print('AST: ', inspect(ast))
+-- print('AST: ', inspect(ast))
 print('LUA: ', orbit.compile(ast))

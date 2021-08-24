@@ -2,6 +2,19 @@ local inspect = require('inspect')
 local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
+-- State
+-- -----------------------------------------------------------------------------
+
+local state = {
+  tmpcounter = 1,
+}
+
+local function newtmpid()
+  state.tmpcounter = state.tmpcounter + 1
+  return ('__ORBIT_TMP_%d__'):format(state.tmpcounter)
+end
+
+-- -----------------------------------------------------------------------------
 -- Compile Helpers
 -- -----------------------------------------------------------------------------
 
@@ -18,14 +31,14 @@ local function concat(sep)
   end
 end
 
-local function template(s)
+local function template(str)
   return function(...)
-    return s:format(...)
+    return str:format(...)
   end
 end
 
 local function pack(...)
-  return { ... }
+  return supertable({ ... })
 end
 
 -- -----------------------------------------------------------------------------
@@ -80,31 +93,8 @@ local Tables = {
   TableField = echo,
   Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
 
-  ArrayDestructure = function(isLocal, ...)
-    local ids = supertable({ ... })
-    local _, expr = ids:pop()
-    return ids:map(function(id, index)
-      return ('%s%s = %s[%d]'):format(
-        #isLocal > 0 and 'local ' or '',
-        id,
-        expr,
-        index
-      )
-    end):join('\n')
-  end,
-
-  MapDestructure = function(isLocal, ...)
-    local ids = supertable({ ... })
-    local _, expr = ids:pop()
-    return ids:map(function(id)
-      return ('%s%s = %s.%s'):format(
-        #isLocal > 0 and 'local ' or '',
-        id,
-        expr,
-        id
-      )
-    end):join('\n')
-  end,
+  ArrayDestructure = pack,
+  MapDestructure = pack,
 }
 
 local Functions = {
@@ -124,15 +114,15 @@ local Functions = {
       return ('function(%s) %s end'):format(fat and 'self' or '', params)
     end
 
-    local varargs = params[#params].varargs and table.remove(params)
+    local varargs = params[#params].varargs and params:pop()
 
     local ids = supertable(
       fat and { 'self' },
-      supertable(params):map(function(param) return param.id end),
+      params:map(function(param) return param.id end),
       varargs and { '...' }
     ):join(',')
 
-    local prebody = supertable(params)
+    local prebody = params
       :filter(function(param) return param.default end)
       :map(function(param)
         return ('if %s == nil then %s = %s end')
@@ -157,7 +147,6 @@ local LogicFlow = {
   If = template('if %s then %s'),
   ElseIf = template('elseif %s then %s'),
   Else = template('else %s'),
-
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
@@ -187,6 +176,12 @@ local Operators = {
   Division = concat('/'),
   Modulo = concat('%'),
 
+  Greater = concat('>'),
+  Less = concat('<'),
+  GreaterEq = concat('>='),
+  LessEq = concat('<='),
+  Eq = concat('=='),
+
   Binop = echo,
 
   Ternary = function(condition, iftrue, iffalse)
@@ -198,13 +193,44 @@ local Operators = {
   end,
 
   NullCoalescence = function(default, backup)
-    return ([[
-    (function()
-    local __ORBIT_TMP__ = %s
-    if __ORBIT_TMP__ ~= nil then return __ORBIT_TMP__ else return %s end
-    )()
-    ]]):format(default, backup)
+    local tmpid = newtmpid()
+    return ([[(function()
+      local %s = %s
+      if %s ~= nil then
+        return %s
+      else
+        return %s
+      end
+    )()]]):format(tmpid, default, tmpid, tmpid, backup)
   end,
+}
+
+local Declaration = {
+  IdDeclaration = concat(' '),
+
+  ArrayDestructureDeclaration = function(isLocal, ids, expr) 
+    local tmpid = newtmpid()
+    return supertable(
+      { ('local %s = %s'):format(tmpid, expr) }, 
+      ids:map(function(id, index)
+        return (isLocal and 'local %s = %s[%d]' or '%s = %s[%d]')
+          :format(id, tmpid, index)
+      end)
+    ):join('\n')
+  end,
+
+  MapDestructureDeclaration = function(isLocal, ids, expr)
+    local tmpid = newtmpid()
+    return supertable(
+      { ('local %s = %s'):format(tmpid, expr) }, 
+      ids:map(function(id)
+        return (isLocal and 'local %s = %s.%s' or '%s = %s.%s')
+          :format(id, tmpid, id)
+      end)
+    ):join('\n')
+  end,
+
+  Declaration = echo,
 }
 
 local Blocks = {
@@ -212,14 +238,6 @@ local Blocks = {
     return supertable({ ... }):join('\n')
   end,
   Statement = echo,
-
-  Declaration = function(isLocal, id, expr)
-    return supertable({
-      #isLocal > 0 and 'local ' or '',
-      id,
-      expr and (' = %s'):format(expr) or '',
-    }):join('')
-  end,
 }
 
 -- -----------------------------------------------------------------------------
@@ -228,6 +246,7 @@ local Blocks = {
 
 local compiler = supertable(
   Blocks,
+  Declaration,
   Operators,
   Expressions,
   LogicFlow,
