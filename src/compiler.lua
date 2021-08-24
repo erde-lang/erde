@@ -157,7 +157,6 @@ local LogicFlow = {
   If = template('if %s then %s'),
   ElseIf = template('elseif %s then %s'),
   Else = template('else %s'),
-
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
@@ -186,6 +185,12 @@ local Operators = {
   Multiplication = concat('*'),
   Division = concat('/'),
   Modulo = concat('%'),
+
+  Greater = concat('>'),
+  Less = concat('<'),
+  GreaterEq = concat('>='),
+  LessEq = concat('<='),
+  Eq = concat('=='),
 
   Binop = echo,
 

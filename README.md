@@ -2,16 +2,19 @@
 
 ## TODO
 
-- Function optional paren (one arg, include destructuring!)
-- Error messages
-- Switch case
+- allow destructuring in params (including optional parens)
+- shorthand @test for self.test?
 - While loop
-- table casting
-- Macros
 - Optional chaining
 - unary operators
+- === operator??
 - expr index (IndexableExpr, index chaining: a.b.c)
+- varargs assignment (local ...x = myfunc())
+- case statement
+- table casting
+- Macros
 - order of operations?
+- Error messages
 
 ## Long Term TODO
 
@@ -83,18 +86,28 @@ There is no for loop. Instead, use Array constructors + macros:
 
 TODO
 
-#### Switch case
+#### Case statement
 
-Similar to golang. No break required. Switch statements CAN return values
+One of orbits unique features. Similar to a `switch` statement but:
+
+1. case statements can return values
+1. No need to use `case` keyword
+1. Rather than hard values, expressions are used
+1. The cased value is accessible as "$"
 
 ```
-local x = switch myenum {
-  case 1:
-    return 'hello'
-  case 2:
-    return 'world'
-  default:
-    return 'empty'
+local test = case myfunc() {
+  $ > 4:
+    dosomething()
+    doanotherthing()
+    return 3
+  $ < 10:
+    return $ + 3
+  $ == 10:
+  $ == 4:
+    return 10
+  true:
+    return 4
 }
 ```
 

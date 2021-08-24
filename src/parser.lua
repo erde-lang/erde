@@ -293,6 +293,12 @@ local Operators = RuleSet({
   Division = Binop('/'),
   Modulo = Binop('%'),
 
+  Greater = Binop('>'),
+  Less = Binop('<'),
+  GreaterEq = Binop('>='),
+  LessEq = Binop('<='),
+  Eq = Binop('=='),
+
   Binop = Sum(
     V('LogicalAnd'),
     V('LogicalOr'),
@@ -300,7 +306,12 @@ local Operators = RuleSet({
     V('Subtraction'),
     V('Multiplication'),
     V('Division'),
-    V('Modulo')
+    V('Modulo'),
+    V('Greater'),
+    V('Less'),
+    V('GreaterEq'),
+    V('LessEq'),
+    V('Eq')
   ),
 
   Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
