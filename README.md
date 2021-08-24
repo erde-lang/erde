@@ -2,17 +2,18 @@
 
 ## TODO
 
+- DUE 08/29
 - allow destructuring in params (including optional parens)
-- track `__ORBIT_TMP__` with unique ids!
 - shorthand @test for self.test?
 - While loop
-- Optional chaining
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - === operator??
 - assignment operators (+=, -=)
-- expr index (IndexableExpr, index chaining: a.b.c)
 - varargs assignment (local ...x = myfunc())
+- expr index (IndexableExpr, index chaining: a.b.c)
+- Optional chaining
+
 - case statement
 - table casting
 - Macros
