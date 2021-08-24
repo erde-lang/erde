@@ -193,12 +193,15 @@ local Operators = {
   end,
 
   NullCoalescence = function(default, backup)
-    return ([[
-    (function()
-    local __ORBIT_TMP__ = %s
-    if __ORBIT_TMP__ ~= nil then return __ORBIT_TMP__ else return %s end
-    )()
-    ]]):format(default, backup)
+    local tmpid = newtmpid()
+    return ([[(function()
+      local %s = %s
+      if %s ~= nil then
+        return %s
+      else
+        return %s
+      end
+    )()]]):format(tmpid, default, tmpid, tmpid, backup)
   end,
 }
 

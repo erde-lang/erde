@@ -206,6 +206,8 @@ local Functions = RuleSet({
       Pad(',') ^ -1,
       Pad(')')
     ),
+    V('ArrayDestructure'),
+    V('MapDestructure'),
     V('Arg')
   ),
 
