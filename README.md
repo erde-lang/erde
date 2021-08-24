@@ -11,7 +11,7 @@
 - Optional chaining
 - unary operators
 - expr index (IndexableExpr, index chaining: a.b.c)
-  - order of operations?
+- order of operations?
 
 ## Long Term TODO
 
@@ -137,11 +137,11 @@ const t = {...}
 const [a1, a2] = t
 
 // String fields
-const { hello, cake } = t
+const { :hello, :cake } = t
 
 // Simultaneous
 
-const [a1, a2], { hello, cake } = t
+const [a1, a2], { :hello, :cake } = t
 ```
 
 #### Casting
@@ -158,7 +158,7 @@ const t = {
 const tarray = t[]
 
 // { hello: "world" }
-const tmap = t{}
+const tmap = t{:}
 ```
 
 ### Functions

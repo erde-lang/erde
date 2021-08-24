@@ -44,7 +44,7 @@ local y = {
 local x = y.a
 
 local [a, b] = y
-local { a, b } = y
+local { :a, :b } = y
 
 local x = y + 3 * ((9 + 9))
 

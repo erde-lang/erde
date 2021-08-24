@@ -192,7 +192,7 @@ local Tables = RuleSet({
   MapDestructure = Product(
     C(Pad('local') ^ -1),
     Pad('{'),
-    List(V('Id'), Pad(',')),
+    List(P(':') * V('Id'), Pad(',')),
     Pad('}'),
     Pad('='),
     Demand(V('Expr'))
