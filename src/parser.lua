@@ -206,19 +206,22 @@ local Functions = RuleSet({
 
   ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArgList = List(V('OptArg'), Pad(',')),
-  Params = Product(
-    Pad('('),
-    Sum(
-      Product(
-        V('ArgList'),
-        (Pad(',') * V('OptArgList')) ^ -1,
-        (Pad(',') * V('VarArgs')) ^ -1
+  Params = Sum(
+    Product(
+      Pad('('),
+      Sum(
+        Product(
+          V('ArgList'),
+          (Pad(',') * V('OptArgList')) ^ -1,
+          (Pad(',') * V('VarArgs')) ^ -1
+        ),
+        V('OptArgList') * (Pad(',') * V('VarArgs')) ^ -1,
+        V('VarArgs') ^ -1
       ),
-      V('OptArgList') * (Pad(',') * V('VarArgs')) ^ -1,
-      V('VarArgs') ^ -1
+      Pad(',') ^ -1,
+      Pad(')')
     ),
-    Pad(',') ^ -1,
-    Pad(')')
+    V('Arg')
   ),
 
   FunctionBody = V('Expr') + (Pad('{') * V('Block') * Pad('}')),

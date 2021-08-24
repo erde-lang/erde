@@ -31,6 +31,10 @@ local blah = (x, y = 3, z = 2, ...test) => {
   return h
 }
 
+local blah2 = x -> {
+  return 4
+}
+
 local y = {
   `{hello}`: true,
   test: 'hi',
