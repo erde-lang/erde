@@ -68,8 +68,8 @@ local function Product(...)
 end
 
 local function Demand(pattern)
-  return pattern + Cc('__KALE_ERROR__') * Cp() / function(capture, position)
-    if capture == '__KALE_ERROR__' then
+  return pattern + Cc('__ORBIT_ERROR__') * Cp() / function(capture, position)
+    if capture == '__ORBIT_ERROR__' then
       error(('Line %s, Column %s: Error'):format(
         state.line,
         position - state.colstart

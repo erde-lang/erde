@@ -1,7 +1,7 @@
 package.path = './src/?.lua;' .. package.path
 package.path = '/home/bsuth/projects/?/src/init.lua;' .. package.path
 
-local kale = require('kale')
+local orbit = require('orbit')
 local inspect = require('inspect')
 
 local function read_file(path)
@@ -24,7 +24,7 @@ local function write_file(path, content)
 end
 
 local input = read_file('./examples/test.kl')
-local ast, state = kale.parse(input)
+local ast, state = orbit.parse(input)
 print('STATE: ', inspect(state))
 print('AST: ', inspect(ast))
-print('LUA: ', kale.compile(ast))
+print('LUA: ', orbit.compile(ast))
