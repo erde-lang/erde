@@ -3,11 +3,14 @@
 ## TODO
 
 - allow destructuring in params (including optional parens)
+- track `__ORBIT_TMP__` with unique ids!
 - shorthand @test for self.test?
 - While loop
 - Optional chaining
 - unary operators
+- debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - === operator??
+- assignment operators (+=, -=)
 - expr index (IndexableExpr, index chaining: a.b.c)
 - varargs assignment (local ...x = myfunc())
 - case statement
@@ -15,6 +18,7 @@
 - Macros
 - order of operations?
 - Error messages
+- Performance tuning
 
 ## Long Term TODO
 

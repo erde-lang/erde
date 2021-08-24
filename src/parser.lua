@@ -180,23 +180,8 @@ local Tables = RuleSet({
   TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
   Table = Pad('{') * List(V('TableField'), Pad(',')) * Pad(',') ^ -1 * Pad('}'),
 
-  ArrayDestructure = Product(
-    C(Pad('local') ^ -1),
-    Pad('['),
-    List(V('Id'), Pad(',')),
-    Pad(']'),
-    Pad('='),
-    Demand(V('Expr'))
-  ),
-
-  MapDestructure = Product(
-    C(Pad('local') ^ -1),
-    Pad('{'),
-    List(P(':') * V('Id'), Pad(',')),
-    Pad('}'),
-    Pad('='),
-    Demand(V('Expr'))
-  ),
+  ArrayDestructure = Pad('[') * List(V('Id'), Pad(',')) * Pad(']'),
+  MapDestructure = Pad('{') * List(P(':') * V('Id'), Pad(',')) * Pad('}'),
 })
 
 local Functions = RuleSet({
@@ -318,24 +303,43 @@ local Operators = RuleSet({
   NullCoalescence = V('MoleculeExpr') * Pad('??') * V('Expr'),
 })
 
+local Declaration = RuleSet({
+  IdDeclaration = Product(
+    PadC('local') ^ -1,
+    V('Id'),
+    (PadC('=') * Demand(V('Expr'))) ^ -1
+  ),
+
+  ArrayDestructureDeclaration = Product(
+    PadC('local') + C(false),
+    V('ArrayDestructure'),
+    Pad('='),
+    Demand(V('Expr'))
+  ),
+
+  MapDestructureDeclaration = Product(
+    PadC('local') + C(false),
+    V('MapDestructure'),
+    Pad('='),
+    Demand(V('Expr'))
+  ),
+
+  Declaration = Sum(
+    V('MapDestructureDeclaration'),
+    V('ArrayDestructureDeclaration'),
+    V('IdDeclaration')
+  ),
+})
+
 local Blocks = RuleSet({
   Block = V('Statement') ^ 0,
-
   Statement = Pad(Sum(
     V('FunctionCall'),
-    V('ArrayDestructure'),
-    V('MapDestructure'),
     V('Declaration'),
     V('Return'),
     V('IfElse'),
     V('Comment')
   )),
-
-  Declaration = Product(
-    PadC('local') ^ -1,
-    V('Id'),
-    (Pad('=') * Demand(V('Expr'))) ^ -1
-  ),
 })
 
 -- -----------------------------------------------------------------------------
@@ -345,6 +349,7 @@ local Blocks = RuleSet({
 local grammar = P(supertable(
   { V('Block') },
   Blocks,
+  Declaration,
   Operators,
   Expressions,
   LogicFlow,
