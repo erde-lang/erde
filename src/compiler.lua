@@ -6,7 +6,7 @@ local supertable = require('supertable')
 -- -----------------------------------------------------------------------------
 
 local state = {
-  tmpcounter = 1,
+  tmpcounter = 0,
 }
 
 local function newtmpid()
@@ -87,20 +87,63 @@ local Strings = {
 }
 
 local Tables = {
-  StringTableKey = template('[%s]'),
+  StringTableKey = template('[ %s ]'),
   MapTableField = template('%s = %s'),
   InlineTableField = function(id) return ('%s = %s'):format(id, id) end,
+
   TableField = echo,
-  Table = function(...) return ('{ %s }'):format(supertable({ ... }):join(', ')) end,
+  TableFieldList = concat(),
+  Table = concat(),
+
+  DotIndex = concat(),
+  BracketIndex = concat(),
+  ChainIndex = concat(),
+  IndexExpr = echo,
 
   ArrayDestructure = pack,
+
+  MapDestruct = concat(),
   MapDestructure = pack,
 }
 
 local Functions = {
-  Arg = function(id) return { id = id } end,
-  OptArg = function(id, expr) return { id = id, default = expr } end,
-  VarArgs = function(id) return { id = id, varargs = true } end,
+  Arg = function(id)
+    return { id = id, prebody = '' }
+  end,
+
+  OptArg = function(id, expr)
+    return {
+      id = id,
+      prebody = ('if %s == nil then %s = %s end'):format(id, id, expr),
+    }
+  end,
+
+  VarArgs = function(id)
+    return {
+      id = id,
+      prebody = ('local %s = {...}'):format(id),
+    }
+  end,
+
+  ArrayArg = function(ids)
+    local tmpid = newtmpid()
+    return {
+      id = tmpid,
+      prebody = ids:map(function(id, index)
+        return ('local %s = %s[%d]'):format(id, tmpid, index)
+      end):join('\n'),
+    }
+  end,
+
+  MapArg = function(ids)
+    local tmpid = newtmpid()
+    return {
+      id = tmpid,
+      prebody = ids:map(function(id)
+        return ('local %s = %s.%s'):format(id, tmpid, id)
+      end):join('\n'),
+    }
+  end,
 
   ArgList = echo,
   OptArgList = echo,
@@ -137,6 +180,7 @@ local Functions = {
   FunctionCallArgList = concat(','),
   FunctionCallParams = concat(),
 
+  FunctionCallBase = concat(),
   ExprCall = concat(),
   SkinnyFunctionCall = concat(),
   FatFunctionCall = concat(),
@@ -159,11 +203,6 @@ local Expressions = {
   MoleculeExpr = echo,
   OrganismExpr = echo,
   Expr = echo,
-
-  IndexableExpr = concat(),
-  DotIndexExpr = concat(),
-  BracketIndexExpr = concat(),
-  IndexExpr = echo,
 }
 
 local Operators = {

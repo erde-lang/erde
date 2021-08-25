@@ -2,22 +2,29 @@
 
 ## TODO
 
-- DUE 08/29
-- allow destructuring in params (including optional parens)
+- DUE 08/26
+- nested destructuring
+- allow destructuring in params
+- Optional chaining
+
+- DUE 08/27
 - shorthand @test for self.test?
 - While loop
+- varargs assignment (local ...x = myfunc())
+
+- DUE 08/29
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - === operator??
 - assignment operators (+=, -=)
-- varargs assignment (local ...x = myfunc())
-- expr index (IndexableExpr, index chaining: a.b.c)
-- Optional chaining
+- order of operations?
 
+- DUE ???
 - case statement
 - table casting
 - Macros
-- order of operations?
+
+- DUE ???
 - Error messages
 - Performance tuning
 
@@ -160,6 +167,12 @@ const { :hello, :cake } = t
 // Simultaneous
 
 const [a1, a2], { :hello, :cake } = t
+```
+
+Can also null coalesce inside destructure:
+
+```
+const { :hello ?? 'world' } = t
 ```
 
 #### Casting
