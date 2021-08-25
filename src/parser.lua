@@ -50,9 +50,11 @@ local function PadC(pattern)
   return V('Space') * C(pattern) * V('Space')
 end
 
-local function List(pattern, separator, threshold)
-  threshold = threshold or 0
-  return pattern * (separator * pattern) ^ threshold
+local function List(pattern, separator, options)
+  options = options or {}
+  min = options.min or 0
+  trailing = options.trailing == false and P(true) or separator
+  return pattern * (separator * pattern) ^ min * trailing ^ -1
 end
 
 local function Sum(...)
@@ -123,8 +125,8 @@ local Core = RuleSet({
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
 
-  SingleLineComment = P('//') * (P(1) - V('Newline')) ^ 0,
-  MultiLineComment = P('/*') * (P(1) - P('*/')) ^ 0 * P('*/'),
+  SingleLineComment = Pad('//') * (P(1) - V('Newline')) ^ 0,
+  MultiLineComment = Pad('/*') * (P(1) - P('*/')) ^ 0 * Pad('*/'),
   Comment = V('SingleLineComment') + V('MultiLineComment'),
 })
 
@@ -177,8 +179,15 @@ local Tables = RuleSet({
   StringTableKey = V('String'),
   MapTableField = (V('StringTableKey') + V('Id')) * Pad(':') * V('Expr'),
   InlineTableField = Pad(P(':') * V('Id')),
+
   TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
-  Table = Pad('{') * List(V('TableField'), Pad(',')) * Pad(',') ^ -1 * Pad('}'),
+  TableFieldList = List(V('TableField'), PadC(',')) + PadC(''),
+  Table = PadC('{') * V('TableFieldList') * PadC('}'),
+
+  DotIndex = V('Space') * C('.') * V('Id'),
+  BracketIndex = PadC('[') * V('Expr') * PadC(']'),
+  ChainIndex = (V('DotIndex') + V('BracketIndex')) ^ 1,
+  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('ChainIndex'),
 
   ArrayDestructure = Pad('[') * List(V('Id'), Pad(',')) * Pad(']'),
   MapDestructure = Pad('{') * List(P(':') * V('Id'), Pad(',')) * Pad('}'),
@@ -188,6 +197,9 @@ local Functions = RuleSet({
   Arg = V('Id'),
   OptArg = V('Id') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ 0,
+
+  ArrayArg = V('ArrayDestructure'),
+  MapArg = V('MapDestructure'),
 
   ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArgList = List(V('OptArg'), Pad(',')),
@@ -219,9 +231,10 @@ local Functions = RuleSet({
   FunctionCallArgList = (List(V('Id'), Pad(',')) * Pad(',') ^ -1) ^ -1,
   FunctionCallParams = PadC('(') * V('FunctionCallArgList') * PadC(')'),
 
-  ExprCall = V('IndexableExpr') * V('FunctionCallParams'),
-  SkinnyFunctionCall = V('DotIndexExpr') * V('FunctionCallParams'),
-  FatFunctionCall = V('IndexableExpr') * PadC(':') * V('Id') * V('FunctionCallParams'),
+  FunctionCallBase = PadC('(') * V('Expr') * PadC(')') + V('Id'),
+  ExprCall = V('FunctionCallBase') * V('FunctionCallParams'),
+  SkinnyFunctionCall = V('IndexExpr') * V('FunctionCallParams'),
+  FatFunctionCall = V('FunctionCallBase') * PadC(':') * V('Id') * V('FunctionCallParams'),
   FunctionCall = Sum(
     V('FatFunctionCall'),
     V('SkinnyFunctionCall'),
@@ -263,11 +276,6 @@ local Expressions = RuleSet({
   ),
 
   Expr = V('OrganismExpr') + PadC('(') * V('Expr') * PadC(')'),
-
-  IndexableExpr = PadC('(') * V('Expr') * PadC(')') + V('Id'),
-  DotIndexExpr = V('IndexableExpr') * PadC('.') * V('Id'),
-  BracketIndexExpr = V('IndexableExpr') * PadC('[') * V('Expr') * PadC(']'),
-  IndexExpr = V('DotIndexExpr') + V('BracketIndexExpr'),
 })
 
 local Operators = RuleSet({

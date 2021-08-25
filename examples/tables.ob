@@ -1,0 +1,19 @@
+// Declarations
+
+local y = {  }
+local y = {
+  `{hello}`: true,
+  test: 'hi',
+  :test,
+  'hello world',
+}
+
+// Indexing
+
+local x = y.a.b[3].c
+local x = ({ x: 'hi' }).x
+
+// Destructuring
+
+local [a, b] = y
+local { :a, :b } = y

@@ -3,7 +3,12 @@
 ## TODO
 
 - DUE 08/29
-- allow destructuring in params (including optional parens)
+
+- allow destructuring in params?
+- nested destructuring
+- expr index (IndexableExpr, index chaining: a.b.c)
+- Optional chaining
+
 - shorthand @test for self.test?
 - While loop
 - unary operators
@@ -11,8 +16,6 @@
 - === operator??
 - assignment operators (+=, -=)
 - varargs assignment (local ...x = myfunc())
-- expr index (IndexableExpr, index chaining: a.b.c)
-- Optional chaining
 
 - case statement
 - table casting
@@ -160,6 +163,12 @@ const { :hello, :cake } = t
 // Simultaneous
 
 const [a1, a2], { :hello, :cake } = t
+```
+
+Can also null coalesce inside destructure:
+
+```
+const { :hello ?? 'world' } = t
 ```
 
 #### Casting
