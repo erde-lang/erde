@@ -190,7 +190,14 @@ local Tables = RuleSet({
   IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('ChainIndex'),
 
   ArrayDestructure = Pad('[') * List(V('Id'), Pad(',')) * Pad(']'),
-  MapDestructure = Pad('{') * List(P(':') * V('Id'), Pad(',')) * Pad('}'),
+
+  MapDestruct = Product(
+    P(':'),
+    V('Id'),
+    V('MapDestructure') ^ -1,
+    (Pad('=') * Demand(V('Expr'))) ^ -1
+  ),
+  MapDestructure = Pad('{') * List(V('MapDestruct'), Pad(',')) * Pad('}'),
 })
 
 local Functions = RuleSet({

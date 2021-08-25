@@ -2,25 +2,29 @@
 
 ## TODO
 
-- DUE 08/29
-
-- allow destructuring in params?
+- DUE 08/26
 - nested destructuring
-- expr index (IndexableExpr, index chaining: a.b.c)
+- allow destructuring in params
 - Optional chaining
 
+- DUE 08/27
 - shorthand @test for self.test?
 - While loop
+- varargs assignment (local ...x = myfunc())
+
+- DUE 08/29
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - === operator??
 - assignment operators (+=, -=)
-- varargs assignment (local ...x = myfunc())
+- order of operations?
 
+- DUE ???
 - case statement
 - table casting
 - Macros
-- order of operations?
+
+- DUE ???
 - Error messages
 - Performance tuning
 

@@ -6,7 +6,7 @@ local supertable = require('supertable')
 -- -----------------------------------------------------------------------------
 
 local state = {
-  tmpcounter = 1,
+  tmpcounter = 0,
 }
 
 local function newtmpid()
@@ -101,6 +101,8 @@ local Tables = {
   IndexExpr = echo,
 
   ArrayDestructure = pack,
+
+  MapDestruct = concat(),
   MapDestructure = pack,
 }
 

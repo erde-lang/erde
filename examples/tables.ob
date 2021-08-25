@@ -17,3 +17,8 @@ local x = ({ x: 'hi' }).x
 
 local [a, b] = y
 local { :a, :b } = y
+
+// Nested Destructure
+
+local { a: { :a1 :a2 } } = y
+local { :a { :a1 :a2 } } = y
