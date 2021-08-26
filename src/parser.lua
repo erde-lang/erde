@@ -316,7 +316,7 @@ local Operators = RuleSet({
 
 local Declaration = RuleSet({
   IdDeclaration = Product(
-    PadC('local') ^ -1,
+    PadC('local') + C(false),
     V('Id'),
     (PadC('=') * Demand(V('Expr'))) ^ -1
   ),

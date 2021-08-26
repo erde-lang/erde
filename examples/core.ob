@@ -1,0 +1,3 @@
+// Varargs Assignment
+
+local ...x = myfunc()

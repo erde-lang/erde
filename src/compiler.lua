@@ -7,6 +7,7 @@ local supertable = require('supertable')
 
 local state = {
   tmpcounter = 0,
+  concatcache = {},
 }
 
 local function newtmpid()
@@ -26,9 +27,15 @@ local function echo(...)
 end
 
 local function concat(sep)
-  return function(...)
-    return table.concat({...}, sep)
+  sep = sep or ''
+  if state.concatcache[sep] == nil then
+    state.concatcache[sep] = function(...)
+      return supertable({ ... })
+        :filter(function(v) return type(v) == 'string' end)
+        :join(sep)
+    end
   end
+  return state.concatcache[sep]
 end
 
 local function template(str)
@@ -58,7 +65,7 @@ end
 -- Rule Helpers
 -- -----------------------------------------------------------------------------
 
-local function compiledestructure(isLocal, destructure, expr)
+local function compiledestructure(islocal, destructure, expr)
   local function extractids(destructure)
     return destructure:reduce(function(ids, destruct)
       return destruct.nested == false
@@ -92,7 +99,7 @@ local function compiledestructure(isLocal, destructure, expr)
 
   local exprid = newtmpid()
   return ('%s%s do %s %s end'):format(
-    isLocal and 'local ' or '',
+    islocal and 'local ' or '',
     extractids(destructure):join(','),
     ('local %s = %s'):format(exprid, expr),
     compilebody(destructure, exprid)
@@ -302,9 +309,7 @@ local Declaration = {
 }
 
 local Blocks = {
-  Block = function(...)
-    return supertable({ ... }):join('\n')
-  end,
+  Block = concat('\n'),
   Statement = echo,
 }
 

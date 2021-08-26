@@ -3,9 +3,16 @@
 ## TODO
 
 - DUE 08/29
-- fix varargs + trailing params comma (for example, `(,)` should not be valid)
 - varargs assignment (local ...x = myfunc())
 - Optional chaining
+
+- function improvements
+
+  - cleanup code / patterns (params??)
+  - function parsing performance!
+  - debug functions.ob compilation
+  - index chain calls without paren
+
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - assignment operators (+=, -=)
