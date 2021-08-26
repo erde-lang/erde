@@ -3,31 +3,43 @@
 ## TODO
 
 - DUE 08/29
-- fix varargs + trailing params comma (for example, `(,)` should not be valid)
-- varargs assignment (local ...x = myfunc())
-- Optional chaining
-- unary operators
-- debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
+- shorthand @test for self.test?
+- multiple returns
+- refactor expr
 - assignment operators (+=, -=)
+- unary operators
+- `do end` scoping (required to prevent holding refs!)
+
+- DUE 08/31
+- Optional chaining (dot index, bracket index, function call)
+- index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
+
+- DUE 09/03
+- case statement
 
 - DUE ???
-- `do end` scoping (required to prevent holding refs!)
-- While loop
-- case statement
-- multiple returns
 - table casting
 - Macros
-- shorthand @test for self.test?
+- require global keyword for global vars? (would be awesome, but requires scope tracking...)
 
 - DUE ???
 - order of operations?
 - print compiled code prettier (for debugging)
-- require global keyword for global vars?
 - Error messages
-- Performance tuning
 
 ## Long Term TODO
 
+- Syntax highlighting
+  - Vim
+  - Emacs
+  - Vscode
+  - Treesitter
+- orbit cli
+  - target various lua versions
+  - luajit bytecode option?
+- orbit lib
+  - allow mutating `require` (similar to moonscript)
+- docs site
 - Formatter
 - Source maps?
 
@@ -94,7 +106,8 @@ There is no for loop. Instead, use Array constructors + macros:
 
 #### While Loop
 
-TODO
+There is no while loop. Orbit retains the tail recursiveness of lua, so you may
+use recursive functions in place of traditional while loops.
 
 #### Case statement
 

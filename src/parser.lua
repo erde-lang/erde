@@ -50,13 +50,6 @@ local function PadC(pattern)
   return V('Space') * C(pattern) * V('Space')
 end
 
-local function List(pattern, separator, options)
-  options = options or {}
-  min = options.min or 0
-  trailing = options.trailing == false and P(true) or separator
-  return pattern * (separator * pattern) ^ min * trailing ^ -1
-end
-
 local function Sum(...)
   return supertable({ ... }):reduce(function(sum, pattern)
     return sum + pattern
@@ -87,7 +80,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function Binop(op)
-  return V('AtomExpr') * Pad(op) * V('Expr')
+  return V('Expr') * op * V('Expr')
+end
+
+function Csv(pattern, commacapture)
+  local comma = commacapture and PadC(',') or Pad(',')
+  return pattern * (comma * pattern) ^ 0 * Pad(',') ^ -1
 end
 
 -- -----------------------------------------------------------------------------
@@ -121,6 +119,7 @@ local Core = RuleSet({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
+  IdExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain') ^ -1,
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -128,51 +127,36 @@ local Core = RuleSet({
   SingleLineComment = Pad('//') * (P(1) - V('Newline')) ^ 0,
   MultiLineComment = Pad('/*') * (P(1) - P('*/')) ^ 0 * Pad('*/'),
   Comment = V('SingleLineComment') + V('MultiLineComment'),
-})
 
-local Numbers = RuleSet({
   Integer = digit ^ 1,
+  Hex = (P('0x') + P('0X')) * xdigit ^ 1,
   Exponent = S('eE') * S('+-') ^ -1 * V('Integer'),
-  Number = C(Sum(
-    Sum( -- float
-      digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
-      V('Integer') * V('Exponent')
-    ),
-    (P('0x') + P('0X')) * xdigit ^ 1, -- hex
-    V('Integer')
-  )),
+  Float = Sum(
+    digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
+    V('Integer') * V('Exponent')
+  ),
+  Number = C(V('Float') + V('Hex') + V('Integer')),
 })
 
 local Strings = RuleSet({
   EscapedChar = C(V('Newline') + P('\\') * P(1)),
 
-  Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
+  Interpolation = P('{') * Pad(Demand(V('Expr'))) * P('}'),
   LongString = Product(
-    '`',
-    (V('EscapedChar') + V('Interpolation') + C(P(1) - P('`'))) ^ 0,
-    '`'
+    P('`'),
+    Sum(
+      V('EscapedChar'),
+      V('Interpolation'),
+      C(P(1) - P('`'))
+    ) ^ 0,
+    P('`')
   ),
 
   String = Sum(
     V('LongString'),
-    P("'") * (V('EscapedChar') + (P(1) - P("'"))) ^ 0 * P("'"), -- single quote
-    P('"') * (V('EscapedChar') + (P(1) - P('"'))) ^ 0 * P('"') -- double quote
-  ) / function(s)
-    return s
-    -- return s
-    --   :gsub('\\a', '\a')
-    --   :gsub('\\b', '\b')
-    --   :gsub('\\f', '\f')
-    --   :gsub('\\n', '\n')
-    --   :gsub('\\r', '\r')
-    --   :gsub('\\t', '\t')
-    --   :gsub('\\v', '\v')
-    --   :gsub('\\\\', '\\')
-    --   :gsub('\\"', '"')
-    --   :gsub("\\'", "'")
-    --   :gsub('\\[', '[')
-    --   :gsub('\\]', ']')
-  end,
+    C("'") * (V('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"), -- single quote
+    C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"') -- double quote
+  ),
 })
 
 local Tables = RuleSet({
@@ -180,13 +164,12 @@ local Tables = RuleSet({
   MapTableField = (V('StringTableKey') + V('Id')) * Pad(':') * V('Expr'),
   InlineTableField = Pad(P(':') * V('Id')),
   TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
-  TableFieldList = List(V('TableField'), PadC(',')) + PadC(''),
-  Table = PadC('{') * V('TableFieldList') * PadC('}'),
+  Table = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
 
   DotIndex = V('Space') * C('.') * V('Id'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
-  ChainIndex = (V('DotIndex') + V('BracketIndex')) ^ 1,
-  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('ChainIndex'),
+  IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
+  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain'),
 
   Destruct = Product(
     C(':') + Cc(false),
@@ -194,50 +177,39 @@ local Tables = RuleSet({
     V('Destructure') + Cc(false),
     (Pad('=') * Demand(V('Expr'))) + Cc(false)
   ),
-  Destructure = Pad('{') * List(V('Destruct'), Pad(',')) * Pad('}'),
+  Destructure = Pad('{') * Csv(V('Destruct')) * Pad('}'),
 })
 
 local Functions = RuleSet({
-  Arg = V('Destructure') + V('Id'),
+  Arg = Sum(
+    Cc(false) * V('Id'),
+    Cc(true) * V('Destructure')
+  ),
   OptArg = V('Arg') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ -1,
-
-  ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
-  OptArgList = List(V('OptArg'), Pad(',')),
-  Params = Sum(
-    Product(
-      Pad('('),
-      Sum(
-        Product(
-          V('ArgList'),
-          (Pad(',') * V('OptArgList')) ^ -1,
-          (Pad(',') * V('VarArgs')) ^ -1
-        ),
-        V('OptArgList') * (Pad(',') * V('VarArgs')) ^ -1,
-        V('VarArgs') ^ -1
-      ),
-      Pad(',') ^ -1,
-      Pad(')')
-    ),
-    V('Arg')
+  ParamComma = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
+  Params = V('Arg') + Product(
+    Pad('('),
+    (V('Arg') * V('ParamComma')) ^ 0,
+    (V('OptArg') * V('ParamComma')) ^ 0,
+    (V('VarArgs') * V('ParamComma')) ^ -1,
+    Cc({}),
+    Pad(')')
   ),
 
-  FunctionBody = V('Expr') + (Pad('{') * V('Block') * Pad('}')),
-  SkinnyFunction = Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
-  FatFunction = Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
-  Function = V('SkinnyFunction') + V('FatFunction'),
+  FunctionExprBody = V('Expr'),
+  FunctionBody = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
+  Function = Sum(
+    Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
+    Cc(true) * V('Params') * Pad('=>') * V('FunctionBody')
+  ),
 
-  FunctionCallArgList = (List(V('Id'), Pad(',')) * Pad(',') ^ -1) ^ -1,
-  FunctionCallParams = PadC('(') * V('FunctionCallArgList') * PadC(')'),
-
-  FunctionCallBase = PadC('(') * V('Expr') * PadC(')') + V('Id'),
-  ExprCall = V('FunctionCallBase') * V('FunctionCallParams'),
-  SkinnyFunctionCall = V('IndexExpr') * V('FunctionCallParams'),
-  FatFunctionCall = V('FunctionCallBase') * PadC(':') * V('Id') * V('FunctionCallParams'),
-  FunctionCall = Sum(
-    V('FatFunctionCall'),
-    V('SkinnyFunctionCall'),
-    V('ExprCall')
+  FunctionCall = Product(
+    V('IdExpr'),
+    (PadC(':') * V('Id')) ^ -1,
+    PadC('('),
+    Csv(V('Expr'), true) + V('Space'),
+    PadC(')')
   ),
 })
 
@@ -274,40 +246,25 @@ local Expressions = RuleSet({
     V('MoleculeExpr')
   ),
 
-  Expr = V('OrganismExpr') + PadC('(') * V('Expr') * PadC(')'),
+  Expr = PadC('(') * V('Expr') * PadC(')') + V('OrganismExpr'),
 })
 
 local Operators = RuleSet({
-  LogicalAnd = Binop('&&'),
-  LogicalOr = Binop('||'),
+  LogicalAnd = Binop(Pad('&&')),
+  LogicalOr = Binop(Pad('||')),
 
-  Addition = Binop('+'),
-  Subtraction = Binop('-'),
-  Multiplication = Binop('*'),
-  Division = Binop('/'),
-  Modulo = Binop('%'),
-
-  Greater = Binop('>'),
-  Less = Binop('<'),
-  GreaterEq = Binop('>='),
-  LessEq = Binop('<='),
-  Neq = Binop('~='),
-  Eq = Binop('=='),
+  EchoOperator = Binop(PadC(Sum(
+    P('>='),
+    P('<='),
+    P('=='),
+    P('~='),
+    S('+-*/%><')
+  ))),
 
   Binop = Sum(
     V('LogicalAnd'),
     V('LogicalOr'),
-    V('Addition'),
-    V('Subtraction'),
-    V('Multiplication'),
-    V('Division'),
-    V('Modulo'),
-    V('Greater'),
-    V('Less'),
-    V('GreaterEq'),
-    V('LessEq'),
-    V('Neq'),
-    V('Eq')
+    V('EchoOperator')
   ),
 
   Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
@@ -316,9 +273,16 @@ local Operators = RuleSet({
 
 local Declaration = RuleSet({
   IdDeclaration = Product(
-    PadC('local') ^ -1,
+    PadC('local') + C(false),
     V('Id'),
     (PadC('=') * Demand(V('Expr'))) ^ -1
+  ),
+
+  VarArgsDeclaration = Product(
+    PadC('local') + C(false),
+    Pad('...'),
+    V('Id'),
+    Demand(Pad('=') * V('Expr'))
   ),
 
   DestructureDeclaration = Product(
@@ -329,6 +293,7 @@ local Declaration = RuleSet({
 
   Declaration = Sum(
     V('DestructureDeclaration'),
+    V('VarArgsDeclaration'),
     V('IdDeclaration')
   ),
 })
@@ -358,7 +323,6 @@ local grammar = P(supertable(
   Functions,
   Tables,
   Strings,
-  Numbers,
   Core
 ))
 

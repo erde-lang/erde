@@ -1,0 +1,6 @@
+local x = y / (3 * ((9 + 9)))
+local x = (1 + 2) * (3 + 4)
+
+local x = 2 + 3 ? 4 : 9
+local x = 99 ? y
+local x = 88 ?? z

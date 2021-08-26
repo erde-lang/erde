@@ -1,0 +1,45 @@
+// Params
+
+local p1 = () -> {}
+local p2 = () => {}
+
+local p3 = x -> {}
+local p4 = { :x = y } -> {}
+local p5 = ({ :x = y }, z) -> {}
+
+local p6 = (x = 1) -> {}
+local p7 = (x, y = 1, z = 4) -> {}
+
+local p8 = (...) -> {}
+local p9 = (x, ...) -> {}
+local p10 = (...x) -> {}
+
+local p11 = (x, y = 3, z = 2, ...test) => {}
+
+local p12 = (
+  x,
+  y = 3,
+  z = 2,
+  ...test,
+) => {}
+
+// Function Body
+
+local b1 = () -> {
+  local x = 42
+  return x
+}
+
+local b2 = () -> { local x = 'hello' }
+local b3 = () -> {
+  x: 'hello',
+  y: 'bye',
+}
+
+// Function Call
+
+myfunc()
+(() -> {})()
+a.b[1]()
+a.b[3].c(x, 4 + 5)
+a.b[3]:c()
