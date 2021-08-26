@@ -179,7 +179,6 @@ local Tables = RuleSet({
   StringTableKey = V('String'),
   MapTableField = (V('StringTableKey') + V('Id')) * Pad(':') * V('Expr'),
   InlineTableField = Pad(P(':') * V('Id')),
-
   TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
   TableFieldList = List(V('TableField'), PadC(',')) + PadC(''),
   Table = PadC('{') * V('TableFieldList') * PadC('}'),
@@ -189,24 +188,19 @@ local Tables = RuleSet({
   ChainIndex = (V('DotIndex') + V('BracketIndex')) ^ 1,
   IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('ChainIndex'),
 
-  ArrayDestructure = Pad('[') * List(V('Id'), Pad(',')) * Pad(']'),
-
-  MapDestruct = Product(
-    P(':'),
+  Destruct = Product(
+    C(':') + Cc(false),
     V('Id'),
-    V('MapDestructure') ^ -1,
-    (Pad('=') * Demand(V('Expr'))) ^ -1
+    V('Destructure') + Cc(false),
+    (Pad('=') * Demand(V('Expr'))) + Cc(false)
   ),
-  MapDestructure = Pad('{') * List(V('MapDestruct'), Pad(',')) * Pad('}'),
+  Destructure = Pad('{') * List(V('Destruct'), Pad(',')) * Pad('}'),
 })
 
 local Functions = RuleSet({
   Arg = V('Id'),
   OptArg = V('Id') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ 0,
-
-  ArrayArg = V('ArrayDestructure'),
-  MapArg = V('MapDestructure'),
 
   ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArgList = List(V('OptArg'), Pad(',')),
@@ -225,8 +219,6 @@ local Functions = RuleSet({
       Pad(',') ^ -1,
       Pad(')')
     ),
-    V('ArrayDestructure'),
-    V('MapDestructure'),
     V('Arg')
   ),
 
@@ -327,23 +319,15 @@ local Declaration = RuleSet({
     (PadC('=') * Demand(V('Expr'))) ^ -1
   ),
 
-  ArrayDestructureDeclaration = Product(
+  DestructureDeclaration = Product(
     PadC('local') + C(false),
-    V('ArrayDestructure'),
-    Pad('='),
-    Demand(V('Expr'))
-  ),
-
-  MapDestructureDeclaration = Product(
-    PadC('local') + C(false),
-    V('MapDestructure'),
+    V('Destructure'),
     Pad('='),
     Demand(V('Expr'))
   ),
 
   Declaration = Sum(
-    V('MapDestructureDeclaration'),
-    V('ArrayDestructureDeclaration'),
+    V('DestructureDeclaration'),
     V('IdDeclaration')
   ),
 })

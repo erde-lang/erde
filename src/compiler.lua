@@ -41,6 +41,19 @@ local function pack(...)
   return supertable({ ... })
 end
 
+local function map(...)
+  local keys = { ... }
+  return function(...)
+    return supertable({ ... }):map(function(value, i)
+      if type(value) == 'table' then
+        return supertable(value), keys[i]
+      else
+        return value, keys[i]
+      end
+    end)
+  end
+end
+
 -- -----------------------------------------------------------------------------
 -- Rule Sets
 -- -----------------------------------------------------------------------------
@@ -90,7 +103,6 @@ local Tables = {
   StringTableKey = template('[ %s ]'),
   MapTableField = template('%s = %s'),
   InlineTableField = function(id) return ('%s = %s'):format(id, id) end,
-
   TableField = echo,
   TableFieldList = concat(),
   Table = concat(),
@@ -100,10 +112,18 @@ local Tables = {
   ChainIndex = concat(),
   IndexExpr = echo,
 
-  ArrayDestructure = pack,
-
-  MapDestruct = concat(),
-  MapDestructure = pack,
+  Destruct = map('keyed', 'id', 'nested', 'default'),
+  Destructure = function(...)
+    local keycounter = 1
+    return supertable({ ... }):each(function(destruct)
+      if destruct.keyed then
+        destruct.index = ('.%s'):format(destruct.id)
+      else
+        destruct.index = ('[%d]'):format(keycounter)
+        keycounter = keycounter + 1
+      end
+    end)
+  end,
 }
 
 local Functions = {
@@ -122,26 +142,6 @@ local Functions = {
     return {
       id = id,
       prebody = ('local %s = {...}'):format(id),
-    }
-  end,
-
-  ArrayArg = function(ids)
-    local tmpid = newtmpid()
-    return {
-      id = tmpid,
-      prebody = ids:map(function(id, index)
-        return ('local %s = %s[%d]'):format(id, tmpid, index)
-      end):join('\n'),
-    }
-  end,
-
-  MapArg = function(ids)
-    local tmpid = newtmpid()
-    return {
-      id = tmpid,
-      prebody = ids:map(function(id)
-        return ('local %s = %s.%s'):format(id, tmpid, id)
-      end):join('\n'),
     }
   end,
 
@@ -247,26 +247,37 @@ local Operators = {
 local Declaration = {
   IdDeclaration = concat(' '),
 
-  ArrayDestructureDeclaration = function(isLocal, ids, expr) 
-    local tmpid = newtmpid()
-    return supertable(
-      { ('local %s = %s'):format(tmpid, expr) }, 
-      ids:map(function(id, index)
-        return (isLocal and 'local %s = %s[%d]' or '%s = %s[%d]')
-          :format(id, tmpid, index)
-      end)
-    ):join('\n')
-  end,
+  DestructureDeclaration = function(isLocal, initdestructs, initexpr)
+    function extractids(destructs)
+      return destructs:reduce(function(ids, destruct)
+        return destruct.nested == false
+          and ids:push(destruct.id)
+          or ids:push(unpack(extractids(destruct.nested)))
+      end, supertable())
+    end
 
-  MapDestructureDeclaration = function(isLocal, ids, expr)
-    local tmpid = newtmpid()
-    return supertable(
-      { ('local %s = %s'):format(tmpid, expr) }, 
-      ids:map(function(id)
-        return (isLocal and 'local %s = %s.%s' or '%s = %s.%s')
-          :format(id, tmpid, id)
-      end)
-    ):join('\n')
+    function compiledestructs(destructs, expr, default)
+      local exprid = newtmpid()
+      return supertable(
+        {
+          ('local %s = %s'):format(exprid, expr),
+          default ~= nil
+            and ('if %s == nil then %s = %s end'):format(exprid, exprid, default)
+            or nil,
+        }, 
+        destructs:map(function(destruct)
+          local nestedexpr = exprid .. destruct.index
+          return destruct.nested == false
+            and ('%s = %s'):format(destruct.id, nestedexpr)
+            or compiledestructs(destruct.nested, nestedexpr, destruct.default)
+        end)
+      ):join('\n')
+    end
+
+    return ('local %s do %s end'):format(
+      extractids(initdestructs):join(','),
+      compiledestructs(initdestructs, initexpr)
+    )
   end,
 
   Declaration = echo,

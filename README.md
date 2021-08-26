@@ -9,8 +9,8 @@
 
 - DUE 08/27
 - shorthand @test for self.test?
-- While loop
 - varargs assignment (local ...x = myfunc())
+- While loop
 
 - DUE 08/29
 - unary operators
@@ -21,10 +21,14 @@
 
 - DUE ???
 - case statement
+- multiple returns
 - table casting
 - Macros
 
 - DUE ???
+- `do end` scoping (required to prevent holding refs!)
+- print compiled code prettier (for debugging)
+- require global keyword for global vars?
 - Error messages
 - Performance tuning
 
