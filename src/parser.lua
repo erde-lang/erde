@@ -198,7 +198,7 @@ local Tables = RuleSet({
 })
 
 local Functions = RuleSet({
-  Arg = V('Id'),
+  Arg = V('Destructure') + V('Id'),
   OptArg = V('Id') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ 0,
 
@@ -322,8 +322,7 @@ local Declaration = RuleSet({
   DestructureDeclaration = Product(
     PadC('local') + C(false),
     V('Destructure'),
-    Pad('='),
-    Demand(V('Expr'))
+    Demand(Pad('=') * V('Expr'))
   ),
 
   Declaration = Sum(

@@ -2,17 +2,11 @@
 
 ## TODO
 
-- DUE 08/26
-- nested destructuring
+- DUE 08/29
 - allow destructuring in params
 - Optional chaining
-
-- DUE 08/27
-- shorthand @test for self.test?
 - varargs assignment (local ...x = myfunc())
 - While loop
-
-- DUE 08/29
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - === operator??
@@ -24,6 +18,7 @@
 - multiple returns
 - table casting
 - Macros
+- shorthand @test for self.test?
 
 - DUE ???
 - `do end` scoping (required to prevent holding refs!)

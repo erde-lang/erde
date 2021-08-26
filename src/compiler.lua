@@ -55,6 +55,51 @@ local function map(...)
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule Helpers
+-- -----------------------------------------------------------------------------
+
+local function compiledestructure(isLocal, destructure, expr)
+  local function extractids(destructure)
+    return destructure:reduce(function(ids, destruct)
+      return destruct.nested == false
+        and ids:push(destruct.id)
+        or ids:push(unpack(extractids(destruct.nested)))
+    end, supertable())
+  end
+
+  local function compilebody(destructure, exprid)
+    return destructure
+      :map(function(destruct)
+        local destructexpr = exprid .. destruct.index
+        local destructexprid = destruct.nested and newtmpid() or destruct.id
+        return supertable({
+          ('%s%s = %s'):format(
+            destruct.nested and 'local ' or '',
+            destructexprid,
+            destructexpr
+          ),
+          destruct.default and
+            ('if %s == nil then %s = %s end')
+              :format(destructexprid, destructexprid, destruct.default),
+          destruct.nested and
+            compilebody(destruct.nested, destructexprid),
+        })
+          :filter(function(compiled) return compiled end)
+          :join(' ')
+      end)
+      :join(' ')
+  end
+
+  local exprid = newtmpid()
+  return ('%s%s do %s %s end'):format(
+    isLocal and 'local ' or '',
+    extractids(destructure):join(','),
+    ('local %s = %s'):format(exprid, expr),
+    compilebody(destructure, exprid)
+  )
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule Sets
 -- -----------------------------------------------------------------------------
 
@@ -127,22 +172,21 @@ local Tables = {
 }
 
 local Functions = {
-  Arg = function(id)
-    return { id = id, prebody = '' }
+  Arg = function(arg)
+    if type(arg) == 'string' then
+      return { id = arg, prebody = false }
+    else
+      local tmpid = newtmpid()
+      return { id = tmpid, prebody = compiledestructure(true, arg, tmpid) }
+    end
   end,
 
   OptArg = function(id, expr)
-    return {
-      id = id,
-      prebody = ('if %s == nil then %s = %s end'):format(id, id, expr),
-    }
+    return { id = id, prebody = ('if %s == nil then %s = %s end'):format(id, id, expr) }
   end,
 
   VarArgs = function(id)
-    return {
-      id = id,
-      prebody = ('local %s = {...}'):format(id),
-    }
+    return { id = id, prebody = ('local %s = {...}'):format(id) }
   end,
 
   ArgList = echo,
@@ -166,12 +210,8 @@ local Functions = {
     ):join(',')
 
     local prebody = params
-      :filter(function(param) return param.default end)
-      :map(function(param)
-        return ('if %s == nil then %s = %s end')
-          :format(param.id, param.id, param.default)
-        end)
-      :push(varargs and ('local %s = {...}'):format(varargs.id) or nil)
+      :filter(function(param) return param.prebody end)
+      :map(function(param) return param.prebody end)
       :join(' ')
 
     return ('function(%s) %s %s end'):format(ids, prebody, body)
@@ -246,40 +286,7 @@ local Operators = {
 
 local Declaration = {
   IdDeclaration = concat(' '),
-
-  DestructureDeclaration = function(isLocal, initdestructs, initexpr)
-    function extractids(destructs)
-      return destructs:reduce(function(ids, destruct)
-        return destruct.nested == false
-          and ids:push(destruct.id)
-          or ids:push(unpack(extractids(destruct.nested)))
-      end, supertable())
-    end
-
-    function compiledestructs(destructs, expr, default)
-      local exprid = newtmpid()
-      return supertable(
-        {
-          ('local %s = %s'):format(exprid, expr),
-          default ~= nil
-            and ('if %s == nil then %s = %s end'):format(exprid, exprid, default)
-            or nil,
-        }, 
-        destructs:map(function(destruct)
-          local nestedexpr = exprid .. destruct.index
-          return destruct.nested == false
-            and ('%s = %s'):format(destruct.id, nestedexpr)
-            or compiledestructs(destruct.nested, nestedexpr, destruct.default)
-        end)
-      ):join('\n')
-    end
-
-    return ('local %s do %s end'):format(
-      extractids(initdestructs):join(','),
-      compiledestructs(initdestructs, initexpr)
-    )
-  end,
-
+  DestructureDeclaration = compiledestructure,
   Declaration = echo,
 }
 
