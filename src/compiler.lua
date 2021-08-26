@@ -7,7 +7,6 @@ local supertable = require('supertable')
 
 local state = {
   tmpcounter = 0,
-  concatcache = {},
 }
 
 local function newtmpid()
@@ -27,15 +26,11 @@ local function echo(...)
 end
 
 local function concat(sep)
-  sep = sep or ''
-  if state.concatcache[sep] == nil then
-    state.concatcache[sep] = function(...)
-      return supertable({ ... })
-        :filter(function(v) return type(v) == 'string' end)
-        :join(sep)
-    end
+  return function(...)
+    return supertable({ ... })
+      :filter(function(v) return type(v) == 'string' end)
+      :join(sep)
   end
-  return state.concatcache[sep]
 end
 
 local function template(str)
@@ -115,6 +110,7 @@ local Core = {
   Keyword = noop,
   Bool = echo,
 
+  -- TODO: can leave these out?
   SingleLineComment = noop,
   MultiLineComment = noop,
   Comment = noop,

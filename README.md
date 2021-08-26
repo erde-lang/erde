@@ -2,8 +2,7 @@
 
 ## TODO
 
-- DUE 08/29
-- Optional chaining
+- DUE 08/28
 
 - function improvements
 
@@ -11,6 +10,11 @@
   - function parsing performance!
   - debug functions.ob compilation
   - index chain calls without paren
+
+- DUE 08/29
+
+- Optional chaining (dot index, bracket index, function call)
+- index declaration (local a.b = 'test')
 
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
@@ -34,6 +38,11 @@
 
 ## Long Term TODO
 
+- Syntax highlighting
+  - Vim
+  - Emacs
+  - Vscode
+  - Treesitter
 - Formatter
 - Source maps?
 

@@ -1,3 +1,5 @@
 // Varargs Assignment
 
 local ...x = myfunc()
+
+/* local x = a?[2]?.test?() */
