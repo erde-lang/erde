@@ -181,8 +181,14 @@ local Functions = {
     end
   end,
 
-  OptArg = function(id, expr)
-    return { id = id, prebody = ('if %s == nil then %s = %s end'):format(id, id, expr) }
+  OptArg = function(arg, expr)
+    local optprebody = ('if %s == nil then %s = %s end'):format(arg.id, arg.id, expr)
+    return {
+      id = arg.id,
+      prebody = arg.prebody
+        and ('%s %s'):format(optprebody, arg.prebody)
+        or optprebody,
+    }
   end,
 
   VarArgs = function(id)
@@ -194,8 +200,8 @@ local Functions = {
   Params = pack,
 
   FunctionBody = echo,
-  SkinnyFunction = function(...) return false, ... end,
-  FatFunction = function(...) return true, ... end,
+  SkinnyFunction = echo,
+  FatFunction = echo,
   Function = function(fat, params, body)
     if body == nil then
       return ('function(%s) %s end'):format(fat and 'self' or '', params)
