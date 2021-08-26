@@ -259,6 +259,7 @@ local Operators = {
   Less = concat('<'),
   GreaterEq = concat('>='),
   LessEq = concat('<='),
+  Neq = concat('~='),
   Eq = concat('=='),
 
   Binop = echo,
