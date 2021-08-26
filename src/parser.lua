@@ -52,9 +52,8 @@ end
 
 local function List(pattern, separator, options)
   options = options or {}
-  min = options.min or 0
   trailing = options.trailing == false and P(true) or separator
-  return pattern * (separator * pattern) ^ min * trailing ^ -1
+  return pattern * (separator * pattern) ^ 0 * trailing ^ -1
 end
 
 local function Sum(...)
@@ -202,9 +201,10 @@ local Functions = RuleSet({
   OptArg = V('Arg') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ -1,
 
-  ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
-  OptArgList = List(V('OptArg'), Pad(',')),
+  ArgList = List(V('Arg') - V('OptArg'), Pad(','), { trailing = false }),
+  OptArgList = List(V('OptArg'), Pad(','), { trailing = false }),
   Params = Sum(
+    Pad('(') * Pad(')'),
     Product(
       Pad('('),
       Sum(
@@ -214,7 +214,7 @@ local Functions = RuleSet({
           (Pad(',') * V('VarArgs')) ^ -1
         ),
         V('OptArgList') * (Pad(',') * V('VarArgs')) ^ -1,
-        V('VarArgs') ^ -1
+        V('VarArgs')
       ),
       Pad(',') ^ -1,
       Pad(')')

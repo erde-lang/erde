@@ -192,7 +192,11 @@ local Functions = {
   end,
 
   VarArgs = function(id)
-    return { id = id, prebody = ('local %s = {...}'):format(id) }
+    return {
+      id = id,
+      prebody = ('local %s = {...}'):format(id),
+      varargs = true,
+    }
   end,
 
   ArgList = echo,
