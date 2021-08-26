@@ -9,11 +9,10 @@
 - While loop
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
-- === operator??
 - assignment operators (+=, -=)
-- order of operations?
 
 - DUE ???
+- `do end` scoping (required to prevent holding refs!)
 - case statement
 - multiple returns
 - table casting
@@ -21,7 +20,7 @@
 - shorthand @test for self.test?
 
 - DUE ???
-- `do end` scoping (required to prevent holding refs!)
+- order of operations?
 - print compiled code prettier (for debugging)
 - require global keyword for global vars?
 - Error messages

@@ -291,6 +291,7 @@ local Operators = RuleSet({
   Less = Binop('<'),
   GreaterEq = Binop('>='),
   LessEq = Binop('<='),
+  Neq = Binop('~='),
   Eq = Binop('=='),
 
   Binop = Sum(
@@ -305,6 +306,7 @@ local Operators = RuleSet({
     V('Less'),
     V('GreaterEq'),
     V('LessEq'),
+    V('Neq'),
     V('Eq')
   ),
 
