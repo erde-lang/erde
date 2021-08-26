@@ -3,15 +3,16 @@
 ## TODO
 
 - DUE 08/29
-- Optional chaining
+- fix varargs + trailing params comma (for example, `(,)` should not be valid)
 - varargs assignment (local ...x = myfunc())
-- While loop
+- Optional chaining
 - unary operators
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - assignment operators (+=, -=)
 
 - DUE ???
 - `do end` scoping (required to prevent holding refs!)
+- While loop
 - case statement
 - multiple returns
 - table casting

@@ -200,7 +200,7 @@ local Tables = RuleSet({
 local Functions = RuleSet({
   Arg = V('Destructure') + V('Id'),
   OptArg = V('Arg') * Pad('=') * V('Expr'),
-  VarArgs = Pad('...') * V('Id') ^ 0,
+  VarArgs = Pad('...') * V('Id') ^ -1,
 
   ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
   OptArgList = List(V('OptArg'), Pad(',')),
