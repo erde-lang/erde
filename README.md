@@ -3,7 +3,6 @@
 ## TODO
 
 - DUE 08/29
-- allow destructuring in params
 - Optional chaining
 - varargs assignment (local ...x = myfunc())
 - While loop

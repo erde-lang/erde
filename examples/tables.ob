@@ -25,3 +25,5 @@ local { :a { :a1, :a2 } = {}, :b } = y
 local test = { :x = y } -> {
   return true
 }
+
+local test2 = ({ :x = y } = z) => {}

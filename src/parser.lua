@@ -199,7 +199,7 @@ local Tables = RuleSet({
 
 local Functions = RuleSet({
   Arg = V('Destructure') + V('Id'),
-  OptArg = V('Id') * Pad('=') * V('Expr'),
+  OptArg = V('Arg') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ 0,
 
   ArgList = List(V('Arg') - V('OptArg'), Pad(',')),
@@ -223,8 +223,8 @@ local Functions = RuleSet({
   ),
 
   FunctionBody = V('Expr') + (Pad('{') * V('Block') * Pad('}')),
-  SkinnyFunction = V('Params') * Pad('->') * V('FunctionBody'),
-  FatFunction = V('Params') * Pad('=>') * V('FunctionBody'),
+  SkinnyFunction = Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
+  FatFunction = Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
   Function = V('SkinnyFunction') + V('FatFunction'),
 
   FunctionCallArgList = (List(V('Id'), Pad(',')) * Pad(',') ^ -1) ^ -1,
