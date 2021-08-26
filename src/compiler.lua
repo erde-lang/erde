@@ -304,6 +304,9 @@ local Operators = {
 
 local Declaration = {
   IdDeclaration = concat(' '),
+  VarArgsDeclaration = function(islocal, id, expr)
+    return ('%s%s = { %s }'):format(islocal and 'local ' or '', id, expr)
+  end,
   DestructureDeclaration = compiledestructure,
   Declaration = echo,
 }

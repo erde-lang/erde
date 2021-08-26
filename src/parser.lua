@@ -321,6 +321,13 @@ local Declaration = RuleSet({
     (PadC('=') * Demand(V('Expr'))) ^ -1
   ),
 
+  VarArgsDeclaration = Product(
+    PadC('local') + C(false),
+    Pad('...'),
+    V('Id'),
+    Demand(Pad('=') * V('Expr'))
+  ),
+
   DestructureDeclaration = Product(
     PadC('local') + C(false),
     V('Destructure'),
@@ -329,6 +336,7 @@ local Declaration = RuleSet({
 
   Declaration = Sum(
     V('DestructureDeclaration'),
+    V('VarArgsDeclaration'),
     V('IdDeclaration')
   ),
 })

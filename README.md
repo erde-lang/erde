@@ -3,7 +3,6 @@
 ## TODO
 
 - DUE 08/29
-- varargs assignment (local ...x = myfunc())
 - Optional chaining
 
 - function improvements
