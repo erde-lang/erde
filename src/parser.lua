@@ -50,12 +50,6 @@ local function PadC(pattern)
   return V('Space') * C(pattern) * V('Space')
 end
 
-local function List(pattern, separator, options)
-  options = options or {}
-  trailing = options.trailing == false and P(true) or separator
-  return pattern * (separator * pattern) ^ 0 * trailing ^ -1
-end
-
 local function Sum(...)
   return supertable({ ... }):reduce(function(sum, pattern)
     return sum + pattern
@@ -89,6 +83,11 @@ function Binop(op)
   return V('AtomExpr') * Pad(op) * V('Expr')
 end
 
+function Csv(pattern, commacapture)
+  local comma = commacapture and PadC(',') or Pad(',')
+  return pattern * (comma * pattern) ^ 0 * Pad(',') ^ -1
+end
+
 -- -----------------------------------------------------------------------------
 -- Rule Sets
 -- -----------------------------------------------------------------------------
@@ -120,6 +119,7 @@ local Core = RuleSet({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
+  IdExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain') ^ -1,
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -179,13 +179,12 @@ local Tables = RuleSet({
   MapTableField = (V('StringTableKey') + V('Id')) * Pad(':') * V('Expr'),
   InlineTableField = Pad(P(':') * V('Id')),
   TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
-  TableFieldList = List(V('TableField'), PadC(',')) + PadC(''),
-  Table = PadC('{') * V('TableFieldList') * PadC('}'),
+  Table = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
 
   DotIndex = V('Space') * C('.') * V('Id'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
-  ChainIndex = (V('DotIndex') + V('BracketIndex')) ^ 1,
-  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('ChainIndex'),
+  IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
+  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain'),
 
   Destruct = Product(
     C(':') + Cc(false),
@@ -193,7 +192,7 @@ local Tables = RuleSet({
     V('Destructure') + Cc(false),
     (Pad('=') * Demand(V('Expr'))) + Cc(false)
   ),
-  Destructure = Pad('{') * List(V('Destruct'), Pad(',')) * Pad('}'),
+  Destructure = Pad('{') * Csv(V('Destruct')) * Pad('}'),
 })
 
 local Functions = RuleSet({
@@ -220,17 +219,12 @@ local Functions = RuleSet({
     Cc(true) * V('Params') * Pad('=>') * V('FunctionBody')
   ),
 
-  FunctionCallArgList = (List(V('Id'), Pad(',')) * Pad(',') ^ -1) ^ -1,
-  FunctionCallParams = PadC('(') * V('FunctionCallArgList') * PadC(')'),
-
-  FunctionCallBase = PadC('(') * V('Expr') * PadC(')') + V('Id'),
-  ExprCall = V('FunctionCallBase') * V('FunctionCallParams'),
-  SkinnyFunctionCall = V('IndexExpr') * V('FunctionCallParams'),
-  FatFunctionCall = V('FunctionCallBase') * PadC(':') * V('Id') * V('FunctionCallParams'),
-  FunctionCall = Sum(
-    V('FatFunctionCall'),
-    V('SkinnyFunctionCall'),
-    V('ExprCall')
+  FunctionCall = Product(
+    V('IdExpr'),
+    (PadC(':') * V('Id')) ^ -1,
+    PadC('('),
+    Csv(V('Expr'), true) + V('Space'),
+    PadC(')')
   ),
 })
 

@@ -35,7 +35,9 @@ end
 
 local function template(str)
   return function(...)
-    return str:format(...)
+    return supertable({ ... }):reduce(function(compiled, v, i)
+      return compiled:gsub('%%'..i, v)
+    end, str)
   end
 end
 
@@ -106,9 +108,9 @@ end
 -- -----------------------------------------------------------------------------
 
 local Core = {
-  Id = echo,
   Keyword = noop,
-  Bool = echo,
+  Id = echo,
+  IdExpr = concat(),
 
   -- TODO: can leave these out?
   SingleLineComment = noop,
@@ -148,16 +150,15 @@ local Strings = {
 }
 
 local Tables = {
-  StringTableKey = template('[ %s ]'),
-  MapTableField = template('%s = %s'),
-  InlineTableField = function(id) return ('%s = %s'):format(id, id) end,
+  StringTableKey = template('[ %1 ]'),
+  MapTableField = template('%1 = %2'),
+  InlineTableField = template('%1 = %1'),
   TableField = echo,
-  TableFieldList = concat(),
   Table = concat(),
 
   DotIndex = concat(),
   BracketIndex = concat(),
-  ChainIndex = concat(),
+  IndexChain = concat(),
   IndexExpr = echo,
 
   Destruct = map('keyed', 'id', 'nested', 'default'),
@@ -201,7 +202,7 @@ local Functions = {
   end,
   Params = pack,
 
-  FunctionExprBody = template('return %s'),
+  FunctionExprBody = template('return %1'),
   FunctionBody = echo,
   Function = function(needself, params, body)
     local varargs = params[#params]
@@ -222,20 +223,13 @@ local Functions = {
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
-  FunctionCallArgList = concat(','),
-  FunctionCallParams = concat(),
-
-  FunctionCallBase = concat(),
-  ExprCall = concat(),
-  SkinnyFunctionCall = concat(),
-  FatFunctionCall = concat(),
-  FunctionCall = echo,
+  FunctionCall = concat(),
 }
 
 local LogicFlow = {
-  If = template('if %s then %s'),
-  ElseIf = template('elseif %s then %s'),
-  Else = template('else %s'),
+  If = template('if %1 then %2'),
+  ElseIf = template('elseif %1 then %2'),
+  Else = template('else %1'),
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,

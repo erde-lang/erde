@@ -4,20 +4,17 @@
 
 - DUE 08/28
 
-- function improvements
-
-  - index chain calls without paren
-  - expr parentheses parsing performance!
+- refactor numbers / strings
+- expr parentheses parsing performance!
+- debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
+- unary operators
+- assignment operators (+=, -=)
 
 - DUE 08/29
 
-- refactor numbers / strings
-- Optional chaining (dot index, bracket index, function call)
+- shorthand @test for self.test?
 - index declaration (local a.b = 'test')
-
-- unary operators
-- debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
-- assignment operators (+=, -=)
+- Optional chaining (dot index, bracket index, function call)
 
 - DUE ???
 - `do end` scoping (required to prevent holding refs!)
@@ -26,8 +23,7 @@
 - multiple returns
 - table casting
 - Macros
-- shorthand @test for self.test?
-- require global keyword for global vars?
+- require global keyword for global vars? (would be awesome, but requires scope tracking...)
 
 - DUE ???
 - order of operations?
