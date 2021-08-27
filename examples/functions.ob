@@ -16,6 +16,13 @@ local p10 = (...x) -> {}
 
 local p11 = (x, y = 3, z = 2, ...test) => {}
 
+local p12 = (
+  x,
+  y = 3,
+  z = 2,
+  ...test,
+) => {}
+
 // Function Body
 
 local b1 = () -> {
@@ -23,8 +30,11 @@ local b1 = () -> {
   return x
 }
 
-local b2 = () -> { x = 'hello' }
-local b3 = () -> ({ x: 'hello' })
+local b2 = () -> { local x = 'hello' }
+local b3 = () -> {
+  x: 'hello',
+  y: 'bye',
+}
 
 // Function Call
 

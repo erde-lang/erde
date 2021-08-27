@@ -6,10 +6,8 @@
 
 - function improvements
 
-  - cleanup code / patterns (params??)
-  - function parsing performance!
-  - debug functions.ob compilation
   - index chain calls without paren
+  - expr parentheses parsing performance!
 
 - DUE 08/29
 

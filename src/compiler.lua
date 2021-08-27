@@ -183,7 +183,6 @@ local Functions = {
       return { id = tmpid, prebody = compiledestructure(true, arg, tmpid) }
     end
   end,
-
   OptArg = function(arg, expr)
     local optprebody = ('if %s == nil then %s = %s end'):format(arg.id, arg.id, expr)
     return {
@@ -193,7 +192,6 @@ local Functions = {
         or optprebody,
     }
   end,
-
   VarArgs = function(id)
     return {
       id = id,
@@ -201,23 +199,18 @@ local Functions = {
       varargs = true,
     }
   end,
-
-  ArgList = echo,
-  OptArgList = echo,
   Params = pack,
 
+  FunctionExprBody = template('return %s'),
   FunctionBody = echo,
-  SkinnyFunction = echo,
-  FatFunction = echo,
-  Function = function(fat, params, body)
-    if body == nil then
-      return ('function(%s) %s end'):format(fat and 'self' or '', params)
-    end
-
-    local varargs = params[#params].varargs and params:pop()
+  Function = function(needself, params, body)
+    print(body)
+    local varargs = params[#params]
+      and params[#params].varargs
+        and params:pop()
 
     local ids = supertable(
-      fat and { 'self' },
+      needself and { 'self' },
       params:map(function(param) return param.id end),
       varargs and { '...' }
     ):join(',')

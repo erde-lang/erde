@@ -200,32 +200,22 @@ local Functions = RuleSet({
   Arg = V('Destructure') + V('Id'),
   OptArg = V('Arg') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ -1,
-
-  ArgList = List(V('Arg') - V('OptArg'), Pad(','), { trailing = false }),
-  OptArgList = List(V('OptArg'), Pad(','), { trailing = false }),
-  Params = Sum(
-    Pad('(') * Pad(')'),
-    Product(
-      Pad('('),
-      Sum(
-        Product(
-          V('ArgList'),
-          (Pad(',') * V('OptArgList')) ^ -1,
-          (Pad(',') * V('VarArgs')) ^ -1
-        ),
-        V('OptArgList') * (Pad(',') * V('VarArgs')) ^ -1,
-        V('VarArgs')
-      ),
-      Pad(',') ^ -1,
-      Pad(')')
-    ),
-    V('Arg')
+  ParamComma = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
+  Params = V('Arg') + Product(
+    Pad('('),
+    (V('Arg') * V('ParamComma')) ^ 0,
+    (V('OptArg') * V('ParamComma')) ^ 0,
+    (V('VarArgs') * V('ParamComma')) ^ -1,
+    Cc({}),
+    Pad(')')
   ),
 
-  FunctionBody = V('Expr') + (Pad('{') * V('Block') * Pad('}')),
-  SkinnyFunction = Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
-  FatFunction = Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
-  Function = V('SkinnyFunction') + V('FatFunction'),
+  FunctionExprBody = V('Expr'),
+  FunctionBody = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
+  Function = Sum(
+    Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
+    Cc(true) * V('Params') * Pad('=>') * V('FunctionBody')
+  ),
 
   FunctionCallArgList = (List(V('Id'), Pad(',')) * Pad(',') ^ -1) ^ -1,
   FunctionCallParams = PadC('(') * V('FunctionCallArgList') * PadC(')'),
