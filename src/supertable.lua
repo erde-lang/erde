@@ -134,7 +134,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function supertable:join(sep)
-  return table.concat(self, sep)
+  return table.concat(
+    self:filter(function(v) return type(v) == 'string' end),
+    sep
+  )
 end
 
 function supertable:find(target)

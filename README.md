@@ -11,6 +11,7 @@
 
 - DUE 08/29
 
+- refactor numbers / strings
 - Optional chaining (dot index, bracket index, function call)
 - index declaration (local a.b = 'test')
 
@@ -26,11 +27,11 @@
 - table casting
 - Macros
 - shorthand @test for self.test?
+- require global keyword for global vars?
 
 - DUE ???
 - order of operations?
 - print compiled code prettier (for debugging)
-- require global keyword for global vars?
 - Error messages
 - Performance tuning
 

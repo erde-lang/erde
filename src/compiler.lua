@@ -184,12 +184,12 @@ local Functions = {
     end
   end,
   OptArg = function(arg, expr)
-    local optprebody = ('if %s == nil then %s = %s end'):format(arg.id, arg.id, expr)
     return {
       id = arg.id,
-      prebody = arg.prebody
-        and ('%s %s'):format(optprebody, arg.prebody)
-        or optprebody,
+      prebody = supertable({
+        ('if %s == nil then %s = %s end'):format(arg.id, arg.id, expr),
+        arg.prebody,
+      }):join(' '),
     }
   end,
   VarArgs = function(id)
@@ -204,7 +204,6 @@ local Functions = {
   FunctionExprBody = template('return %s'),
   FunctionBody = echo,
   Function = function(needself, params, body)
-    print(body)
     local varargs = params[#params]
       and params[#params].varargs
         and params:pop()
