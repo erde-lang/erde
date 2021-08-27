@@ -175,12 +175,12 @@ local Tables = {
 }
 
 local Functions = {
-  Arg = function(arg)
-    if type(arg) == 'string' then
-      return { id = arg, prebody = false }
-    else
+  Arg = function(isdestructure, arg)
+    if isdestructure then
       local tmpid = newtmpid()
       return { id = tmpid, prebody = compiledestructure(true, arg, tmpid) }
+    else
+      return { id = arg, prebody = false }
     end
   end,
   OptArg = function(arg, expr)

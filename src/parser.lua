@@ -197,7 +197,10 @@ local Tables = RuleSet({
 })
 
 local Functions = RuleSet({
-  Arg = V('Destructure') + V('Id'),
+  Arg = Sum(
+    Cc(false) * V('Id'),
+    Cc(true) * V('Destructure')
+  ),
   OptArg = V('Arg') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Id') ^ -1,
   ParamComma = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
