@@ -5,7 +5,6 @@
 - DUE 08/28
 
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
-- expr parentheses parsing performance!
 - assignment operators (+=, -=)
 - unary operators
 

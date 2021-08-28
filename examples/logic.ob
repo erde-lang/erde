@@ -1,0 +1,13 @@
+// If Else
+
+if true {
+  x = 4
+} elseif false {
+  x = 5
+} else {
+  x = 10
+} 
+
+// Case Statement
+
+// TODO

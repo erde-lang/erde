@@ -246,7 +246,7 @@ local Expressions = RuleSet({
     V('MoleculeExpr')
   ),
 
-  Expr = V('OrganismExpr') + PadC('(') * V('Expr') * PadC(')'),
+  Expr = PadC('(') * V('Expr') * PadC(')') + V('OrganismExpr'),
 })
 
 local Operators = RuleSet({
