@@ -237,7 +237,7 @@ local Expressions = {
   AtomExpr = echo,
   MoleculeExpr = echo,
   OrganismExpr = echo,
-  Expr = echo,
+  Expr = concat(),
 }
 
 local Operators = {

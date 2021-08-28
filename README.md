@@ -4,7 +4,6 @@
 
 - DUE 08/28
 
-- debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - assignment operators (+=, -=)
 - unary operators
 
