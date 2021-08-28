@@ -117,23 +117,28 @@ local Strings = {
     return { interpolation = true, value = value }
   end,
 
-  -- TODO make sure the string doesn't use [==[. Should almost never happen but
-  -- need to account for it nonetheless
-  -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
     local values = supertable({ ... })
 
-    local eqstats = values:reduce(function(stats, char)
-      return stats
+    local eqstats = values:reduce(function(eqstats, char)
+      return char ~= '='
+        and { counter = 0, max = eqstats.max }
+        or {
+          counter = eqstats.counter + 1,
+          max = math.max(eqstats.max, eqstats.counter + 1),
+        }
     end, { counter = 0, max = 0 })
 
-    return ('[==[%s]==]'):format(values
-      :map(function(v)
+    local eqid = ('='):rep(eqstats.max + 1)
+
+    return ('[%s[%s]%s]'):format(
+      eqid,
+      values:map(function(v)
         return v.interpolation
-          and (']==]..tostring(%s)..[==['):format(v.value)
+          and (']%s]..tostring(%s)..[%s['):format(eqid, v.value, eqid)
           or v
-      end)
-      :join()
+      end):join(),
+      eqid
     )
   end,
 

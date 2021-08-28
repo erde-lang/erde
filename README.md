@@ -44,6 +44,7 @@
   - luajit bytecode option?
 - orbit lib
   - allow mutating `require` (similar to moonscript)
+- docs site
 - Formatter
 - Source maps?
 

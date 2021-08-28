@@ -16,3 +16,9 @@ local x = `hello { b2 } { wo382+ }`
 // Escape Chars
 
 local x = 'hello\nworld'
+
+// Long String Escape Id
+
+local x = `[[hello]]`
+local x = `[=[hello]=]`
+local x = `[==[hello]==]`
