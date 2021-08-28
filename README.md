@@ -2,20 +2,17 @@
 
 ## TODO
 
-- DUE 08/28
-
+- DUE 08/29
+- shorthand @test for self.test?
+- multiple returns
+- refactor expr
 - assignment operators (+=, -=)
 - unary operators
-
-- DUE 08/29
-
-- shorthand @test for self.test?
-- Optional chaining (dot index, bracket index, function call)
-- index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
+- `do end` scoping (required to prevent holding refs!)
 
 - DUE 08/31
-- `do end` scoping (required to prevent holding refs!)
-- multiple returns
+- Optional chaining (dot index, bracket index, function call)
+- index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
 
 - DUE 09/03
 - case statement

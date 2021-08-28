@@ -80,7 +80,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Binop(op)
-  return V('AtomExpr') * Pad(op) * V('Expr')
+  return V('Expr') * op * V('Expr')
 end
 
 function Csv(pattern, commacapture)
@@ -250,36 +250,21 @@ local Expressions = RuleSet({
 })
 
 local Operators = RuleSet({
-  LogicalAnd = Binop('&&'),
-  LogicalOr = Binop('||'),
+  LogicalAnd = Binop(Pad('&&')),
+  LogicalOr = Binop(Pad('||')),
 
-  Addition = Binop('+'),
-  Subtraction = Binop('-'),
-  Multiplication = Binop('*'),
-  Division = Binop('/'),
-  Modulo = Binop('%'),
-
-  Greater = Binop('>'),
-  Less = Binop('<'),
-  GreaterEq = Binop('>='),
-  LessEq = Binop('<='),
-  Neq = Binop('~='),
-  Eq = Binop('=='),
+  EchoOperator = Binop(PadC(Sum(
+    P('>='),
+    P('<='),
+    P('=='),
+    P('~='),
+    S('+-*/%><')
+  ))),
 
   Binop = Sum(
     V('LogicalAnd'),
     V('LogicalOr'),
-    V('Addition'),
-    V('Subtraction'),
-    V('Multiplication'),
-    V('Division'),
-    V('Modulo'),
-    V('Greater'),
-    V('Less'),
-    V('GreaterEq'),
-    V('LessEq'),
-    V('Neq'),
-    V('Eq')
+    V('EchoOperator')
   ),
 
   Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,

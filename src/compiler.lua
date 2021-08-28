@@ -241,8 +241,9 @@ local Expressions = {
 }
 
 local Operators = {
-  And = concat('and'),
-  Or = concat('or'),
+  LogicalAnd = concat('and'),
+  LogicalOr = concat('or'),
+  EchoOperator = concat(),
 
   Addition = concat('+'),
   Subtraction = concat('-'),
