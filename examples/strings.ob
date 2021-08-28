@@ -1,0 +1,18 @@
+// Short Strings
+
+local x = 'hello world'
+local y = "goodbye world"
+
+// Long Strings
+
+local x = `hello world`
+local x = `
+  hello
+  world
+`
+
+local x = `hello { b2 } { wo382+ }`
+
+// Escape Chars
+
+local x = 'hello\nworld'

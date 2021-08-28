@@ -4,23 +4,25 @@
 
 - DUE 08/28
 
-- refactor strings
-- expr parentheses parsing performance!
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
-- unary operators
+- expr parentheses parsing performance!
 - assignment operators (+=, -=)
+- unary operators
 
 - DUE 08/29
 
 - shorthand @test for self.test?
-- index declaration (local a.b = 'test')
 - Optional chaining (dot index, bracket index, function call)
+- index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
+
+- DUE 08/31
+- `do end` scoping (required to prevent holding refs!)
+- multiple returns
+
+- DUE 09/03
+- case statement
 
 - DUE ???
-- `do end` scoping (required to prevent holding refs!)
-- While loop
-- case statement
-- multiple returns
 - table casting
 - Macros
 - require global keyword for global vars? (would be awesome, but requires scope tracking...)
@@ -29,7 +31,6 @@
 - order of operations?
 - print compiled code prettier (for debugging)
 - Error messages
-- Performance tuning
 
 ## Long Term TODO
 
@@ -38,6 +39,11 @@
   - Emacs
   - Vscode
   - Treesitter
+- orbit cli
+  - target various lua versions
+  - luajit bytecode option?
+- orbit lib
+  - allow mutating `require` (similar to moonscript)
 - Formatter
 - Source maps?
 
@@ -104,7 +110,8 @@ There is no for loop. Instead, use Array constructors + macros:
 
 #### While Loop
 
-TODO
+There is no while loop. Orbit retains the tail recursiveness of lua, so you may
+use recursive functions in place of traditional while loops.
 
 #### Case statement
 

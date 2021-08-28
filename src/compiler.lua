@@ -121,7 +121,13 @@ local Strings = {
   -- need to account for it nonetheless
   -- Maybe can simply wrap in "" and escape inner "? Need to check newlines.
   LongString = function(...)
-    return ('[==[%s]==]'):format(supertable({ ... })
+    local values = supertable({ ... })
+
+    local eqstats = values:reduce(function(stats, char)
+      return stats
+    end, { counter = 0, max = 0 })
+
+    return ('[==[%s]==]'):format(values
       :map(function(v)
         return v.interpolation
           and (']==]..tostring(%s)..[==['):format(v.value)
@@ -131,7 +137,7 @@ local Strings = {
     )
   end,
 
-  String = echo,
+  String = concat(),
 }
 
 local Tables = {

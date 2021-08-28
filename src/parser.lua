@@ -141,7 +141,7 @@ local Core = RuleSet({
 local Strings = RuleSet({
   EscapedChar = C(V('Newline') + P('\\') * P(1)),
 
-  Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
+  Interpolation = P('{') * Pad(Demand(V('Expr'))) * P('}'),
   LongString = Product(
     P('`'),
     Sum(
@@ -154,24 +154,9 @@ local Strings = RuleSet({
 
   String = Sum(
     V('LongString'),
-    P("'") * (V('EscapedChar') + (P(1) - P("'"))) ^ 0 * P("'"), -- single quote
-    P('"') * (V('EscapedChar') + (P(1) - P('"'))) ^ 0 * P('"') -- double quote
-  ) / function(s)
-    return s
-    -- return s
-    --   :gsub('\\a', '\a')
-    --   :gsub('\\b', '\b')
-    --   :gsub('\\f', '\f')
-    --   :gsub('\\n', '\n')
-    --   :gsub('\\r', '\r')
-    --   :gsub('\\t', '\t')
-    --   :gsub('\\v', '\v')
-    --   :gsub('\\\\', '\\')
-    --   :gsub('\\"', '"')
-    --   :gsub("\\'", "'")
-    --   :gsub('\\[', '[')
-    --   :gsub('\\]', ']')
-  end,
+    C("'") * (V('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"), -- single quote
+    C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"') -- double quote
+  ),
 })
 
 local Tables = RuleSet({
