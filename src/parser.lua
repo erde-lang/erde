@@ -127,19 +127,15 @@ local Core = RuleSet({
   SingleLineComment = Pad('//') * (P(1) - V('Newline')) ^ 0,
   MultiLineComment = Pad('/*') * (P(1) - P('*/')) ^ 0 * Pad('*/'),
   Comment = V('SingleLineComment') + V('MultiLineComment'),
-})
 
-local Numbers = RuleSet({
   Integer = digit ^ 1,
+  Hex = (P('0x') + P('0X')) * xdigit ^ 1,
   Exponent = S('eE') * S('+-') ^ -1 * V('Integer'),
-  Number = C(Sum(
-    Sum( -- float
-      digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
-      V('Integer') * V('Exponent')
-    ),
-    (P('0x') + P('0X')) * xdigit ^ 1, -- hex
-    V('Integer')
-  )),
+  Float = Sum(
+    digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
+    V('Integer') * V('Exponent')
+  ),
+  Number = C(V('Float') + V('Hex') + V('Integer')),
 })
 
 local Strings = RuleSet({
@@ -147,9 +143,13 @@ local Strings = RuleSet({
 
   Interpolation = P('{') * Pad(C(Demand(V('Expr')))) * P('}'),
   LongString = Product(
-    '`',
-    (V('EscapedChar') + V('Interpolation') + C(P(1) - P('`'))) ^ 0,
-    '`'
+    P('`'),
+    Sum(
+      V('EscapedChar'),
+      V('Interpolation'),
+      C(P(1) - P('`'))
+    ) ^ 0,
+    P('`')
   ),
 
   String = Sum(
@@ -353,7 +353,6 @@ local grammar = P(supertable(
   Functions,
   Tables,
   Strings,
-  Numbers,
   Core
 ))
 

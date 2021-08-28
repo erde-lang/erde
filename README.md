@@ -4,7 +4,7 @@
 
 - DUE 08/28
 
-- refactor numbers / strings
+- refactor strings
 - expr parentheses parsing performance!
 - debug expr concat (ex. `((9+9))` -> `(*(*9+9*)*)`)
 - unary operators

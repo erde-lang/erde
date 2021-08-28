@@ -18,9 +18,6 @@ end
 -- Compile Helpers
 -- -----------------------------------------------------------------------------
 
-local function noop()
-end
-
 local function echo(...)
   return ...
 end
@@ -108,17 +105,8 @@ end
 -- -----------------------------------------------------------------------------
 
 local Core = {
-  Keyword = noop,
   Id = echo,
   IdExpr = concat(),
-
-  -- TODO: can leave these out?
-  SingleLineComment = noop,
-  MultiLineComment = noop,
-  Comment = noop,
-}
-
-local Numbers = {
   Number = echo,
 }
 
@@ -126,10 +114,7 @@ local Strings = {
   EscapedChar = echo,
 
   Interpolation = function(value)
-    return {
-      interpolation = true,
-      value = ('tostring(%s)'):format(value),
-    }
+    return { interpolation = true, value = value }
   end,
 
   -- TODO make sure the string doesn't use [==[. Should almost never happen but
@@ -139,7 +124,7 @@ local Strings = {
     return ('[==[%s]==]'):format(supertable({ ... })
       :map(function(v)
         return v.interpolation
-          and (']==]..%s..[==['):format(v.value)
+          and (']==]..tostring(%s)..[==['):format(v.value)
           or v
       end)
       :join()
@@ -311,7 +296,6 @@ local compiler = supertable(
   Functions,
   Tables,
   Strings,
-  Numbers,
   Core
 )
 
@@ -322,9 +306,7 @@ end
 local function compile(node)
   if not isnode(node) then
     return subnode
-  elseif type(compiler[node.rule]) ~= 'function' then
-    error('No compiler for rule: ' .. node.rule)
-  else
+  elseif type(compiler[node.rule]) == 'function' then
     return compiler[node.rule](unpack(node:ipairs():reduce(function(args, subnode)
       return args:push(unpack(isnode(subnode)
         and { compile(subnode) }
