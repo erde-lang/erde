@@ -106,7 +106,8 @@ end
 
 local Core = {
   Id = echo,
-  IdExpr = concat(),
+  Self = template('self'),
+  SelfProperty = template('self.%1'),
   Number = echo,
 }
 
@@ -155,7 +156,6 @@ local Tables = {
   DotIndex = concat(),
   BracketIndex = concat(),
   IndexChain = concat(),
-  IndexExpr = echo,
 
   Destruct = map('keyed', 'id', 'nested', 'default'),
   Destructure = function(...)
@@ -230,34 +230,20 @@ local LogicFlow = {
     return supertable({ ... }, { 'end' }):join(' ')
   end,
 
+  ReturnList = concat(','),
   Return = concat(' '),
 }
 
 local Expressions = {
-  AtomExpr = echo,
-  MoleculeExpr = echo,
-  OrganismExpr = echo,
+  SubExpr = echo,
   Expr = concat(),
+  TerminalExpr = concat(),
 }
 
 local Operators = {
   LogicalAnd = concat('and'),
   LogicalOr = concat('or'),
   EchoOperator = concat(),
-
-  Addition = concat('+'),
-  Subtraction = concat('-'),
-  Multiplication = concat('*'),
-  Division = concat('/'),
-  Modulo = concat('%'),
-
-  Greater = concat('>'),
-  Less = concat('<'),
-  GreaterEq = concat('>='),
-  LessEq = concat('<='),
-  Neq = concat('~='),
-  Eq = concat('=='),
-
   Binop = echo,
 
   Ternary = function(condition, iftrue, iffalse)

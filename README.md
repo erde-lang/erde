@@ -2,22 +2,18 @@
 
 ## TODO
 
-- DUE 08/29
-- shorthand @test for self.test?
 - multiple returns
-- refactor expr
-- assignment operators (+=, -=)
-- unary operators
+- recall keyword? (recall the function of the current scope?)
 - `do end` scoping (required to prevent holding refs!)
 
-- DUE 08/31
+- assignment operators (+=, -=)
+- unary operators
+
 - Optional chaining (dot index, bracket index, function call)
 - index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
 
-- DUE 09/03
-- case statement
-
 - DUE ???
+- case statement
 - table casting
 - Macros
 - require global keyword for global vars? (would be awesome, but requires scope tracking...)

@@ -80,7 +80,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Binop(op)
-  return V('Expr') * op * V('Expr')
+  return V('TerminalExpr') * (op * V('Expr')) ^ 1
 end
 
 function Csv(pattern, commacapture)
@@ -119,7 +119,8 @@ local Core = RuleSet({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
-  IdExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain') ^ -1,
+  Self = PadC('@'),
+  SelfProperty = Pad(P('@') * V('Id')),
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -169,7 +170,6 @@ local Tables = RuleSet({
   DotIndex = V('Space') * C('.') * V('Id'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
   IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
-  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain'),
 
   Destruct = Product(
     C(':') + Cc(false),
@@ -205,7 +205,12 @@ local Functions = RuleSet({
   ),
 
   FunctionCall = Product(
-    V('IdExpr'),
+    Sum(
+      PadC('(') * V('Expr') * PadC(')'),
+      V('SelfProperty'),
+      V('Self'),
+      V('Id')
+    ) * V('IndexChain') ^ -1,
     (PadC(':') * V('Id')) ^ -1,
     PadC('('),
     Csv(V('Expr'), true) + V('Space'),
@@ -219,34 +224,38 @@ local LogicFlow = RuleSet({
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
 
-  Return = PadC('return') * V('Expr') ^ -1,
+  ReturnList = Sum(
+    Pad('(') * V('ReturnList') * Pad(')'),
+    Csv(V('Expr'))
+  ),
+  Return = PadC('return') * V('ReturnList') ^ -1,
 })
 
 local Expressions = RuleSet({
-  AtomExpr = Sum(
+  SubExpr = Sum(
+    V('FunctionCall'),
     V('Function'),
+    V('Id') * V('IndexChain') ^ -1,
+    V('SelfProperty') * V('IndexChain') ^ -1,
+    V('Self') * V('IndexChain') ^ -1,
     V('Table'),
-    V('Id'),
     V('String'),
     V('Number'),
     PadC('true'),
     PadC('false')
   ),
 
-  MoleculeExpr = Sum(
-    V('FunctionCall'),
-    V('IndexExpr'),
+  Expr = Sum(
     V('Binop'),
-    V('AtomExpr')
-  ),
-
-  OrganismExpr = Sum(
     V('Ternary'),
     V('NullCoalescence'),
-    V('MoleculeExpr')
+    V('TerminalExpr')
   ),
 
-  Expr = PadC('(') * V('Expr') * PadC(')') + V('OrganismExpr'),
+  TerminalExpr = Sum(
+    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
+    V('SubExpr')
+  ),
 })
 
 local Operators = RuleSet({
@@ -267,8 +276,8 @@ local Operators = RuleSet({
     V('EchoOperator')
   ),
 
-  Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalescence = V('MoleculeExpr') * Pad('??') * V('Expr'),
+  Ternary = V('TerminalExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalescence = V('TerminalExpr') * Pad('??') * V('Expr'),
 })
 
 local Declaration = RuleSet({
@@ -299,7 +308,7 @@ local Declaration = RuleSet({
 })
 
 local Blocks = RuleSet({
-  Block = V('Statement') ^ 0,
+  Block = V('Statement') ^ 1 + Pad(Cc('')),
   Statement = Pad(Sum(
     V('FunctionCall'),
     V('Declaration'),
