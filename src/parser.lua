@@ -80,7 +80,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Binop(op)
-  return V('Expr') * op * V('Expr')
+  return V('AtomExpr') * op * V('Expr')
 end
 
 function Csv(pattern, commacapture)
@@ -119,7 +119,14 @@ local Core = RuleSet({
   )),
 
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
-  IdExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain') ^ -1,
+  Self = PadC('@'),
+  SelfProperty = Pad(P('@') * V('Id')),
+  IdExpr = Sum(
+    PadC('(') * V('Expr') * PadC(')'),
+    V('SelfProperty'),
+    V('Self'),
+    V('Id')
+  ) * V('IndexChain') ^ -1,
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -226,7 +233,7 @@ local Expressions = RuleSet({
   AtomExpr = Sum(
     V('Function'),
     V('Table'),
-    V('Id'),
+    V('IdExpr'),
     V('String'),
     V('Number'),
     PadC('true'),

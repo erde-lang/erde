@@ -12,6 +12,12 @@ local a4 = 0.2e10
 this is a
 multiline comment */
 
+// Self
+
+local x = @
+local x = @test
+local x = @[2]
+
 // Varargs Assignment
 
 local ...x = myfunc()

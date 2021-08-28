@@ -106,6 +106,8 @@ end
 
 local Core = {
   Id = echo,
+  Self = template('self'),
+  SelfProperty = template('self.%1'),
   IdExpr = concat(),
   Number = echo,
 }

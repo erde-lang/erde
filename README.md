@@ -3,7 +3,6 @@
 ## TODO
 
 - DUE 08/29
-- shorthand @test for self.test?
 - multiple returns
 - refactor expr
 - assignment operators (+=, -=)
