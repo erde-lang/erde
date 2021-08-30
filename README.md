@@ -2,9 +2,6 @@
 
 ## TODO
 
-- assignment operators (+=, -=)
-- unary operators
-
 - Optional chaining (dot index, bracket index, function call)
 - index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
 
@@ -19,6 +16,8 @@
 - order of operations?
 - automated tests
 - Error messages
+- Lua versions
+  - Bitwise Operators
 
 ## Long Term TODO
 
