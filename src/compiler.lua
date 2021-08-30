@@ -157,7 +157,6 @@ local Tables = {
   DotIndex = concat(),
   BracketIndex = concat(),
   IndexChain = concat(),
-  IndexExpr = echo,
 
   Destruct = map('keyed', 'id', 'nested', 'default'),
   Destructure = function(...)
@@ -232,6 +231,7 @@ local LogicFlow = {
     return supertable({ ... }, { 'end' }):join(' ')
   end,
 
+  ReturnList = concat(','),
   Return = concat(' '),
 }
 

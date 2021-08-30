@@ -121,12 +121,6 @@ local Core = RuleSet({
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
   Self = PadC('@'),
   SelfProperty = Pad(P('@') * V('Id')),
-  IdExpr = Sum(
-    PadC('(') * V('Expr') * PadC(')'),
-    V('SelfProperty'),
-    V('Self'),
-    V('Id')
-  ) * V('IndexChain') ^ -1,
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -176,7 +170,6 @@ local Tables = RuleSet({
   DotIndex = V('Space') * C('.') * V('Id'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
   IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
-  IndexExpr = (PadC('(') * V('Expr') * PadC(')') + V('Id')) * V('IndexChain'),
 
   Destruct = Product(
     C(':') + Cc(false),
@@ -212,7 +205,12 @@ local Functions = RuleSet({
   ),
 
   FunctionCall = Product(
-    V('IdExpr'),
+    Sum(
+      PadC('(') * V('Expr') * PadC(')'),
+      V('SelfProperty'),
+      V('Self'),
+      V('Id')
+    ) * V('IndexChain') ^ -1,
     (PadC(':') * V('Id')) ^ -1,
     PadC('('),
     Csv(V('Expr'), true) + V('Space'),
@@ -226,14 +224,20 @@ local LogicFlow = RuleSet({
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
 
-  Return = PadC('return') * V('Expr') ^ -1,
+  ReturnList = Sum(
+    Pad('(') * V('ReturnList') * Pad(')'),
+    Csv(V('Expr'))
+  ),
+  Return = PadC('return') * V('ReturnList') ^ -1,
 })
 
 local Expressions = RuleSet({
   AtomExpr = Sum(
+    V('SelfProperty') * V('IndexChain') ^ -1,
+    V('Self') * V('IndexChain') ^ -1,
+    V('Id') * V('IndexChain') ^ -1,
     V('Function'),
     V('Table'),
-    V('IdExpr'),
     V('String'),
     V('Number'),
     PadC('true'),
@@ -242,7 +246,6 @@ local Expressions = RuleSet({
 
   MoleculeExpr = Sum(
     V('FunctionCall'),
-    V('IndexExpr'),
     V('Binop'),
     V('AtomExpr')
   ),
@@ -253,7 +256,10 @@ local Expressions = RuleSet({
     V('MoleculeExpr')
   ),
 
-  Expr = PadC('(') * V('Expr') * PadC(')') + V('OrganismExpr'),
+  Expr = Sum(
+    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
+    V('OrganismExpr')
+  ),
 })
 
 local Operators = RuleSet({
