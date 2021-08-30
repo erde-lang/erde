@@ -234,10 +234,10 @@ local LogicFlow = RuleSet({
 local Expressions = RuleSet({
   SubExpr = Sum(
     V('FunctionCall'),
+    V('Function'),
+    V('Id') * V('IndexChain') ^ -1,
     V('SelfProperty') * V('IndexChain') ^ -1,
     V('Self') * V('IndexChain') ^ -1,
-    V('Id') * V('IndexChain') ^ -1,
-    V('Function'),
     V('Table'),
     V('String'),
     V('Number'),
@@ -308,7 +308,7 @@ local Declaration = RuleSet({
 })
 
 local Blocks = RuleSet({
-  Block = V('Statement') ^ 0,
+  Block = V('Statement') ^ 1 + Pad(Cc('')),
   Statement = Pad(Sum(
     V('FunctionCall'),
     V('Declaration'),
