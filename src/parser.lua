@@ -80,7 +80,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Binop(op)
-  return V('AtomExpr') * op * V('Expr')
+  return V('TerminalExpr') * (op * V('Expr')) ^ 1
 end
 
 function Csv(pattern, commacapture)
@@ -232,7 +232,8 @@ local LogicFlow = RuleSet({
 })
 
 local Expressions = RuleSet({
-  AtomExpr = Sum(
+  SubExpr = Sum(
+    V('FunctionCall'),
     V('SelfProperty') * V('IndexChain') ^ -1,
     V('Self') * V('IndexChain') ^ -1,
     V('Id') * V('IndexChain') ^ -1,
@@ -244,21 +245,16 @@ local Expressions = RuleSet({
     PadC('false')
   ),
 
-  MoleculeExpr = Sum(
-    V('FunctionCall'),
+  Expr = Sum(
     V('Binop'),
-    V('AtomExpr')
-  ),
-
-  OrganismExpr = Sum(
     V('Ternary'),
     V('NullCoalescence'),
-    V('MoleculeExpr')
+    V('TerminalExpr')
   ),
 
-  Expr = Sum(
+  TerminalExpr = Sum(
     PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
-    V('OrganismExpr')
+    V('SubExpr')
   ),
 })
 
@@ -280,8 +276,8 @@ local Operators = RuleSet({
     V('EchoOperator')
   ),
 
-  Ternary = V('MoleculeExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalescence = V('MoleculeExpr') * Pad('??') * V('Expr'),
+  Ternary = V('TerminalExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalescence = V('TerminalExpr') * Pad('??') * V('Expr'),
 })
 
 local Declaration = RuleSet({

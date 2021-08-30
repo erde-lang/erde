@@ -2,8 +2,8 @@
 
 ## TODO
 
-- refactor expr
 - multiple returns
+- recall keyword? (recall the function of the current scope?)
 - `do end` scoping (required to prevent holding refs!)
 
 - assignment operators (+=, -=)
