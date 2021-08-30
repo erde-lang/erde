@@ -1,11 +1,11 @@
 // If Else
 
 if true {
-  x = 4
+  local x = 4
 } elseif false {
-  x = 5
+  local x = 5
 } else {
-  x = 10
+  local x = 10
 } 
 
 // Returns
