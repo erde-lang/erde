@@ -108,6 +108,7 @@ local Core = {
   Id = echo,
   Self = template('self'),
   SelfProperty = template('self.%1'),
+  IdLike = concat(),
   Number = echo,
 }
 
@@ -243,8 +244,9 @@ local Expressions = {
 local Operators = {
   LogicalAnd = concat('and'),
   LogicalOr = concat('or'),
-  EchoOperator = concat(),
-  Binop = echo,
+  Binop = concat(),
+
+  CompareOp = concat(),
 
   Ternary = function(condition, iftrue, iffalse)
     return ('(function() if %s then return %s %s end)()'):format(
@@ -254,17 +256,15 @@ local Operators = {
     )
   end,
 
-  NullCoalescence = function(default, backup)
+  NullCoalesce = function(default, backup)
     local tmpid = newtmpid()
     return ([[(function()
       local %s = %s
-      if %s ~= nil then
-        return %s
-      else
-        return %s
-      end
+      if %s ~= nil then return %s else return %s end
     )()]]):format(tmpid, default, tmpid, tmpid, backup)
   end,
+
+  AssignOp= template('%1 = %1 %2 %3'),
 }
 
 local Declaration = {

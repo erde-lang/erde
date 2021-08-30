@@ -2,6 +2,9 @@ local x = 1 + 2 + 3
 local x = y / (3 * ((9 + 9)))
 local x = (1 + 2) * (3 + 4)
 
+x += 3
+x.y /= (1 ? 2 : 3)
+
 local x = 4 + (1 ? 2 : 3)
 local x = (1 ? 2 : 3) + 4
 local x = (1 + 2) ? 3 : 4

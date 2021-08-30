@@ -79,8 +79,10 @@ end
 -- Rule Helpers
 -- -----------------------------------------------------------------------------
 
-function Binop(op)
-  return V('TerminalExpr') * (op * V('Expr')) ^ 1
+function Binop(op, chain)
+  return chain or chain == nil
+    and V('TerminalExpr') * (op * V('Expr')) ^ 1
+    or V('TerminalExpr') * op * V('Expr')
 end
 
 function Csv(pattern, commacapture)
@@ -121,6 +123,7 @@ local Core = RuleSet({
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
   Self = PadC('@'),
   SelfProperty = Pad(P('@') * V('Id')),
+  IdLike = (V('Id') + V('SelfProperty') + V('Self')) * V('IndexChain') ^ -1,
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -235,9 +238,7 @@ local Expressions = RuleSet({
   SubExpr = Sum(
     V('FunctionCall'),
     V('Function'),
-    V('Id') * V('IndexChain') ^ -1,
-    V('SelfProperty') * V('IndexChain') ^ -1,
-    V('Self') * V('IndexChain') ^ -1,
+    V('IdLike'),
     V('Table'),
     V('String'),
     V('Number'),
@@ -247,8 +248,9 @@ local Expressions = RuleSet({
 
   Expr = Sum(
     V('Binop'),
+    V('CompareOp'),
     V('Ternary'),
-    V('NullCoalescence'),
+    V('NullCoalesce'),
     V('TerminalExpr')
   ),
 
@@ -261,23 +263,27 @@ local Expressions = RuleSet({
 local Operators = RuleSet({
   LogicalAnd = Binop(Pad('&&')),
   LogicalOr = Binop(Pad('||')),
-
-  EchoOperator = Binop(PadC(Sum(
-    P('>='),
-    P('<='),
-    P('=='),
-    P('~='),
-    S('+-*/%><')
-  ))),
-
   Binop = Sum(
     V('LogicalAnd'),
     V('LogicalOr'),
-    V('EchoOperator')
+    Binop(PadC(S('+-*/%><')))
   ),
 
+  CompareOp = Binop(PadC(Sum(
+    P('>='),
+    P('<='),
+    P('=='),
+    P('~=')
+  )), false),
+
   Ternary = V('TerminalExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalescence = V('TerminalExpr') * Pad('??') * V('Expr'),
+  NullCoalesce = V('TerminalExpr') * Pad('??') * V('Expr'),
+
+  AssignOp = Product(
+    V('IdLike'),
+    Pad(C(S('+-*/%')) * P('=')),
+    V('Expr')
+  ),
 })
 
 local Declaration = RuleSet({
@@ -312,6 +318,7 @@ local Blocks = RuleSet({
   Statement = Pad(Sum(
     V('FunctionCall'),
     V('Declaration'),
+    V('AssignOp'),
     V('Return'),
     V('IfElse'),
     V('Comment')
