@@ -242,6 +242,9 @@ local Expressions = {
 }
 
 local Operators = {
+  NegateOp = template('not %1'),
+  UnaryOp = concat(),
+
   LogicalAnd = concat('and'),
   LogicalOr = concat('or'),
   Binop = concat(),

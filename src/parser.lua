@@ -247,6 +247,7 @@ local Expressions = RuleSet({
   ),
 
   Expr = Sum(
+    V('UnaryOp'),
     V('Binop'),
     V('CompareOp'),
     V('Ternary'),
@@ -261,15 +262,20 @@ local Expressions = RuleSet({
 })
 
 local Operators = RuleSet({
+  NegateOp = Pad('!') * V('Expr'),
+  UnaryOp = V('NegateOp') + (C(S('-#')) * V('Expr')),
+
   LogicalAnd = Binop(Pad('&&')),
   LogicalOr = Binop(Pad('||')),
   Binop = Sum(
     V('LogicalAnd'),
     V('LogicalOr'),
-    Binop(PadC(S('+-*/%><')))
+    Binop(PadC(S('+-*/^%')))
   ),
 
   CompareOp = Binop(PadC(Sum(
+    P('>'),
+    P('<'),
     P('>='),
     P('<='),
     P('=='),
@@ -281,7 +287,7 @@ local Operators = RuleSet({
 
   AssignOp = Product(
     V('IdLike'),
-    Pad(C(S('+-*/%')) * P('=')),
+    Pad(C(S('+-*/^%')) * P('=')),
     V('Expr')
   ),
 })
