@@ -2,10 +2,6 @@
 
 ## TODO
 
-- multiple returns
-- recall keyword? (recall the function of the current scope?)
-- `do end` scoping (required to prevent holding refs!)
-
 - assignment operators (+=, -=)
 - unary operators
 
@@ -17,10 +13,11 @@
 - table casting
 - Macros
 - require global keyword for global vars? (would be awesome, but requires scope tracking...)
+- recall keyword? (recall the function of the current scope?)
 
 - DUE ???
 - order of operations?
-- print compiled code prettier (for debugging)
+- automated tests
 - Error messages
 
 ## Long Term TODO

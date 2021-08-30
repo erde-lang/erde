@@ -23,7 +23,7 @@ local function write_file(path, content)
   file:close()
 end
 
-local input = read_file('./examples/logic.ob')
+local input = read_file('./examples/operators.ob')
 local ast, state = orbit.parse(input)
 print('STATE: ', inspect(state))
 -- print('AST: ', inspect(ast))
