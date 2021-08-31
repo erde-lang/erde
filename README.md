@@ -2,7 +2,6 @@
 
 ## TODO
 
-- Optional chaining (dot index, bracket index, function call)
 - index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
 
 - DUE ???
@@ -13,7 +12,8 @@
 - recall keyword? (recall the function of the current scope?)
 
 - DUE ???
-- order of operations?
+- order of operations
+  - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
 - automated tests
 - Error messages
 - Lua versions
