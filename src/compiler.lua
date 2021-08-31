@@ -9,7 +9,7 @@ local state = {
   tmpcounter = 0,
 }
 
-local function newtmpid()
+local function newtmpname()
   state.tmpcounter = state.tmpcounter + 1
   return ('__ORBIT_TMP_%d__'):format(state.tmpcounter)
 end
@@ -59,31 +59,52 @@ end
 -- Rule Helpers
 -- -----------------------------------------------------------------------------
 
+local function indexchain(bodycompiler)
+  return function(base, chain, ...)
+    local chainexpr = supertable({ base }, chain:map(function(index)
+      return index.suffix
+    end)):join()
+
+    local prebody = chain:reduce(function(prebody, index)
+      return {
+        partialchain = prebody.partialchain .. index.suffix,
+        parts = not index.optional and prebody.parts or
+          prebody.parts:push(('if %s == nil then return end'):format(prebody.partialchain)),
+      }
+    end, { partialchain = base, parts = supertable() })
+
+    return ('(function() %s %s end)()'):format(
+      prebody.parts:join(' '),
+      bodycompiler(chainexpr, ...)
+    )
+  end
+end
+
 local function compiledestructure(islocal, destructure, expr)
-  local function extractids(destructure)
-    return destructure:reduce(function(ids, destruct)
+  local function extractnames(destructure)
+    return destructure:reduce(function(names, destruct)
       return destruct.nested == false
-        and ids:push(destruct.id)
-        or ids:push(unpack(extractids(destruct.nested)))
+        and names:push(destruct.name)
+        or names:push(unpack(extractnames(destruct.nested)))
     end, supertable())
   end
 
-  local function compilebody(destructure, exprid)
+  local function bodycompiler(destructure, exprname)
     return destructure
       :map(function(destruct)
-        local destructexpr = exprid .. destruct.index
-        local destructexprid = destruct.nested and newtmpid() or destruct.id
+        local destructexpr = exprname .. destruct.index
+        local destructexprname = destruct.nested and newtmpname() or destruct.name
         return supertable({
           ('%s%s = %s'):format(
             destruct.nested and 'local ' or '',
-            destructexprid,
+            destructexprname,
             destructexpr
           ),
           destruct.default and
             ('if %s == nil then %s = %s end')
-              :format(destructexprid, destructexprid, destruct.default),
+              :format(destructexprname, destructexprname, destruct.default),
           destruct.nested and
-            compilebody(destruct.nested, destructexprid),
+            bodycompiler(destruct.nested, destructexprname),
         })
           :filter(function(compiled) return compiled end)
           :join(' ')
@@ -91,12 +112,12 @@ local function compiledestructure(islocal, destructure, expr)
       :join(' ')
   end
 
-  local exprid = newtmpid()
+  local exprname = newtmpname()
   return ('%s%s do %s %s end'):format(
     islocal and 'local ' or '',
-    extractids(destructure):join(','),
-    ('local %s = %s'):format(exprid, expr),
-    compilebody(destructure, exprid)
+    extractnames(destructure):join(','),
+    ('local %s = %s'):format(exprname, expr),
+    bodycompiler(destructure, exprname)
   )
 end
 
@@ -105,10 +126,14 @@ end
 -- -----------------------------------------------------------------------------
 
 local Core = {
-  Id = echo,
+  Name = echo,
   Self = template('self'),
   SelfProperty = template('self.%1'),
-  IdLike = concat(),
+
+  IdBase = concat(),
+  Id = echo,
+  IdExpr = indexchain(template('return %1')),
+
   Number = echo,
 }
 
@@ -131,16 +156,16 @@ local Strings = {
         }
     end, { counter = 0, max = 0 })
 
-    local eqid = ('='):rep(eqstats.max + 1)
+    local eqstr = ('='):rep(eqstats.max + 1)
 
     return ('[%s[%s]%s]'):format(
-      eqid,
+      eqstr,
       values:map(function(v)
         return v.interpolation
-          and (']%s]..tostring(%s)..[%s['):format(eqid, v.value, eqid)
+          and (']%s]..tostring(%s)..[%s['):format(eqstr, v.value, eqstr)
           or v
       end):join(),
-      eqid
+      eqstr
     )
   end,
 
@@ -156,14 +181,15 @@ local Tables = {
 
   DotIndex = concat(),
   BracketIndex = concat(),
-  IndexChain = concat(),
+  Index = map('optional', 'suffix'),
+  IndexChain = pack,
 
-  Destruct = map('keyed', 'id', 'nested', 'default'),
+  Destruct = map('keyed', 'name', 'nested', 'default'),
   Destructure = function(...)
     local keycounter = 1
     return supertable({ ... }):each(function(destruct)
       if destruct.keyed then
-        destruct.index = ('.%s'):format(destruct.id)
+        destruct.index = ('.%s'):format(destruct.name)
       else
         destruct.index = ('[%d]'):format(keycounter)
         keycounter = keycounter + 1
@@ -175,25 +201,25 @@ local Tables = {
 local Functions = {
   Arg = function(isdestructure, arg)
     if isdestructure then
-      local tmpid = newtmpid()
-      return { id = tmpid, prebody = compiledestructure(true, arg, tmpid) }
+      local tmpname = newtmpname()
+      return { name = tmpname, prebody = compiledestructure(true, arg, tmpname) }
     else
-      return { id = arg, prebody = false }
+      return { name = arg, prebody = false }
     end
   end,
   OptArg = function(arg, expr)
     return {
-      id = arg.id,
+      name = arg.name,
       prebody = supertable({
-        ('if %s == nil then %s = %s end'):format(arg.id, arg.id, expr),
+        ('if %s == nil then %s = %s end'):format(arg.name, arg.name, expr),
         arg.prebody,
       }):join(' '),
     }
   end,
-  VarArgs = function(id)
+  VarArgs = function(name)
     return {
-      id = id,
-      prebody = ('local %s = {...}'):format(id),
+      name = name,
+      prebody = ('local %s = {...}'):format(name),
       varargs = true,
     }
   end,
@@ -206,9 +232,9 @@ local Functions = {
       and params[#params].varargs
         and params:pop()
 
-    local ids = supertable(
+    local names = supertable(
       needself and { 'self' },
-      params:map(function(param) return param.id end),
+      params:map(function(param) return param.name end),
       varargs and { '...' }
     ):join(',')
 
@@ -217,8 +243,11 @@ local Functions = {
       :map(function(param) return param.prebody end)
       :join(' ')
 
-    return ('function(%s) %s %s end'):format(ids, prebody, body)
+    return ('function(%s) %s %s end'):format(names, prebody, body)
   end,
+
+  ReturnList = concat(','),
+  Return = concat(' '),
 
   FunctionCall = concat(),
 }
@@ -230,15 +259,11 @@ local LogicFlow = {
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
-
-  ReturnList = concat(','),
-  Return = concat(' '),
 }
 
 local Expressions = {
   SubExpr = echo,
   Expr = concat(),
-  TerminalExpr = concat(),
 }
 
 local Operators = {
@@ -260,22 +285,23 @@ local Operators = {
   end,
 
   NullCoalesce = function(default, backup)
-    local tmpid = newtmpid()
+    local tmpname = newtmpname()
     return ([[(function()
       local %s = %s
       if %s ~= nil then return %s else return %s end
-    )()]]):format(tmpid, default, tmpid, tmpid, backup)
+    )()]]):format(tmpname, default, tmpname, tmpname, backup)
   end,
 
   AssignOp= template('%1 = %1 %2 %3'),
 }
 
 local Declaration = {
-  IdDeclaration = concat(' '),
-  VarArgsDeclaration = function(islocal, id, expr)
-    return ('%s%s = { %s }'):format(islocal and 'local ' or '', id, expr)
+  NameDeclaration = concat(' '),
+  VarArgsDeclaration = function(islocal, name, expr)
+    return ('%s%s = { %s }'):format(islocal and 'local ' or '', name, expr)
   end,
   DestructureDeclaration = compiledestructure,
+  Assignment = indexchain(template('%1 = %2')),
   Declaration = echo,
 }
 

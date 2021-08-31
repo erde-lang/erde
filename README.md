@@ -2,22 +2,22 @@
 
 ## TODO
 
-- Optional chaining (dot index, bracket index, function call)
-- index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
+- case statement
 
 - DUE ???
-- case statement
 - table casting
 - Macros
 - require global keyword for global vars? (would be awesome, but requires scope tracking...)
 - recall keyword? (recall the function of the current scope?)
 
 - DUE ???
-- order of operations?
+- order of operations
+  - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
 - automated tests
 - Error messages
 - Lua versions
   - Bitwise Operators
+  - goto vs functions
 
 ## Long Term TODO
 
@@ -34,6 +34,7 @@
 - docs site
 - Formatter
 - Source maps?
+- performance tuning + optimizations
 
 ## Syntax
 

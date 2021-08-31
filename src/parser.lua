@@ -81,8 +81,8 @@ end
 
 function Binop(op, chain)
   return chain or chain == nil
-    and V('TerminalExpr') * (op * V('Expr')) ^ 1
-    or V('TerminalExpr') * op * V('Expr')
+    and V('SubExpr') * (op * V('Expr')) ^ 1
+    or V('SubExpr') * op * V('Expr')
 end
 
 function Csv(pattern, commacapture)
@@ -120,10 +120,18 @@ local Core = RuleSet({
     P('return')
   )),
 
-  Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
+  Name = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
   Self = PadC('@'),
-  SelfProperty = Pad(P('@') * V('Id')),
-  IdLike = (V('Id') + V('SelfProperty') + V('Self')) * V('IndexChain') ^ -1,
+  SelfProperty = Pad(P('@') * V('Name')),
+
+  IdBase = Sum(
+    PadC('(') * V('Expr') * PadC(')'),
+    V('Name'),
+    V('SelfProperty'),
+    V('Self')
+  ),
+  Id = V('IdBase') * (V('IndexChain') + Cc(supertable())),
+  IdExpr = V('Id'),
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -165,18 +173,22 @@ local Strings = RuleSet({
 
 local Tables = RuleSet({
   StringTableKey = V('String'),
-  MapTableField = (V('StringTableKey') + V('Id')) * Pad(':') * V('Expr'),
-  InlineTableField = Pad(P(':') * V('Id')),
+  MapTableField = (V('StringTableKey') + V('Name')) * Pad(':') * V('Expr'),
+  InlineTableField = Pad(P(':') * V('Name')),
   TableField = V('InlineTableField') + V('MapTableField') + V('Expr'),
   Table = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
 
-  DotIndex = V('Space') * C('.') * V('Id'),
+  DotIndex = V('Space') * C('.') * V('Name'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
-  IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
+  Index = Product(
+    Pad('?') * Cc(true) + Cc(false),
+    V('DotIndex') + V('BracketIndex')
+  ),
+  IndexChain = V('Index') ^ 1,
 
   Destruct = Product(
     C(':') + Cc(false),
-    V('Id'),
+    V('Name'),
     V('Destructure') + Cc(false),
     (Pad('=') * Demand(V('Expr'))) + Cc(false)
   ),
@@ -185,11 +197,11 @@ local Tables = RuleSet({
 
 local Functions = RuleSet({
   Arg = Sum(
-    Cc(false) * V('Id'),
+    Cc(false) * V('Name'),
     Cc(true) * V('Destructure')
   ),
   OptArg = V('Arg') * Pad('=') * V('Expr'),
-  VarArgs = Pad('...') * V('Id') ^ -1,
+  VarArgs = Pad('...') * V('Name') ^ -1,
   ParamComma = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
   Params = V('Arg') + Product(
     Pad('('),
@@ -207,14 +219,12 @@ local Functions = RuleSet({
     Cc(true) * V('Params') * Pad('=>') * V('FunctionBody')
   ),
 
+  ReturnList = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
+  Return = PadC('return') * V('ReturnList') ^ -1,
+
   FunctionCall = Product(
-    Sum(
-      PadC('(') * V('Expr') * PadC(')'),
-      V('SelfProperty'),
-      V('Self'),
-      V('Id')
-    ) * V('IndexChain') ^ -1,
-    (PadC(':') * V('Id')) ^ -1,
+    V('IdExpr'),
+    (PadC(':') * V('Name')) ^ -1,
     PadC('('),
     Csv(V('Expr'), true) + V('Space'),
     PadC(')')
@@ -226,19 +236,13 @@ local LogicFlow = RuleSet({
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
-
-  ReturnList = Sum(
-    Pad('(') * V('ReturnList') * Pad(')'),
-    Csv(V('Expr'))
-  ),
-  Return = PadC('return') * V('ReturnList') ^ -1,
 })
 
 local Expressions = RuleSet({
   SubExpr = Sum(
     V('FunctionCall'),
     V('Function'),
-    V('IdLike'),
+    V('IdExpr'),
     V('Table'),
     V('String'),
     V('Number'),
@@ -252,11 +256,6 @@ local Expressions = RuleSet({
     V('CompareOp'),
     V('Ternary'),
     V('NullCoalesce'),
-    V('TerminalExpr')
-  ),
-
-  TerminalExpr = Sum(
-    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
     V('SubExpr')
   ),
 })
@@ -282,27 +281,27 @@ local Operators = RuleSet({
     P('~=')
   )), false),
 
-  Ternary = V('TerminalExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalesce = V('TerminalExpr') * Pad('??') * V('Expr'),
+  Ternary = V('SubExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalesce = V('SubExpr') * Pad('??') * V('Expr'),
 
   AssignOp = Product(
-    V('IdLike'),
+    V('Id'),
     Pad(C(S('+-*/^%')) * P('=')),
     V('Expr')
   ),
 })
 
 local Declaration = RuleSet({
-  IdDeclaration = Product(
+  NameDeclaration = Product(
     PadC('local') + C(false),
-    V('Id'),
+    V('Name'),
     (PadC('=') * Demand(V('Expr'))) ^ -1
   ),
 
   VarArgsDeclaration = Product(
     PadC('local') + C(false),
     Pad('...'),
-    V('Id'),
+    V('Name'),
     Demand(Pad('=') * V('Expr'))
   ),
 
@@ -312,10 +311,13 @@ local Declaration = RuleSet({
     Demand(Pad('=') * V('Expr'))
   ),
 
+  Assignment = V('Id') * Pad('=') * V('Expr'),
+
   Declaration = Sum(
+    V('Assignment'),
     V('DestructureDeclaration'),
     V('VarArgsDeclaration'),
-    V('IdDeclaration')
+    V('NameDeclaration')
   ),
 })
 
