@@ -181,7 +181,6 @@ local Tables = RuleSet({
   OptIndexChain = V('OptIndex') ^ 1,
   OptExprBase = PadC('(') * V('Expr') * PadC(')') + V('IdLike'),
   OptExpr = V('OptExprBase') * V('OptIndexChain'),
-  OptDeclaration = P(true),
 
   Destruct = Product(
     C(':') + Cc(false),
@@ -216,6 +215,9 @@ local Functions = RuleSet({
     Cc(true) * V('Params') * Pad('=>') * V('FunctionBody')
   ),
 
+  ReturnList = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
+  Return = PadC('return') * V('ReturnList') ^ -1,
+
   FunctionCall = Product(
     PadC('(') * V('Expr') * PadC(')') * V('IndexChain') + V('IdLike'),
     (PadC(':') * V('Id')) ^ -1,
@@ -230,12 +232,6 @@ local LogicFlow = RuleSet({
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
-
-  ReturnList = Sum(
-    Pad('(') * V('ReturnList') * Pad(')'),
-    Csv(V('Expr'))
-  ),
-  Return = PadC('return') * V('ReturnList') ^ -1,
 })
 
 local Expressions = RuleSet({
@@ -317,7 +313,14 @@ local Declaration = RuleSet({
     Demand(Pad('=') * V('Expr'))
   ),
 
+  OptAssign = Product(
+    V('OptExprBase') * V('OptIndexChain'),
+    Pad('='),
+    V('Expr')
+  ),
+
   Declaration = Sum(
+    V('OptAssign'),
     V('DestructureDeclaration'),
     V('VarArgsDeclaration'),
     V('IdDeclaration')

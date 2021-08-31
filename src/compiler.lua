@@ -177,7 +177,6 @@ local Tables = {
         end, { '', expr }))
       )
   end,
-  OptDeclaration = concat(),
 
   Destruct = map('keyed', 'id', 'nested', 'default'),
   Destructure = function(...)
@@ -241,6 +240,9 @@ local Functions = {
     return ('function(%s) %s %s end'):format(ids, prebody, body)
   end,
 
+  ReturnList = concat(','),
+  Return = concat(' '),
+
   FunctionCall = concat(),
 }
 
@@ -251,9 +253,6 @@ local LogicFlow = {
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
-
-  ReturnList = concat(','),
-  Return = concat(' '),
 }
 
 local Expressions = {
@@ -297,6 +296,28 @@ local Declaration = {
     return ('%s%s = { %s }'):format(islocal and 'local ' or '', id, expr)
   end,
   DestructureDeclaration = compiledestructure,
+
+  OptAssign = function(base, chain, expr)
+    return not chain:find(function(optindex) return optindex.optional end)
+      and ('%s = %s'):format(
+          supertable({ base }, chain:map(function(optindex)
+            return optindex.index
+          end)):join(),
+          expr
+        )
+      or ('(function() %s %s = %s end)()'):format(
+        unpack(chain:reduce(function(state, optindex)
+          return {
+            optindex.optional
+              and ('%s if %s == nil then return end'):format(unpack(state))
+              or state[1],
+            state[2] .. optindex.index,
+            state[3]
+          }
+        end, { '', base, expr }))
+      )
+  end,
+
   Declaration = echo,
 }
 

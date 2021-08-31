@@ -16,6 +16,8 @@ local x = ({ x: 'hi' }).x
 local x = y.b?.a
 local x = (y.b?.a) ?? 4
 
+y.b?.a = 4
+
 // Destructure
 
 local { a, b } = y
