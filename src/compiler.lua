@@ -162,14 +162,20 @@ local Tables = {
   OptIndexChain = pack,
   OptExprBase = concat(),
   OptExpr = function(expr, chain)
-    return chain:reduce(function(optexpr, optindex)
-      if not optindex.optional then
-        return optexpr .. optindex.index
-      else
-        -- TODO
-        return optexpr .. '?' .. optindex.index
-      end
-    end, expr)
+    return not chain:find(function(optindex) return optindex.optional end)
+      and supertable({ expr }, chain:map(function(optindex)
+          return optindex.index
+        end)):join()
+      or ('(function() %s return %s end)()'):format(
+        unpack(chain:reduce(function(state, optindex)
+          return {
+            optindex.optional
+              and ('%s if %s == nil then return end'):format(unpack(state))
+              or state[1],
+            state[2] .. optindex.index
+          }
+        end, { '', expr }))
+      )
   end,
   OptDeclaration = concat(),
 
