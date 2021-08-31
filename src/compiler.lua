@@ -158,6 +158,21 @@ local Tables = {
   BracketIndex = concat(),
   IndexChain = concat(),
 
+  OptIndex = map('optional', 'index'),
+  OptIndexChain = pack,
+  OptExprBase = concat(),
+  OptExpr = function(expr, chain)
+    return chain:reduce(function(optexpr, optindex)
+      if not optindex.optional then
+        return optexpr .. optindex.index
+      else
+        -- TODO
+        return optexpr .. '?' .. optindex.index
+      end
+    end, expr)
+  end,
+  OptDeclaration = concat(),
+
   Destruct = map('keyed', 'id', 'nested', 'default'),
   Destructure = function(...)
     local keycounter = 1

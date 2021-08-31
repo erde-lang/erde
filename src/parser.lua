@@ -174,6 +174,15 @@ local Tables = RuleSet({
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
   IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
 
+  OptIndex = Product(
+    Pad('?') * Cc(true) + Cc(false),
+    V('DotIndex') + V('BracketIndex')
+  ),
+  OptIndexChain = V('OptIndex') ^ 1,
+  OptExprBase = PadC('(') * V('Expr') * PadC(')') + V('IdLike'),
+  OptExpr = V('OptExprBase') * V('OptIndexChain'),
+  OptDeclaration = P(true),
+
   Destruct = Product(
     C(':') + Cc(false),
     V('Id'),
@@ -208,12 +217,7 @@ local Functions = RuleSet({
   ),
 
   FunctionCall = Product(
-    Sum(
-      PadC('(') * V('Expr') * PadC(')'),
-      V('SelfProperty'),
-      V('Self'),
-      V('Id')
-    ) * V('IndexChain') ^ -1,
+    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') + V('IdLike'),
     (PadC(':') * V('Id')) ^ -1,
     PadC('('),
     Csv(V('Expr'), true) + V('Space'),
@@ -252,6 +256,7 @@ local Expressions = RuleSet({
     V('CompareOp'),
     V('Ternary'),
     V('NullCoalesce'),
+    V('OptExpr'),
     V('TerminalExpr')
   ),
 

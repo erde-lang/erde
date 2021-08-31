@@ -13,6 +13,8 @@ local y = {
 local x = y.a.b[3].c
 local x = ({ x: 'hi' }).x
 
+local x = y.b?.a
+
 // Destructure
 
 local { a, b } = y
