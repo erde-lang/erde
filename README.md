@@ -2,8 +2,6 @@
 
 ## TODO
 
-- index declaration (`local a.b = 'test'`, `local a?.b = 'test'`)
-- collapse terminalexpr + subexpr?
 - collapse optindex + index?
 
 - DUE ???

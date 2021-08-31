@@ -81,8 +81,8 @@ end
 
 function Binop(op, chain)
   return chain or chain == nil
-    and V('TerminalExpr') * (op * V('Expr')) ^ 1
-    or V('TerminalExpr') * op * V('Expr')
+    and V('SubExpr') * (op * V('Expr')) ^ 1
+    or V('SubExpr') * op * V('Expr')
 end
 
 function Csv(pattern, commacapture)
@@ -236,6 +236,7 @@ local LogicFlow = RuleSet({
 
 local Expressions = RuleSet({
   SubExpr = Sum(
+    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
     V('FunctionCall'),
     V('Function'),
     V('IdLike'),
@@ -253,11 +254,6 @@ local Expressions = RuleSet({
     V('Ternary'),
     V('NullCoalesce'),
     V('OptExpr'),
-    V('TerminalExpr')
-  ),
-
-  TerminalExpr = Sum(
-    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
     V('SubExpr')
   ),
 })
@@ -283,8 +279,8 @@ local Operators = RuleSet({
     P('~=')
   )), false),
 
-  Ternary = V('TerminalExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalesce = V('TerminalExpr') * Pad('??') * V('Expr'),
+  Ternary = V('SubExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  NullCoalesce = V('SubExpr') * Pad('??') * V('Expr'),
 
   AssignOp = Product(
     V('IdLike'),

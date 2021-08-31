@@ -258,7 +258,6 @@ local LogicFlow = {
 local Expressions = {
   SubExpr = echo,
   Expr = concat(),
-  TerminalExpr = concat(),
 }
 
 local Operators = {
