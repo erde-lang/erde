@@ -2,8 +2,7 @@
 
 ## TODO
 
-- change id => name, idlike => id
-- case statement!
+- case statement
 
 - DUE ???
 - table casting
@@ -16,7 +15,6 @@
   - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
 - automated tests
 - Error messages
-- goto optimizations? (do end w/ goto instead of function calls)
 - Lua versions
   - Bitwise Operators
   - goto vs functions
@@ -36,6 +34,7 @@
 - docs site
 - Formatter
 - Source maps?
+- performance tuning + optimizations
 
 ## Syntax
 
