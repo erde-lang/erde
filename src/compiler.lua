@@ -59,6 +59,27 @@ end
 -- Rule Helpers
 -- -----------------------------------------------------------------------------
 
+local function indexchain(bodycompiler)
+  return function(base, chain, ...)
+    local chainexpr = supertable({ base }, chain:map(function(index)
+      return index.suffix
+    end)):join()
+
+    local prebody = chain:reduce(function(prebody, index)
+      return {
+        partialchain = prebody.partialchain .. index.suffix,
+        parts = not index.optional and prebody.parts or
+          prebody.parts:push(('if %s == nil then return end'):format(prebody.partialchain)),
+      }
+    end, { partialchain = base, parts = supertable() })
+
+    return ('(function() %s %s end)()'):format(
+      prebody.parts:join(' '),
+      bodycompiler(chainexpr, ...)
+    )
+  end
+end
+
 local function compiledestructure(islocal, destructure, expr)
   local function extractids(destructure)
     return destructure:reduce(function(ids, destruct)
@@ -68,7 +89,7 @@ local function compiledestructure(islocal, destructure, expr)
     end, supertable())
   end
 
-  local function compilebody(destructure, exprid)
+  local function bodycompiler(destructure, exprid)
     return destructure
       :map(function(destruct)
         local destructexpr = exprid .. destruct.index
@@ -83,7 +104,7 @@ local function compiledestructure(islocal, destructure, expr)
             ('if %s == nil then %s = %s end')
               :format(destructexprid, destructexprid, destruct.default),
           destruct.nested and
-            compilebody(destruct.nested, destructexprid),
+            bodycompiler(destruct.nested, destructexprid),
         })
           :filter(function(compiled) return compiled end)
           :join(' ')
@@ -96,7 +117,7 @@ local function compiledestructure(islocal, destructure, expr)
     islocal and 'local ' or '',
     extractids(destructure):join(','),
     ('local %s = %s'):format(exprid, expr),
-    compilebody(destructure, exprid)
+    bodycompiler(destructure, exprid)
   )
 end
 
@@ -108,7 +129,11 @@ local Core = {
   Id = echo,
   Self = template('self'),
   SelfProperty = template('self.%1'),
-  IdLike = concat(),
+
+  IdLikeBase = concat(),
+  IdLike = echo,
+  IdLikeExpr = indexchain(template('return %1')),
+
   Number = echo,
 }
 
@@ -156,27 +181,8 @@ local Tables = {
 
   DotIndex = concat(),
   BracketIndex = concat(),
-  IndexChain = concat(),
-
-  OptIndex = map('optional', 'index'),
-  OptIndexChain = pack,
-  OptExprBase = concat(),
-  OptExpr = function(expr, chain)
-    return not chain:find(function(optindex) return optindex.optional end)
-      and supertable({ expr }, chain:map(function(optindex)
-          return optindex.index
-        end)):join()
-      or ('(function() %s return %s end)()'):format(
-        unpack(chain:reduce(function(state, optindex)
-          return {
-            optindex.optional
-              and ('%s if %s == nil then return end'):format(unpack(state))
-              or state[1],
-            state[2] .. optindex.index
-          }
-        end, { '', expr }))
-      )
-  end,
+  Index = map('optional', 'suffix'),
+  IndexChain = pack,
 
   Destruct = map('keyed', 'id', 'nested', 'default'),
   Destructure = function(...)
@@ -295,28 +301,7 @@ local Declaration = {
     return ('%s%s = { %s }'):format(islocal and 'local ' or '', id, expr)
   end,
   DestructureDeclaration = compiledestructure,
-
-  OptAssign = function(base, chain, expr)
-    return not chain:find(function(optindex) return optindex.optional end)
-      and ('%s = %s'):format(
-          supertable({ base }, chain:map(function(optindex)
-            return optindex.index
-          end)):join(),
-          expr
-        )
-      or ('(function() %s %s = %s end)()'):format(
-        unpack(chain:reduce(function(state, optindex)
-          return {
-            optindex.optional
-              and ('%s if %s == nil then return end'):format(unpack(state))
-              or state[1],
-            state[2] .. optindex.index,
-            state[3]
-          }
-        end, { '', base, expr }))
-      )
-  end,
-
+  Assignment = indexchain(template('%1 = %2')),
   Declaration = echo,
 }
 

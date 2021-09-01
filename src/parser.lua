@@ -123,7 +123,15 @@ local Core = RuleSet({
   Id = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
   Self = PadC('@'),
   SelfProperty = Pad(P('@') * V('Id')),
-  IdLike = (V('Id') + V('SelfProperty') + V('Self')) * V('IndexChain') ^ -1,
+
+  IdLikeBase = Sum(
+    PadC('(') * V('Expr') * PadC(')'),
+    V('Id'),
+    V('SelfProperty'),
+    V('Self')
+  ),
+  IdLike = V('IdLikeBase') * (V('IndexChain') + Cc(supertable())),
+  IdLikeExpr = V('IdLike'),
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
@@ -172,15 +180,11 @@ local Tables = RuleSet({
 
   DotIndex = V('Space') * C('.') * V('Id'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
-  IndexChain = (V('DotIndex') + V('BracketIndex')) ^ 1,
-
-  OptIndex = Product(
+  Index = Product(
     Pad('?') * Cc(true) + Cc(false),
     V('DotIndex') + V('BracketIndex')
   ),
-  OptIndexChain = V('OptIndex') ^ 1,
-  OptExprBase = PadC('(') * V('Expr') * PadC(')') + V('IdLike'),
-  OptExpr = V('OptExprBase') * V('OptIndexChain'),
+  IndexChain = V('Index') ^ 1,
 
   Destruct = Product(
     C(':') + Cc(false),
@@ -219,7 +223,7 @@ local Functions = RuleSet({
   Return = PadC('return') * V('ReturnList') ^ -1,
 
   FunctionCall = Product(
-    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') + V('IdLike'),
+    V('IdLikeExpr'),
     (PadC(':') * V('Id')) ^ -1,
     PadC('('),
     Csv(V('Expr'), true) + V('Space'),
@@ -236,10 +240,9 @@ local LogicFlow = RuleSet({
 
 local Expressions = RuleSet({
   SubExpr = Sum(
-    PadC('(') * V('Expr') * PadC(')') * V('IndexChain') ^ -1,
     V('FunctionCall'),
     V('Function'),
-    V('IdLike'),
+    V('IdLikeExpr'),
     V('Table'),
     V('String'),
     V('Number'),
@@ -253,7 +256,6 @@ local Expressions = RuleSet({
     V('CompareOp'),
     V('Ternary'),
     V('NullCoalesce'),
-    V('OptExpr'),
     V('SubExpr')
   ),
 })
@@ -309,14 +311,10 @@ local Declaration = RuleSet({
     Demand(Pad('=') * V('Expr'))
   ),
 
-  OptAssign = Product(
-    V('OptExprBase') * V('OptIndexChain'),
-    Pad('='),
-    V('Expr')
-  ),
+  Assignment = V('IdLike') * Pad('=') * V('Expr'),
 
   Declaration = Sum(
-    V('OptAssign'),
+    V('Assignment'),
     V('DestructureDeclaration'),
     V('VarArgsDeclaration'),
     V('IdDeclaration')

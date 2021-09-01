@@ -2,10 +2,10 @@
 
 ## TODO
 
-- collapse optindex + index?
+- change id => name, idlike => id
+- case statement!
 
 - DUE ???
-- case statement
 - table casting
 - Macros
 - require global keyword for global vars? (would be awesome, but requires scope tracking...)
@@ -16,8 +16,10 @@
   - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
 - automated tests
 - Error messages
+- goto optimizations? (do end w/ goto instead of function calls)
 - Lua versions
   - Bitwise Operators
+  - goto vs functions
 
 ## Long Term TODO
 
