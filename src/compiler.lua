@@ -11,7 +11,7 @@ local state = {
 
 local function newtmpname()
   state.tmpcounter = state.tmpcounter + 1
-  return ('__ORBIT_TMP_%d__'):format(state.tmpcounter)
+  return ('__ERDE_TMP_%d__'):format(state.tmpcounter)
 end
 
 -- -----------------------------------------------------------------------------
