@@ -1,4 +1,4 @@
-# Orbit
+# Erde
 
 ## TODO
 
@@ -26,10 +26,10 @@
   - Emacs
   - Vscode
   - Treesitter
-- orbit cli
+- erde cli
   - target various lua versions
   - luajit bytecode option?
-- orbit lib
+- erde lib
   - allow mutating `require` (similar to moonscript)
 - docs site
 - Formatter
@@ -99,12 +99,12 @@ There is no for loop. Instead, use Array constructors + macros:
 
 #### While Loop
 
-There is no while loop. Orbit retains the tail recursiveness of lua, so you may
+There is no while loop. Erde retains the tail recursiveness of lua, so you may
 use recursive functions in place of traditional while loops.
 
 #### Case statement
 
-One of orbits unique features. Similar to a `switch` statement but:
+One of erde's unique features. Similar to a `switch` statement but:
 
 1. case statements can return values
 1. No need to use `case` keyword

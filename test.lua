@@ -1,7 +1,7 @@
 package.path = './src/?.lua;' .. package.path
 package.path = '/home/bsuth/projects/?/src/init.lua;' .. package.path
 
-local orbit = require('orbit')
+local erde = require('erde')
 local inspect = require('inspect')
 
 local function read_file(path)
@@ -23,8 +23,8 @@ local function write_file(path, content)
   file:close()
 end
 
-local input = read_file('./examples/tables.ob')
-local ast, state = orbit.parse(input)
+local input = read_file('./examples/tables.erde')
+local ast, state = erde.parse(input)
 print('STATE: ', inspect(state))
 -- print('AST: ', inspect(ast))
-print('LUA: ', orbit.compile(ast))
+print('LUA: ', erde.compile(ast))
