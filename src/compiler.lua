@@ -65,18 +65,22 @@ local function indexchain(bodycompiler)
       return index.suffix
     end)):join()
 
-    local prebody = chain:reduce(function(prebody, index)
-      return {
-        partialchain = prebody.partialchain .. index.suffix,
-        parts = not index.optional and prebody.parts or
-          prebody.parts:push(('if %s == nil then return end'):format(prebody.partialchain)),
-      }
-    end, { partialchain = base, parts = supertable() })
+    if not chain:find(function(index) return index.optional end) then
+      return chainexpr
+    else
+      local prebody = chain:reduce(function(prebody, index)
+        return {
+          partialchain = prebody.partialchain .. index.suffix,
+          parts = not index.optional and prebody.parts or
+            prebody.parts:push(('if %s == nil then return end'):format(prebody.partialchain)),
+        }
+      end, { partialchain = base, parts = supertable() })
 
-    return ('(function() %s %s end)()'):format(
-      prebody.parts:join(' '),
-      bodycompiler(chainexpr, ...)
-    )
+      return ('(function() %s %s end)()'):format(
+        prebody.parts:join(' '),
+        bodycompiler(chainexpr, ...)
+      )
+    end
   end
 end
 
@@ -259,6 +263,10 @@ local LogicFlow = {
   IfElse = function(...)
     return supertable({ ... }, { 'end' }):join(' ')
   end,
+
+  CaseCondition = echo,
+  CaseBlock = echo,
+  Case = echo,
 }
 
 local Expressions = {

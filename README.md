@@ -3,6 +3,7 @@
 ## TODO
 
 - case statement
+- remove if-else statement (replace completely with case)
 
 - DUE ???
 - table casting
