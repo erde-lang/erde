@@ -26,5 +26,5 @@ end
 local input = read_file('./examples/logic.erde')
 local ast, state = erde.parse(input)
 print('STATE: ', inspect(state))
-print('AST: ', inspect(ast))
+-- print('AST: ', inspect(ast))
 print('LUA: ', erde.compile(ast))

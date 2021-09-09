@@ -8,6 +8,10 @@ if true {
   local x = 10
 } 
 
+local x = do {
+  return x
+}
+
 // Returns
 
 local x = () -> {
@@ -30,13 +34,10 @@ local x = () -> {
   )
 }
 
-// Case Statement
+// Piping
 
-case {
-  n % 2 == 0:
-    return n + 1
-  n % 2 == 1:
-    return n + 1
-  true:
-    print('n is positive')
-}
+// local derivedcollection = mycollection
+//   >> map(value -> value + 2)
+//   >> reduce((reduction, test) -> {
+//   })
+//   >> filter(value -> value + 2)

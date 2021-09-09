@@ -236,15 +236,10 @@ local LogicFlow = RuleSet({
   ElseIf = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
   Else = Pad('else') * Pad('{') * V('Block') * Pad('}'),
   IfElse = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
-
-  CaseCondition = V('Expr') * Pad(':'),
-  CaseBlock = V('CaseCondition') ^ 1 * V('Block'),
-  Case = Pad('case') * Pad('{') * V('CaseBlock') ^ 1 * Pad('}'),
 })
 
 local Expressions = RuleSet({
   SubExpr = Sum(
-    V('Case'),
     V('FunctionCall'),
     V('Function'),
     V('IdExpr'),
@@ -329,7 +324,6 @@ local Declaration = RuleSet({
 local Blocks = RuleSet({
   Block = V('Statement') ^ 1 + Pad(Cc('')),
   Statement = Pad(Sum(
-    V('Case'),
     V('FunctionCall'),
     V('Declaration'),
     V('AssignOp'),
