@@ -50,41 +50,6 @@
 
 ## Syntax
 
-### Functions
-
-#### Declaration
-
-All functions are arrow functions. Params MUST be wrapped in parentheses.
-
-```
-const MyFunction = () => {
-  local x = 3
-
-  ...
-
-  return x
-}
-```
-
-#### Implicit Return
-
-Arrow function have implicit return, like JS:
-
-```
-const MyFunction = () => "hello world"
-
-// prints "hello world"
-print(MyFunction())
-```
-
-#### Optional Params / Varargs
-
-```
-const MyFunction = (x = 4)
-const MyFunction = (x = 4, ...)
-const MyFunction = (x = 4, ...children)
-```
-
 ### Oddities
 
 #### Ternary
