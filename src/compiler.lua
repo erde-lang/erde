@@ -1,5 +1,6 @@
 local inspect = require('inspect')
 local supertable = require('supertable')
+require('rules.operators')
 
 -- -----------------------------------------------------------------------------
 -- State

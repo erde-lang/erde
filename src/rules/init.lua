@@ -1,0 +1,5 @@
+require('rules.Core')
+require('rules.Operators')
+require('rules.Expr')
+require('rules.Block')
+return require('rules.registry')
