@@ -153,6 +153,15 @@ function supertable:find(target)
   return nil, nil
 end
 
+function supertable:merge(...)
+  for _, t in ipairs({ ... }) do
+    for key, value in pairs(t) do
+      self[type(key) == 'string' and key or #self + 1] = value
+    end
+  end
+  return self
+end
+
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------

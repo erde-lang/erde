@@ -8,17 +8,14 @@ local supertable = require('supertable')
 -- -----------------------------------------------------------------------------
 -- Environment
 --
--- Sets the fenv so that we don't have to prefix everything with `lpeg.` and
--- don't have to manually destructure everything.
+-- Sets the fenv so that we don't have to prefix everything with `lpeg.` nor
+-- manually destructure everything.
 -- -----------------------------------------------------------------------------
 
-local env = setmetatable(
+setfenv(1, setmetatable(
   supertable(lpeg):filter(function(v, k) return _G[k] == nil end),
   { __index = _G }
-)
-
-setfenv(1, env)
-local operators = require('rules.operators.grammar')
+))
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -37,7 +34,24 @@ function state.newline(position)
 end
 
 -- -----------------------------------------------------------------------------
--- Grammar Helpers
+-- Rules
+-- -----------------------------------------------------------------------------
+
+local rules = supertable({ V('Block') })
+
+function RuleSet(patterns)
+  rules:merge(supertable(patterns):map(function(pattern, rule)
+    return Cp() * pattern / function(position, ...)
+      local node = supertable({ ... })
+        :filter(function(value) return value ~= nil end)
+        :merge({ rule = rule, position = position })
+      return #node > 0 and node or nil
+    end
+  end))
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule Helpers
 -- -----------------------------------------------------------------------------
 
 local function Pad(pattern)
@@ -46,6 +60,11 @@ end
 
 local function PadC(pattern)
   return V('Space') * C(pattern) * V('Space')
+end
+
+local function Csv(pattern, commacapture)
+  local comma = commacapture and PadC(',') or Pad(',')
+  return pattern * (comma * pattern) ^ 0 * Pad(',') ^ -1
 end
 
 local function Sum(patterns)
@@ -74,37 +93,8 @@ local function Demand(pattern)
 end
 
 -- -----------------------------------------------------------------------------
--- Rule Helpers
--- -----------------------------------------------------------------------------
-
-function Binop(op, chain)
-  return chain or chain == nil
-    and V('SubExpr') * (op * V('Expr')) ^ 1
-    or V('SubExpr') * op * V('Expr')
-end
-
-function Csv(pattern, commacapture)
-  local comma = commacapture and PadC(',') or Pad(',')
-  return pattern * (comma * pattern) ^ 0 * Pad(',') ^ -1
-end
-
--- -----------------------------------------------------------------------------
 -- Rule Sets
 -- -----------------------------------------------------------------------------
-
-function RuleSet(patterns)
-  return supertable(patterns):map(function(pattern, rule)
-    return Cp() * pattern / function(position, ...)
-      local node = supertable(
-        { rule = rule, position = position },
-        supertable({ ... }):filter(function(value)
-          return value ~= nil
-        end)
-      )
-      return #node > 0 and node or nil
-    end
-  end)
-end
 
 local Core = RuleSet({
   Keyword = Pad(Sum({
@@ -250,44 +240,51 @@ local Expressions = RuleSet({
   }),
 
   Expr = Sum({
-    V('UnaryOp'),
-    V('Binop'),
-    V('CompareOp'),
-    V('Ternary'),
-    V('NullCoalesce'),
+    V('Operation'),
     V('SubExpr'),
   }),
 })
 
 local Operators = RuleSet({
-  NegateOp = Pad('~') * V('Expr'),
-  UnaryOp = V('NegateOp') + (C(S('-#')) * V('Expr')),
-
-  LogicalAnd = Binop(Pad('&')),
-  LogicalOr = Binop(Pad('|')),
-  Binop = Sum({
-    V('LogicalAnd'),
-    V('LogicalOr'),
-    Binop(PadC(S('+-*/^%'))),
-    Binop(PadC('..')),
+  UnaryOp = C(S('~-#')) * V('Expr'),
+  TernaryOp = V('SubExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
+  UnchainableBinop = V('SubExpr') * Product({
+    PadC(Sum({ '==', '~=', '<=', '>=', '<', '>' })),
+    V('Expr'),
   }),
-
-  CompareOp = Binop(PadC(Sum({
-    P('>'),
-    P('<'),
-    P('>='),
-    P('<='),
-    P('=='),
-    P('~='),
-  })), false),
-
-  Ternary = V('SubExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  NullCoalesce = V('SubExpr') * Pad('??') * V('Expr'),
-
+  ChainableBinopChar = C(Sum({
+    '+',
+    '-',
+    '*',
+    '//',
+    '/',
+    '^',
+    '%',
+    '.|',
+    '.&',
+    '.~',
+    '.>>',
+    '.<<',
+    '&',
+    '|',
+    '..',
+    '??',
+  })),
+  ChainableBinop = V('SubExpr') * Product({
+    Pad(V('ChainableBinopChar')),
+    V('Expr'),
+  }) ^ 1,
   AssignOp = Product({
     V('Id'),
-    Pad(C(S('+-*/^%')) * P('=')),
+    Pad(V('ChainableBinopChar') * P('=')),
     V('Expr'),
+  }),
+  Operation = Sum({
+    V('UnaryOp'),
+    V('TernaryOp'),
+    V('UnchainableBinop'),
+    V('ChainableBinop'),
+    V('AssignOp'),
   }),
 })
 
@@ -334,21 +331,10 @@ local Blocks = RuleSet({
 })
 
 -- -----------------------------------------------------------------------------
--- Grammar
+-- Return
 -- -----------------------------------------------------------------------------
 
-local grammar = P(supertable(
-  { V('Block') },
-  Blocks,
-  Declaration,
-  Operators,
-  Expressions,
-  LogicFlow,
-  Functions,
-  Tables,
-  Strings,
-  Core
-))
+local grammar = P(rules)
 
 return function(subject)
   lpeg.setmaxstack(1000)
