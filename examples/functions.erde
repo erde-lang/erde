@@ -1,4 +1,4 @@
-// Params
+-- Params
 
 local p1 = () -> {}
 local p2 = () => {}
@@ -23,7 +23,7 @@ local p12 = (
   ...test,
 ) => {}
 
-// Function Body
+-- Function Body
 
 local b1 = () -> {
   local x = 42
@@ -36,10 +36,33 @@ local b3 = () -> {
   y: 'bye',
 }
 
-// Function Call
+-- Function Call
 
 myfunc()
 (() -> {})()
 a.b[1]()
 a.b[3].c(x, 4 + 5)
 a.b[3]:c()
+
+-- Returns
+
+local x = () -> {
+  return
+}
+
+local x = () -> {
+  return a
+}
+
+local x = () -> {
+  return a, b, c
+}
+
+local x = () -> {
+  return (
+    a,
+    b,
+    c,
+  )
+}
+

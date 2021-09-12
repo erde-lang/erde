@@ -1,5 +1,7 @@
 package.path = './src/?.lua;' .. package.path
-package.path = '/home/bsuth/projects/?/src/init.lua;' .. package.path
+package.path = './src/?/init.lua;' .. package.path
+package.path = '/home/bsuth/repos/?/src/init.lua;' .. package.path
+package.path = '/home/mujin/Documents/?/src/init.lua;' .. package.path
 
 local erde = require('erde')
 local inspect = require('inspect')
@@ -23,8 +25,22 @@ local function write_file(path, content)
   file:close()
 end
 
-local input = read_file('./examples/logic.erde')
-local ast, state = erde.parse(input)
-print('STATE: ', inspect(state))
--- print('AST: ', inspect(ast))
-print('LUA: ', erde.compile(ast))
+local function benchmark(label, callback, stress)
+  local start = os.clock()
+  if stress then
+    for i = 1, 1000 do callback() end
+  end
+  print(callback())
+  print(label, ' => ', os.clock() - start)
+end
+
+local input = read_file('./examples/scratchpad.erde')
+-- local input = read_file('./examples/tables.erde')
+-- print(inspect(erde.parse(input)))
+benchmark('COMPILE', function()
+  return erde.compile(input)
+end, false)
+
+benchmark('FORMAT', function()
+  return erde.format(input)
+end, false)

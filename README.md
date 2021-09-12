@@ -2,34 +2,22 @@
 
 ## TODO
 
-- Refactor for scaling
-  - simplify grammar, move grouping work to parser
-  - real error messages
-  - prepare scope tracking
-- lua comments
-- string concat op
-- bit operations (prefixed with `.`, ex. `.>>`)
-- lua table brackets
-- optional nested destructure
-- restore lua constructs
-  - for loop, while loop, repeat until, do block (allow return!)
-- function piping (instead of macros!) `>>` syntax
-  - take first return of one function as first argument of "next" function
-- optional chaining function calls
-- `kpairs` keyword
-- `global` keyword + scope tracking
-- order of operations
-  - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
+- formatter infra
+- error handling
+- integrate official erde-lang spec
+- add returns to do blocks (needs scope tracking)
+- custom keywords
+  - `global` (needs scope tracking)
+  - `kpairs`
 - automated tests
+- lua versions (bit operators)
+- order of operations?
 
 ## Proposals
 
 - named export
-- `recall` keyword? (recall the function of the current scope?)
-- `demand` keyword (early return)
 - case statement?
-- allow self in table declaration?
-- replace self `@` with `$`?
+- shorthand self? need to support optional op?
 
 ## Long Term TODO
 
@@ -39,11 +27,8 @@
   - Vscode
   - Treesitter
 - erde cli
-  - target various lua versions
-  - luajit bytecode option?
-- erde lib
+- erde runtime lib
   - allow mutating `require` (similar to moonscript)
 - docs site
 - Formatter
 - Source maps?
-- performance tuning + optimizations

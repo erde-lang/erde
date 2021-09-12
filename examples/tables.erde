@@ -1,14 +1,16 @@
-// Declaration
+-- Declaration
 
 local y = { }
 local y = {
+  ['hello' .. 'world']: true,
+  ['hello']: true,
   `{hello}`: true,
   test: 'hi',
   :test,
   'hello world',
 }
 
-// Indexing
+-- Indexing
 
 local x = y.a.b[3].c
 local x = ({ x: 'hi' }).x
@@ -19,14 +21,14 @@ local x = (y.b?.a) ?? 4
 y.b?.a = 4
 y?.b.a = 4
 
-// Destructure
+-- Destructure
 
 local { a, b } = y
 local { :a, :b } = y
 local { :a { :a1, :a2 } } = y
 local { :a { :a1, :a2 } = {}, :b } = y
 
-// Destructure Params
+-- Destructure Params
 
 local test = { :x = y } -> {
   return true
