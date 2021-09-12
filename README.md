@@ -2,11 +2,6 @@
 
 ## TODO
 
-- Refactor for scaling
-  - simplify grammar, move grouping work to parser
-  - real error messages
-  - prepare scope tracking
-- lua comments
 - string concat op
 - bit operations (prefixed with `.`, ex. `.>>`)
 - lua table brackets

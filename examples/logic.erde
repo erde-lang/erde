@@ -1,4 +1,4 @@
-// If Else
+-- If Else
 
 if true {
   local x = 4
@@ -34,10 +34,10 @@ local x = () -> {
   )
 }
 
-// Piping
+-- Piping
 
-// local derivedcollection = mycollection
-//   >> map(value -> value + 2)
-//   >> reduce((reduction, test) -> {
-//   })
-//   >> filter(value -> value + 2)
+-- local derivedcollection = mycollection
+--   >> map(value -> value + 2)
+--   >> reduce((reduction, test) -> {
+--   })
+--   >> filter(value -> value + 2)

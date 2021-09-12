@@ -136,9 +136,10 @@ local Core = RuleSet({
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
 
-  SingleLineComment = Pad('//') * (P(1) - V('Newline')) ^ 0,
-  MultiLineComment = Pad('/*') * (P(1) - P('*/')) ^ 0 * Pad('*/'),
-  Comment = V('SingleLineComment') + V('MultiLineComment'),
+  Comment = Sum(
+    Pad('--') * (P(1) - V('Newline')) ^ 0,
+    Pad('--[[') * (P(1) - P(']]--')) ^ 0 * Pad(']]--')
+  ),
 
   Integer = digit ^ 1,
   Hex = (P('0x') + P('0X')) * xdigit ^ 1,

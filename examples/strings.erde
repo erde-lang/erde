@@ -1,9 +1,9 @@
-// Short Strings
+-- Short Strings
 
 local x = 'hello world'
 local y = "goodbye world"
 
-// Long Strings
+-- Long Strings
 
 local x = `hello world`
 local x = `
@@ -13,11 +13,11 @@ local x = `
 
 local x = `hello { b2 } { wo382+ }`
 
-// Escape Chars
+-- Escape Chars
 
 local x = 'hello\nworld'
 
-// Long String Escape Id
+-- Long String Escape Id
 
 local x = `[[hello]]`
 local x = `[=[hello]=]`
