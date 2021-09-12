@@ -51,7 +51,7 @@ Rule('DestructureDeclaration', {
   compiler = compiledestructure,
 })
 
-Rule('Assignment ', {
+Rule('Assignment', {
   parser = V('Id') * Pad('=') * V('Expr'),
   compiler = indexchain(template('%1 = %2')),
 })

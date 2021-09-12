@@ -2,7 +2,7 @@ require('env')()
 local lpeg = require('lpeg')
 local Rule = require('rules.registry')
 
-Rule('SubExpr ', {
+Rule('SubExpr', {
   parser = Sum({
     V('FunctionCall'),
     V('Function'),
@@ -16,7 +16,7 @@ Rule('SubExpr ', {
   compiler = echo,
 })
 
-Rule('Expr ', {
+Rule('Expr', {
   parser = Sum({
     V('Operation'),
     V('SubExpr'),

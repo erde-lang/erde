@@ -19,7 +19,7 @@ Rule('Name ', {
 })
 
 Rule('Self', {
-  parser = template('self'),
+  parser = Pad('@'),
   compiler = echo,
 })
 

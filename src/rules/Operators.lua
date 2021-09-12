@@ -51,6 +51,7 @@ Rule('AssignOp', {
   }),
   compiler = function(id, op, expr)
     if op == '??' then
+      -- TODO: consider optional assign
       return 
     elseif op == '&' then
       return template('%1 = %1 and %2')(id, expr)
