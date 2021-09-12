@@ -246,44 +246,30 @@ local Expressions = RuleSet({
 })
 
 local Operators = RuleSet({
-  UnaryOp = C(S('~-#')) * V('Expr'),
   TernaryOp = V('SubExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
-  UnchainableBinop = V('SubExpr') * Product({
-    PadC(Sum({ '==', '~=', '<=', '>=', '<', '>' })),
+  UnaryOp = PadC(S('~-#')) * V('Expr'),
+  Binop = V('SubExpr') * Product({
+    PadC(Sum({
+      '+', '-', '*', '//', '/', '^', '%', -- arithmetic
+      '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
+      '==', '~=', '<=', '>=', '<', '>',   -- relational
+      '&', '|', '..', '??',               -- misc
+    })),
     V('Expr'),
   }),
-  ChainableBinopChar = C(Sum({
-    '+',
-    '-',
-    '*',
-    '//',
-    '/',
-    '^',
-    '%',
-    '.|',
-    '.&',
-    '.~',
-    '.>>',
-    '.<<',
-    '&',
-    '|',
-    '..',
-    '??',
-  })),
-  ChainableBinop = V('SubExpr') * Product({
-    Pad(V('ChainableBinopChar')),
-    V('Expr'),
-  }) ^ 1,
   AssignOp = Product({
     V('Id'),
-    Pad(V('ChainableBinopChar') * P('=')),
+    Pad(C(Sum({
+      '+', '-', '*', '//', '/', '^', '%', -- arithmetic
+      '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
+      '&', '|', '..', '??',               -- misc
+    })) * P('=')),
     V('Expr'),
   }),
   Operation = Sum({
     V('UnaryOp'),
     V('TernaryOp'),
-    V('UnchainableBinop'),
-    V('ChainableBinop'),
+    V('Binop'),
     V('AssignOp'),
   }),
 })

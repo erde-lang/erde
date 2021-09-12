@@ -275,32 +275,29 @@ local Expressions = {
 }
 
 local Operators = {
-  NegateOp = template('not %1'),
-  UnaryOp = concat(),
-
-  LogicalAnd = concat('and'),
-  LogicalOr = concat('or'),
-  Binop = concat(),
-
-  CompareOp = concat(),
-
-  Ternary = function(condition, iftrue, iffalse)
+  UnaryOp = function(op, expr)
+    return op == '~' and 'not ' .. expr or op .. expr
+  end,
+  TernaryOp = function(condition, iftrue, iffalse)
     return ('(function() if %s then return %s %s end)()'):format(
       condition,
       iftrue,
       iffalse and ('else return %s'):format(iffalse) or ''
     )
   end,
-
-  NullCoalesce = function(default, backup)
-    local tmpname = newtmpname()
-    return ([[(function()
-      local %s = %s
-      if %s ~= nil then return %s else return %s end
-    )()]]):format(tmpname, default, tmpname, tmpname, backup)
+  Binop = function(lhs, op, rhs)
+    if op == '??' then
+      local tmpname = newtmpname()
+      return ([[(function()
+        local %s = %s
+        if %s ~= nil then return %s else return %s end
+      )()]]):format(tmpname, lhs, tmpname, tmpname, rhs)
+    else
+      return lhs..op..rhs
+    end
   end,
-
   AssignOp= template('%1 = %1 %2 %3'),
+  Operation = echo,
 }
 
 local Declaration = {

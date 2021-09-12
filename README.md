@@ -2,8 +2,8 @@
 
 ## TODO
 
-- string concat op
-- bit operations (prefixed with `.`, ex. `.>>`)
+- order of operations
+  - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
 - lua table brackets
 - optional nested destructure
 - restore lua constructs
@@ -13,8 +13,6 @@
 - optional chaining function calls
 - `kpairs` keyword
 - `global` keyword + scope tracking
-- order of operations
-  - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
 - automated tests
 
 ## Proposals
