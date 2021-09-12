@@ -12,15 +12,13 @@ local supertable = require('supertable')
 -- don't have to manually destructure everything.
 -- -----------------------------------------------------------------------------
 
-local env = setmetatable({}, { __index = _G })
-
-for k, v in pairs(lpeg) do
-  if _G[k] == nil then
-    env[k] = v
-  end
-end
+local env = setmetatable(
+  supertable(lpeg):filter(function(v, k) return _G[k] == nil end),
+  { __index = _G }
+)
 
 setfenv(1, env)
+local operators = require('rules.operators.grammar')
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -50,14 +48,14 @@ local function PadC(pattern)
   return V('Space') * C(pattern) * V('Space')
 end
 
-local function Sum(...)
-  return supertable({ ... }):reduce(function(sum, pattern)
+local function Sum(patterns)
+  return supertable(patterns):reduce(function(sum, pattern)
     return sum + pattern
   end, P(false))
 end
 
-local function Product(...)
-  return supertable({ ... }):reduce(function(product, pattern)
+local function Product(patterns)
+  return supertable(patterns):reduce(function(product, pattern)
     return product * pattern
   end, P(true))
 end
@@ -109,7 +107,7 @@ function RuleSet(patterns)
 end
 
 local Core = RuleSet({
-  Keyword = Pad(Sum(
+  Keyword = Pad(Sum({
     P('local'),
     P('if'),
     P('elseif'),
@@ -117,37 +115,37 @@ local Core = RuleSet({
     P('false'),
     P('true'),
     P('nil'),
-    P('return')
-  )),
+    P('return'),
+  })),
 
   Name = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
   Self = PadC('@'),
   SelfProperty = Pad(P('@') * V('Name')),
 
-  IdBase = Sum(
+  IdBase = Sum({
     PadC('(') * V('Expr') * PadC(')'),
     V('Name'),
     V('SelfProperty'),
-    V('Self')
-  ),
+    V('Self'),
+  }),
   Id = V('IdBase') * (V('IndexChain') + Cc(supertable())),
   IdExpr = V('Id'),
 
   Newline = P('\n') * (Cp() / state.newline),
   Space = (V('Newline') + space) ^ 0,
 
-  Comment = Sum(
+  Comment = Sum({
     Pad('--') * (P(1) - V('Newline')) ^ 0,
-    Pad('--[[') * (P(1) - P(']]--')) ^ 0 * Pad(']]--')
-  ),
+    Pad('--[[') * (P(1) - P(']]--')) ^ 0 * Pad(']]--'),
+  }),
 
   Integer = digit ^ 1,
   Hex = (P('0x') + P('0X')) * xdigit ^ 1,
   Exponent = S('eE') * S('+-') ^ -1 * V('Integer'),
-  Float = Sum(
+  Float = Sum({
     digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
-    V('Integer') * V('Exponent')
-  ),
+    V('Integer') * V('Exponent'),
+  }),
   Number = C(V('Float') + V('Hex') + V('Integer')),
 })
 
@@ -155,21 +153,21 @@ local Strings = RuleSet({
   EscapedChar = C(V('Newline') + P('\\') * P(1)),
 
   Interpolation = P('{') * Pad(Demand(V('Expr'))) * P('}'),
-  LongString = Product(
+  LongString = Product({
     P('`'),
-    Sum(
+    Sum({
       V('EscapedChar'),
       V('Interpolation'),
-      C(P(1) - P('`'))
-    ) ^ 0,
-    P('`')
-  ),
+      C(P(1) - P('`')),
+    }) ^ 0,
+    P('`'),
+  }),
 
-  String = Sum(
+  String = Sum({
     V('LongString'),
     C("'") * (V('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"), -- single quote
-    C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"') -- double quote
-  ),
+    C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"'), -- double quote
+  }),
 })
 
 local Tables = RuleSet({
@@ -181,55 +179,55 @@ local Tables = RuleSet({
 
   DotIndex = V('Space') * C('.') * V('Name'),
   BracketIndex = PadC('[') * V('Expr') * PadC(']'),
-  Index = Product(
+  Index = Product({
     Pad('?') * Cc(true) + Cc(false),
-    V('DotIndex') + V('BracketIndex')
-  ),
+    V('DotIndex') + V('BracketIndex'),
+  }),
   IndexChain = V('Index') ^ 1,
 
-  Destruct = Product(
+  Destruct = Product({
     C(':') + Cc(false),
     V('Name'),
     V('Destructure') + Cc(false),
-    (Pad('=') * Demand(V('Expr'))) + Cc(false)
-  ),
+    (Pad('=') * Demand(V('Expr'))) + Cc(false),
+  }),
   Destructure = Pad('{') * Csv(V('Destruct')) * Pad('}'),
 })
 
 local Functions = RuleSet({
-  Arg = Sum(
+  Arg = Sum({
     Cc(false) * V('Name'),
-    Cc(true) * V('Destructure')
-  ),
+    Cc(true) * V('Destructure'),
+  }),
   OptArg = V('Arg') * Pad('=') * V('Expr'),
   VarArgs = Pad('...') * V('Name') ^ -1,
   ParamComma = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
-  Params = V('Arg') + Product(
+  Params = V('Arg') + Product({
     Pad('('),
     (V('Arg') * V('ParamComma')) ^ 0,
     (V('OptArg') * V('ParamComma')) ^ 0,
     (V('VarArgs') * V('ParamComma')) ^ -1,
     Cc({}),
-    Pad(')')
-  ),
+    Pad(')'),
+  }),
 
   FunctionExprBody = V('Expr'),
   FunctionBody = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
-  Function = Sum(
+  Function = Sum({
     Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
-    Cc(true) * V('Params') * Pad('=>') * V('FunctionBody')
-  ),
+    Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
+  }),
 
   ReturnList = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
   Return = PadC('return') * V('ReturnList') ^ -1,
 
-  FunctionCall = Product(
+  FunctionCall = Product({
     V('IdExpr'),
     (PadC(':') * V('Name')) ^ -1,
     PadC('('),
     Csv(V('Expr'), true) + V('Space'),
-    PadC(')')
-  ),
+    PadC(')'),
+  }),
 })
 
 local LogicFlow = RuleSet({
@@ -240,7 +238,7 @@ local LogicFlow = RuleSet({
 })
 
 local Expressions = RuleSet({
-  SubExpr = Sum(
+  SubExpr = Sum({
     V('FunctionCall'),
     V('Function'),
     V('IdExpr'),
@@ -248,90 +246,91 @@ local Expressions = RuleSet({
     V('String'),
     V('Number'),
     PadC('true'),
-    PadC('false')
-  ),
+    PadC('false'),
+  }),
 
-  Expr = Sum(
+  Expr = Sum({
     V('UnaryOp'),
     V('Binop'),
     V('CompareOp'),
     V('Ternary'),
     V('NullCoalesce'),
-    V('SubExpr')
-  ),
+    V('SubExpr'),
+  }),
 })
 
 local Operators = RuleSet({
-  NegateOp = Pad('!') * V('Expr'),
+  NegateOp = Pad('~') * V('Expr'),
   UnaryOp = V('NegateOp') + (C(S('-#')) * V('Expr')),
 
-  LogicalAnd = Binop(Pad('&&')),
-  LogicalOr = Binop(Pad('||')),
-  Binop = Sum(
+  LogicalAnd = Binop(Pad('&')),
+  LogicalOr = Binop(Pad('|')),
+  Binop = Sum({
     V('LogicalAnd'),
     V('LogicalOr'),
-    Binop(PadC(S('+-*/^%')))
-  ),
+    Binop(PadC(S('+-*/^%'))),
+    Binop(PadC('..')),
+  }),
 
-  CompareOp = Binop(PadC(Sum(
+  CompareOp = Binop(PadC(Sum({
     P('>'),
     P('<'),
     P('>='),
     P('<='),
     P('=='),
-    P('~=')
-  )), false),
+    P('~='),
+  })), false),
 
   Ternary = V('SubExpr') * Pad('?') * V('Expr') * (Pad(':') * V('Expr')) ^ -1,
   NullCoalesce = V('SubExpr') * Pad('??') * V('Expr'),
 
-  AssignOp = Product(
+  AssignOp = Product({
     V('Id'),
     Pad(C(S('+-*/^%')) * P('=')),
-    V('Expr')
-  ),
+    V('Expr'),
+  }),
 })
 
 local Declaration = RuleSet({
-  NameDeclaration = Product(
+  NameDeclaration = Product({
     PadC('local') + C(false),
     V('Name'),
-    (PadC('=') * Demand(V('Expr'))) ^ -1
-  ),
+    (PadC('=') * Demand(V('Expr'))) ^ -1,
+  }),
 
-  VarArgsDeclaration = Product(
+  VarArgsDeclaration = Product({
     PadC('local') + C(false),
     Pad('...'),
     V('Name'),
-    Demand(Pad('=') * V('Expr'))
-  ),
+    Demand(Pad('=') * V('Expr')),
+  }),
 
-  DestructureDeclaration = Product(
+  DestructureDeclaration = Product({
     PadC('local') + C(false),
     V('Destructure'),
-    Demand(Pad('=') * V('Expr'))
-  ),
+    Demand(Pad('=') * V('Expr')),
+  }),
 
   Assignment = V('Id') * Pad('=') * V('Expr'),
 
-  Declaration = Sum(
+  Declaration = Sum({
     V('Assignment'),
     V('DestructureDeclaration'),
     V('VarArgsDeclaration'),
-    V('NameDeclaration')
-  ),
+    V('NameDeclaration'),
+  }),
 })
 
 local Blocks = RuleSet({
   Block = V('Statement') ^ 1 + Pad(Cc('')),
-  Statement = Pad(Sum(
+  Statement = Pad(Sum({
     V('FunctionCall'),
     V('Declaration'),
     V('AssignOp'),
     V('Return'),
     V('IfElse'),
-    V('Comment')
-  )),
+    V('Comment'),
+  })),
 })
 
 -- -----------------------------------------------------------------------------
