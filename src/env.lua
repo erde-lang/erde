@@ -38,8 +38,8 @@ function env.PadC(pattern)
 end
 
 function env.Csv(pattern, commacapture)
-  local comma = commacapture and PadC(',') or Pad(',')
-  return pattern * (comma * pattern) ^ 0 * Pad(',') ^ -1
+  local comma = commacapture and env.PadC(',') or env.Pad(',')
+  return pattern * (comma * pattern) ^ 0 * env.Pad(',') ^ -1
 end
 
 function env.Sum(patterns)
@@ -96,7 +96,7 @@ function env.template(str)
 end
 
 function env.iife(str)
-  return env.template(('(function() %s end)()'):format(body))
+  return env.template(('(function() %s end)()'):format(str))
 end
 
 function env.map(...)

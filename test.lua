@@ -1,6 +1,7 @@
 package.path = './src/?.lua;' .. package.path
 package.path = './src/?/init.lua;' .. package.path
 package.path = '/home/bsuth/repos/?/src/init.lua;' .. package.path
+package.path = '/home/mujin/Documents/?/src/init.lua;' .. package.path
 
 local erde = require('erde')
 local inspect = require('inspect')
