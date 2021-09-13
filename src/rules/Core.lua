@@ -42,6 +42,6 @@ return {
       }),
       V('IndexChain') + Cc(supertable()),
     }),
-    -- compiler = indexchain(template('return %1')),
+    compiler = indexchain(template('return %1')),
   },
 }
