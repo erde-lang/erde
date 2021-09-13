@@ -93,7 +93,7 @@ return {
   },
   FunctionCall = {
     parser = Product({
-      V('IdExpr'),
+      V('Id'),
       (PadC(':') * V('Name')) ^ -1,
       PadC('('),
       Csv(V('Expr'), true) + V('Space'),

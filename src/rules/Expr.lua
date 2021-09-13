@@ -5,7 +5,7 @@ return {
     parser = Sum({
       V('FunctionCall'),
       V('Function'),
-      V('IdExpr'),
+      V('Id'),
       V('Table'),
       V('String'),
       V('Number'),

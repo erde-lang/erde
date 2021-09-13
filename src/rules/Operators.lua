@@ -58,7 +58,7 @@ return {
       end
     end,
   },
-  Operator = {
+  Operation = {
     parser = Sum({
       V('UnaryOp'),
       V('TernaryOp'),

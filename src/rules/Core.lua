@@ -11,6 +11,15 @@ return {
   Space = {
     parser = (V('Newline') + space) ^ 0,
   },
+  Comment = {
+    parser = Sum({
+      Pad('--') * (P(1) - V('Newline')) ^ 0,
+      Pad('--[[') * (P(1) - P(']]--')) ^ 0 * Pad(']]--'),
+    }),
+  },
+  Keyword = {
+    parser = Pad(Sum({ 'local', 'if', 'elseif', 'else', 'false', 'true', 'nil', 'return' })),
+  },
   Name = {
     parser = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
     compiler = echo,
