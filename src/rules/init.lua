@@ -1,4 +1,6 @@
 require('rules.Core')
+require('rules.Primitives')
+require('rules.Tables')
 require('rules.Operators')
 require('rules.Expr')
 require('rules.Block')
