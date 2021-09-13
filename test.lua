@@ -26,7 +26,6 @@ local function write_file(path, content)
 end
 
 local input = read_file('./examples/operators.erde')
-local ast, state = erde.parse(input)
-print('STATE: ', inspect(state))
+local ast = erde.parse(input)
 -- print('AST: ', inspect(ast))
 print('LUA: ', erde.compile(ast))

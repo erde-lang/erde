@@ -11,10 +11,17 @@ return supertable()
   :merge(require('rules.Logic'))
   :merge(require('rules.Block'))
   :reduce(function(rules, rule, rulename)
-    rules.parser:merge({ [rulename] = rule.parser })
-    rules.compiler:merge({ [rulename] = rule.parser })
-    return rules
-  end, {
-    parser = supertable({ lpeg.V('Block') }),
-    compiler = supertable(),
-  })
+    return {
+      parser = rules.parser:merge({
+        [rulename] = lpeg.Cp() * rule.parser / function(position, ...)
+          local node = supertable({ ... })
+            :filter(function(value) return value ~= nil end)
+            :merge({ rule = rulename, position = position })
+          return #node > 0 and node or nil
+        end,
+      }),
+      compiler = rules.compiler:merge({
+        [rulename] = rule.compiler,
+      }),
+    }
+  end, { parser = supertable({ lpeg.V('Block') }), compiler = supertable() })

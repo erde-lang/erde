@@ -1,7 +1,6 @@
 local inspect = require('inspect')
 local lpeg = require('lpeg')
 lpeg.locale(lpeg)
-
 local compiler = require('compiler')
 local supertable = require('supertable')
 

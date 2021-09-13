@@ -1,6 +1,7 @@
+local inspect = require('inspect')
 local lpeg = require('lpeg')
-local supertable = require('supertable')
 lpeg.locale(lpeg)
+local supertable = require('supertable')
 
 -- -----------------------------------------------------------------------------
 -- Env
