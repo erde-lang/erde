@@ -2,8 +2,9 @@
 
 ## TODO
 
-- order of operations
-  - ex) (y.b?.a) ?? 4 (paren necessary here w/ current parser)
+- replace in-house recursive compiler w/ native lpeg
+    - map(pattern -> pattern / compiler)
+    - match on compiler tree directly!
 - integrate official erde-lang spec
   - lua table brackets
   - optional nested destructure
@@ -15,6 +16,7 @@
 - `global` keyword + scope tracking
 - automated tests
 - lua versions
+- order of operations?
 
 ## Proposals
 
