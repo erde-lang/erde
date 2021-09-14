@@ -2,7 +2,7 @@ require('env')()
 
 return {
   Arg = {
-    parser = Sum({
+    pattern = Sum({
       Cc(false) * V('Name'),
       Cc(true) * V('Destructure'),
     }),
@@ -16,7 +16,7 @@ return {
     end,
   },
   OptArg = {
-    parser = V('Arg') * Pad('=') * V('Expr'),
+    pattern = V('Arg') * Pad('=') * V('Expr'),
     oldcompiler = function(arg, expr)
       return {
         name = arg.name,
@@ -28,7 +28,7 @@ return {
     end,
   },
   VarArgs = {
-    parser = Pad('...') * V('Name') ^ -1,
+    pattern = Pad('...') * V('Name') ^ -1,
     oldcompiler = function(name)
       return {
         name = name,
@@ -38,10 +38,10 @@ return {
     end,
   },
   ParamComma = {
-    parser = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
+    pattern = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
   },
   Params = {
-    parser = V('Arg') + Product({
+    pattern = V('Arg') + Product({
       Pad('('),
       (V('Arg') * V('ParamComma')) ^ 0,
       (V('OptArg') * V('ParamComma')) ^ 0,
@@ -52,15 +52,15 @@ return {
     oldcompiler = pack,
   },
   FunctionExprBody = {
-    parser = V('Expr'),
+    pattern = V('Expr'),
     oldcompiler = template('return %1'),
   },
   FunctionBody = {
-    parser = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
+    pattern = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
     oldcompiler = echo,
   },
   Function = {
-    parser = Sum({
+    pattern = Sum({
       Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
       Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
     }),
@@ -84,15 +84,15 @@ return {
     end,
   },
   ReturnList = {
-    parser = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
+    pattern = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
     oldcompiler = concat(','),
   },
   Return = {
-    parser = PadC('return') * V('ReturnList') ^ -1,
+    pattern = PadC('return') * V('ReturnList') ^ -1,
     oldcompiler = concat(' '),
   },
   FunctionCall = {
-    parser = Product({
+    pattern = Product({
       V('Id'),
       (PadC(':') * V('Name')) ^ -1,
       PadC('('),

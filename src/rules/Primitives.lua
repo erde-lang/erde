@@ -2,40 +2,40 @@ require('env')()
 
 return {
   Integer = {
-    parser = digit ^ 1,
+    pattern = digit ^ 1,
     oldcompiler = echo,
   },
   Hex = {
-    parser = (P('0x') + P('0X')) * xdigit ^ 1,
+    pattern = (P('0x') + P('0X')) * xdigit ^ 1,
     oldcompiler = echo,
   },
   Exponent = {
-    parser = S('eE') * S('+-') ^ -1 * V('Integer'),
+    pattern = S('eE') * S('+-') ^ -1 * V('Integer'),
     oldcompiler = echo,
   },
   Float = {
-    parser = Sum({
+    pattern = Sum({
       digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
       V('Integer') * V('Exponent'),
     }),
     oldcompiler = echo,
   },
   Number = {
-    parser = C(V('Float') + V('Hex') + V('Integer')),
+    pattern = C(V('Float') + V('Hex') + V('Integer')),
     oldcompiler = echo,
   },
   EscapedChar = {
-    parser = C(V('Newline') + P('\\') * P(1)),
+    pattern = C(V('Newline') + P('\\') * P(1)),
     oldcompiler = echo,
   },
   Interpolation = {
-    parser = P('{') * Pad(Demand(V('Expr'))) * P('}'),
+    pattern = P('{') * Pad(Demand(V('Expr'))) * P('}'),
     oldcompiler = function(value)
       return { interpolation = true, value = value }
     end,
   },
   LongString = {
-    parser = Product({
+    pattern = Product({
       P('`'),
       Sum({
         V('EscapedChar'),
@@ -70,7 +70,7 @@ return {
     end,
   },
   String = {
-    parser = Sum({
+    pattern = Sum({
       V('LongString'),
       C("'") * (V('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"), -- single quote
       C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"'), -- double quote

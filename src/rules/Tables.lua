@@ -2,11 +2,11 @@ require('env')()
 
 return {
   StringTableKey = {
-    parser = V('String'),
+    pattern = V('String'),
     oldcompiler = template('[ %1 ]'),
   },
   MapTableField = {
-    parser = Product({
+    pattern = Product({
       V('Name') + V('StringTableKey'),
       Pad(':'),
       V('Expr'),
@@ -14,38 +14,38 @@ return {
     oldcompiler = template('%1 = %2'),
   },
   ShorthandTableField = {
-    parser = Pad(P(':') * V('Name')),
+    pattern = Pad(P(':') * V('Name')),
     oldcompiler = template('%1 = %1'),
   },
   TableField = {
-    parser = V('ShorthandTableField') + V('MapTableField') + V('Expr'),
+    pattern = V('ShorthandTableField') + V('MapTableField') + V('Expr'),
     oldcompiler = echo,
   },
   Table = {
-    parser = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
+    pattern = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
     oldcompiler = concat(),
   },
   DotIndex = {
-    parser = V('Space') * C('.') * V('Name'),
+    pattern = V('Space') * C('.') * V('Name'),
     oldcompiler = concat(),
   },
   BracketIndex = {
-    parser = PadC('[') * V('Expr') * PadC(']'),
+    pattern = PadC('[') * V('Expr') * PadC(']'),
     oldcompiler = concat(),
   },
   Index = {
-    parser = Product({
+    pattern = Product({
       Pad('?') * Cc(true) + Cc(false),
       V('DotIndex') + V('BracketIndex'),
     }),
     oldcompiler = map('optional', 'suffix'),
   },
   IndexChain = {
-    parser = V('Index') ^ 1,
+    pattern = V('Index') ^ 1,
     oldcompiler = pack,
   },
   Destruct = {
-    parser = Product({
+    pattern = Product({
       C(':') + Cc(false),
       V('Name'),
       V('Destructure') + Cc(false),
@@ -54,7 +54,7 @@ return {
     oldcompiler = map('keyed', 'name', 'nested', 'default'),
   },
   Destructure = {
-    parser = Pad('{') * Csv(V('Destruct')) * Pad('}'),
+    pattern = Pad('{') * Csv(V('Destruct')) * Pad('}'),
     oldcompiler = function(...)
       local keycounter = 1
       return supertable({ ... }):each(function(destruct)

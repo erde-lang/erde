@@ -13,7 +13,7 @@ return supertable()
   :reduce(function(rules, rule, rulename)
     return {
       parser = rules.parser:merge({
-        [rulename] = Cp() * rule.parser / function(position, ...)
+        [rulename] = Cp() * rule.pattern / function(position, ...)
           local node = supertable({ ... })
             :filter(function(value) return value ~= nil end)
             :merge({ rule = rulename, position = position })
@@ -24,7 +24,7 @@ return supertable()
         [rulename] = rule.oldcompiler,
       }),
       compiler = rules.compiler:merge({
-        [rulename] = rule.parser / 
+        [rulename] = rule.pattern / 
           (type(rule.compiler) == 'function' and rule.compiler or noop),
       })
     }

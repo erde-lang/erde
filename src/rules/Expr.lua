@@ -2,7 +2,7 @@ require('env')()
 
 return {
   SubExpr = {
-    parser = Sum({
+    pattern = Sum({
       PadC('(') * V('Expr') * PadC(')'),
       V('FunctionCall'),
       V('Function'),
@@ -16,7 +16,7 @@ return {
     oldcompiler = echo,
   },
   Expr = {
-    parser = Sum({
+    pattern = Sum({
       V('Operation'),
       V('SubExpr'),
     }),
