@@ -17,6 +17,7 @@ local env = setmetatable(
     :merge({
       currentline = 1,
       currentlinestart = 1,
+      tmpnamecounter = 0,
     }),
   { __index = _G, __call = function(self) setfenv(2, self) end }
 )
@@ -71,6 +72,11 @@ end
 -- -----------------------------------------------------------------------------
 -- Compiler Helpers
 -- -----------------------------------------------------------------------------
+
+function env.newtmpname()
+  env.tmpnamecounter = env.tmpnamecounter + 1
+  return ('__ERDE_TMP_%d__'):format(env.tmpnamecounter)
+end
 
 function env.echo(...)
   return ...

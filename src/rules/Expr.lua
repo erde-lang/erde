@@ -3,6 +3,7 @@ require('env')()
 return {
   SubExpr = {
     parser = Sum({
+      PadC('(') * V('Expr') * PadC(')'),
       V('FunctionCall'),
       V('Function'),
       V('Id'),

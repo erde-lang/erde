@@ -13,5 +13,5 @@ local x = 4 + (1 ? 2 : 3)
 local x = (1 ? 2 : 3) + 4
 local x = (1 + 2) ? 3 : 4
 
-local x = 99 ? y
+local x = 99 ? y : 1
 local x = 88 ?? z ?? y

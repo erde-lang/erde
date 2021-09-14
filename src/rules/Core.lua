@@ -24,21 +24,11 @@ return {
     parser = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
     compiler = echo,
   },
-  Self = {
-    parser = Pad('@'),
-    compiler = echo,
-  },
-  SelfProperty  = {
-    parser = Pad(P('@') * V('Name')),
-    compiler = template('self.%1'),
-  },
   Id = {
     parser = Product({
       Sum({
         PadC('(') * V('Expr') * PadC(')'),
         V('Name'),
-        V('SelfProperty'),
-        V('Self'),
       }),
       V('IndexChain') + Cc(supertable()),
     }),

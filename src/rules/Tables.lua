@@ -5,23 +5,27 @@ return {
     parser = V('String'),
     compiler = template('[ %1 ]'),
   },
-  MapTableField  = {
-    parser = (V('StringTableKey') + V('Name')) * Pad(':') * V('Expr'),
+  MapTableField = {
+    parser = Product({
+      V('Name') + V('StringTableKey'),
+      Pad(':'),
+      V('Expr'),
+    }),
     compiler = template('%1 = %2'),
   },
-  InlineTableField  = {
+  ShorthandTableField = {
     parser = Pad(P(':') * V('Name')),
     compiler = template('%1 = %1'),
   },
-  TableField   = {
-    parser = V('InlineTableField') + V('MapTableField') + V('Expr'),
+  TableField = {
+    parser = V('ShorthandTableField') + V('MapTableField') + V('Expr'),
     compiler = echo,
   },
-  Table  = {
+  Table = {
     parser = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
     compiler = concat(),
   },
-  DotIndex  = {
+  DotIndex = {
     parser = V('Space') * C('.') * V('Name'),
     compiler = concat(),
   },
@@ -29,18 +33,18 @@ return {
     parser = PadC('[') * V('Expr') * PadC(']'),
     compiler = concat(),
   },
-  Index  = {
+  Index = {
     parser = Product({
       Pad('?') * Cc(true) + Cc(false),
       V('DotIndex') + V('BracketIndex'),
     }),
     compiler = map('optional', 'suffix'),
   },
-  IndexChain  = {
+  IndexChain = {
     parser = V('Index') ^ 1,
     compiler = pack,
   },
-  Destruct  = {
+  Destruct = {
     parser = Product({
       C(':') + Cc(false),
       V('Name'),
@@ -49,7 +53,7 @@ return {
     }),
     compiler = map('keyed', 'name', 'nested', 'default'),
   },
-  Destructure  = {
+  Destructure = {
     parser = Pad('{') * Csv(V('Destruct')) * Pad('}'),
     compiler = function(...)
       local keycounter = 1
