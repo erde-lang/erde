@@ -2,8 +2,9 @@ require('env')()
 
 return {
   UnaryOp = {
-    pattern = PadC(S('~-#')) * V('Expr'),
+    pattern = PadC(S('~-#')) * CV('Expr'),
     compiler = function(op, expr)
+      print(op, expr)
       return op == '~'
         and ('not %s'):format(expr)
         or op .. expr
@@ -16,7 +17,7 @@ return {
   BinaryOp = {
     pattern = V('SubExpr') * Product({
       PadC(Sum({
-        '+', '-', '*', '//', '/', '^', '%', -- arithmetic
+        '+', P('-') - P('--'), '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
         '==', '~=', '<=', '>=', '<', '>',   -- relational
         '&', '|', '..', '??',               -- misc

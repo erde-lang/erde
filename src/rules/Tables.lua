@@ -26,7 +26,7 @@ return {
     compiler = concat(),
   },
   DotIndex = {
-    pattern = V('Space') * C('.') * V('Name'),
+    pattern = V('Space') * C('.') * C(V('Name')),
     compiler = concat(),
   },
   BracketIndex = {

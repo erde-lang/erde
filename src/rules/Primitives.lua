@@ -3,30 +3,25 @@ require('env')()
 return {
   Integer = {
     pattern = digit ^ 1,
-    compiler = echo,
   },
   Hex = {
     pattern = (P('0x') + P('0X')) * xdigit ^ 1,
-    compiler = echo,
   },
   Exponent = {
     pattern = S('eE') * S('+-') ^ -1 * V('Integer'),
-    compiler = echo,
   },
   Float = {
     pattern = Sum({
       digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
       V('Integer') * V('Exponent'),
     }),
-    compiler = echo,
   },
   Number = {
-    pattern = Pad(C(V('Float') + V('Hex') + V('Integer'))),
+    pattern = C(V('Float') + V('Hex') + V('Integer')),
     compiler = echo,
   },
   EscapedChar = {
     pattern = C(V('Newline') + P('\\') * P(1)),
-    compiler = echo,
   },
   Interpolation = {
     pattern = P('{') * Pad(Demand(V('Expr'))) * P('}'),

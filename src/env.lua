@@ -31,6 +31,10 @@ end
 -- Parser Helpers
 -- -----------------------------------------------------------------------------
 
+function env.CV(rule)
+  return lpeg.C(lpeg.V(rule))
+end
+
 function env.Pad(pattern)
   return lpeg.V('Space') * pattern * lpeg.V('Space')
 end

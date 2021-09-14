@@ -7,6 +7,7 @@ return {
   },
   Statement = {
     parser = Pad(Sum({
+      V('Comment'),
       V('FunctionCall'),
       V('Assignment'),
       V('DestructureDeclaration'),
@@ -15,7 +16,6 @@ return {
       V('AssignOp'),
       V('Return'),
       V('IfElse'),
-      V('Comment'),
     })),
     compiler = echo,
   },

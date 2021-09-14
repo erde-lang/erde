@@ -37,9 +37,9 @@ local function benchmark(label, callback, stress)
 end
 
 local input = read_file('./examples/core.erde')
-benchmark('OLDCOMPILE', function()
-  return erde.oldcompile(input)
-end, true)
 benchmark('NEWCOMPILE', function()
   return erde.compile(input)
+end, true)
+benchmark('OLDCOMPILE', function()
+  return erde.oldcompile(input)
 end, true)

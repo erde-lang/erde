@@ -21,6 +21,8 @@ return supertable()
           return #node > 0 and node or nil
         end,
       }),
+      -- TODO: optimization here? I don't think we need to divide EVERY rule,
+      -- probably can check before hand and sometimes just return pattern.
       compiler = rules.compiler:merge({
         [rulename] = C('') * rule.pattern / function(_, ...)
           if type(rule.compiler) == 'function' and #{...} > 0 then

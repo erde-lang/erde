@@ -7,6 +7,7 @@ return {
   },
   Statement = {
     pattern = Sum({
+      V('Comment'),
       V('FunctionCall'),
       V('Assignment'),
       V('DestructureDeclaration'),
@@ -15,15 +16,14 @@ return {
       V('AssignOp'),
       V('Return'),
       V('IfElse'),
-      V('Comment'),
     }),
     compiler = echo,
   },
   NameDeclaration = {
     pattern = Product({
       PadC('local') + C(false),
-      V('Name'),
-      (PadC('=') * Demand(V('Expr'))) ^ -1,
+      C(V('Name')),
+      (PadC('=') * CV('Expr')) ^ -1,
     }),
     compiler = concat(' '),
   },

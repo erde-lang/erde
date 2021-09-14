@@ -41,4 +41,3 @@
 - docs site
 - Formatter
 - Source maps?
-- performance tuning + optimizations

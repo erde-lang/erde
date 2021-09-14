@@ -21,20 +21,16 @@ return {
     pattern = Pad(Sum({ 'local', 'if', 'elseif', 'else', 'false', 'true', 'nil', 'return' })),
   },
   Name = {
-    pattern = C(Product({
-      -(V('Keyword') + V('Comment')),
+    pattern = Product({
+      -V('Keyword'),
       alpha + P('_'),
       (alnum + P('_')) ^ 0,
-    })),
-    compiler = echo,
+    }),
   },
   Id = {
-    pattern = Product({
-      Sum({
-        PadC('(') * V('Expr') * PadC(')'),
-        V('Name'),
-      }),
-      V('IndexChain') + Cc(supertable()),
+    pattern = Sum({
+      PadC('(') * V('Expr') * PadC(')') * V('IndexChain'),
+      CV('Name') * (V('IndexChain') + Cc(supertable())),
     }),
     compiler = indexchain(template('return %1')),
   },
