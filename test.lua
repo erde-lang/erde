@@ -25,8 +25,21 @@ local function write_file(path, content)
   file:close()
 end
 
-local input = read_file('./examples/scratchpad.erde')
-local ast = erde.parse(input)
--- print('AST: ', inspect(ast))
-print('OLDLUA: ', erde.oldcompile(ast))
-print('LUA: ', erde.compile(input))
+local function benchmark(label, callback, stress)
+  local start = os.clock()
+  if stress then
+    for i = 1, 1000 do
+      callback()
+    end
+  end
+  print(callback())
+  print(label, ' => ', os.clock() - start)
+end
+
+local input = read_file('./examples/core.erde')
+benchmark('OLDCOMPILE', function()
+  return erde.oldcompile(input)
+end, true)
+benchmark('NEWCOMPILE', function()
+  return erde.compile(input)
+end, true)

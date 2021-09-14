@@ -2,7 +2,7 @@ require('env')()
 
 return {
   Arg = {
-    pattern = Sum({
+    parser = Sum({
       Cc(false) * V('Name'),
       Cc(true) * V('Destructure'),
     }),
@@ -16,7 +16,7 @@ return {
     end,
   },
   OptArg = {
-    pattern = V('Arg') * Pad('=') * V('Expr'),
+    parser = V('Arg') * Pad('=') * V('Expr'),
     compiler = function(arg, expr)
       return {
         name = arg.name,
@@ -28,7 +28,7 @@ return {
     end,
   },
   VarArgs = {
-    pattern = Pad('...') * V('Name') ^ -1,
+    parser = Pad('...') * V('Name') ^ -1,
     compiler = function(name)
       return {
         name = name,
@@ -38,10 +38,10 @@ return {
     end,
   },
   ParamComma = {
-    pattern = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
+    parser = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
   },
   Params = {
-    pattern = V('Arg') + Product({
+    parser = V('Arg') + Product({
       Pad('('),
       (V('Arg') * V('ParamComma')) ^ 0,
       (V('OptArg') * V('ParamComma')) ^ 0,
@@ -52,15 +52,15 @@ return {
     compiler = pack,
   },
   FunctionExprBody = {
-    pattern = V('Expr'),
+    parser = V('Expr'),
     compiler = template('return %1'),
   },
   FunctionBody = {
-    pattern = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
+    parser = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
     compiler = echo,
   },
   Function = {
-    pattern = Sum({
+    parser = Sum({
       Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
       Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
     }),
@@ -84,15 +84,15 @@ return {
     end,
   },
   ReturnList = {
-    pattern = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
+    parser = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
     compiler = concat(','),
   },
   Return = {
-    pattern = PadC('return') * V('ReturnList') ^ -1,
+    parser = PadC('return') * V('ReturnList') ^ -1,
     compiler = concat(' '),
   },
   FunctionCall = {
-    pattern = Product({
+    parser = Product({
       V('Id'),
       (PadC(':') * V('Name')) ^ -1,
       PadC('('),

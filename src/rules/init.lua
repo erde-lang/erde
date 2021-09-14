@@ -1,4 +1,5 @@
 require('env')()
+local inspect = require('inspect')
 local supertable = require('supertable')
 
 return supertable()
@@ -20,16 +21,15 @@ return supertable()
           return #node > 0 and node or nil
         end,
       }),
-      oldcompiler = rules.oldcompiler:merge({
-        [rulename] = rule.oldcompiler,
-      }),
       compiler = rules.compiler:merge({
-        [rulename] = rule.pattern / 
-          (type(rule.compiler) == 'function' and rule.compiler or noop),
+        [rulename] = C('') * rule.pattern / function(_, ...)
+          if type(rule.compiler) == 'function' and #{...} > 0 then
+            return rule.compiler(...)
+          end
+        end,
       })
     }
   end, {
     parser = supertable({ V('Block') }),
-    oldcompiler = supertable(),
     compiler = supertable({ V('Block') }),
   })

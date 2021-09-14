@@ -1,4 +1,3 @@
--- Numbers
 
 local a1 = 0x450
 local a2 = 43
@@ -11,12 +10,6 @@ local a4 = 0.2e10
 --[[
 this is a
 multiline comment ]]--
-
--- Self
-
-local x = @
-local x = @test
-local x = @[2]
 
 -- Varargs Assignment
 

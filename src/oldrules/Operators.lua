@@ -2,7 +2,7 @@ require('env')()
 
 return {
   UnaryOp = {
-    pattern = PadC(S('~-#')) * V('Expr'),
+    parser = PadC(S('~-#')) * V('Expr'),
     compiler = function(op, expr)
       return op == '~'
         and ('not %s'):format(expr)
@@ -10,11 +10,11 @@ return {
     end,
   },
   TernaryOp = {
-    pattern = V('SubExpr') * Pad('?') * V('Expr') * Pad(':') * V('Expr'),
+    parser = V('SubExpr') * Pad('?') * V('Expr') * Pad(':') * V('Expr'),
     compiler = iife('if %1 then return %2 else return %3 end'),
   },
   BinaryOp = {
-    pattern = V('SubExpr') * Product({
+    parser = V('SubExpr') * Product({
       PadC(Sum({
         '+', '-', '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
@@ -36,7 +36,7 @@ return {
     end,
   },
   AssignOp = {
-    pattern = Product({
+    parser = Product({
       V('Id'),
       Pad(C(Sum({
         '+', '-', '*', '//', '/', '^', '%', -- arithmetic
@@ -59,7 +59,7 @@ return {
     end,
   },
   Operation = {
-    pattern = Sum({
+    parser = Sum({
       V('UnaryOp'),
       V('TernaryOp'),
       V('BinaryOp'),

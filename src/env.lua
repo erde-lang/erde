@@ -78,10 +78,6 @@ function env.newtmpname()
   return ('__ERDE_TMP_%d__'):format(env.tmpnamecounter)
 end
 
-function noop()
-  return
-end
-
 function env.echo(...)
   return ...
 end

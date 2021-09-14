@@ -2,11 +2,11 @@ require('env')()
 
 return {
   SubExpr = {
-    pattern = Sum({
+    parser = Sum({
       PadC('(') * V('Expr') * PadC(')'),
       V('FunctionCall'),
       V('Function'),
-      -- V('Id'),
+      V('Id'),
       V('Table'),
       V('String'),
       V('Number'),
@@ -16,10 +16,10 @@ return {
     compiler = echo,
   },
   Expr = {
-    pattern = Sum({
+    parser = Sum({
       V('Operation'),
       V('SubExpr'),
     }),
-    compiler = echo,
+    compiler = concat(),
   },
 }

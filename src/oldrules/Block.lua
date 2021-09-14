@@ -2,11 +2,11 @@ require('env')()
 
 return {
   Block = {
-    pattern = Pad(V('Statement')) ^ 1 + Pad(Cc('')),
+    parser = V('Statement') ^ 1 + Pad(Cc('')),
     compiler = concat('\n'),
   },
   Statement = {
-    pattern = Sum({
+    parser = Pad(Sum({
       V('FunctionCall'),
       V('Assignment'),
       V('DestructureDeclaration'),
@@ -16,11 +16,11 @@ return {
       V('Return'),
       V('IfElse'),
       V('Comment'),
-    }),
+    })),
     compiler = echo,
   },
   NameDeclaration = {
-    pattern = Product({
+    parser = Product({
       PadC('local') + C(false),
       V('Name'),
       (PadC('=') * Demand(V('Expr'))) ^ -1,
@@ -28,7 +28,7 @@ return {
     compiler = concat(' '),
   },
   VarArgsDeclaration = {
-    pattern = Product({
+    parser = Product({
       PadC('local') + C(false),
       Pad('...'),
       V('Name'),
@@ -39,7 +39,7 @@ return {
     end,
   },
   DestructureDeclaration = {
-    pattern = Product({
+    parser = Product({
       PadC('local') + C(false),
       V('Destructure'),
       Demand(Pad('=') * V('Expr')),
@@ -47,7 +47,7 @@ return {
     compiler = compiledestructure,
   },
   Assignment = {
-    pattern = V('Id') * Pad('=') * V('Expr'),
+    parser = V('Id') * Pad('=') * V('Expr'),
     compiler = indexchain(template('%1 = %2')),
   },
 }
