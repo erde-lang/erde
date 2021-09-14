@@ -3,34 +3,34 @@ require('env')()
 return {
   Integer = {
     parser = digit ^ 1,
-    compiler = echo,
+    oldcompiler = echo,
   },
   Hex = {
     parser = (P('0x') + P('0X')) * xdigit ^ 1,
-    compiler = echo,
+    oldcompiler = echo,
   },
   Exponent = {
     parser = S('eE') * S('+-') ^ -1 * V('Integer'),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Float = {
     parser = Sum({
       digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
       V('Integer') * V('Exponent'),
     }),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Number = {
     parser = C(V('Float') + V('Hex') + V('Integer')),
-    compiler = echo,
+    oldcompiler = echo,
   },
   EscapedChar = {
     parser = C(V('Newline') + P('\\') * P(1)),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Interpolation = {
     parser = P('{') * Pad(Demand(V('Expr'))) * P('}'),
-    compiler = function(value)
+    oldcompiler = function(value)
       return { interpolation = true, value = value }
     end,
   },
@@ -44,7 +44,7 @@ return {
       }) ^ 0,
       P('`'),
     }),
-    compiler = function(...)
+    oldcompiler = function(...)
       local values = supertable({ ... })
 
       local eqstats = values:reduce(function(eqstats, char)
@@ -75,6 +75,6 @@ return {
       C("'") * (V('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"), -- single quote
       C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"'), -- double quote
     }),
-    compiler = echo,
+    oldcompiler = echo,
   },
 }

@@ -6,7 +6,7 @@ return {
       Cc(false) * V('Name'),
       Cc(true) * V('Destructure'),
     }),
-    compiler = function(isdestructure, arg)
+    oldcompiler = function(isdestructure, arg)
       if isdestructure then
         local tmpname = newtmpname()
         return { name = tmpname, prebody = compiledestructure(true, arg, tmpname) }
@@ -17,7 +17,7 @@ return {
   },
   OptArg = {
     parser = V('Arg') * Pad('=') * V('Expr'),
-    compiler = function(arg, expr)
+    oldcompiler = function(arg, expr)
       return {
         name = arg.name,
         prebody = supertable({
@@ -29,7 +29,7 @@ return {
   },
   VarArgs = {
     parser = Pad('...') * V('Name') ^ -1,
-    compiler = function(name)
+    oldcompiler = function(name)
       return {
         name = name,
         prebody = ('local %s = {...}'):format(name),
@@ -49,22 +49,22 @@ return {
       Cc({}),
       Pad(')'),
     }),
-    compiler = pack,
+    oldcompiler = pack,
   },
   FunctionExprBody = {
     parser = V('Expr'),
-    compiler = template('return %1'),
+    oldcompiler = template('return %1'),
   },
   FunctionBody = {
     parser = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Function = {
     parser = Sum({
       Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
       Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
     }),
-    compiler = function(needself, params, body)
+    oldcompiler = function(needself, params, body)
       local varargs = params[#params]
         and params[#params].varargs
           and params:pop()
@@ -85,11 +85,11 @@ return {
   },
   ReturnList = {
     parser = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
-    compiler = concat(','),
+    oldcompiler = concat(','),
   },
   Return = {
     parser = PadC('return') * V('ReturnList') ^ -1,
-    compiler = concat(' '),
+    oldcompiler = concat(' '),
   },
   FunctionCall = {
     parser = Product({
@@ -99,6 +99,6 @@ return {
       Csv(V('Expr'), true) + V('Space'),
       PadC(')'),
     }),
-    compiler = concat(),
+    oldcompiler = concat(),
   },
 }

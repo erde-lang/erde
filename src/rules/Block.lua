@@ -3,7 +3,7 @@ require('env')()
 return {
   Block = {
     parser = V('Statement') ^ 1 + Pad(Cc('')),
-    compiler = concat('\n'),
+    oldcompiler = concat('\n'),
   },
   Statement = {
     parser = Pad(Sum({
@@ -17,7 +17,7 @@ return {
       V('IfElse'),
       V('Comment'),
     })),
-    compiler = echo,
+    oldcompiler = echo,
   },
   NameDeclaration = {
     parser = Product({
@@ -25,7 +25,7 @@ return {
       V('Name'),
       (PadC('=') * Demand(V('Expr'))) ^ -1,
     }),
-    compiler = concat(' '),
+    oldcompiler = concat(' '),
   },
   VarArgsDeclaration = {
     parser = Product({
@@ -34,7 +34,7 @@ return {
       V('Name'),
       Demand(Pad('=') * V('Expr')),
     }),
-    compiler = function(islocal, name, expr)
+    oldcompiler = function(islocal, name, expr)
       return ('%s%s = { %s }'):format(islocal and 'local ' or '', name, expr)
     end,
   },
@@ -44,10 +44,10 @@ return {
       V('Destructure'),
       Demand(Pad('=') * V('Expr')),
     }),
-    compiler = compiledestructure,
+    oldcompiler = compiledestructure,
   },
   Assignment = {
     parser = V('Id') * Pad('=') * V('Expr'),
-    compiler = indexchain(template('%1 = %2')),
+    oldcompiler = indexchain(template('%1 = %2')),
   },
 }

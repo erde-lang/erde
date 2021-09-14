@@ -22,7 +22,7 @@ return {
   },
   Name = {
     parser = C(-V('Keyword') * (alpha + P('_')) * (alnum + P('_')) ^ 0),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Id = {
     parser = Product({
@@ -32,6 +32,6 @@ return {
       }),
       V('IndexChain') + Cc(supertable()),
     }),
-    compiler = indexchain(template('return %1')),
+    oldcompiler = indexchain(template('return %1')),
   },
 }

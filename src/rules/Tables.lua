@@ -3,7 +3,7 @@ require('env')()
 return {
   StringTableKey = {
     parser = V('String'),
-    compiler = template('[ %1 ]'),
+    oldcompiler = template('[ %1 ]'),
   },
   MapTableField = {
     parser = Product({
@@ -11,38 +11,38 @@ return {
       Pad(':'),
       V('Expr'),
     }),
-    compiler = template('%1 = %2'),
+    oldcompiler = template('%1 = %2'),
   },
   ShorthandTableField = {
     parser = Pad(P(':') * V('Name')),
-    compiler = template('%1 = %1'),
+    oldcompiler = template('%1 = %1'),
   },
   TableField = {
     parser = V('ShorthandTableField') + V('MapTableField') + V('Expr'),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Table = {
     parser = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
-    compiler = concat(),
+    oldcompiler = concat(),
   },
   DotIndex = {
     parser = V('Space') * C('.') * V('Name'),
-    compiler = concat(),
+    oldcompiler = concat(),
   },
   BracketIndex = {
     parser = PadC('[') * V('Expr') * PadC(']'),
-    compiler = concat(),
+    oldcompiler = concat(),
   },
   Index = {
     parser = Product({
       Pad('?') * Cc(true) + Cc(false),
       V('DotIndex') + V('BracketIndex'),
     }),
-    compiler = map('optional', 'suffix'),
+    oldcompiler = map('optional', 'suffix'),
   },
   IndexChain = {
     parser = V('Index') ^ 1,
-    compiler = pack,
+    oldcompiler = pack,
   },
   Destruct = {
     parser = Product({
@@ -51,11 +51,11 @@ return {
       V('Destructure') + Cc(false),
       (Pad('=') * Demand(V('Expr'))) + Cc(false),
     }),
-    compiler = map('keyed', 'name', 'nested', 'default'),
+    oldcompiler = map('keyed', 'name', 'nested', 'default'),
   },
   Destructure = {
     parser = Pad('{') * Csv(V('Destruct')) * Pad('}'),
-    compiler = function(...)
+    oldcompiler = function(...)
       local keycounter = 1
       return supertable({ ... }):each(function(destruct)
         if destruct.keyed then

@@ -3,7 +3,7 @@ require('env')()
 return {
   UnaryOp = {
     parser = PadC(S('~-#')) * V('Expr'),
-    compiler = function(op, expr)
+    oldcompiler = function(op, expr)
       return op == '~'
         and ('not %s'):format(expr)
         or op .. expr
@@ -11,7 +11,7 @@ return {
   },
   TernaryOp = {
     parser = V('SubExpr') * Pad('?') * V('Expr') * Pad(':') * V('Expr'),
-    compiler = iife('if %1 then return %2 else return %3 end'),
+    oldcompiler = iife('if %1 then return %2 else return %3 end'),
   },
   BinaryOp = {
     parser = V('SubExpr') * Product({
@@ -23,7 +23,7 @@ return {
       })),
       V('Expr'),
     }),
-    compiler = function(lhs, op, rhs)
+    oldcompiler = function(lhs, op, rhs)
       if op == '??' then
         return iife('local %1 = %2 if %1 ~= nil then return %1 else return %3 end')(newtmpname(), lhs, rhs)
       elseif op == '&' then
@@ -45,7 +45,7 @@ return {
       })) * P('=')),
       V('Expr'),
     }),
-    compiler = function(id, op, expr)
+    oldcompiler = function(id, op, expr)
       if op == '??' then
         -- TODO: consider optional assign
         return 
@@ -65,6 +65,6 @@ return {
       V('BinaryOp'),
       V('AssignOp'),
     }),
-    compiler = echo,
+    oldcompiler = echo,
   },
 }

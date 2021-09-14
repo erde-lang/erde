@@ -1,4 +1,4 @@
-local lpeg = require('lpeg')
+require('env')()
 local supertable = require('supertable')
 
 return supertable()
@@ -13,15 +13,23 @@ return supertable()
   :reduce(function(rules, rule, rulename)
     return {
       parser = rules.parser:merge({
-        [rulename] = lpeg.Cp() * rule.parser / function(position, ...)
+        [rulename] = Cp() * rule.parser / function(position, ...)
           local node = supertable({ ... })
             :filter(function(value) return value ~= nil end)
             :merge({ rule = rulename, position = position })
           return #node > 0 and node or nil
         end,
       }),
-      compiler = rules.compiler:merge({
-        [rulename] = rule.compiler,
+      oldcompiler = rules.oldcompiler:merge({
+        [rulename] = rule.oldcompiler,
       }),
+      compiler = rules.compiler:merge({
+        [rulename] = rule.parser / 
+          (type(rule.compiler) == 'function' and rule.compiler or noop),
+      })
     }
-  end, { parser = supertable({ lpeg.V('Block') }), compiler = supertable() })
+  end, {
+    parser = supertable({ V('Block') }),
+    oldcompiler = supertable(),
+    compiler = supertable({ V('Block') }),
+  })

@@ -13,13 +13,13 @@ return {
       PadC('true'),
       PadC('false'),
     }),
-    compiler = echo,
+    oldcompiler = echo,
   },
   Expr = {
     parser = Sum({
       V('Operation'),
       V('SubExpr'),
     }),
-    compiler = concat(),
+    oldcompiler = concat(),
   },
 }

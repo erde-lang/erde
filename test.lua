@@ -25,7 +25,8 @@ local function write_file(path, content)
   file:close()
 end
 
-local input = read_file('./examples/operators.erde')
+local input = read_file('./examples/scratchpad.erde')
 local ast = erde.parse(input)
 -- print('AST: ', inspect(ast))
-print('LUA: ', erde.compile(ast))
+print('OLDLUA: ', erde.oldcompile(ast))
+print('LUA: ', erde.compile(input))

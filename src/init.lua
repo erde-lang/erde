@@ -10,6 +10,7 @@ local supertable = require('supertable')
 -- -----------------------------------------------------------------------------
 
 local grammar = lpeg.P(rules.parser)
+local compilergrammar = lpeg.P(rules.compiler)
 local erde = {}
 
 -- -----------------------------------------------------------------------------
@@ -31,17 +32,23 @@ local function isnode(node)
   return type(node) == 'table' and type(node.rule) == 'string'
 end
 
-function erde.compile(node)
+function erde.oldcompile(node)
   if not isnode(node) then
     return subnode
-  elseif type(rules.compiler[node.rule]) == 'function' then
-    return rules.compiler[node.rule](unpack(node:ipairs():reduce(function(args, subnode)
+  elseif type(rules.oldcompiler[node.rule]) == 'function' then
+    return rules.oldcompiler[node.rule](unpack(node:ipairs():reduce(function(args, subnode)
       return args:push(unpack(isnode(subnode)
-        and { erde.compile(subnode) }
+        and { erde.oldcompile(subnode) }
         or { subnode }
       ))
     end, supertable())))
   end
+end
+
+function erde.compile(subject)
+  lpeg.setmaxstack(1000)
+  env:reset()
+  return compilergrammar:match(subject, nil, {})
 end
 
 -- -----------------------------------------------------------------------------
