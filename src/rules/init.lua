@@ -12,25 +12,28 @@ return supertable()
   :merge(require('rules.Logic'))
   :merge(require('rules.Block'))
   :reduce(function(rules, rule, rulename)
-    return {
-      parser = rules.parser:merge({
-        [rulename] = Cp() * rule.pattern / function(position, ...)
-          local node = supertable({ ... })
-            :filter(function(value) return value ~= nil end)
-            :merge({ rule = rulename, position = position })
-          return #node > 0 and node or nil
-        end,
-      }),
-      -- TODO: optimization here? I don't think we need to divide EVERY rule,
-      -- probably can check before hand and sometimes just return pattern.
-      compiler = rules.compiler:merge({
+    rules.parser:merge({
+      [rulename] = Cp() * rule.pattern / function(position, ...)
+        local node = supertable({ ... })
+          :filter(function(value) return value ~= nil end)
+          :merge({ rule = rulename, position = position })
+        return #node > 0 and node or nil
+      end,
+    })
+
+    if type(rule.compiler) == 'nil' then
+      rules.compiler:merge({ [rulename] = rule.pattern })
+    elseif type(rule.compiler) == 'function'  then
+      rules.compiler:merge({
         [rulename] = C('') * rule.pattern / function(_, ...)
-          if type(rule.compiler) == 'function' and #{...} > 0 then
-            return rule.compiler(...)
-          end
+          return rule.compiler(...)
         end,
       })
-    }
+    else
+      rules.compiler:merge({ [rulename] = rule.pattern / rule.compiler })
+    end
+
+    return rules
   end, {
     parser = supertable({ V('Block') }),
     compiler = supertable({ V('Block') }),

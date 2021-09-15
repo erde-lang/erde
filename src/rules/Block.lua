@@ -23,7 +23,7 @@ return {
     pattern = Product({
       PadC('local') + C(false),
       C(V('Name')),
-      (PadC('=') * CV('Expr')) ^ -1,
+      (PadC('=') * V('Expr')) ^ -1,
     }),
     compiler = concat(' '),
   },

@@ -28,15 +28,13 @@ end
 local function benchmark(label, callback, stress)
   local start = os.clock()
   if stress then
-    for i = 1, 1000 do
-      callback()
-    end
+    for i = 1, 1000 do callback() end
   end
   print(callback())
   print(label, ' => ', os.clock() - start)
 end
 
-local stress = false
+local stress = true 
 local input = read_file('./examples/primitives.erde')
 benchmark('NEWCOMPILE', function()
   return erde.compile(input)

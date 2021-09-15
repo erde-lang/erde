@@ -25,15 +25,14 @@ return {
   LongString = {
     pattern = Product({
       P('`'),
-      C(Sum({
-        V('EscapedChar'),
+      Sum({
+        CV('EscapedChar'),
         V('Interpolation'),
-        (P(1) - S('{`\\')) ^ 1,
-      })) ^ 0,
+        C((P(1) - S('{`\\')) ^ 1),
+      }) ^ 0,
       P('`'),
     }),
     compiler = function(...)
-      print(inspect({...}))
       local values = supertable({ ... })
 
       local eqstats = values:reduce(function(eqstats, char)
@@ -60,10 +59,10 @@ return {
   },
   String = {
     pattern = Sum({
-      C("'") * (CV('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"),
-      C('"') * (CV('EscapedChar') + C(1) - P('"')) ^ 0 * C('"'),
+      C(P("'") * (V('EscapedChar') + P(1) - P("'")) ^ 0 * P("'")),
+      C(P('"') * (V('EscapedChar') + P(1) - P('"')) ^ 0 * P('"')),
       V('LongString'),
     }),
-    compiler = echo,
+    compiler = concat(),
   },
 }

@@ -21,11 +21,11 @@ return {
     pattern = Pad(Sum({ 'local', 'if', 'elseif', 'else', 'false', 'true', 'nil', 'return' })),
   },
   Name = {
-    pattern = C(Product({
+    pattern = Product({
       -V('Keyword'),
       alpha + P('_'),
       (alnum + P('_')) ^ 0,
-    })),
+    }),
   },
   Id = {
     pattern = Sum({
