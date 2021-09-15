@@ -35,7 +35,7 @@ local function benchmark(label, callback, stress)
 end
 
 local stress = true 
-local input = read_file('./examples/primitives.erde')
+local input = read_file('./examples/tables.erde')
 benchmark('NEWCOMPILE', function()
   return erde.compile(input)
 end, stress)

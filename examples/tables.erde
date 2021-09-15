@@ -2,6 +2,8 @@
 
 local y = { }
 local y = {
+  ['hello' .. 'world']: true,
+  ['hello']: true,
   `{hello}`: true,
   test: 'hi',
   :test,

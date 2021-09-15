@@ -3,19 +3,23 @@ require('env')()
 return {
   StringTableKey = {
     pattern = V('String'),
-    compiler = template('[ %1 ]'),
+    compiler = '[ %1 ]',
   },
   MapTableField = {
     pattern = Product({
-      V('Name') + V('StringTableKey'),
+      Sum({
+        CV('Name'),
+        V('StringTableKey'),
+        C(Pad('[') * V('Expr') * Pad(']')),
+      }),
       Pad(':'),
-      V('Expr'),
+      CV('Expr'),
     }),
-    compiler = template('%1 = %2'),
+    compiler = '%1 = %2',
   },
   ShorthandTableField = {
-    pattern = Pad(P(':') * V('Name')),
-    compiler = template('%1 = %1'),
+    pattern = Pad(P(':') * CV('Name')),
+    compiler = '%1 = %1',
   },
   TableField = {
     pattern = V('ShorthandTableField') + V('MapTableField') + V('Expr'),

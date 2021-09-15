@@ -18,8 +18,8 @@ return {
   },
   Interpolation = {
     pattern = P('{') * Pad(Demand(CV('Expr'))) * P('}'),
-    compiler = function(value)
-      return { interpolation = true, value = value }
+    compiler = function(expr)
+      return { interpolation = true, expr = expr }
     end,
   },
   LongString = {
@@ -33,9 +33,9 @@ return {
       P('`'),
     }),
     compiler = function(...)
-      local values = supertable({ ... })
+      local expressions = supertable({ ... })
 
-      local eqstats = values:reduce(function(eqstats, char)
+      local eqstats = expressions:reduce(function(eqstats, char)
         return char ~= '='
           and { counter = 0, max = eqstats.max }
           or {
@@ -48,9 +48,9 @@ return {
 
       return ('[%s[%s]%s]'):format(
         eqstr,
-        values:map(function(v)
+        expressions:map(function(v)
           return v.interpolation
-            and (']%s]..tostring(%s)..[%s['):format(eqstr, v.value, eqstr)
+            and (']%s]..tostring(%s)..[%s['):format(eqstr, v.expr, eqstr)
             or v
         end):join(),
         eqstr
