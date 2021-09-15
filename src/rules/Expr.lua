@@ -9,7 +9,7 @@ return {
       V('Id'),
       V('Table'),
       V('String'),
-      V('Number'),
+      CV('Number'),
       PadC('true'),
       PadC('false'),
     }),

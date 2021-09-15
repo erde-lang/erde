@@ -1,30 +1,23 @@
 require('env')()
+local inspect = require('inspect')
+local supertable = require('supertable')
 
 return {
-  Integer = {
-    pattern = digit ^ 1,
-  },
-  Hex = {
-    pattern = (P('0x') + P('0X')) * xdigit ^ 1,
-  },
-  Exponent = {
-    pattern = S('eE') * S('+-') ^ -1 * V('Integer'),
-  },
-  Float = {
+  Number = {
     pattern = Sum({
-      digit ^ 0 * P('.') * V('Integer') * V('Exponent') ^ -1,
-      V('Integer') * V('Exponent'),
+      P('0') * S('xX') * (xdigit ^ 1),
+      Product({
+        (digit ^ 0 * P('.')) ^ -1,
+        digit ^ 1,
+        (S('eE') * S('+-') ^ -1 * digit ^ 1) ^ -1,
+      }),
     }),
   },
-  Number = {
-    pattern = C(V('Float') + V('Hex') + V('Integer')),
-    compiler = echo,
-  },
   EscapedChar = {
-    pattern = C(V('Newline') + P('\\') * P(1)),
+    pattern = V('Newline') + P('\\') * P(1),
   },
   Interpolation = {
-    pattern = P('{') * Pad(Demand(V('Expr'))) * P('}'),
+    pattern = P('{') * Pad(Demand(CV('Expr'))) * P('}'),
     compiler = function(value)
       return { interpolation = true, value = value }
     end,
@@ -32,14 +25,15 @@ return {
   LongString = {
     pattern = Product({
       P('`'),
-      Sum({
+      C(Sum({
         V('EscapedChar'),
         V('Interpolation'),
-        C(P(1) - P('`')),
-      }) ^ 0,
+        (P(1) - S('{`\\')) ^ 1,
+      })) ^ 0,
       P('`'),
     }),
     compiler = function(...)
+      print(inspect({...}))
       local values = supertable({ ... })
 
       local eqstats = values:reduce(function(eqstats, char)
@@ -66,9 +60,9 @@ return {
   },
   String = {
     pattern = Sum({
+      C("'") * (CV('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"),
+      C('"') * (CV('EscapedChar') + C(1) - P('"')) ^ 0 * C('"'),
       V('LongString'),
-      C("'") * (V('EscapedChar') + C(1) - P("'")) ^ 0 * C("'"), -- single quote
-      C('"') * (V('EscapedChar') + C(1) - P('"')) ^ 0 * C('"'), -- double quote
     }),
     compiler = echo,
   },

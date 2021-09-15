@@ -21,15 +21,15 @@ return {
     pattern = Pad(Sum({ 'local', 'if', 'elseif', 'else', 'false', 'true', 'nil', 'return' })),
   },
   Name = {
-    pattern = Product({
+    pattern = C(Product({
       -V('Keyword'),
       alpha + P('_'),
       (alnum + P('_')) ^ 0,
-    }),
+    })),
   },
   Id = {
     pattern = Sum({
-      PadC('(') * V('Expr') * PadC(')') * V('IndexChain'),
+      PadC('(') * CV('Expr') * PadC(')') * V('IndexChain'),
       CV('Name') * (V('IndexChain') + Cc(supertable())),
     }),
     compiler = indexchain(template('return %1')),

@@ -16,7 +16,7 @@ return {
   BinaryOp = {
     parser = V('SubExpr') * Product({
       PadC(Sum({
-        '+', '-', '*', '//', '/', '^', '%', -- arithmetic
+        '+', P('-') - P('--'), '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
         '==', '~=', '<=', '>=', '<', '>',   -- relational
         '&', '|', '..', '??',               -- misc

@@ -1,0 +1,28 @@
+-- Numbers
+
+local a1 = 0x450
+local a2 = 43
+local a3 = 43.4
+local a4 = 10.2E8
+local a5 = .2e10
+
+-- Strings
+
+local b1 = 'hello world'
+local b2 = "goodbye world"
+local b3 = `hello world`
+local b4 = `
+  hello
+  world
+`
+local b5 = `hello { b2 } { wo382 }`
+
+-- Escape Chars
+
+local c1 = 'hello\nworld'
+
+-- Long String Escape Id
+
+local d1 = `[[hello]]`
+local d2 = `[=[hello]=]`
+local d3 = `[==[hello]==]`
