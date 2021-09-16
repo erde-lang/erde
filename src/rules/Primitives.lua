@@ -34,11 +34,11 @@ return {
     }),
     compiler = function(...)
       local captures = supertable({ ... })
+
+      local eqstr = '='
       local strcaptures = captures:filter(function(capture)
         return type(capture) == 'string'
       end)
-
-      local eqstr = '='
       while strcaptures:find(function(capture) return capture:find(eqstr) end) do
         eqstr = ('='):rep(#eqstr + 1)
       end

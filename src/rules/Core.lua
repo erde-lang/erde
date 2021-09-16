@@ -13,8 +13,8 @@ return {
   },
   Comment = {
     pattern = Sum({
+      Pad('---') * (P(1) - P('---')) ^ 0 * Pad('---'),
       Pad('--') * (P(1) - V('Newline')) ^ 0,
-      Pad('--[[') * (P(1) - P(']]--')) ^ 0 * Pad(']]--'),
     }),
   },
   Keyword = {

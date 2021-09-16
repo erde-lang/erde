@@ -34,7 +34,7 @@ local function benchmark(label, callback, stress)
   print(label, ' => ', os.clock() - start)
 end
 
-local input = read_file('./examples/primitives.erde')
+local input = read_file('./examples/core.erde')
 benchmark('TIME', function()
   return erde.compile(input)
 end, false)

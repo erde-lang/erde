@@ -1,6 +1,8 @@
 -- Multiline Comments
 
---[[ this is an inline comment ]]--
---[[
+--- this is an inline comment ---
+---
 this is a
-multiline comment ]]--
+multiline comment---
+
+local x
