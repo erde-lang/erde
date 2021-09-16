@@ -20,6 +20,7 @@ local b5 = `hello { b2 } { wo382 }`
 -- Escape Chars
 
 local c1 = 'hello\nworld'
+local c2 = `a\`b\{c\}d`
 
 -- Long String Escape Id
 

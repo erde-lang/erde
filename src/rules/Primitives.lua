@@ -48,7 +48,7 @@ return {
         captures:map(function(capture)
           return capture.interpolation
             and (']%s]..tostring(%s)..[%s['):format(eqstr, capture.expr, eqstr)
-            or capture
+            or capture:gsub('\\([`{}])', '%1')
         end):join(),
         eqstr
       )
