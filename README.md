@@ -2,20 +2,12 @@
 
 ## TODO
 
-- replace in-house recursive compiler w/ native lpeg
-    - map(pattern -> pattern / compiler)
-    - match on compiler tree directly!
 - integrate official erde-lang spec
-  - lua table brackets
-  - optional nested destructure
-  - restore lua constructs
-    - for loop, while loop, repeat until, do block (allow return!)
-  - function piping (instead of macros!) `>>` syntax
-- optional chaining function calls
-- `kpairs` keyword
-- `global` keyword + scope tracking
+- custom keywords
+  - `global` (needs scope tracking)
+  - `kpairs`
 - automated tests
-- lua versions
+- lua versions (bit operators)
 - order of operations?
 
 ## Proposals
@@ -34,9 +26,7 @@
   - Vscode
   - Treesitter
 - erde cli
-  - target various lua versions
-  - luajit bytecode option?
-- erde lib
+- erde runtime lib
   - allow mutating `require` (similar to moonscript)
 - docs site
 - Formatter
