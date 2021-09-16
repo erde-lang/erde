@@ -5,9 +5,17 @@ return {
     parser = V('String'),
     compiler = template('[ %1 ]'),
   },
+  ExprTableKey = {
+    parser = PadC('[') * V('Expr') * PadC(']'),
+    compiler = concat(' '),
+  },
   MapTableField = {
     parser = Product({
-      V('Name') + V('StringTableKey'),
+      Sum({
+        V('Name'),
+        V('StringTableKey'),
+        V('ExprTableKey'),
+      }),
       Pad(':'),
       V('Expr'),
     }),

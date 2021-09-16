@@ -29,7 +29,7 @@ return {
   },
   Id = {
     pattern = Sum({
-      PadC('(') * CV('Expr') * PadC(')') * V('IndexChain'),
+      Cs(Pad('(') * V('Expr') * Pad(')')) * V('IndexChain'),
       CV('Name') * (V('IndexChain') + Cc(supertable())),
     }),
     compiler = indexchain(template('return %1')),

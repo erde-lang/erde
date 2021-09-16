@@ -125,6 +125,7 @@ end
 
 function env.indexchain(bodycompiler)
   return function(base, chain, ...)
+    print(base, inspect(chain))
     local chainexpr = supertable({ base }, chain:map(function(index)
       return index.suffix
     end)):join()

@@ -34,11 +34,7 @@ local function benchmark(label, callback, stress)
   print(label, ' => ', os.clock() - start)
 end
 
-local stress = true 
-local input = read_file('./examples/tables.erde')
-benchmark('NEWCOMPILE', function()
+local input = read_file('./examples/scratchpad.erde')
+benchmark('TIME', function()
   return erde.compile(input)
-end, stress)
-benchmark('OLDCOMPILE', function()
-  return erde.oldcompile(input)
-end, stress)
+end, false)

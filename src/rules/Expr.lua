@@ -4,7 +4,6 @@ local inspect = require('inspect')
 return {
   SubExpr = {
     pattern = Sum({
-      PadC('(') * V('Expr') * PadC(')'),
       V('FunctionCall'),
       V('Function'),
       V('Id'),
@@ -13,6 +12,7 @@ return {
       CV('Number'),
       PadC('true'),
       PadC('false'),
+      PadC('(') * V('Expr') * PadC(')'),
     }),
   },
   Expr = {
