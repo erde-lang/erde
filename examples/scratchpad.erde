@@ -1,1 +1,3 @@
-({ x: 'hi' }).x = 1
+if blah {
+  local x = 4
+}

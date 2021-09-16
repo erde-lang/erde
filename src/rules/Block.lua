@@ -2,7 +2,7 @@ require('env')()
 
 return {
   Block = {
-    pattern = Pad(V('Statement')) ^ 1 + Pad(Cc('')),
+    pattern = Pad(CsV('Statement')) ^ 1 + Pad(Cc('')),
     compiler = concat('\n'),
   },
   Statement = {
@@ -17,7 +17,6 @@ return {
       V('Return'),
       V('IfElse'),
     }),
-    compiler = echo,
   },
   NameDeclaration = {
     pattern = Product({

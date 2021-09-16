@@ -2,15 +2,19 @@ require('env')()
 
 return {
   If = {
-    pattern = Pad('if') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
+    pattern = Pad('if') * CsV('Expr') * Pad('{') * CsV('Block') * Pad('}'),
+    compiler = template('if %1 then %2'),
   },
   ElseIf = {
-    pattern = Pad('elseif') * V('Expr') * Pad('{') * V('Block') * Pad('}'),
+    pattern = Pad('elseif') * CsV('Expr') * Pad('{') * CsV('Block') * Pad('}'),
+    compiler = template(' elseif %1 then %2')
   },
   Else = {
-    pattern = Pad('else') * Pad('{') * V('Block') * Pad('}'),
+    pattern = Pad('else') * Pad('{') * CsV('Block') * Pad('}'),
+    compiler = template(' else %1')
   },
   IfElse = {
-    pattern = V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1,
+    pattern = Cs(V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1),
+    compiler = template('%1 end')
   },
 }

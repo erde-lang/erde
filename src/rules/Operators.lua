@@ -2,9 +2,8 @@ require('env')()
 
 return {
   UnaryOp = {
-    pattern = PadC(S('~-#')) * CV('Expr'),
+    pattern = PadC(S('~-#')) * CsV('Expr'),
     compiler = function(op, expr)
-      print(op, expr)
       return op == '~'
         and ('not %s'):format(expr)
         or op .. expr
