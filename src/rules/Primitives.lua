@@ -17,7 +17,7 @@ return {
     pattern = V('Newline') + P('\\') * P(1),
   },
   Interpolation = {
-    pattern = P('{') * Pad(Demand(CV('Expr'))) * P('}'),
+    pattern = P('{') * Pad(Demand(CsV('Expr'))) * P('}'),
     compiler = function(expr)
       return { interpolation = true, expr = expr }
     end,
@@ -26,41 +26,38 @@ return {
     pattern = Product({
       P('`'),
       Sum({
-        CV('EscapedChar'),
+        CsV('EscapedChar'),
         V('Interpolation'),
         C((P(1) - S('{`\\')) ^ 1),
       }) ^ 0,
       P('`'),
     }),
     compiler = function(...)
-      local expressions = supertable({ ... })
+      local captures = supertable({ ... })
+      local strcaptures = captures:filter(function(capture)
+        return type(capture) == 'string'
+      end)
 
-      local eqstats = expressions:reduce(function(eqstats, char)
-        return char ~= '='
-          and { counter = 0, max = eqstats.max }
-          or {
-            counter = eqstats.counter + 1,
-            max = math.max(eqstats.max, eqstats.counter + 1),
-          }
-      end, { counter = 0, max = 0 })
-
-      local eqstr = ('='):rep(eqstats.max + 1)
+      local eqstr = '='
+      while strcaptures:find(function(capture) return capture:find(eqstr) end) do
+        eqstr = ('='):rep(#eqstr + 1)
+      end
 
       return ('[%s[%s]%s]'):format(
         eqstr,
-        expressions:map(function(v)
-          return v.interpolation
-            and (']%s]..tostring(%s)..[%s['):format(eqstr, v.expr, eqstr)
-            or v
+        captures:map(function(capture)
+          return capture.interpolation
+            and (']%s]..tostring(%s)..[%s['):format(eqstr, capture.expr, eqstr)
+            or capture
         end):join(),
         eqstr
       )
     end,
   },
   String = {
-    pattern = Sum({
-      C(P("'") * (V('EscapedChar') + P(1) - P("'")) ^ 0 * P("'")),
-      C(P('"') * (V('EscapedChar') + P(1) - P('"')) ^ 0 * P('"')),
+    pattern = SumCs({
+      P("'") * (V('EscapedChar') + P(1) - P("'")) ^ 0 * P("'"),
+      P('"') * (V('EscapedChar') + P(1) - P('"')) ^ 0 * P('"'),
       V('LongString'),
     }),
     compiler = concat(),

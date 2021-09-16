@@ -2,23 +2,23 @@ require('env')()
 
 return {
   StringTableKey = {
-    pattern = V('String'),
+    pattern = CsV('String'),
     compiler = '[ %1 ]',
   },
   MapTableField = {
     pattern = Product({
-      Sum({
-        CV('Name'),
+      SumCs({
+        V('Name'),
         V('StringTableKey'),
-        C(Pad('[') * V('Expr') * Pad(']')),
+        Pad('[') * V('Expr') * Pad(']'),
       }),
       Pad(':'),
-      CV('Expr'),
+      CsV('Expr'),
     }),
     compiler = '%1 = %2',
   },
   ShorthandTableField = {
-    pattern = Pad(P(':') * CV('Name')),
+    pattern = Pad(P(':') * CsV('Name')),
     compiler = '%1 = %1',
   },
   TableField = {
@@ -26,21 +26,28 @@ return {
     compiler = echo,
   },
   Table = {
-    pattern = PadC('{') * (Csv(V('TableField'), true) + V('Space')) * PadC('}'),
+    pattern = ProductCs({
+      Pad('{'),
+      Csv(Sum({
+        V('ShorthandTableField'),
+        V('MapTableField'),
+        V('Expr'),
+      }), true) ^ -1,
+      Pad('}')
+    }),
     compiler = concat(),
   },
   DotIndex = {
-    pattern = V('Space') * C('.') * C(V('Name')),
-    compiler = concat(),
+    pattern = P('.') * V('Name'),
   },
   BracketIndex = {
-    pattern = PadC('[') * V('Expr') * PadC(']'),
-    compiler = concat(),
+    pattern = Pad('[') * V('Expr') * Pad(']'),
   },
   Index = {
     pattern = Product({
+      V('Space'),
       Pad('?') * Cc(true) + Cc(false),
-      V('DotIndex') + V('BracketIndex'),
+      CsV('DotIndex') + CsV('BracketIndex'),
     }),
     compiler = map('optional', 'suffix'),
   },

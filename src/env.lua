@@ -35,6 +35,10 @@ function env.CV(rule)
   return lpeg.C(lpeg.V(rule))
 end
 
+function env.CsV(rule)
+  return lpeg.Cs(lpeg.V(rule))
+end
+
 function env.Pad(pattern)
   return lpeg.V('Space') * pattern * lpeg.V('Space')
 end
@@ -43,9 +47,8 @@ function env.PadC(pattern)
   return lpeg.V('Space') * lpeg.C(pattern) * lpeg.V('Space')
 end
 
-function env.Csv(pattern, commacapture)
-  local comma = commacapture and env.PadC(',') or env.Pad(',')
-  return pattern * (comma * pattern) ^ 0 * env.Pad(',') ^ -1
+function env.PadCs(pattern)
+  return lpeg.V('Space') * lpeg.Cs(pattern) * lpeg.V('Space')
 end
 
 function env.Sum(patterns)
@@ -54,10 +57,31 @@ function env.Sum(patterns)
   end, lpeg.P(false))
 end
 
+function env.SumC(patterns)
+  return lpeg.C(env.Sum(patterns))
+end
+
+function env.SumCs(patterns)
+  return lpeg.Cs(env.Sum(patterns))
+end
+
 function env.Product(patterns)
   return supertable(patterns):reduce(function(product, pattern)
     return product * pattern
   end, lpeg.P(true))
+end
+
+function env.ProductC(patterns)
+  return lpeg.C(env.Product(patterns))
+end
+
+function env.ProductCs(patterns)
+  return lpeg.Cs(env.Product(patterns))
+end
+
+function env.Csv(pattern, commacapture)
+  local comma = commacapture and env.PadC(',') or env.Pad(',')
+  return pattern * (comma * pattern) ^ 0 * env.Pad(',') ^ -1
 end
 
 function env.Demand(pattern)

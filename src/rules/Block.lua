@@ -22,8 +22,8 @@ return {
   NameDeclaration = {
     pattern = Product({
       PadC('local') + C(false),
-      C(V('Name')),
-      (PadC('=') * V('Expr')) ^ -1,
+      CsV('Name'),
+      (PadC('=') * CsV('Expr')) ^ -1,
     }),
     compiler = concat(' '),
   },
