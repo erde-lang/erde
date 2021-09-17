@@ -7,14 +7,16 @@ return {
   },
   ElseIf = {
     pattern = Pad('elseif') * CsV('Expr') * Pad('{') * CsV('Block') * Pad('}'),
-    compiler = template(' elseif %1 then %2')
+    compiler = template('elseif %1 then %2'),
   },
   Else = {
     pattern = Pad('else') * Pad('{') * CsV('Block') * Pad('}'),
-    compiler = template(' else %1')
+    compiler = template('else %1'),
   },
   IfElse = {
-    pattern = Cs(V('If') * V('ElseIf') ^ 0 * V('Else') ^ -1),
-    compiler = template('%1 end')
+    pattern = CsV('If') * CsV('ElseIf') ^ 0 * CsV('Else') ^ -1,
+    compiler = function(...)
+      return supertable({ ... }):push('end'):join(' ')
+    end,
   },
 }

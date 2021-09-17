@@ -1,5 +1,4 @@
 require('env')()
-local inspect = require('inspect')
 
 return {
   SubExpr = {

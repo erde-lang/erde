@@ -15,6 +15,10 @@ local env = setmetatable(
   supertable(lpeg)
     :filter(function(v, k) return _G[k] == nil end)
     :merge({
+      inspect = inspect,
+      supertable = supertable,
+    })
+    :merge({
       currentline = 1,
       currentlinestart = 1,
       tmpnamecounter = 0,

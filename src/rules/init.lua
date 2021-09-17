@@ -1,6 +1,4 @@
 require('env')()
-local inspect = require('inspect')
-local supertable = require('supertable')
 
 return supertable()
   :merge(require('rules.Core'))

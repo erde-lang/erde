@@ -1,6 +1,4 @@
 require('env')()
-local inspect = require('inspect')
-local supertable = require('supertable')
 
 return {
   Number = {
