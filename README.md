@@ -3,6 +3,7 @@
 ## TODO
 
 - integrate official erde-lang spec
+- add returns to do blocks (needs scope tracking)
 - custom keywords
   - `global` (needs scope tracking)
   - `kpairs`

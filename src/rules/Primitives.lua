@@ -53,11 +53,11 @@ return {
     end,
   },
   String = {
-    pattern = SumCs({
+    pattern = Cs(Sum({
       P("'") * (V('EscapedChar') + P(1) - P("'")) ^ 0 * P("'"),
       P('"') * (V('EscapedChar') + P(1) - P('"')) ^ 0 * P('"'),
       V('LongString'),
-    }),
+    })),
     compiler = concat(),
   },
 }

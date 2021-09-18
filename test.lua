@@ -35,7 +35,7 @@ local function benchmark(label, callback, stress)
 end
 
 -- local input = read_file('./examples/scratchpad.erde')
-local input = read_file('./examples/logic.erde')
+local input = read_file('./examples/tables.erde')
 -- print(inspect(erde.parse(input)))
 benchmark('TIME', function()
   return erde.compile(input)

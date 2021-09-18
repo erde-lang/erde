@@ -7,10 +7,10 @@ return {
   },
   MapTableField = {
     pattern = Product({
-      SumCs({
-        V('Name'),
-        V('StringTableKey'),
-        Pad('[') * V('Expr') * Pad(']'),
+      Sum({
+        CsV('Name'),
+        CsV('StringTableKey'),
+        Pad('[') * CsV('Expr') * Pad(']'),
       }),
       Pad(':'),
       CsV('Expr'),
@@ -26,16 +26,18 @@ return {
     compiler = echo,
   },
   Table = {
-    pattern = ProductCs({
+    pattern = Product({
       Pad('{'),
-      Csv(Sum({
-        V('ShorthandTableField'),
-        V('MapTableField'),
-        V('Expr'),
-      }), true) ^ -1,
+      List(Sum({
+        CsV('ShorthandTableField'),
+        CsV('MapTableField'),
+        CsV('Expr'),
+      })),
       Pad('}')
     }),
-    compiler = concat(),
+    compiler = function(fields)
+      return ('{ %s }'):format(fields:join(','))
+    end,
   },
   DotIndex = {
     pattern = P('.') * V('Name'),
@@ -65,7 +67,7 @@ return {
     compiler = map('keyed', 'name', 'nested', 'default'),
   },
   Destructure = {
-    pattern = Pad('{') * Csv(V('Destruct')) * Pad('}'),
+    pattern = Pad('{') * List(V('Destruct')) * Pad('}'),
     compiler = function(...)
       local keycounter = 1
       return supertable({ ... }):each(function(destruct)

@@ -61,26 +61,10 @@ function env.Sum(patterns)
   end, lpeg.P(false))
 end
 
-function env.SumC(patterns)
-  return lpeg.C(env.Sum(patterns))
-end
-
-function env.SumCs(patterns)
-  return lpeg.Cs(env.Sum(patterns))
-end
-
 function env.Product(patterns)
   return supertable(patterns):reduce(function(product, pattern)
     return product * pattern
   end, lpeg.P(true))
-end
-
-function env.ProductC(patterns)
-  return lpeg.C(env.Product(patterns))
-end
-
-function env.ProductCs(patterns)
-  return lpeg.Cs(env.Product(patterns))
 end
 
 function env.Csv(pattern, commacapture)
@@ -89,9 +73,12 @@ function env.Csv(pattern, commacapture)
 end
 
 function env.List(pattern, config)
+  config = config or {}
+  local minlen = config.minlen or 0
+
   local sep = env.Pad(config.sep or ',')
   local chainbase = sep * pattern
-  local chain = chainbase ^ math.max(0, config.minlen - 1)
+  local chain = chainbase ^ math.max(0, minlen - 1)
 
   if config.maxlen == 0 then
     return lpeg.V('Space')
@@ -103,8 +90,8 @@ function env.List(pattern, config)
     env.Product({
       pattern,
       chain,
-      config.trailing == false and sep ^ -1 or P(true),
-    }) + (config.minlen == 0 and lpeg.V('Space') or lpeg.P(false))
+      config.trailing == false and sep ^ -1 or lpeg.P(true),
+    }) + (minlen == 0 and lpeg.V('Space') or lpeg.P(false))
   ) / env.pack
 end
 
