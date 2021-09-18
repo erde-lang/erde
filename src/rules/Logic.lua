@@ -58,4 +58,27 @@ return {
       )
     end,
   },
+  WhileLoop = {
+    pattern = Product({
+      Pad('while'),
+      CsV('Expr'),
+      Pad('{'),
+      CsV('Block'),
+      Pad('}'),
+    }),
+    compiler = template('while %1 do %2 end'),
+  },
+  RepeatUntil = {
+    pattern = Product({
+      Pad('repeat'),
+      Pad('{'),
+      CsV('Block'),
+      Pad('}'),
+      Pad('until'),
+      Pad('('),
+      CsV('Expr'),
+      Pad(')'),
+    }),
+    compiler = template('repeat %1 until (%2)'),
+  },
 }

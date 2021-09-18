@@ -18,6 +18,24 @@ for i = 1, 3 {
   local x
 }
 
+-- Generic For
+
+for k, v in ipairs() {
+  local x
+}
+
+-- While Loop
+
+while x {
+  local x = 4
+}
+
+-- Repeat Until
+
+repeat {
+  local x = 2
+} until (x)
+
 // Returns
 
 local x = () -> {
