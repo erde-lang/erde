@@ -2,6 +2,8 @@
 
 ## TODO
 
+- formatter infra
+- error handling
 - integrate official erde-lang spec
 - add returns to do blocks (needs scope tracking)
 - custom keywords
@@ -14,8 +16,6 @@
 ## Proposals
 
 - named export
-- `recall` keyword? (recall the function of the current scope?)
-- `demand` keyword (early return)
 - case statement?
 - shorthand self? need to support optional op?
 

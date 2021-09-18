@@ -1,7 +1,0 @@
-local y = {
-  ['hello' .. 'world']: true,
-  ['hello']: true,
-  `{hello}`: true,
-  'hi',
-  'bye',
-}

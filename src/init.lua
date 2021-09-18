@@ -14,6 +14,7 @@ lpeg.setmaxstack(1000)
 local oldgrammar = lpeg.P(oldrules.parser)
 local parsergrammar = lpeg.P(rules.parser)
 local compilergrammar = lpeg.P(rules.compiler)
+local formattergrammar = lpeg.P(rules.formatter)
 local erde = {}
 
 -- -----------------------------------------------------------------------------
@@ -23,6 +24,16 @@ local erde = {}
 function erde.parse(subject)
   env:reset()
   return parsergrammar:match(subject, nil, {}) or {}
+end
+
+function erde.compile(subject)
+  env:reset()
+  return compilergrammar:match(subject, nil, {})
+end
+
+function erde.format(subject)
+  env:reset()
+  return formattergrammar:match(subject, nil, {})
 end
 
 -- -----------------------------------------------------------------------------

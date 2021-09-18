@@ -4,6 +4,7 @@ return {
   Block = {
     pattern = Pad(V('Statement')) ^ 1 + Pad(Cc('')),
     compiler = concat('\n'),
+    formatter = concat('\n'),
   },
   Statement = {
     pattern = Sum({

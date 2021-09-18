@@ -37,6 +37,10 @@ end
 local input = read_file('./examples/scratchpad.erde')
 -- local input = read_file('./examples/tables.erde')
 -- print(inspect(erde.parse(input)))
-benchmark('TIME', function()
+benchmark('COMPILE', function()
   return erde.compile(input)
+end, false)
+
+benchmark('FORMAT', function()
+  return erde.format(input)
 end, false)

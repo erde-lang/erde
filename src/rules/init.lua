@@ -19,20 +19,21 @@ return supertable()
       end,
     })
 
-    if type(rule.compiler) == 'nil' then
-      rules.compiler:merge({ [rulename] = rule.pattern })
-    elseif type(rule.compiler) == 'function'  then
-      rules.compiler:merge({
-        [rulename] = C('') * rule.pattern / function(_, ...)
-          return rule.compiler(...)
-        end,
-      })
-    else
-      rules.compiler:merge({ [rulename] = rule.pattern / rule.compiler })
-    end
+    rules.compiler:merge({
+      [rulename] = rule.compiler ~= nil
+        and rule.pattern / rule.compiler
+        or rule.pattern,
+    })
+
+    rules.formatter:merge({
+      [rulename] = rule.formatter ~= nil
+        and rule.pattern / rule.formatter
+        or rule.pattern,
+    })
 
     return rules
   end, {
     parser = supertable({ V('Block') }),
     compiler = supertable({ V('Block') }),
+    formatter = supertable({ V('Block') }),
   })
