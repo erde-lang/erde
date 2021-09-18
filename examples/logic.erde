@@ -36,26 +36,10 @@ repeat {
   local x = 2
 } until (x)
 
-// Returns
+-- Do Block
 
-local x = () -> {
-  return
-}
-
-local x = () -> {
-  return a
-}
-
-local x = () -> {
-  return a, b, c
-}
-
-local x = () -> {
-  return (
-    a,
-    b,
-    c,
-  )
+do {
+  local x = 4
 }
 
 -- Piping

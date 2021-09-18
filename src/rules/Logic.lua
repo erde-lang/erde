@@ -81,4 +81,13 @@ return {
     }),
     compiler = template('repeat %1 until (%2)'),
   },
+  DoBlock = {
+    pattern = Product({
+      Pad('do'),
+      Pad('{'),
+      CsV('Block'),
+      Pad('}'),
+    }),
+    compiler = template('do %1 end'),
+  },
 }

@@ -43,3 +43,26 @@ myfunc()
 a.b[1]()
 a.b[3].c(x, 4 + 5)
 a.b[3]:c()
+
+-- Returns
+
+local x = () -> {
+  return
+}
+
+local x = () -> {
+  return a
+}
+
+local x = () -> {
+  return a, b, c
+}
+
+local x = () -> {
+  return (
+    a,
+    b,
+    c,
+  )
+}
+

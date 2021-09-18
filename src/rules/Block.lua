@@ -7,10 +7,6 @@ return {
   },
   Statement = {
     pattern = Sum({
-      V('NumericFor'),
-      V('GenericFor'),
-      V('WhileLoop'),
-      V('RepeatUntil'),
       V('Comment'),
       V('FunctionCall'),
       V('Assignment'),
@@ -20,6 +16,11 @@ return {
       V('AssignOp'),
       V('Return'),
       V('IfElse'),
+      V('NumericFor'),
+      V('GenericFor'),
+      V('WhileLoop'),
+      V('RepeatUntil'),
+      V('DoBlock'),
     }),
   },
   NameDeclaration = {
