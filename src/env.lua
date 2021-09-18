@@ -90,7 +90,7 @@ function env.List(pattern, config)
     env.Product({
       pattern,
       chain,
-      config.trailing == false and sep ^ -1 or lpeg.P(true),
+      config.trailing == false and lpeg.P(true) or sep ^ -1,
     }) + (minlen == 0 and lpeg.V('Space') or lpeg.P(false))
   ) / env.pack
 end

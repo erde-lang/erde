@@ -1,15 +1,7 @@
-for k, v in ipairs() {
-  local x = 4
-}
-
-for x = 1, 2, 3 {
-  local x = 4
-}
-
-for i = 1, 2 {
-  local x = 4
-}
-
-while x {
-  local x = 4
+local y = {
+  ['hello' .. 'world']: true,
+  ['hello']: true,
+  `{hello}`: true,
+  'hi',
+  'bye',
 }

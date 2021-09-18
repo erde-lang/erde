@@ -21,10 +21,6 @@ return {
     pattern = Pad(P(':') * CsV('Name')),
     compiler = '%1 = %1',
   },
-  TableField = {
-    pattern = V('ShorthandTableField') + V('MapTableField') + V('Expr'),
-    compiler = echo,
-  },
   Table = {
     pattern = Product({
       Pad('{'),
