@@ -88,6 +88,26 @@ function env.Csv(pattern, commacapture)
   return pattern * (comma * pattern) ^ 0 * env.Pad(',') ^ -1
 end
 
+function env.List(pattern, config)
+  local sep = env.Pad(config.sep or ',')
+  local chainbase = sep * pattern
+  local chain = chainbase ^ math.max(0, config.minlen - 1)
+
+  if config.maxlen == 0 then
+    return lpeg.V('Space')
+  elseif config.maxlen then
+    chain = chain - chainbase ^ math.max(0, config.maxlen)
+  end
+
+  return (
+    env.Product({
+      pattern,
+      chain,
+      config.trailing == false and sep ^ -1 or P(true),
+    }) + (config.minlen == 0 and lpeg.V('Space') or lpeg.P(false))
+  ) / env.pack
+end
+
 function env.Demand(pattern)
   return pattern + lpeg.Cc('__ERDE_ERROR__') * lpeg.Cp() / function(capture, position)
     if capture == '__ERDE_ERROR__' then

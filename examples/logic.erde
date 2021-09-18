@@ -8,8 +8,14 @@ if true {
   local x = 10
 } 
 
-local x = do {
-  return x
+-- Numeric For
+
+for i = 1, 3, 4 {
+  local x
+}
+
+for i = 1, 3 {
+  local x
 }
 
 // Returns

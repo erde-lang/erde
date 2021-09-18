@@ -19,4 +19,43 @@ return {
       return supertable({ ... }):push('end'):join(' ')
     end,
   },
+  NumericFor = {
+    pattern = Product({
+      Pad('for'),
+      CsV('Name'),
+      Pad('='),
+      List(CsV('Expr'), {
+        minlen = 2,
+        maxlen = 3,
+        trailing = false,
+      }),
+      Pad('{'),
+      CsV('Block'),
+      Pad('}'),
+    }),
+    compiler = function(name, exprlist, block)
+      return ('for %s = %s do %s end'):format(name, exprlist:join(','), block)
+    end,
+  },
+  GenericFor = {
+    pattern = Product({
+      Pad('for'),
+      CsV('Name'),
+      Pad(','),
+      CsV('Name'),
+      Pad('in'),
+      CsV('FunctionCall'),
+      Pad('{'),
+      CsV('Block'),
+      Pad('}'),
+    }),
+    compiler = function(keyname, valuename, iterator, block)
+      return ('for %s,%s in %s do %s end'):format(
+        keyname,
+        valuename,
+        iterator,
+        block
+      )
+    end,
+  },
 }

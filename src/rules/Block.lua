@@ -7,6 +7,8 @@ return {
   },
   Statement = {
     pattern = Sum({
+      V('NumericFor'),
+      V('GenericFor'),
       V('Comment'),
       V('FunctionCall'),
       V('Assignment'),
