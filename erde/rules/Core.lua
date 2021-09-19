@@ -1,40 +1,51 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
+local state = require('erde.state')
+local supertable = require('erde.supertable')
 
 return {
   Newline = {
-    pattern = P('\n') * (Cp() / function(position)
-      currentline = currentline + 1
-      currentlinestart = position
+    pattern = _.P('\n') * (_.Cp() / function(position)
+      state.currentline = state.currentline + 1
+      state.currentlinestart = position
     end),
   },
   Space = {
-    pattern = (V('Newline') + space) ^ 0,
+    pattern = (_.V('Newline') + _.space) ^ 0,
   },
   Comment = {
-    pattern = Sum({
-      Pad('---') * (P(1) - P('---')) ^ 0 * Pad('---'),
-      Pad('--') * (P(1) - V('Newline')) ^ 0,
+    pattern = _.Sum({
+      _.Pad('---') * (_.P(1) - _.P('---')) ^ 0 * _.Pad('---'),
+      _.Pad('--') * (_.P(1) - _.V('Newline')) ^ 0,
     }),
   },
   Keyword = {
-    pattern = Pad(Sum({ 'local', 'if', 'elseif', 'else', 'false', 'true', 'nil', 'return' })),
+    pattern = _.Pad(_.Sum({
+      'local',
+      'if',
+      'elseif',
+      'else',
+      'false',
+      'true',
+      'nil',
+      'return',
+    })),
   },
   Name = {
-    pattern = Product({
-      -V('Keyword'),
-      alpha + P('_'),
-      (alnum + P('_')) ^ 0,
+    pattern = _.Product({
+      -_.V('Keyword'),
+      _.alpha + _.P('_'),
+      (_.alnum + _.P('_')) ^ 0,
     }),
   },
   Id = {
-    pattern = Sum({
-      Pad('(') * CsV('Expr') * Pad(')') * V('IndexChain'),
-      CsV('Name') * (V('IndexChain') + Cc(supertable())),
+    pattern = _.Sum({
+      _.Pad('(') * _.CsV('Expr') * _.Pad(')') * _.V('IndexChain'),
+      _.CsV('Name') * (_.V('IndexChain') + _.Cc(supertable())),
     }),
-    compiler = indexchain(template('return %1')),
+    compiler = _.indexchain(_.template('return %1')),
   },
   IdExpr = {
-    pattern = V('Id'),
-    compiler = indexchain(template('return %1')),
+    pattern = _.V('Id'),
+    compiler = _.indexchain(_.template('return %1')),
   },
 }

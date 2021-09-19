@@ -1,34 +1,35 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
+local supertable = require('erde.supertable')
 
 return {
   Number = {
-    pattern = Sum({
-      P('0') * S('xX') * (xdigit ^ 1),
-      Product({
-        (digit ^ 0 * P('.')) ^ -1,
-        digit ^ 1,
-        (S('eE') * S('+-') ^ -1 * digit ^ 1) ^ -1,
+    pattern = _.Sum({
+      _.P('0') * _.S('xX') * (_.xdigit ^ 1),
+      _.Product({
+        (_.digit ^ 0 * _.P('.')) ^ -1,
+        _.digit ^ 1,
+        (_.S('eE') * _.S('+-') ^ -1 * _.digit ^ 1) ^ -1,
       }),
     }),
   },
   EscapedChar = {
-    pattern = V('Newline') + P('\\') * P(1),
+    pattern = _.V('Newline') + _.P('\\') * _.P(1),
   },
   Interpolation = {
-    pattern = P('{') * Pad(Demand(CsV('Expr'))) * P('}'),
+    pattern = _.P('{') * _.Pad(_.Demand(_.CsV('Expr'))) * _.P('}'),
     compiler = function(expr)
       return { interpolation = true, expr = expr }
     end,
   },
   LongString = {
-    pattern = Product({
-      P('`'),
-      Sum({
-        CsV('EscapedChar'),
-        V('Interpolation'),
-        C((P(1) - S('{`\\')) ^ 1),
+    pattern = _.Product({
+      _.P('`'),
+      _.Sum({
+        _.CsV('EscapedChar'),
+        _.V('Interpolation'),
+        _.C((_.P(1) - _.S('{`\\')) ^ 1),
       }) ^ 0,
-      P('`'),
+      _.P('`'),
     }),
     compiler = function(...)
       local captures = supertable({ ... })
@@ -53,11 +54,11 @@ return {
     end,
   },
   String = {
-    pattern = Cs(Sum({
-      P("'") * (V('EscapedChar') + P(1) - P("'")) ^ 0 * P("'"),
-      P('"') * (V('EscapedChar') + P(1) - P('"')) ^ 0 * P('"'),
-      V('LongString'),
+    pattern = _.Cs(_.Sum({
+      _.P("'") * (_.V('EscapedChar') + _.P(1) - _.P("'")) ^ 0 * _.P("'"),
+      _.P('"') * (_.V('EscapedChar') + _.P(1) - _.P('"')) ^ 0 * _.P('"'),
+      _.V('LongString'),
     })),
-    compiler = concat(),
+    compiler = _.concat(),
   },
 }

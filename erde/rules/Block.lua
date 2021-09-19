@@ -1,62 +1,63 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
+local supertable = require('erde.supertable')
 
 return {
   Block = {
-    pattern = Pad(V('Statement')) ^ 1 + Pad(Cc('')),
-    compiler = concat('\n'),
-    formatter = concat('\n'),
+    pattern = _.Pad(_.V('Statement')) ^ 1 + _.Pad(_.Cc('')),
+    compiler = _.concat('\n'),
+    formatter = _.concat('\n'),
   },
   Statement = {
-    pattern = Sum({
-      V('Comment'),
-      V('FunctionCall'),
-      V('Assignment'),
-      V('DestructureDeclaration'),
-      V('VarArgsDeclaration'),
-      V('NameDeclaration'),
-      V('AssignOp'),
-      V('Return'),
-      V('IfElse'),
-      V('NumericFor'),
-      V('GenericFor'),
-      V('WhileLoop'),
-      V('RepeatUntil'),
-      V('DoBlock'),
+    pattern = _.Sum({
+      _.V('Comment'),
+      _.V('FunctionCall'),
+      _.V('Assignment'),
+      _.V('DestructureDeclaration'),
+      _.V('VarArgsDeclaration'),
+      _.V('NameDeclaration'),
+      _.V('AssignOp'),
+      _.V('Return'),
+      _.V('IfElse'),
+      _.V('NumericFor'),
+      _.V('GenericFor'),
+      _.V('WhileLoop'),
+      _.V('RepeatUntil'),
+      _.V('DoBlock'),
     }),
   },
   NameDeclaration = {
-    pattern = Product({
-      PadC('local') + C(false),
-      CsV('Name'),
-      (PadC('=') * CsV('Expr')) ^ -1,
+    pattern = _.Product({
+      _.PadC('local') + _.C(false),
+      _.CsV('Name'),
+      (_.PadC('=') * _.CsV('Expr')) ^ -1,
     }),
-    compiler = concat(' '),
+    compiler = _.concat(' '),
   },
   VarArgsDeclaration = {
-    pattern = Product({
-      PadC('local') + C(false),
-      Pad('...'),
-      V('Name'),
-      Demand(Pad('=') * V('Expr')),
+    pattern = _.Product({
+      _.PadC('local') + _.C(false),
+      _.Pad('...'),
+      _.V('Name'),
+      _.Demand(_.Pad('=') * _.V('Expr')),
     }),
     compiler = function(islocal, name, expr)
       return ('%s%s = { %s }'):format(islocal and 'local ' or '', name, expr)
     end,
   },
   DestructureDeclaration = {
-    pattern = Product({
-      PadC('local') + C(false),
-      V('Destructure'),
-      Demand(Pad('=') * V('Expr')),
+    pattern = _.Product({
+      _.PadC('local') + _.C(false),
+      _.V('Destructure'),
+      _.Demand(_.Pad('=') * _.V('Expr')),
     }),
     compiler = compiledestructure,
   },
   Assignment = {
-    pattern = Sum({
-      Pad('(') * CsV('Expr') * Pad(')') * V('IndexChain'),
-      CsV('Name') * (V('IndexChain') + Cc(supertable())),
-    }) * Pad('=') * CsV('Expr'),
-    pattern = CsV('Id') * Pad('=') * CsV('Expr'),
-    compiler = indexchain(template('%1 = %2')),
+    pattern = _.Sum({
+      _.Pad('(') * _.CsV('Expr') * _.Pad(')') * _.V('IndexChain'),
+      _.CsV('Name') * (_.V('IndexChain') + _.Cc(supertable())),
+    }) * _.Pad('=') * _.CsV('Expr'),
+    pattern = _.CsV('Id') * _.Pad('=') * _.CsV('Expr'),
+    compiler = _.indexchain(_.template('%1 = %2')),
   },
 }

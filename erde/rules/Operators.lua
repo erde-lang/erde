@@ -1,8 +1,8 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
 
 return {
   UnaryOp = {
-    pattern = PadC(S('~-#')) * CsV('Expr'),
+    pattern = _.PadC(_.S('~-#')) * _.CsV('Expr'),
     compiler = function(op, expr)
       return op == '~'
         and ('not %s'):format(expr)
@@ -10,22 +10,22 @@ return {
     end,
   },
   TernaryOp = {
-    pattern = V('SubExpr') * Pad('?') * V('Expr') * Pad(':') * V('Expr'),
-    compiler = iife('if %1 then return %2 else return %3 end'),
+    pattern = _.V('SubExpr') * _.Pad('?') * _.V('Expr') * _.Pad(':') * _.V('Expr'),
+    compiler = _.iife('if %1 then return %2 else return %3 end'),
   },
   BinaryOp = {
-    pattern = V('SubExpr') * Product({
-      PadC(Sum({
-        '+', P('-') - P('--'), '*', '//', '/', '^', '%', -- arithmetic
+    pattern = _.V('SubExpr') * _.Product({
+      _.PadC(_.Sum({
+        '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
         '==', '~=', '<=', '>=', '<', '>',   -- relational
         '&', '|', '..', '??',               -- misc
       })),
-      V('Expr'),
+      _.V('Expr'),
     }),
     compiler = function(lhs, op, rhs)
       if op == '??' then
-        return iife('local %1 = %2 if %1 ~= nil then return %1 else return %3 end')(newtmpname(), lhs, rhs)
+        return _.iife('local %1 = %2 if %1 ~= nil then return %1 else return %3 end')(_.newtmpname(), lhs, rhs)
       elseif op == '&' then
         return ('%s and %s'):format(lhs, rhs)
       elseif op == '|' then
@@ -36,35 +36,35 @@ return {
     end,
   },
   AssignOp = {
-    pattern = Product({
-      V('Id'),
-      Pad(C(Sum({
+    pattern = _.Product({
+      _.V('Id'),
+      _.Pad(_.C(_.Sum({
         '+', '-', '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
         '&', '|', '..', '??',               -- misc
-      })) * P('=')),
-      V('Expr'),
+      })) * _.P('=')),
+      _.V('Expr'),
     }),
     compiler = function(id, op, expr)
       if op == '??' then
         -- TODO: consider optional assign
         return 
       elseif op == '&' then
-        return template('%1 = %1 and %2')(id, expr)
+        return _.template('%1 = %1 and %2')(id, expr)
       elseif op == '|' then
-        return template('%1 = %1 or %2')(id, expr)
+        return _.template('%1 = %1 or %2')(id, expr)
       else
-        return template('%1 = %1 %2 %3')(id, op, expr)
+        return _.template('%1 = %1 %2 %3')(id, op, expr)
       end
     end,
   },
   Operation = {
-    pattern = Sum({
-      V('UnaryOp'),
-      V('TernaryOp'),
-      V('BinaryOp'),
-      V('AssignOp'),
+    pattern = _.Sum({
+      _.V('UnaryOp'),
+      _.V('TernaryOp'),
+      _.V('BinaryOp'),
+      _.V('AssignOp'),
     }),
-    compiler = echo,
+    compiler = _.echo,
   },
 }

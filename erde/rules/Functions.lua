@@ -1,22 +1,23 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
+local supertable = require('erde.supertable')
 
 return {
   Arg = {
-    pattern = Sum({
-      Cc(false) * V('Name'),
-      Cc(true) * V('Destructure'),
+    pattern = _.Sum({
+      _.Cc(false) * _.V('Name'),
+      _.Cc(true) * _.V('Destructure'),
     }),
     compiler = function(isdestructure, arg)
       if isdestructure then
-        local tmpname = newtmpname()
-        return { name = tmpname, prebody = compiledestructure(true, arg, tmpname) }
+        local tmpname = _.newtmpname()
+        return { name = tmpname, prebody = _.compiledestructure(true, arg, tmpname) }
       else
         return { name = arg, prebody = false }
       end
     end,
   },
   OptArg = {
-    pattern = V('Arg') * Pad('=') * V('Expr'),
+    pattern = _.V('Arg') * _.Pad('=') * _.V('Expr'),
     compiler = function(arg, expr)
       return {
         name = arg.name,
@@ -28,7 +29,7 @@ return {
     end,
   },
   VarArgs = {
-    pattern = Pad('...') * V('Name') ^ -1,
+    pattern = _.Pad('...') * _.V('Name') ^ -1,
     compiler = function(name)
       return {
         name = name,
@@ -38,31 +39,31 @@ return {
     end,
   },
   ParamComma = {
-    pattern = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
+    pattern = (#_.Pad(')') * _.Pad(',') ^ -1) + _.Pad(','),
   },
   Params = {
-    pattern = V('Arg') + Product({
-      Pad('('),
-      (V('Arg') * V('ParamComma')) ^ 0,
-      (V('OptArg') * V('ParamComma')) ^ 0,
-      (V('VarArgs') * V('ParamComma')) ^ -1,
-      Cc({}),
-      Pad(')'),
+    pattern = _.V('Arg') + _.Product({
+      _.Pad('('),
+      (_.V('Arg') * _.V('ParamComma')) ^ 0,
+      (_.V('OptArg') * _.V('ParamComma')) ^ 0,
+      (_.V('VarArgs') * _.V('ParamComma')) ^ -1,
+      _.Cc({}),
+      _.Pad(')'),
     }),
-    compiler = pack,
+    compiler = _.pack,
   },
   FunctionExprBody = {
-    pattern = V('Expr'),
-    compiler = template('return %1'),
+    pattern = _.V('Expr'),
+    compiler = _.template('return %1'),
   },
   FunctionBody = {
-    pattern = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
+    pattern = _.Pad('{') * _.V('Block') * _.Pad('}') + _.V('FunctionExprBody'),
     compiler = echo,
   },
   Function = {
-    pattern = Sum({
-      Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
-      Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
+    pattern = _.Sum({
+      _.Cc(false) * _.V('Params') * _.Pad('->') * _.V('FunctionBody'),
+      _.Cc(true) * _.V('Params') * _.Pad('=>') * _.V('FunctionBody'),
     }),
     compiler = function(needself, params, body)
       local varargs = params[#params]
@@ -84,21 +85,21 @@ return {
     end,
   },
   ReturnList = {
-    pattern = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
-    compiler = concat(','),
+    pattern = _.Pad('(') * _.V('ReturnList') * _.Pad(')') + _.Csv(_.V('Expr')),
+    compiler = _.concat(','),
   },
   Return = {
-    pattern = PadC('return') * V('ReturnList') ^ -1,
-    compiler = concat(' '),
+    pattern = _.PadC('return') * _.V('ReturnList') ^ -1,
+    compiler = _.concat(' '),
   },
   FunctionCall = {
-    pattern = Product({
-      V('Id'),
-      (PadC(':') * V('Name')) ^ -1,
-      PadC('('),
-      Csv(V('Expr'), true) + V('Space'),
-      PadC(')'),
+    pattern = _.Product({
+      _.V('Id'),
+      (_.PadC(':') * _.V('Name')) ^ -1,
+      _.PadC('('),
+      _.Csv(_.V('Expr'), true) + _.V('Space'),
+      _.PadC(')'),
     }),
-    compiler = concat(),
+    compiler = _.concat(),
   },
 }
