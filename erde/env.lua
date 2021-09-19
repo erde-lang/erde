@@ -1,7 +1,7 @@
 local inspect = require('inspect')
 local lpeg = require('lpeg')
 lpeg.locale(lpeg)
-local supertable = require('supertable')
+local supertable = require('erde.supertable')
 
 -- -----------------------------------------------------------------------------
 -- Env
@@ -160,6 +160,7 @@ end
 
 function env.indexchain(bodycompiler)
   return function(base, chain, ...)
+    print(base, chain)
     local chainexpr = supertable({ base }, chain:map(function(index)
       return index.suffix
     end)):join()
@@ -171,7 +172,8 @@ function env.indexchain(bodycompiler)
         return {
           partialchain = prebody.partialchain .. index.suffix,
           parts = not index.optional and prebody.parts or
-            prebody.parts:push(('if %s == nil then return end'):format(prebody.partialchain)),
+            prebody.parts:push(('if %s == nil then return end')
+              :format(prebody.partialchain)),
         }
       end, { partialchain = base, parts = supertable() })
 
@@ -196,7 +198,7 @@ function env.compiledestructure(islocal, destructure, expr)
     return destructure
       :map(function(destruct)
         local destructexpr = exprname .. destruct.index
-        local destructexprname = destruct.nested and newtmpname() or destruct.name
+        local destructexprname = destruct.nested and env.newtmpname() or destruct.name
         return supertable({
           ('%s%s = %s'):format(
             destruct.nested and 'local ' or '',
@@ -215,7 +217,7 @@ function env.compiledestructure(islocal, destructure, expr)
       :join(' ')
   end
 
-  local exprname = newtmpname()
+  local exprname = env.newtmpname()
   return ('%s%s do %s %s end'):format(
     islocal and 'local ' or '',
     extractnames(destructure):join(','),

@@ -1,9 +1,8 @@
 local inspect = require('inspect')
 local lpeg = require('lpeg')
-
-local env = require('env')
-local rules = require('rules')
-local supertable = require('supertable')
+local env = require('erde.env')
+local rules = require('erde.rules')
+local supertable = require('erde.supertable')
 
 lpeg.setmaxstack(1000)
 

@@ -1,4 +1,4 @@
-require('env')()
+require('erde.env')()
 
 return {
   Newline = {
@@ -28,9 +28,13 @@ return {
   },
   Id = {
     pattern = Sum({
-      Pad('(') * CsV('Expr') * Pad(')') * CV('IndexChain'),
-      CsV('Name') * (CV('IndexChain') + Cc(supertable())),
+      Pad('(') * CsV('Expr') * Pad(')') * V('IndexChain'),
+      CsV('Name') * (V('IndexChain') + Cc(supertable())),
     }),
+    compiler = indexchain(template('return %1')),
+  },
+  IdExpr = {
+    pattern = V('Id'),
     compiler = indexchain(template('return %1')),
   },
 }

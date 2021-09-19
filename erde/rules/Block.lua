@@ -1,4 +1,4 @@
-require('env')()
+require('erde.env')()
 
 return {
   Block = {
@@ -52,7 +52,11 @@ return {
     compiler = compiledestructure,
   },
   Assignment = {
-    pattern = V('Id') * Pad('=') * V('Expr'),
+    pattern = Sum({
+      Pad('(') * CsV('Expr') * Pad(')') * V('IndexChain'),
+      CsV('Name') * (V('IndexChain') + Cc(supertable())),
+    }) * Pad('=') * CsV('Expr'),
+    pattern = CsV('Id') * Pad('=') * CsV('Expr'),
     compiler = indexchain(template('%1 = %2')),
   },
 }

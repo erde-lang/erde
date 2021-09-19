@@ -1,4 +1,4 @@
-require('env')()
+require('erde.env')()
 
 return {
   StringTableKey = {
@@ -41,17 +41,14 @@ return {
   BracketIndex = {
     pattern = Pad('[') * V('Expr') * Pad(']'),
   },
-  Index = {
-    pattern = Product({
-      V('Space'),
-      Pad('?') * Cc(true) + Cc(false),
-      CsV('DotIndex') + CsV('BracketIndex'),
-    }),
-    compiler = map('optional', 'suffix'),
-  },
   IndexChain = {
-    pattern = V('Index') ^ 1,
-    compiler = pack,
+    pattern = (
+      Product({
+        V('Space'),
+        Pad('?') * Cc(true) + Cc(false),
+        CsV('DotIndex') + CsV('BracketIndex'),
+      }) / map('optional', 'suffix')
+    ) ^ 1 / pack,
   },
   Destruct = {
     pattern = Product({
