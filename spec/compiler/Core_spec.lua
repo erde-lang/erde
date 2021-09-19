@@ -1,8 +1,70 @@
 local erde = require('erde')
 
-describe("a test", function()
-  describe("a nested block", function()
-    describe("can have many describes", function()
-    end)
+spec('single line comment', function()
+  assert.are.equal('', erde.compile('-- test'))
+end)
+
+spec('multi line comment', function()
+  assert.are.equal('', erde.compile([[
+  ---
+  -- This is a
+  -- multiline comment
+  ---
+  ]]))
+end)
+
+describe('ids', function()
+  spec('dot index', function()
+    assert.are.equal('a = 1', erde.compile('a = 1'))
+    assert.are.equal('a.b.c = 1', erde.compile('a.b.c = 1'))
   end)
+
+  spec('function calls', function()
+    assert.are.equal('a()', erde.compile('a()'))
+    assert.are.equal('a(x,y)', erde.compile('a(x, y)'))
+    assert.are.equal('a.b.c()', erde.compile('a.b.c()'))
+    assert.are.equal('a.b.c(x,y)', erde.compile('a.b.c(x, y)'))
+    assert.are.equal('a.b:c()', erde.compile('a.b:c()'))
+    assert.are.equal('a.b:c(x,y)', erde.compile('a.b:c(x, y)'))
+  end)
+
+  spec('method calls', function()
+    assert.are.equal('a:c().d = 1', erde.compile('a:c().d = 1'))
+    -- TODO: readd this. Need to take it out for now to support method piping
+    -- assert.has_error(function() erde.compile('a:c.d = 1') end)
+  end)
+
+  spec('opt index', function()
+    assert.are.equal(1, erde.eval([[
+      local x = { a: 1 }
+      return x?.a
+    ]]))
+    assert.are.equal(true, erde.eval('return x?.b == nil'))
+    assert.are.equal(1, erde.eval('return ({ x: 1 })?.x'))
+  end)
+end)
+
+spec('returns', function()
+  assert.are.equal(2, erde.eval('return 2'))
+  assert.is_nil(erde.eval('return'))
+  assert.are.same({ 1, 2, 3 }, erde.eval([[
+    local test = () -> 1, 2, 3
+    return { test() }
+  ]]))
+  assert.are.same({ 1, 2, 3 }, erde.eval([[
+    local test = () -> {
+      return 1, 2, 3
+    }
+    return { test() }
+  ]]))
+  assert.are.same({ 1, 2, 3 }, erde.eval([[
+    local test = () -> {
+      return (
+        1,
+        2,
+        3,
+      )
+    }
+    return { test() }
+  ]]))
 end)

@@ -1,76 +1,76 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
+local supertable = require('erde.supertable')
 
 return {
-  StringTableKey = {
-    pattern = CsV('String'),
-    compiler = '[ %1 ]',
-  },
-  MapTableField = {
-    pattern = Product({
-      Sum({
-        CsV('Name'),
-        CsV('StringTableKey'),
-        Pad('[') * CsV('Expr') * Pad(']'),
+  KeyValuePair = {
+    pattern = 
+    _.Product({
+      _.Sum({
+        _.Cc(1) * _.CsV('Name'),
+        _.Cc(2) * _.CsV('String'),
+        _.Cc(3) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
       }),
-      Pad(':'),
-      CsV('Expr'),
+      _.Pad(':'),
+      _.CsV('Expr'),
     }),
-    compiler = '%1 = %2',
-  },
-  ShorthandTableField = {
-    pattern = Pad(P(':') * CsV('Name')),
-    compiler = '%1 = %1',
+    compiler = function(variant, key, value)
+      return variant == 1 and key..' = '..value or '['..key..'] = '..value
+    end,
   },
   Table = {
-    pattern = Product({
-      Pad('{'),
-      List(Sum({
-        CsV('ShorthandTableField'),
-        CsV('MapTableField'),
-        CsV('Expr'),
-      })),
-      Pad('}')
+    pattern = _.Product({
+      _.Pad('{'),
+      _.List(
+        _.Sum({
+          _.Cc(1) * _.CsV('KeyValuePair'),
+          _.Cc(2) * _.Pad(_.P(':') * _.CsV('Name')),
+          _.Cc(3) * _.CsV('Expr'),
+        }) / _.map('variant', 'capture')
+      ),
+      _.Pad('}')
     }),
     compiler = function(fields)
-      return ('{ %s }'):format(fields:join(','))
+      local joinedFields = fields:map(function(field)
+        return field.variant == 2
+          and field.capture..' = '..field.capture
+          or field.capture
+      end):join(',')
+      return '{'..joinedFields..'}'
     end,
-  },
-  DotIndex = {
-    pattern = P('.') * V('Name'),
-  },
-  BracketIndex = {
-    pattern = Pad('[') * V('Expr') * Pad(']'),
-  },
-  IndexChain = {
-    pattern = (
-      Product({
-        V('Space'),
-        Pad('?') * Cc(true) + Cc(false),
-        CsV('DotIndex') + CsV('BracketIndex'),
-      }) / map('optional', 'suffix')
-    ) ^ 1 / pack,
   },
   Destruct = {
-    pattern = Product({
-      C(':') + Cc(false),
-      V('Name'),
-      V('Destructure') + Cc(false),
-      (Pad('=') * Demand(V('Expr'))) + Cc(false),
+    pattern = _.Product({
+      _.Sum({
+        _.Cc(1) * _.CsV('Name'),
+        _.Cc(2) * _.V('Destructure'),
+        _.Cc(3) * _.Product({
+          _.P(':'),
+          _.CsV('Name'),
+          _.V('Destructure') ^ -1,
+        }),
+      }),
+      (_.Pad('=') * _.CsV('Expr')) ^ -1,
     }),
-    compiler = map('keyed', 'name', 'nested', 'default'),
+    compiler = function(variant, c1, c2, c3)
+      if variant == 1 then
+        return { name = c1, default = c2 }
+      elseif variant == 2 then
+        return { nested = c1, default = c2 }
+      elseif variant == 3 then
+        if type(c2) == 'table' then
+          return { keyed = true, name = c1, nested = c2, default = c3 }
+        else
+          return { keyed = true, name = c1, default = c2 }
+        end
+      end
+    end,
   },
   Destructure = {
-    pattern = Pad('{') * List(V('Destruct')) * Pad('}'),
-    compiler = function(...)
-      local keycounter = 1
-      return supertable({ ... }):each(function(destruct)
-        if destruct.keyed then
-          destruct.index = ('.%s'):format(destruct.name)
-        else
-          destruct.index = ('[%d]'):format(keycounter)
-          keycounter = keycounter + 1
-        end
-      end)
-    end,
+    pattern = _.Product({
+      _.Pad('?') * _.Cc(true) + _.Cc(false),
+      _.Pad('{'),
+      _.List(_.V('Destruct')),
+      _.Pad('}'),
+    }) / _.map('opt', 'destructs'),
   },
 }

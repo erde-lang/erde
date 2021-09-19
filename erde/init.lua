@@ -1,26 +1,48 @@
+local rules = require('erde.rules')
+local state = require('erde.state')
+local supertable = require('erde.supertable')
 local inspect = require('inspect')
 local lpeg = require('lpeg')
-local env = require('erde.env')
-local rules = require('erde.rules')
-local supertable = require('erde.supertable')
 
+local erde = {}
+local grammars = {}
 lpeg.setmaxstack(1000)
 
-local parsergrammar = lpeg.P(rules.parser)
-local compilergrammar = lpeg.P(rules.compiler)
-local formattergrammar = lpeg.P(rules.formatter)
+function erde.parse(subject)
+  if not grammars.parser then
+    grammars.parser = lpeg.P(rules.parser)
+  end
+  state:reset()
+  return grammars.parser:match(subject, nil, {}) or {}
+end
 
-return {
-  parse = function(subject)
-    env:reset()
-    return parsergrammar:match(subject, nil, {}) or {}
-  end,
-  compile = function(subject)
-    env:reset()
-    return compilergrammar:match(subject, nil, {})
-  end,
-  format = function(subject)
-    env:reset()
-    return formattergrammar:match(subject, nil, {})
-  end,
-}
+function erde.compile(subject)
+  if not grammars.compiler then
+    grammars.compiler = lpeg.P(rules.compiler)
+  end
+  state:reset()
+  return grammars.compiler:match(subject, nil, {})
+end
+
+function erde.format(subject)
+  if not grammars.formatter then
+    grammars.formatter = lpeg.P(rules.formatter)
+  end
+  state:reset()
+  return grammars.formatter:match(subject, nil, {})
+end
+
+function erde.eval(erdecode)
+  local evaluator
+  if _VERSION:find('5.1') then
+    evaluator = loadstring(erde.compile(erdecode))
+  else
+    evaluator = load(erde.compile(erdecode))
+  end
+
+  if type(evaluator) == 'function' then
+    return evaluator()
+  end
+end
+
+return erde

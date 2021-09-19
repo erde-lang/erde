@@ -114,19 +114,27 @@ function supertable:push(...)
 end
 
 function supertable:pop(n)
-  local removed = {}
+  local removed = constructor()
   for i = 1, n or 1 do
     table.insert(removed, table.remove(self))
   end
-  return self, unpack(removed)
+  return removed:unpack()
 end
 
 function supertable:remove(index, n)
-  local removed = {}
+  local removed = constructor()
   for _ = 1, n or 1 do
     table.insert(removed, table.remove(self, index))
   end
-  return self, unpack(removed)
+  return removed:unpack()
+end
+
+function supertable:unpack()
+  if _VERSION:find('5.1') then
+    return unpack(self)
+  else
+    return table.unpack(self)
+  end
 end
 
 -- -----------------------------------------------------------------------------

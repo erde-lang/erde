@@ -1,5 +1,8 @@
 return {
   default = {
+    ROOT = {
+      'spec/parser',
+    },
     verbose = true,
   },
 }

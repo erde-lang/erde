@@ -1,104 +1,131 @@
-require('erde.env')()
+local _ = require('erde.rules.helpers')
+local supertable = require('erde.supertable')
+local inspect = require('inspect')
 
 return {
   Arg = {
-    pattern = Sum({
-      Cc(false) * V('Name'),
-      Cc(true) * V('Destructure'),
+    pattern = _.Sum({
+      _.Cc(false) * _.CsV('Name'),
+      _.Cc(true) * _.V('Destructure'),
     }),
-    compiler = function(isdestructure, arg)
-      if isdestructure then
-        local tmpname = newtmpname()
-        return { name = tmpname, prebody = compiledestructure(true, arg, tmpname) }
+    compiler = function(isDestructure, arg)
+      if isDestructure then
+        local tmpName = _.newTmpName()
+        return {
+          name = tmpName,
+          prebody = _.compileDestructure(true, arg, tmpName),
+        }
       else
-        return { name = arg, prebody = false }
+        return { name = arg, prebody = '' }
       end
     end,
   },
   OptArg = {
-    pattern = V('Arg') * Pad('=') * V('Expr'),
+    pattern = _.V('Arg') * _.Pad('=') * _.CsV('Expr'),
     compiler = function(arg, expr)
       return {
         name = arg.name,
-        prebody = supertable({
-          ('if %s == nil then %s = %s end'):format(arg.name, arg.name, expr),
-          arg.prebody,
-        }):join(' '),
+        prebody = ('if %s == nil then %s = %s end %s'):format(
+          arg.name,
+          arg.name,
+          expr,
+          arg.prebody
+        ),
       }
     end,
   },
   VarArgs = {
-    pattern = Pad('...') * V('Name') ^ -1,
+    pattern = _.Pad('...') * (_.CsV('Name') + _.Cc(false)),
     compiler = function(name)
-      return {
-        name = name,
-        prebody = ('local %s = {...}'):format(name),
-        varargs = true,
-      }
+      if not name then
+        return { name = '', prebody = '', varargs = true }
+      else
+        return {
+          name = name,
+          prebody = 'local '..name..' = {...}',
+          varargs = true,
+        }
+      end
     end,
   },
-  ParamComma = {
-    pattern = (#Pad(')') * Pad(',') ^ -1) + Pad(','),
-  },
   Params = {
-    pattern = V('Arg') + Product({
-      Pad('('),
-      (V('Arg') * V('ParamComma')) ^ 0,
-      (V('OptArg') * V('ParamComma')) ^ 0,
-      (V('VarArgs') * V('ParamComma')) ^ -1,
-      Cc({}),
-      Pad(')'),
-    }),
-    compiler = pack,
-  },
-  FunctionExprBody = {
-    pattern = V('Expr'),
-    compiler = template('return %1'),
-  },
-  FunctionBody = {
-    pattern = Pad('{') * V('Block') * Pad('}') + V('FunctionExprBody'),
-    compiler = echo,
-  },
-  Function = {
-    pattern = Sum({
-      Cc(false) * V('Params') * Pad('->') * V('FunctionBody'),
-      Cc(true) * V('Params') * Pad('=>') * V('FunctionBody'),
-    }),
-    compiler = function(needself, params, body)
+    pattern = function()
+      local ParamComma =  (_.Pad(',') ^ -1 * #_.Pad(')')) + _.Pad(',')
+      return _.Sum({
+        _.V('Arg'),
+        _.Product({
+          _.Pad('('),
+          (_.V('Arg') * ParamComma) ^ 0,
+          (_.V('OptArg') * ParamComma) ^ 0,
+          (_.V('VarArgs') * ParamComma) ^ -1,
+          _.Pad(')'),
+        }),
+      }) / _.pack
+    end,
+    compiler = function(params)
       local varargs = params[#params]
         and params[#params].varargs
           and params:pop()
-
-      local names = supertable(
-        needself and { 'self' },
-        params:map(function(param) return param.name end),
-        varargs and { '...' }
-      ):join(',')
+      
+      local names = params:map(function(param)
+        return param.name
+      end) 
 
       local prebody = params
         :filter(function(param) return param.prebody end)
         :map(function(param) return param.prebody end)
-        :join(' ')
 
-      return ('function(%s) %s %s end'):format(names, prebody, body)
+      if varargs then
+        names:push('...')
+        prebody:push(varargs.prebody)
+      end
+
+      return { names = names, prebody = prebody:join(' ') }
     end,
   },
-  ReturnList = {
-    pattern = Pad('(') * V('ReturnList') * Pad(')') + Csv(V('Expr')),
-    compiler = concat(','),
-  },
-  Return = {
-    pattern = PadC('return') * V('ReturnList') ^ -1,
-    compiler = concat(' '),
-  },
-  FunctionCall = {
-    pattern = Product({
-      V('Id'),
-      (PadC(':') * V('Name')) ^ -1,
-      PadC('('),
-      Csv(V('Expr'), true) + V('Space'),
-      PadC(')'),
+  ArrowFunction = {
+    pattern = _.Product({
+      _.V('Params'),
+      _.Sum({
+        _.Cc(false) * _.Pad('->'),
+        _.Cc(true) * _.Pad('=>'),
+      }),
+      _.Sum({
+        _.Cc(false) * _.CsV('BraceBlock'),
+        _.Cc(true) * _.V('ExprList'),
+      }),
     }),
-    compiler = concat(),
+    compiler = function(params, isFat, isExprBody, body)
+      if isFat then
+        params.names:insert(1, 'self')
+      end
+
+      return ('function(%s) %s %s end'):format(
+        params.names:join(','),
+        params.prebody,
+        isExprBody and 'return '..body:join(',') or body
+      )
+    end,
+  },
+  FunctionDeclaration = {
+    pattern = _.Product({
+      _.Pad('local') * _.Cc(true) + _.Cc(false),
+      _.Pad('function'),
+      _.CsV('Name'),
+      (_.Pad('.') * _.CsV('Name')) ^ 0 / _.pack,
+      _.Pad(':') * _.CsV('Name') + _.Cc(false),
+      _.V('Params'),
+      _.CsV('BraceBlock'),
+    }),
+    compiler = function(isLocal, base, chain, method, params, body)
+      return ('%s function %s%s(%s) %s %s end'):format(
+        isLocal and 'local' or '',
+        chain:insert(1, base):join('.'),
+        method and ':'..method or '',
+        params.names:join(','),
+        params.prebody,
+        body
+      )
+    end,
   },
 }
