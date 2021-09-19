@@ -2,14 +2,13 @@
 
 ## TODO
 
-- formatter infra
 - error handling
+- automated tests
 - integrate official erde-lang spec
 - add returns to do blocks (needs scope tracking)
 - custom keywords
   - `global` (needs scope tracking)
   - `kpairs`
-- automated tests
 - lua versions (bit operators)
 - order of operations?
 

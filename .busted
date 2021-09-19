@@ -1,0 +1,7 @@
+return {
+  default = {
+    verbose = true,
+  },
+}
+
+-- vim: filetype=lua:
