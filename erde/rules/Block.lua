@@ -41,7 +41,7 @@ return {
         return _.compiledestructure(islocal, declaree, expr)
       elseif expr then
         return ('%s%s = %s'):format(prefix, declaree, expr)
-      else
+      elseif islocal then
         return ('%s%s'):format(prefix, declaree)
       end
     end,
