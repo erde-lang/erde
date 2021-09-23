@@ -4,6 +4,7 @@
 
 - error handling
 - automated tests
+- add `...` as expr
 - integrate official erde-lang spec
 - add returns to do blocks (needs scope tracking)
 - custom keywords

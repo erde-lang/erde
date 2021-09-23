@@ -134,7 +134,6 @@ end
 
 function _.indexchain(bodycompiler)
   return function(base, chain, ...)
-    print(base, chain)
     local chainexpr = supertable({ base }, chain:map(function(index)
       return index.suffix
     end)):join()
