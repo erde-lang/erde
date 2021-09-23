@@ -3,7 +3,7 @@ local supertable = require('erde.supertable')
 
 return {
   Block = {
-    pattern = _.Pad(_.V('Statement')) ^ 1 + _.Pad(_.Cc('')),
+    pattern = _.Cc('') * _.Pad(_.V('Statement')) ^ 1,
     compiler = _.concat('\n'),
     formatter = _.concat('\n'),
   },

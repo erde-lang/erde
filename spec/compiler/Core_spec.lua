@@ -1,8 +1,11 @@
 local erde = require('erde')
 
-describe("a test", function()
-  describe("a nested block", function()
-    describe("can have many describes", function()
+describe('core', function()
+  describe('comments', function()
+    spec('single line comment', function()
+      assert.are.equal('', erde.compile([[
+        -- test
+      ]]))
     end)
   end)
 end)
