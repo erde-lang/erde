@@ -38,7 +38,7 @@ return {
       _.PadC('local') + _.C(false),
       _.Pad('...'),
       _.V('Name'),
-      _.Demand(_.Pad('=') * _.V('Expr')),
+      _.Expect(_.Pad('=') * _.V('Expr')),
     }),
     compiler = function(islocal, name, expr)
       return ('%s%s = { %s }'):format(islocal and 'local ' or '', name, expr)
@@ -48,7 +48,7 @@ return {
     pattern = _.Product({
       _.PadC('local') + _.C(false),
       _.V('Destructure'),
-      _.Demand(_.Pad('=') * _.V('Expr')),
+      _.Expect(_.Pad('=') * _.V('Expr')),
     }),
     compiler = compiledestructure,
   },

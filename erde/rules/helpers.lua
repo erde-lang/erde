@@ -41,11 +41,6 @@ function _.Product(patterns)
   end, _.P(true))
 end
 
-function _.Csv(pattern, commacapture)
-  local comma = commacapture and _.PadC(',') or _.Pad(',')
-  return pattern * (comma * pattern) ^ 0 * _.Pad(',') ^ -1
-end
-
 function _.List(pattern, config)
   config = config or {}
   local minlen = config.minlen or 0
@@ -69,7 +64,7 @@ function _.List(pattern, config)
   ) / _.pack
 end
 
-function _.Demand(pattern)
+function _.Expect(pattern)
   return pattern + _.Cc('__ERDE_ERROR__') * _.Cp() / function(capture, position)
     if capture == '__ERDE_ERROR__' then
       error(('Line %s, Column %s: Error'):format(

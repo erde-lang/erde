@@ -85,7 +85,7 @@ return {
     end,
   },
   ReturnList = {
-    pattern = _.Pad('(') * _.V('ReturnList') * _.Pad(')') + _.Csv(_.V('Expr')),
+    pattern = _.Pad('(') * _.V('ReturnList') * _.Pad(')') + _.List(_.V('Expr')),
     compiler = _.concat(','),
   },
   Return = {

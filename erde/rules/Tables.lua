@@ -56,7 +56,7 @@ return {
       _.C(':') + _.Cc(false),
       _.V('Name'),
       _.V('Destructure') + _.Cc(false),
-      (_.Pad('=') * _.Demand(_.V('Expr'))) + _.Cc(false),
+      (_.Pad('=') * _.Expect(_.V('Expr'))) + _.Cc(false),
     }),
     compiler = _.map('keyed', 'name', 'nested', 'default'),
   },

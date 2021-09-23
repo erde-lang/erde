@@ -16,7 +16,7 @@ return {
     pattern = _.V('Newline') + _.P('\\') * _.P(1),
   },
   Interpolation = {
-    pattern = _.P('{') * _.Pad(_.Demand(_.CsV('Expr'))) * _.P('}'),
+    pattern = _.P('{') * _.Pad(_.Expect(_.CsV('Expr'))) * _.P('}'),
     compiler = function(expr)
       return { interpolation = true, expr = expr }
     end,
