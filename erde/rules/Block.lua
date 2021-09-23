@@ -12,9 +12,7 @@ return {
       _.V('Comment'),
       _.V('FunctionCall'),
       _.V('Assignment'),
-      _.V('DestructureDeclaration'),
-      _.V('VarArgsDeclaration'),
-      _.V('NameDeclaration'),
+      _.V('Declaration'),
       _.V('AssignOp'),
       _.V('Return'),
       _.V('IfElse'),
@@ -25,32 +23,28 @@ return {
       _.V('DoBlock'),
     }),
   },
-  NameDeclaration = {
+  Declaration = {
     pattern = _.Product({
-      _.PadC('local') + _.C(false),
-      _.CsV('Name'),
-      (_.PadC('=') * _.CsV('Expr')) ^ -1,
+      _.Sum({
+        _.Pad('local') * _.Cc(true),
+        _.Pad('global') * _.Cc(false),
+      }),
+      _.Expect(_.Sum({
+        _.V('Destructure') * _.Cc(true),
+        _.CsV('Name') * _.Cc(false),
+      })),
+      (_.Pad('=') * _.CsV('Expr')) ^ -1,
     }),
-    compiler = _.concat(' '),
-  },
-  VarArgsDeclaration = {
-    pattern = _.Product({
-      _.PadC('local') + _.C(false),
-      _.Pad('...'),
-      _.V('Name'),
-      _.Expect(_.Pad('=') * _.V('Expr')),
-    }),
-    compiler = function(islocal, name, expr)
-      return ('%s%s = { %s }'):format(islocal and 'local ' or '', name, expr)
+    compiler = function(islocal, declaree, isdestructure, expr)
+      local prefix = islocal and 'local ' or ''
+      if isdestructure then
+        return _.compiledestructure(islocal, declaree, expr)
+      elseif expr then
+        return ('%s%s = %s'):format(prefix, declaree, expr)
+      else
+        return ('%s%s'):format(prefix, declaree)
+      end
     end,
-  },
-  DestructureDeclaration = {
-    pattern = _.Product({
-      _.PadC('local') + _.C(false),
-      _.V('Destructure'),
-      _.Expect(_.Pad('=') * _.V('Expr')),
-    }),
-    compiler = compiledestructure,
   },
   Assignment = {
     pattern = _.Sum({
