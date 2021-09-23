@@ -94,12 +94,17 @@ return {
   },
   FunctionCall = {
     pattern = _.Product({
-      _.V('Id'),
-      (_.PadC(':') * _.V('Name')) ^ -1,
-      _.PadC('('),
-      _.Csv(_.V('Expr'), true) + _.V('Space'),
-      _.PadC(')'),
+      _.CsV('Id'),
+      _.Pad(':') * _.CsV('Name') + _.Cc(false),
+      _.Pad('('),
+      _.List(_.CsV('Expr')) + _.V('Space'),
+      _.Pad(')'),
     }),
-    compiler = _.concat(),
+    compiler = function(id, method, exprlist)
+      return ('%s(%s)'):format(
+        method and id..':'..method or id,
+        exprlist:join(',')
+      )
+    end,
   },
 }
