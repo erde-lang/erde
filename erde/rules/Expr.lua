@@ -5,7 +5,7 @@ return {
     pattern = _.Sum({
      _.V('FunctionCall'),
      _.V('Function'),
-     _.V('Id'),
+     _.V('Id') / _.indexchain(_.template('return %1')),
      _.V('Table'),
      _.V('String'),
      _.V('Number'),

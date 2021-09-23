@@ -47,10 +47,6 @@ return {
     end,
   },
   Assignment = {
-    pattern = _.Sum({
-      _.Pad('(') * _.CsV('Expr') * _.Pad(')') * _.V('IndexChain'),
-      _.CsV('Name') * (_.V('IndexChain') + _.Cc(supertable())),
-    }) * _.Pad('=') * _.CsV('Expr'),
     pattern = _.CsV('Id') * _.Pad('=') * _.CsV('Expr'),
     compiler = _.indexchain(_.template('%1 = %2')),
   },

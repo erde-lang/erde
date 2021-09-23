@@ -42,10 +42,5 @@ return {
       _.Pad('(') * _.CsV('Expr') * _.Pad(')') * _.V('IndexChain'),
       _.CsV('Name') * (_.V('IndexChain') + _.Cc(supertable())),
     }),
-    compiler = _.indexchain(_.template('return %1')),
-  },
-  IdExpr = {
-    pattern = _.V('Id'),
-    compiler = _.indexchain(_.template('return %1')),
   },
 }
