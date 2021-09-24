@@ -92,15 +92,6 @@ return {
     pattern = _.PadC('return') * _.V('ReturnList') ^ -1,
     compiler = _.concat(' '),
   },
-  FunctionCallParams = {
-    pattern = _.Product({
-      _.Pad('?') * _.Cc(true) + _.Cc(false),
-      _.Pad('('),
-      _.List(_.CsV('Expr')),
-      _.Pad(')'),
-    }),
-    compiler = _.map('optional', 'exprlist'),
-  },
   FunctionCall = {
     pattern = _.Product({
       _.V('Id'),

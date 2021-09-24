@@ -1,5 +1,6 @@
 local state = require('erde.state')
 local supertable = require('erde.supertable')
+local inspect = require('inspect')
 local lpeg = require('lpeg')
 
 lpeg.locale(lpeg)
@@ -130,7 +131,15 @@ end
 function _.indexchain(bodycompiler, optbodycompiler)
   return function(base, chain, ...)
     local chainexpr = supertable({ base }, chain:map(function(index)
-      return index.suffix
+      if index.variant == 1 then
+        return '.'..index.value
+      elseif index.variant == 2 then
+        return '['..index.value..']'
+      elseif index.variant == 3 then
+        return '('..index.value:join(',')..')'
+      elseif index.variant == 4 then
+        return ':'..index.value
+      end
     end)):join()
 
     if not chain:find(function(index) return index.optional end) then

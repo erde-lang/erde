@@ -44,14 +44,21 @@ return {
         _.Sum({
           _.Cc(1) * _.Pad('.') * _.CsV('Name'),
           _.Cc(2) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
-          _.Cc(3) * _.Pad(':') * _.CsV('FunctionCallParams'),
+          _.Cc(3) * _.Pad('(') * _.List(_.CsV('Expr')) * _.Pad(')'),
+          _.Cc(4) * _.Pad(':') * _.CsV('Name') * #_.Expect(_.Product({
+            _.Pad('?') ^ -1,
+            _.Pad('('),
+            _.List(_.CsV('Expr')),
+            _.Pad(')'),
+          })),
         }),
-      }) / _.map('optional', 'suffix')
+      }) / _.map('optional', 'variant', 'value')
     ) ^ 0 / _.pack,
   },
   Id = {
     pattern = _.Sum({
       _.Pad('(') * _.CsV('Expr') * _.Pad(')'),
+      _.CsV('Table'),
       _.CsV('Name'),
     }) * _.V('IndexChain'),
   },
