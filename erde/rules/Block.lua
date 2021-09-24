@@ -47,7 +47,7 @@ return {
     end,
   },
   Assignment = {
-    pattern = _.CsV('Id') * _.Pad('=') * _.CsV('Expr'),
+    pattern = _.V('Id') * _.Pad('=') * _.CsV('Expr'),
     compiler = _.indexchain(_.template('%1 = %2')),
   },
 }

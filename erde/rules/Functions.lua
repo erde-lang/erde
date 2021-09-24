@@ -92,15 +92,37 @@ return {
     pattern = _.PadC('return') * _.V('ReturnList') ^ -1,
     compiler = _.concat(' '),
   },
+  FunctionCallParams = {
+    pattern = _.Product({
+      _.Pad('?') * _.Cc(true) + _.Cc(false),
+      _.Pad('('),
+      _.List(_.CsV('Expr')),
+      _.Pad(')'),
+    }),
+    compiler = _.map('optional', 'exprlist'),
+  },
   FunctionCall = {
     pattern = _.Product({
-      _.CsV('Id'),
+      _.V('Id'),
       _.Pad(':') * _.CsV('Name') + _.Cc(false),
+      _.Pad('?') * _.Cc(true) + _.Cc(false),
       _.Pad('('),
       _.List(_.CsV('Expr')) + _.V('Space'),
       _.Pad(')'),
     }),
-    compiler = function(id, method, exprlist)
+    compiler = function(base, indexchain, method, optcall, exprlist)
+      if optcall then
+        return _.indexchain(
+          _.template('if %1 ~= nil then %1(%2) end'),
+          _.template('if %1 ~= nil then return %1(%2) end')
+        )(base, indexchain, exprlist:join(','))
+      else
+        return _.indexchain(
+          _.template('%1(%2)'),
+          _.template('return %1(%2)')
+        )(base, indexchain, exprlist:join(','))
+      end
+
       return ('%s(%s)'):format(
         method and id..':'..method or id,
         exprlist:join(',')

@@ -37,10 +37,22 @@ return {
       (_.alnum + _.P('_')) ^ 0,
     }),
   },
+  IndexChain = {
+    pattern = (
+      _.Product({
+        _.Pad('?') * _.Cc(true) + _.Cc(false),
+        _.Sum({
+          _.Cc(1) * _.Pad('.') * _.CsV('Name'),
+          _.Cc(2) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
+          _.Cc(3) * _.Pad(':') * _.CsV('FunctionCallParams'),
+        }),
+      }) / _.map('optional', 'suffix')
+    ) ^ 0 / _.pack,
+  },
   Id = {
     pattern = _.Sum({
-      _.Pad('(') * _.CsV('Expr') * _.Pad(')') * _.V('IndexChain'),
-      _.CsV('Name') * (_.V('IndexChain') + _.Cc(supertable())),
-    }),
+      _.Pad('(') * _.CsV('Expr') * _.Pad(')'),
+      _.CsV('Name'),
+    }) * _.V('IndexChain'),
   },
 }

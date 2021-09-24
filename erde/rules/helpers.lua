@@ -127,14 +127,14 @@ function _.map(...)
   end
 end
 
-function _.indexchain(bodycompiler)
+function _.indexchain(bodycompiler, optbodycompiler)
   return function(base, chain, ...)
     local chainexpr = supertable({ base }, chain:map(function(index)
       return index.suffix
     end)):join()
 
     if not chain:find(function(index) return index.optional end) then
-      return chainexpr
+      return bodycompiler(chainexpr, ...)
     else
       local prebody = chain:reduce(function(prebody, index)
         return {
@@ -147,7 +147,7 @@ function _.indexchain(bodycompiler)
 
       return ('(function() %s %s end)()'):format(
         prebody.parts:join(' '),
-        bodycompiler(chainexpr, ...)
+        (optbodycompiler or bodycompiler)(chainexpr, ...)
       )
     end
   end

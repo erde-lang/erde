@@ -36,21 +36,6 @@ return {
       return ('{ %s }'):format(fields:join(','))
     end,
   },
-  DotIndex = {
-    pattern = _.P('.') * _.V('Name'),
-  },
-  BracketIndex = {
-    pattern = _.Pad('[') * _.V('Expr') * _.Pad(']'),
-  },
-  IndexChain = {
-    pattern = (
-      _.Product({
-        _.V('Space'),
-        _.Pad('?') * _.Cc(true) + _.Cc(false),
-        _.CsV('DotIndex') + _.CsV('BracketIndex'),
-      }) / _.map('optional', 'suffix')
-    ) ^ 1 / _.pack,
-  },
   Destruct = {
     pattern = _.Product({
       _.C(':') + _.Cc(false),

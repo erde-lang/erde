@@ -1,6 +1,7 @@
 return {
   default = {
     verbose = true,
+    lpath = "./?/init.lua",
   },
 }
 
