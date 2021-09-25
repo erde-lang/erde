@@ -3,9 +3,8 @@ local _ = require('erde.rules.helpers')
 return {
   SubExpr = {
     pattern = _.Sum({
-     _.V('FunctionCall'),
      _.V('Function'),
-     _.V('Id') / _.indexchain(_.template('return %1')),
+     _.V('IdExpr'),
      _.V('Table'),
      _.V('String'),
      _.V('Number'),

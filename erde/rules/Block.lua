@@ -3,25 +3,23 @@ local supertable = require('erde.supertable')
 
 return {
   Block = {
-    pattern = _.Cc(true) * _.Pad(_.V('Statement')) ^ 1,
+    pattern = _.Cc(true) * _.Expect(_.Pad(_.Sum({
+      _.CsV('Comment'),
+      -- allow function calls as statements
+      _.CsV('IdExpr') * _.B(')'),
+      _.CsV('Assignment'),
+      _.CsV('Declaration'),
+      _.CsV('AssignOp'),
+      _.CsV('Return'),
+      _.CsV('IfElse'),
+      _.CsV('NumericFor'),
+      _.CsV('GenericFor'),
+      _.CsV('WhileLoop'),
+      _.CsV('RepeatUntil'),
+      _.CsV('DoBlock'),
+    })) ^ 1),
     compiler = _.concat('\n'),
     formatter = _.concat('\n'),
-  },
-  Statement = {
-    pattern = _.Sum({
-      _.V('Comment'),
-      _.V('FunctionCall'),
-      _.V('Assignment'),
-      _.V('Declaration'),
-      _.V('AssignOp'),
-      _.V('Return'),
-      _.V('IfElse'),
-      _.V('NumericFor'),
-      _.V('GenericFor'),
-      _.V('WhileLoop'),
-      _.V('RepeatUntil'),
-      _.V('DoBlock'),
-    }),
   },
   Declaration = {
     pattern = _.Product({
@@ -43,6 +41,10 @@ return {
         return ('%s%s = %s'):format(prefix, declaree, expr)
       elseif islocal then
         return ('%s%s'):format(prefix, declaree)
+      else
+        -- global declarations with no initializer do not warrant an output
+        -- ex) `global x`
+        return ''
       end
     end,
   },

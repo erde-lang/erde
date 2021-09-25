@@ -142,13 +142,13 @@ function _.indexchain(bodycompiler, optbodycompiler)
       end
     end)):join()
 
-    if not chain:find(function(index) return index.optional end) then
+    if not chain:find(function(index) return index.opt end) then
       return bodycompiler(chainexpr, ...)
     else
       local prebody = chain:reduce(function(prebody, index)
         return {
           partialchain = prebody.partialchain .. index.suffix,
-          parts = not index.optional and prebody.parts or
+          parts = not index.opt and prebody.parts or
             prebody.parts:push(('if %s == nil then return end')
               :format(prebody.partialchain)),
         }

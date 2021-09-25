@@ -17,22 +17,29 @@ return {
       _.Pad('---') * (_.P(1) - _.P('---')) ^ 0 * _.Pad('---'),
       _.Pad('--') * (_.P(1) - _.V('Newline')) ^ 0,
     }),
-  },
-  Keyword = {
-    pattern = _.Pad(_.Sum({
-      'local',
-      'if',
-      'elseif',
-      'else',
-      'false',
-      'true',
-      'nil',
-      'return',
-    })),
+    compiler = function()
+      return ''
+    end,
   },
   Name = {
     pattern = _.Product({
-      -_.V('Keyword'),
+      -_.Pad(_.Sum({
+        'local',
+        'global',
+        'if',
+        'elseif',
+        'else',
+        'for',
+        'in',
+        'while',
+        'repeat',
+        'until',
+        'do',
+        'false',
+        'true',
+        'nil',
+        'return',
+      })),
       _.alpha + _.P('_'),
       (_.alnum + _.P('_')) ^ 0,
     }),
@@ -44,22 +51,24 @@ return {
         _.Sum({
           _.Cc(1) * _.Pad('.') * _.CsV('Name'),
           _.Cc(2) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
-          _.Cc(3) * _.Pad('(') * _.List(_.CsV('Expr')) * _.Pad(')'),
-          _.Cc(4) * _.Pad(':') * _.CsV('Name') * #_.Expect(_.Product({
-            _.Pad('?') ^ -1,
-            _.Pad('('),
-            _.List(_.CsV('Expr')),
-            _.Pad(')'),
-          })),
+          _.Cc(3) * _.V('ArgList'),
+          _.Cc(4) * _.Product({
+            _.Pad(':'),
+            _.CsV('Name'),
+            #(_.Pad('?') ^ -1 * _.V('ArgList')) + _.Expect(false),
+          }),
         }),
-      }) / _.map('optional', 'variant', 'value')
+      }) / _.map('opt', 'variant', 'value')
     ) ^ 0 / _.pack,
   },
   Id = {
     pattern = _.Sum({
       _.Pad('(') * _.CsV('Expr') * _.Pad(')'),
-      _.CsV('Table'),
       _.CsV('Name'),
     }) * _.V('IndexChain'),
+  },
+  IdExpr = {
+    pattern = _.V('Id'),
+    compiler = _.indexchain(_.template('%1'), _.template('return %1')),
   },
 }

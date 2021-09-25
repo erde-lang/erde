@@ -45,7 +45,7 @@ return {
       _.Pad(','),
       _.CsV('Name'),
       _.Pad('in'),
-      _.CsV('FunctionCall'),
+      _.CsV('Expr'),
       _.Pad('{'),
       _.CsV('Block'),
       _.Pad('}'),

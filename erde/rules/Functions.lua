@@ -3,8 +3,7 @@ local supertable = require('erde.supertable')
 
 return {
   Arg = {
-    pattern = _.Sum({
-      _.Cc(false) * _.V('Name'),
+    pattern = _.Sum({ _.Cc(false) * _.V('Name'),
       _.Cc(true) * _.V('Destructure'),
     }),
     compiler = function(isdestructure, arg)
@@ -92,32 +91,7 @@ return {
     pattern = _.PadC('return') * _.V('ReturnList') ^ -1,
     compiler = _.concat(' '),
   },
-  FunctionCall = {
-    pattern = _.Product({
-      _.V('Id'),
-      _.Pad(':') * _.CsV('Name') + _.Cc(false),
-      _.Pad('?') * _.Cc(true) + _.Cc(false),
-      _.Pad('('),
-      _.List(_.CsV('Expr')) + _.V('Space'),
-      _.Pad(')'),
-    }),
-    compiler = function(base, indexchain, method, optcall, exprlist)
-      if optcall then
-        return _.indexchain(
-          _.template('if %1 ~= nil then %1(%2) end'),
-          _.template('if %1 ~= nil then return %1(%2) end')
-        )(base, indexchain, exprlist:join(','))
-      else
-        return _.indexchain(
-          _.template('%1(%2)'),
-          _.template('return %1(%2)')
-        )(base, indexchain, exprlist:join(','))
-      end
-
-      return ('%s(%s)'):format(
-        method and id..':'..method or id,
-        exprlist:join(',')
-      )
-    end,
+  ArgList = {
+    pattern = _.Pad('(') * _.List(_.CsV('Expr')) * _.Pad(')'),
   },
 }
