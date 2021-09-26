@@ -35,6 +35,7 @@ return {
         'repeat',
         'until',
         'do',
+        'function',
         'false',
         'true',
         'nil',

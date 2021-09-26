@@ -60,7 +60,7 @@ return {
     pattern = _.Pad('{') * _.V('Block') * _.Pad('}') + _.V('FunctionExprBody'),
     compiler = echo,
   },
-  Function = {
+  ArrowFunction = {
     pattern = _.Sum({
       _.Cc(false) * _.V('Params') * _.Pad('->') * _.V('FunctionBody'),
       _.Cc(true) * _.V('Params') * _.Pad('=>') * _.V('FunctionBody'),
@@ -83,5 +83,17 @@ return {
 
       return ('function(%s) %s %s end'):format(names, prebody, body)
     end,
+  },
+  Function = {
+    pattern = _.Sum({
+      _.CsV('ArrowFunction'),
+      _.Product({
+        _.Pad('local') * _.Cc(true) + _.Cc(false),
+        _.Pad('function'),
+        _.CsV('Name'),
+        _.V('Params'),
+        _.CsV('BraceBlock'),
+      }),
+    }),
   },
 }
