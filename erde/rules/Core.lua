@@ -45,21 +45,24 @@ return {
     }),
   },
   IndexChain = {
-    pattern = (
-      _.Product({
-        _.Pad('?') * _.Cc(true) + _.Cc(false),
-        _.Sum({
-          _.Cc(1) * _.Pad('.') * _.CsV('Name'),
-          _.Cc(2) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
-          _.Cc(3) * _.V('ArgList'),
-          _.Cc(4) * _.Product({
-            _.Pad(':'),
-            _.CsV('Name'),
-            #(_.Pad('?') ^ -1 * _.V('ArgList')) + _.Expect(false),
+    pattern = function()
+      local ArgList = _.Parens(_.List(_.CsV('Expr')))
+      return (
+        _.Product({
+          _.Pad('?') * _.Cc(true) + _.Cc(false),
+          _.Sum({
+            _.Cc(1) * _.Pad('.') * _.CsV('Name'),
+            _.Cc(2) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
+            _.Cc(3) * ArgList,
+            _.Cc(4) * _.Product({
+              _.Pad(':'),
+              _.CsV('Name'),
+              #(_.Pad('?') ^ -1 * ArgList) + _.Expect(false),
+            }),
           }),
-        }),
-      }) / _.map('opt', 'variant', 'value')
-    ) ^ 0 / _.pack,
+        }) / _.map('opt', 'variant', 'value')
+      ) ^ 0 / _.pack
+    end
   },
   Id = {
     pattern = _.Sum({

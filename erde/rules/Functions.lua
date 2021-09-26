@@ -91,7 +91,4 @@ return {
     pattern = _.PadC('return') * _.V('ReturnList') ^ -1,
     compiler = _.concat(' '),
   },
-  ArgList = {
-    pattern = _.Parens(_.List(_.CsV('Expr'))),
-  },
 }

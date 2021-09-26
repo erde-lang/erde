@@ -2,32 +2,28 @@ local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
 return {
+  BraceBlock = {
+    pattern = _.Pad('{') * _.CsV('Block') * _.Pad('}'),
+  },
   IfElse = {
     pattern = _.Product({
-      _.Cc(1) * _.Product({
+      _.Product({
+        _.Cc(1),
         _.Pad('if'),
         _.CsV('Expr'),
-        _.Pad('{'),
-        _.CsV('Block'),
-        _.Pad('}'),
+        _.V('BraceBlock'),
       }) / _.map('variant', 'expr', 'block'),
-      (
-        _.Cc(2) * _.Product({
-          _.Pad('elseif'),
-          _.CsV('Expr'),
-          _.Pad('{'),
-          _.CsV('Block'),
-          _.Pad('}'),
-        }) / _.map('variant', 'expr', 'block')
-      ) ^ 0,
-      (
-        _.Cc(3) * _.Product({
-          _.Pad('else'),
-          _.Pad('{'),
-          _.CsV('Block'),
-          _.Pad('}'),
-        }) / _.map('variant', 'block')
-      ) ^ -1,
+      (_.Product({
+        _.Cc(2),
+        _.Pad('elseif'),
+        _.CsV('Expr'),
+        _.V('BraceBlock'),
+      }) / _.map('variant', 'expr', 'block')) ^ 0,
+      (_.Product({
+        _.Cc(3),
+        _.Pad('else'),
+        _.V('BraceBlock'),
+      }) / _.map('variant', 'block')) ^ -1,
     }) / _.pack,
     compiler = function(conditionals)
       return conditionals:map(function(cond)
@@ -51,9 +47,7 @@ return {
         maxlen = 3,
         trailing = false,
       }),
-      _.Pad('{'),
-      _.CsV('Block'),
-      _.Pad('}'),
+      _.V('BraceBlock'),
     }),
     compiler = function(name, exprlist, block)
       return ('for %s = %s do %s end'):format(name, exprlist:join(','), block)
@@ -67,9 +61,7 @@ return {
       _.CsV('Name'),
       _.Pad('in'),
       _.CsV('Expr'),
-      _.Pad('{'),
-      _.CsV('Block'),
-      _.Pad('}'),
+      _.V('BraceBlock'),
     }),
     compiler = function(keyname, valuename, iterator, block)
       return ('for %s,%s in %s do %s end'):format(
@@ -84,18 +76,14 @@ return {
     pattern = _.Product({
       _.Pad('while'),
       _.CsV('Expr'),
-      _.Pad('{'),
-      _.CsV('Block'),
-      _.Pad('}'),
+      _.V('BraceBlock'),
     }),
     compiler = _.template('while %1 do %2 end'),
   },
   RepeatUntil = {
     pattern = _.Product({
       _.Pad('repeat'),
-      _.Pad('{'),
-      _.CsV('Block'),
-      _.Pad('}'),
+      _.V('BraceBlock'),
       _.Pad('until'),
       _.Parens(_.CsV('Expr')),
     }),
@@ -104,9 +92,7 @@ return {
   DoBlock = {
     pattern = _.Product({
       _.Pad('do'),
-      _.Pad('{'),
-      _.CsV('Block'),
-      _.Pad('}'),
+      _.V('BraceBlock'),
     }),
     compiler = _.template('do %1 end'),
   },
