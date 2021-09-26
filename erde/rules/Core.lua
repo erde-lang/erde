@@ -74,4 +74,10 @@ return {
     pattern = _.V('Id'),
     compiler = _.indexchain(_.template('%1'), _.template('return %1')),
   },
+  Return = {
+    pattern = _.Pad('return') * _.V('ExprList'),
+    compiler = function(exprlist)
+      return 'return '..exprlist:join(',')
+    end,
+  },
 }

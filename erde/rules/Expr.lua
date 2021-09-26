@@ -19,4 +19,7 @@ return {
       _.V('SubExpr'),
     }),
   },
+  ExprList = {
+    pattern = _.Parens(_.V('ExprList')) + _.List(_.CsV('Expr')),
+  },
 }

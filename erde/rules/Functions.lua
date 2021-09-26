@@ -83,12 +83,4 @@ return {
       return ('function(%s) %s %s end'):format(names, prebody, body)
     end,
   },
-  ReturnList = {
-    pattern = _.Parens(_.V('ReturnList')) + _.List(_.V('Expr')),
-    compiler = _.concat(','),
-  },
-  Return = {
-    pattern = _.PadC('return') * _.V('ReturnList') ^ -1,
-    compiler = _.concat(' '),
-  },
 }
