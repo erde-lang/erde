@@ -11,11 +11,11 @@
   - `global` (needs scope tracking)
   - `kpairs`
 - lua versions (bit operators)
-- import / export
 - order of operations?
 
 ## Proposals
 
+- import / export
 - case statement?
 - shorthand self? need to support optional op?
 

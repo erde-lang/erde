@@ -94,6 +94,14 @@ return {
       _.Pad('do'),
       _.V('BraceBlock'),
     }),
-    compiler = _.template('do %1 end'),
+    compiler = function(block)
+      -- This is pretty crude, but generally covers most cases at VERY little
+      -- compile cost. If at some point in the future we want to REALLY optimize
+      -- the generated lua code (which will cause performance drops in the
+      -- compiler) then this should be changed.
+      return block:find('return')
+        and '(function() '..block..' end)()'
+        or 'do '..block..' end'
+    end,
   },
 }
