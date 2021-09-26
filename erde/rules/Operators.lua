@@ -14,14 +14,14 @@ return {
     compiler = _.iife('if %1 then return %2 else return %3 end'),
   },
   BinaryOp = {
-    pattern = _.V('SubExpr') * _.Product({
+    pattern = _.CsV('SubExpr') * _.Product({
       _.PadC(_.Sum({
         '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
         '==', '~=', '<=', '>=', '<', '>',   -- relational
         '&', '|', '..', '??',               -- misc
       })),
-      _.V('Expr'),
+      _.CsV('Expr'),
     }),
     compiler = function(lhs, op, rhs)
       if op == '??' then

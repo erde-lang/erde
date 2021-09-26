@@ -70,3 +70,46 @@ spec('generic for', function()
     return 6
   ]]))
 end)
+
+spec('while loop', function()
+  assert.are.equal(10, erde.eval([[
+    local x = 0
+    local counter = 10
+    while counter > 0 {
+      x = x + 1
+      counter = counter - 1
+    }
+    return x
+  ]]))
+end)
+
+spec('repeat until', function()
+  assert.are.equal(11, erde.eval([[
+    local x = 0
+    local counter = 10
+    repeat {
+      x = x + 1
+      counter = counter - 1
+    } until (counter < 0)
+    return x
+  ]]))
+end)
+
+spec('do block', function()
+  assert.are.same({ 10, 0 }, erde.eval([[
+    local x = 0
+    local y = 0
+    do {
+      local y = 10
+      x = y
+    }
+    return { x, y }
+  ]]))
+
+  assert.are.equal(10, erde.eval([[
+    return do {
+      local y = 10
+      return y
+    }
+  ]]))
+end)
