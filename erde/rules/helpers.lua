@@ -10,10 +10,6 @@ local _ = supertable(lpeg)
 -- Parser Helpers
 -- -----------------------------------------------------------------------------
 
-function _.CV(rule)
-  return _.C(_.V(rule))
-end
-
 function _.CsV(rule)
   return _.Cs(_.V(rule))
 end
@@ -26,8 +22,8 @@ function _.PadC(pattern)
   return _.V('Space') * _.C(pattern) * _.V('Space')
 end
 
-function _.PadCs(pattern)
-  return _.V('Space') * _.Cs(pattern) * _.V('Space')
+function _.Parens(pattern)
+  return _.Pad('(') * pattern * _.Pad(')')
 end
 
 function _.Sum(patterns)

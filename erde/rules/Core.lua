@@ -63,7 +63,7 @@ return {
   },
   Id = {
     pattern = _.Sum({
-      _.Pad('(') * _.CsV('Expr') * _.Pad(')'),
+      _.Parens(_.CsV('Expr')),
       _.CsV('Name'),
     }) * _.V('IndexChain'),
   },

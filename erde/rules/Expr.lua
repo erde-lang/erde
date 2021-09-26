@@ -10,7 +10,7 @@ return {
      _.V('Number'),
      _.P('true'),
      _.P('false'),
-     _.Pad('(') * _.V('Expr') * _.Pad(')'),
+     _.Parens(_.CsV('Expr')),
     }),
   },
   Expr = {
