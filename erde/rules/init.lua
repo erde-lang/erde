@@ -1,6 +1,8 @@
 local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
+-- TODO: create each grammar on demand to reduce loading time
+
 return supertable(
   require('erde.rules.Core'),
   require('erde.rules.Primitives'),

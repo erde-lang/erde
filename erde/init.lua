@@ -5,25 +5,31 @@ local inspect = require('inspect')
 local lpeg = require('lpeg')
 
 local erde = {}
+local grammars = {}
 lpeg.setmaxstack(1000)
 
-local parsergrammar = lpeg.P(rules.parser)
-local compilergrammar = lpeg.P(rules.compiler)
-local formattergrammar = lpeg.P(rules.formatter)
-
 function erde.parse(subject)
+  if not grammars.parser then
+    grammars.parser = lpeg.P(rules.parser)
+  end
   state:reset()
-  return parsergrammar:match(subject, nil, {}) or {}
+  return grammars.parser:match(subject, nil, {}) or {}
 end
 
 function erde.compile(subject)
+  if not grammars.compiler then
+    grammars.compiler = lpeg.P(rules.compiler)
+  end
   state:reset()
-  return compilergrammar:match(subject, nil, {})
+  return grammars.compiler:match(subject, nil, {})
 end
 
 function erde.format(subject)
+  if not grammars.formatter then
+    grammars.formatter = lpeg.P(rules.formatter)
+  end
   state:reset()
-  return formattergrammar:match(subject, nil, {})
+  return grammars.formatter:match(subject, nil, {})
 end
 
 function erde.eval(erdecode)

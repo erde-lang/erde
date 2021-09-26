@@ -3,7 +3,8 @@ local supertable = require('erde.supertable')
 
 return {
   Arg = {
-    pattern = _.Sum({ _.Cc(false) * _.V('Name'),
+    pattern = _.Sum({
+      _.Cc(false) * _.V('Name'),
       _.Cc(true) * _.V('Destructure'),
     }),
     compiler = function(isdestructure, arg)

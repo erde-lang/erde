@@ -1,3 +1,5 @@
+local loadstart = os.clock()
+
 package.path = './src/?.lua;' .. package.path
 package.path = './src/?/init.lua;' .. package.path
 package.path = '/home/bsuth/repos/?/src/init.lua;' .. package.path
@@ -39,9 +41,10 @@ local input = read_file('./examples/tables.erde')
 -- benchmark('PARSE', function()
 --   return erde.parse(input)
 -- end, false)
-benchmark('COMPILE', function()
-  return erde.compile(input)
-end, false)
+print('LOAD => ', os.clock() - loadstart)
+-- benchmark('COMPILE', function()
+--   return erde.compile(input)
+-- end, false)
 -- benchmark('FORMAT', function()
 --   return erde.format(input)
 -- end, false)

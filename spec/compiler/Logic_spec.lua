@@ -105,7 +105,6 @@ spec('do block', function()
     }
     return { x, y }
   ]]))
-
   assert.are.equal(10, erde.eval([[
     return do {
       local y = 10
