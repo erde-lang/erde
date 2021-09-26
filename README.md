@@ -2,15 +2,12 @@
 
 ## TODO
 
-- error handling
-- automated tests
+- readd alternative function syntax
 - add `...` as expr
 - integrate official erde-lang spec
-- add returns to do blocks (needs scope tracking)
 - custom keywords
-  - `global` (needs scope tracking)
   - `kpairs`
-- lua versions (bit operators)
+- lua versions (bit operators, possibly use `goto` for performance??)
 - order of operations?
 
 ## Proposals
@@ -21,14 +18,20 @@
 
 ## Long Term TODO
 
+- erde cli
+  - `erde`: repl
+  - `erde check`: compile/error checking (slow)
+  - `erde compile`: compile (fast)
+  - `erde run`: run script
+  - `erde format`: formatter
+  - `erde parse`: print ast
 - Syntax highlighting
   - Vim
   - Emacs
   - Vscode
   - Treesitter
-- erde cli
 - erde runtime lib
   - allow mutating `require` (similar to moonscript)
-- docs site
+- finish docs site
 - Formatter
 - Source maps?
