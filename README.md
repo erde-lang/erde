@@ -11,18 +11,16 @@
   - `global` (needs scope tracking)
   - `kpairs`
 - lua versions (bit operators)
+- import / export
 - order of operations?
 
 ## Proposals
 
-- named export
 - case statement?
 - shorthand self? need to support optional op?
 
 ## Long Term TODO
 
-- throw errors on undeclared variables
-  - currently no way to differentiate between assignment + global declaration
 - Syntax highlighting
   - Vim
   - Emacs

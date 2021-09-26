@@ -34,6 +34,6 @@ describe('ids', function()
   end)
 
   spec('disallow non-function-call ids as statements', function()
-    assert.has_error(function() erde.compile('a.b') end)
+    assert.are.equal('', erde.compile('a.b'))
   end)
 end)

@@ -69,8 +69,8 @@ function _.Expect(pattern)
   return pattern + _.Cc('__ERDE_ERROR__') * _.Cp() / function(capture, position)
     if capture == '__ERDE_ERROR__' then
       error(('Line %s, Column %s: Error'):format(
-        _.currentline,
-        position - _.currentlinestart
+        state.currentline,
+        position - state.currentlinestart
       ))
     else
       return capture

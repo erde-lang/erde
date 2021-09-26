@@ -3,21 +3,26 @@ local supertable = require('erde.supertable')
 
 return {
   Block = {
-    pattern = _.Cc(true) * _.Expect(_.Pad(_.Sum({
-      _.CsV('Comment'),
-      -- allow function calls as statements
-      _.CsV('IdExpr') * _.B(')'),
-      _.CsV('Assignment'),
-      _.CsV('Declaration'),
-      _.CsV('AssignOp'),
-      _.CsV('Return'),
-      _.CsV('IfElse'),
-      _.CsV('NumericFor'),
-      _.CsV('GenericFor'),
-      _.CsV('WhileLoop'),
-      _.CsV('RepeatUntil'),
-      _.CsV('DoBlock'),
-    })) ^ 1),
+    pattern = _.Sum({
+      _.Pad(_.Sum({
+        _.CsV('Comment'),
+        -- allow function calls as statements
+        _.CsV('IdExpr') * _.B(')'),
+        _.CsV('Assignment'),
+        _.CsV('Declaration'),
+        _.CsV('AssignOp'),
+        _.CsV('Return'),
+        _.CsV('IfElse'),
+        _.CsV('NumericFor'),
+        _.CsV('GenericFor'),
+        _.CsV('WhileLoop'),
+        _.CsV('RepeatUntil'),
+        _.CsV('DoBlock'),
+      })) ^ 1,
+      -- Allow empty blocks. We have to produce at least one capture here or the
+      -- entire V('Space') match will be passed
+      _.Cc(true) * _.V('Space')
+    }),
     compiler = _.concat('\n'),
     formatter = _.concat('\n'),
   },
