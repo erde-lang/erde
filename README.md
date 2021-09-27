@@ -2,7 +2,6 @@
 
 ## TODO
 
-- readd alternative function syntax
 - add `...` as expr
 - integrate official erde-lang spec
 - custom keywords

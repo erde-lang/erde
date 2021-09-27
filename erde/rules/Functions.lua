@@ -4,7 +4,7 @@ local supertable = require('erde.supertable')
 return {
   Arg = {
     pattern = _.Sum({
-      _.Cc(false) * _.V('Name'),
+      _.Cc(false) * _.CsV('Name'),
       _.Cc(true) * _.V('Destructure'),
     }),
     compiler = function(isdestructure, arg)
@@ -38,19 +38,36 @@ return {
       }
     end,
   },
-  ParamComma = {
-    pattern = (#_.Pad(')') * _.Pad(',') ^ -1) + _.Pad(','),
-  },
   Params = {
-    pattern = _.V('Arg') + _.Product({
-      _.Pad('('),
-      (_.V('Arg') * _.V('ParamComma')) ^ 0,
-      (_.V('OptArg') * _.V('ParamComma')) ^ 0,
-      (_.V('VarArgs') * _.V('ParamComma')) ^ -1,
-      _.Cc({}),
-      _.Pad(')'),
-    }),
-    compiler = _.pack,
+    pattern = function()
+      local ParamComma = (#_.Pad(')') * _.Pad(',') ^ -1) + _.Pad(',')
+      return _.Sum({
+        _.V('Arg'),
+        _.Product({
+          _.Pad('('),
+          (_.V('Arg') * ParamComma) ^ 0,
+          (_.V('OptArg') * ParamComma) ^ 0,
+          (_.V('VarArgs') * ParamComma) ^ -1,
+          _.Pad(')'),
+        }),
+      }) / _.pack
+    end,
+    compiler = function(params)
+      local varargs = params[#params]
+        and params[#params].varargs
+          and params:pop()
+
+      return {
+        names = supertable(
+          params:map(function(param) return param.name end),
+          varargs and { '...' }
+        ):join(','),
+        prebody = params
+          :filter(function(param) return param.prebody end)
+          :map(function(param) return param.prebody end)
+          :join(' '),
+      }
+    end,
   },
   FunctionExprBody = {
     pattern = _.V('Expr'),
@@ -93,10 +110,11 @@ return {
       _.V('BraceBlock'),
     }),
     compiler = function(islocal, name, params, block)
-      return ('%s %s(%s) %s end'):format(
+      return ('%s %s(%s) %s %s end'):format(
         islocal and 'local function' or 'function',
         name,
-        params:join(','),
+        params.names,
+        params.prebody,
         block
       )
     end,
