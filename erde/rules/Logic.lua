@@ -8,18 +8,18 @@ return {
         _.Cc(1),
         _.Pad('if'),
         _.CsV('Expr'),
-        _.V('BraceBlock'),
+        _.CsV('BraceBlock'),
       }) / _.map('variant', 'expr', 'block'),
       (_.Product({
         _.Cc(2),
         _.Pad('elseif'),
         _.CsV('Expr'),
-        _.V('BraceBlock'),
+        _.CsV('BraceBlock'),
       }) / _.map('variant', 'expr', 'block')) ^ 0,
       (_.Product({
         _.Cc(3),
         _.Pad('else'),
-        _.V('BraceBlock'),
+        _.CsV('BraceBlock'),
       }) / _.map('variant', 'block')) ^ -1,
     }) / _.pack,
     compiler = function(conditionals)
@@ -44,7 +44,7 @@ return {
         maxlen = 3,
         trailing = false,
       }),
-      _.V('BraceBlock'),
+      _.CsV('BraceBlock'),
     }),
     compiler = function(name, exprList, block)
       return ('for %s = %s do %s end'):format(name, exprList:join(','), block)
@@ -58,7 +58,7 @@ return {
       _.CsV('Name'),
       _.Pad('in'),
       _.CsV('Expr'),
-      _.V('BraceBlock'),
+      _.CsV('BraceBlock'),
     }),
     compiler = function(key, value, iterator, block)
       return ('for %s,%s in %s do %s end'):format(key, value, iterator, block)
@@ -68,14 +68,14 @@ return {
     pattern = _.Product({
       _.Pad('while'),
       _.CsV('Expr'),
-      _.V('BraceBlock'),
+      _.CsV('BraceBlock'),
     }),
     compiler = _.template('while %1 do %2 end'),
   },
   RepeatUntil = {
     pattern = _.Product({
       _.Pad('repeat'),
-      _.V('BraceBlock'),
+      _.CsV('BraceBlock'),
       _.Pad('until'),
       _.Parens(_.CsV('Expr')),
     }),
@@ -84,7 +84,7 @@ return {
   DoBlock = {
     pattern = _.Product({
       _.Pad('do'),
-      _.V('BraceBlock'),
+      _.CsV('BraceBlock'),
     }),
     compiler = function(block)
       -- This is pretty crude, but generally covers most cases at VERY little

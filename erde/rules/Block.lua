@@ -28,7 +28,7 @@ return {
     formatter = _.concat('\n'),
   },
   BraceBlock = {
-    pattern = _.Pad('{') * _.CsV('Block') * _.Pad('}'),
+    pattern = _.Pad('{') * _.CsV('Block') * _.Pad('}') / 1,
   },
   NameDeclaration = {
     pattern = _.Product({

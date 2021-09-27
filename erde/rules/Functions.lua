@@ -83,7 +83,7 @@ return {
         _.Cc(true) * _.Pad('=>'),
       }),
       _.Sum({
-        _.Cc(false) * _.V('BraceBlock'),
+        _.Cc(false) * _.CsV('BraceBlock'),
         _.Cc(true) * _.CsV('Expr'),
       }),
     }),
@@ -105,7 +105,7 @@ return {
       _.Pad('function'),
       _.CsV('Name'),
       _.V('Params'),
-      _.V('BraceBlock'),
+      _.CsV('BraceBlock'),
     }),
     compiler = function(isLocal, name, params, body)
       return ('%s function %s(%s) %s %s end'):format(

@@ -10,7 +10,7 @@ return {
      _.V('Number'),
      _.P('true'),
      _.P('false'),
-     _.Parens(_.CsV('Expr')),
+     _.Parens(_.V('Expr')),
     }),
   },
   Expr = {
@@ -20,6 +20,6 @@ return {
     }),
   },
   ExprList = {
-    pattern = _.Parens(_.V('ExprList')) + _.List(_.CsV('Expr')),
+    pattern = _.Parens(_.V('ExprList')) + _.List(_.V('Expr')),
   },
 }

@@ -16,10 +16,7 @@ return {
     pattern = _.Sum({
       _.Pad('---') * (_.P(1) - _.P('---')) ^ 0 * _.Pad('---'),
       _.Pad('--') * (_.P(1) - _.V('Newline')) ^ 0,
-    }),
-    compiler = function()
-      return ''
-    end,
+    }) / '',
   },
   Name = {
     pattern = _.Product({
