@@ -1,12 +1,12 @@
 local state = {
-  currentline = 1,
-  currentlinestart = 1,
-  tmpnamecounter = 0,
+  currentLine = 1,
+  currentLineStart = 1,
+  tmpNameCounter = 0,
 }
 
 function state:reset()
-  self.currentline = 1
-  self.currentlinestart = 1
+  self.currentLine = 1
+  self.currentLineStart = 1
 end
 
 return state

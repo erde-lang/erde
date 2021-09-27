@@ -5,8 +5,8 @@ local supertable = require('erde.supertable')
 return {
   Newline = {
     pattern = _.P('\n') * (_.Cp() / function(position)
-      state.currentline = state.currentline + 1
-      state.currentlinestart = position
+      state.currentLine = state.currentLine + 1
+      state.currentLineStart = position
     end),
   },
   Space = {
@@ -73,12 +73,12 @@ return {
   },
   IdExpr = {
     pattern = _.V('Id'),
-    compiler = _.indexchain(_.template('%1'), _.template('return %1')),
+    compiler = _.indexChain(_.template('%1'), _.template('return %1')),
   },
   Return = {
     pattern = _.Pad('return') * _.V('ExprList'),
-    compiler = function(exprlist)
-      return 'return '..exprlist:join(',')
+    compiler = function(exprList)
+      return 'return '..exprList:join(',')
     end,
   },
 }

@@ -12,27 +12,27 @@ return supertable(
   require('erde.rules.Expr'),
   require('erde.rules.Logic'),
   require('erde.rules.Block')
-):reduce(function(rules, rule, rulename)
+):reduce(function(rules, rule, ruleName)
   local pattern = type(rule.pattern) == 'function'
     and rule.pattern() or rule.pattern
 
   rules.parser:merge({
-    [rulename] = _.Cp() * pattern / function(position, ...)
+    [ruleName] = _.Cp() * pattern / function(position, ...)
       local node = supertable({ ... })
         :filter(function(value) return value ~= nil end)
-        :merge({ rule = rulename, position = position })
+        :merge({ rule = ruleName, position = position })
       return #node > 0 and node or nil
     end,
   })
 
   rules.compiler:merge({
-    [rulename] = rule.compiler ~= nil
+    [ruleName] = rule.compiler ~= nil
       and pattern / rule.compiler
       or pattern,
   })
 
   rules.formatter:merge({
-    [rulename] = rule.formatter ~= nil
+    [ruleName] = rule.formatter ~= nil
       and pattern / rule.formatter
       or pattern,
   })

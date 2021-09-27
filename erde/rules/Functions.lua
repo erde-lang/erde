@@ -7,12 +7,12 @@ return {
       _.Cc(false) * _.CsV('Name'),
       _.Cc(true) * _.V('Destructure'),
     }),
-    compiler = function(isdestructure, arg)
-      if isdestructure then
-        local tmpname = _.newtmpname()
+    compiler = function(isDestructure, arg)
+      if isDestructure then
+        local tmpName = _.newTmpName()
         return {
-          name = tmpname,
-          prebody = _.compiledestructure(true, arg, tmpname),
+          name = tmpName,
+          prebody = _.compileDestructure(true, arg, tmpName),
         }
       else
         return { name = arg, prebody = '' }
@@ -87,15 +87,15 @@ return {
         _.Cc(true) * _.CsV('Expr'),
       }),
     }),
-    compiler = function(params, isfat, isexprbody, body)
-      if isfat then
+    compiler = function(params, isFat, isExprBody, body)
+      if isFat then
         params.names:insert(1, 'self')
       end
 
       return ('function(%s) %s %s end'):format(
         params.names:join(','),
         params.prebody,
-        (isexprbody and 'return ' or '') .. body
+        (isExprBody and 'return ' or '') .. body
       )
     end,
   },
@@ -107,9 +107,9 @@ return {
       _.V('Params'),
       _.V('BraceBlock'),
     }),
-    compiler = function(islocal, name, params, body)
+    compiler = function(isLocal, name, params, body)
       return ('%s function %s(%s) %s %s end'):format(
-        islocal and 'local' or '',
+        isLocal and 'local' or '',
         name,
         params.names:join(','),
         params.prebody,

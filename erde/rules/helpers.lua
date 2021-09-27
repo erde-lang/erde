@@ -40,16 +40,16 @@ end
 
 function _.List(pattern, config)
   config = config or {}
-  local minlen = config.minlen or 0
+  local minLen = config.minLen or 0
 
   local sep = _.Pad(config.sep or ',')
-  local chainbase = sep * pattern
-  local chain = chainbase ^ math.max(0, minlen - 1)
+  local chainBase = sep * pattern
+  local chain = chainBase ^ math.max(0, minLen - 1)
 
-  if config.maxlen == 0 then
+  if config.maxLen == 0 then
     return _.V('Space')
-  elseif config.maxlen then
-    chain = chain - chainbase ^ math.max(0, config.maxlen)
+  elseif config.maxLen then
+    chain = chain - chainBase ^ math.max(0, config.maxLen)
   end
 
   return (
@@ -57,7 +57,7 @@ function _.List(pattern, config)
       pattern,
       chain,
       config.trailing == false and _.P(true) or sep ^ -1,
-    }) + (minlen == 0 and _.V('Space') or _.P(false))
+    }) + (minLen == 0 and _.V('Space') or _.P(false))
   ) / _.pack
 end
 
@@ -65,8 +65,8 @@ function _.Expect(pattern)
   return pattern + _.Cc('__ERDE_ERROR__') * _.Cp() / function(capture, position)
     if capture == '__ERDE_ERROR__' then
       error(('Line %s, Column %s: Error'):format(
-        state.currentline,
-        position - state.currentlinestart
+        state.currentLine,
+        position - state.currentLineStart
       ))
     else
       return capture
@@ -78,9 +78,9 @@ end
 -- Compiler Helpers
 -- -----------------------------------------------------------------------------
 
-function _.newtmpname()
-  state.tmpnamecounter = state.tmpnamecounter + 1
-  return ('__ERDE_TMP_%d__'):format(state.tmpnamecounter)
+function _.newTmpName()
+  state.tmpNameCounter = state.tmpNameCounter + 1
+  return ('__ERDE_TMP_%d__'):format(state.tmpNameCounter)
 end
 
 function _.echo(...)
@@ -124,9 +124,9 @@ function _.map(...)
   end
 end
 
-function _.indexchain(bodycompiler, optbodycompiler)
+function _.indexChain(bodyCompiler, optBodyCompiler)
   return function(base, chain, ...)
-    local chainexpr = supertable({ base }, chain:map(function(index)
+    local chainExpr = supertable({ base }, chain:map(function(index)
       if index.variant == 1 then
         return '.'..index.value
       elseif index.variant == 2 then
@@ -139,50 +139,50 @@ function _.indexchain(bodycompiler, optbodycompiler)
     end)):join()
 
     if not chain:find(function(index) return index.opt end) then
-      return bodycompiler(chainexpr, ...)
+      return bodyCompiler(chainExpr, ...)
     else
       local prebody = chain:reduce(function(prebody, index)
         return {
-          partialchain = prebody.partialchain .. index.suffix,
+          partialChain = prebody.partialChain .. index.suffix,
           parts = not index.opt and prebody.parts or
             prebody.parts:push(('if %s == nil then return end')
-              :format(prebody.partialchain)),
+              :format(prebody.partialChain)),
         }
-      end, { partialchain = base, parts = supertable() })
+      end, { partialChain = base, parts = supertable() })
 
       return ('(function() %s %s end)()'):format(
         prebody.parts:join(' '),
-        (optbodycompiler or bodycompiler)(chainexpr, ...)
+        (optBodyCompiler or bodyCompiler)(chainExpr, ...)
       )
     end
   end
 end
 
-function _.compiledestructure(islocal, destructure, expr)
-  local function extractnames(destructure)
+function _.compileDestructure(isLocal, destructure, expr)
+  local function extractNames(destructure)
     return destructure:reduce(function(names, destruct)
       return destruct.nested == false
         and names:push(destruct.name)
-        or names:push(unpack(extractnames(destruct.nested)))
+        or names:push(unpack(extractNames(destruct.nested)))
     end, supertable())
   end
 
-  local function bodycompiler(destructure, exprname)
+  local function bodyCompiler(destructure, exprName)
     return destructure
       :map(function(destruct)
-        local destructexpr = exprname .. destruct.index
-        local destructexprname = destruct.nested and _.newtmpname() or destruct.name
+        local destructExpr = exprName .. destruct.index
+        local destructExprName = destruct.nested and _.newTmpName() or destruct.name
         return supertable({
           ('%s%s = %s'):format(
             destruct.nested and 'local ' or '',
-            destructexprname,
-            destructexpr
+            destructExprName,
+            destructExpr
           ),
           destruct.default and
             ('if %s == nil then %s = %s end')
-              :format(destructexprname, destructexprname, destruct.default),
+              :format(destructExprName, destructExprName, destruct.default),
           destruct.nested and
-            bodycompiler(destruct.nested, destructexprname),
+            bodyCompiler(destruct.nested, destructExprName),
         })
           :filter(function(compiled) return compiled end)
           :join(' ')
@@ -190,12 +190,12 @@ function _.compiledestructure(islocal, destructure, expr)
       :join(' ')
   end
 
-  local exprname = _.newtmpname()
+  local exprName = _.newTmpName()
   return ('%s%s do %s %s end'):format(
-    islocal and 'local ' or '',
-    extractnames(destructure):join(','),
-    ('local %s = %s'):format(exprname, expr),
-    bodycompiler(destructure, exprname)
+    isLocal and 'local ' or '',
+    extractNames(destructure):join(','),
+    ('local %s = %s'):format(exprName, expr),
+    bodyCompiler(destructure, exprName)
   )
 end
 

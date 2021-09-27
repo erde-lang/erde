@@ -46,8 +46,8 @@ return {
       }),
       _.V('BraceBlock'),
     }),
-    compiler = function(name, exprlist, block)
-      return ('for %s = %s do %s end'):format(name, exprlist:join(','), block)
+    compiler = function(name, exprList, block)
+      return ('for %s = %s do %s end'):format(name, exprList:join(','), block)
     end,
   },
   GenericFor = {
@@ -60,13 +60,8 @@ return {
       _.CsV('Expr'),
       _.V('BraceBlock'),
     }),
-    compiler = function(keyname, valuename, iterator, block)
-      return ('for %s,%s in %s do %s end'):format(
-        keyname,
-        valuename,
-        iterator,
-        block
-      )
+    compiler = function(key, value, iterator, block)
+      return ('for %s,%s in %s do %s end'):format(key, value, iterator, block)
     end,
   },
   WhileLoop = {

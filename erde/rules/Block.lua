@@ -42,13 +42,13 @@ return {
       }),
       (_.Pad('=') * _.CsV('Expr')) ^ -1,
     }),
-    compiler = function(islocal, declaree, isdestructure, expr)
-      local prefix = islocal and 'local ' or ''
-      if isdestructure then
-        return _.compiledestructure(islocal, declaree, expr)
+    compiler = function(isLocal, declaree, isDestructure, expr)
+      local prefix = isLocal and 'local ' or ''
+      if isDestructure then
+        return _.compileDestructure(isLocal, declaree, expr)
       elseif expr then
         return ('%s%s = %s'):format(prefix, declaree, expr)
-      elseif islocal then
+      elseif isLocal then
         return ('%s%s'):format(prefix, declaree)
       else
         -- global declarations with no initializer do not warrant an output
@@ -59,6 +59,6 @@ return {
   },
   Assignment = {
     pattern = _.V('Id') * _.Pad('=') * _.CsV('Expr'),
-    compiler = _.indexchain(_.template('%1 = %2')),
+    compiler = _.indexChain(_.template('%1 = %2')),
   },
 }

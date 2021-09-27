@@ -48,13 +48,13 @@ return {
   Destructure = {
     pattern = _.Pad('{') * _.List(_.V('Destruct')) * _.Pad('}'),
     compiler = function(...)
-      local keycounter = 1
+      local keyCounter = 1
       return supertable({ ... }):each(function(destruct)
         if destruct.keyed then
           destruct.index = ('.%s'):format(destruct.name)
         else
-          destruct.index = ('[%d]'):format(keycounter)
-          keycounter = keycounter + 1
+          destruct.index = ('[%d]'):format(keyCounter)
+          keyCounter = keyCounter + 1
         end
       end)
     end,
