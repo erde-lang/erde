@@ -118,7 +118,12 @@ function supertable:pop(n)
   for i = 1, n or 1 do
     table.insert(removed, table.remove(self))
   end
-  return self, unpack(removed)
+
+  if _VERSION:find('5.1') then
+    return unpack(removed)
+  else
+    return table.unpack(removed)
+  end
 end
 
 function supertable:remove(index, n)
@@ -126,7 +131,12 @@ function supertable:remove(index, n)
   for _ = 1, n or 1 do
     table.insert(removed, table.remove(self, index))
   end
-  return self, unpack(removed)
+
+  if _VERSION:find('5.1') then
+    return unpack(removed)
+  else
+    return table.unpack(removed)
+  end
 end
 
 -- -----------------------------------------------------------------------------

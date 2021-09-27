@@ -20,7 +20,7 @@ return {
     end,
   },
   OptArg = {
-    pattern = _.V('Arg') * _.Pad('=') * _.V('Expr'),
+    pattern = _.V('Arg') * _.Pad('=') * _.CsV('Expr'),
     compiler = function(arg, expr)
       return {
         name = arg.name,
@@ -34,13 +34,17 @@ return {
     end,
   },
   VarArgs = {
-    pattern = _.Pad('...') * _.V('Name') ^ -1,
+    pattern = _.Pad('...') * (_.CsV('Name') + _.Cc(false)),
     compiler = function(name)
-      return {
-        name = name,
-        prebody = 'local '..name..' = {...}',
-        varargs = true,
-      }
+      if not name then
+        return { name = '', prebody = '', varargs = true }
+      else
+        return {
+          name = name,
+          prebody = 'local '..name..' = {...}',
+          varargs = true,
+        }
+      end
     end,
   },
   Params = {
@@ -66,13 +70,16 @@ return {
         return param.name
       end) 
 
-      return {
-        names = varargs and names:push('...') or names,
-        prebody = params
-          :filter(function(param) return param.prebody end)
-          :map(function(param) return param.prebody end)
-          :join(' '),
-      }
+      local prebody = params
+        :filter(function(param) return param.prebody end)
+        :map(function(param) return param.prebody end)
+
+      if varargs then
+        names:push('...')
+        prebody:push(varargs.prebody)
+      end
+
+      return { names = names, prebody = prebody:join(' ') }
     end,
   },
   ArrowFunction = {
