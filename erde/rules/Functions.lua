@@ -10,9 +10,12 @@ return {
     compiler = function(isdestructure, arg)
       if isdestructure then
         local tmpname = _.newtmpname()
-        return { name = tmpname, prebody = _.compiledestructure(true, arg, tmpname) }
+        return {
+          name = tmpname,
+          prebody = _.compiledestructure(true, arg, tmpname),
+        }
       else
-        return { name = arg, prebody = false }
+        return { name = arg, prebody = '' }
       end
     end,
   },
@@ -21,10 +24,12 @@ return {
     compiler = function(arg, expr)
       return {
         name = arg.name,
-        prebody = supertable({
-          ('if %s == nil then %s = %s end'):format(arg.name, arg.name, expr),
-          arg.prebody,
-        }):join(' '),
+        prebody = ('if %s == nil then %s = %s end %s'):format(
+          arg.name,
+          arg.name,
+          expr,
+          arg.prebody
+        ),
       }
     end,
   },
@@ -33,7 +38,7 @@ return {
     compiler = function(name)
       return {
         name = name,
-        prebody = ('local %s = {...}'):format(name),
+        prebody = 'local '..name..' = {...}',
         varargs = true,
       }
     end,
@@ -56,12 +61,13 @@ return {
       local varargs = params[#params]
         and params[#params].varargs
           and params:pop()
+      
+      local names = params:map(function(param)
+        return param.name
+      end) 
 
       return {
-        names = supertable(
-          params:map(function(param) return param.name end),
-          varargs and { '...' }
-        ):join(','),
+        names = varargs and names:push('...') or names,
         prebody = params
           :filter(function(param) return param.prebody end)
           :map(function(param) return param.prebody end)
@@ -69,36 +75,28 @@ return {
       }
     end,
   },
-  FunctionExprBody = {
-    pattern = _.V('Expr'),
-    compiler = _.template('return %1'),
-  },
-  FunctionBody = {
-    pattern = _.Pad('{') * _.V('Block') * _.Pad('}') + _.V('FunctionExprBody'),
-    compiler = echo,
-  },
   ArrowFunction = {
-    pattern = _.Sum({
-      _.Cc(false) * _.V('Params') * _.Pad('->') * _.V('FunctionBody'),
-      _.Cc(true) * _.V('Params') * _.Pad('=>') * _.V('FunctionBody'),
+    pattern = _.Product({
+      _.V('Params'),
+      _.Sum({
+        _.Cc(false) * _.Pad('->'),
+        _.Cc(true) * _.Pad('=>'),
+      }),
+      _.Sum({
+        _.Cc(false) * _.V('BraceBlock'),
+        _.Cc(true) * _.CsV('Expr'),
+      }),
     }),
-    compiler = function(needself, params, body)
-      local varargs = params[#params]
-        and params[#params].varargs
-          and params:pop()
+    compiler = function(params, isfat, isexprbody, body)
+      if isfat then
+        params.names:insert(1, 'self')
+      end
 
-      local names = supertable(
-        needself and { 'self' },
-        params:map(function(param) return param.name end),
-        varargs and { '...' }
-      ):join(',')
-
-      local prebody = params
-        :filter(function(param) return param.prebody end)
-        :map(function(param) return param.prebody end)
-        :join(' ')
-
-      return ('function(%s) %s %s end'):format(names, prebody, body)
+      return ('function(%s) %s %s end'):format(
+        params.names:join(','),
+        params.prebody,
+        (isexprbody and 'return ' or '') .. body
+      )
     end,
   },
   FunctionDeclaration = {
@@ -109,13 +107,13 @@ return {
       _.V('Params'),
       _.V('BraceBlock'),
     }),
-    compiler = function(islocal, name, params, block)
-      return ('%s %s(%s) %s %s end'):format(
-        islocal and 'local function' or 'function',
+    compiler = function(islocal, name, params, body)
+      return ('%s function %s(%s) %s %s end'):format(
+        islocal and 'local' or '',
         name,
-        params.names,
+        params.names:join(','),
         params.prebody,
-        block
+        body
       )
     end,
   },
