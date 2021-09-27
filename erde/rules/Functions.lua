@@ -84,16 +84,21 @@ return {
       return ('function(%s) %s %s end'):format(names, prebody, body)
     end,
   },
-  Function = {
-    pattern = _.Sum({
-      _.CsV('ArrowFunction'),
-      _.Product({
-        _.Pad('local') * _.Cc(true) + _.Cc(false),
-        _.Pad('function'),
-        _.CsV('Name'),
-        _.V('Params'),
-        _.CsV('BraceBlock'),
-      }),
+  FunctionDeclaration = {
+    pattern = _.Product({
+      _.Pad('local') * _.Cc(true) + _.Cc(false),
+      _.Pad('function'),
+      _.CsV('Name'),
+      _.V('Params'),
+      _.V('BraceBlock'),
     }),
+    compiler = function(islocal, name, params, block)
+      return ('%s %s(%s) %s end'):format(
+        islocal and 'local function' or 'function',
+        name,
+        params:join(','),
+        block
+      )
+    end,
   },
 }

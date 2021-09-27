@@ -33,10 +33,15 @@ function erde.format(subject)
 end
 
 function erde.eval(erdecode)
+  local evaluator
   if _VERSION:find('5.1') then
-    return loadstring(erde.compile(erdecode))()
+    evaluator = loadstring(erde.compile(erdecode))
   else
-    return load(erde.compile(erdecode))()
+    evaluator = load(erde.compile(erdecode))
+  end
+
+  if type(evaluator) == 'function' then
+    return evaluator()
   end
 end
 

@@ -3,7 +3,7 @@ local _ = require('erde.rules.helpers')
 return {
   SubExpr = {
     pattern = _.Sum({
-     _.V('Function'),
+     _.V('ArrowFunction'),
      _.V('IdExpr'),
      _.V('Table'),
      _.V('String'),

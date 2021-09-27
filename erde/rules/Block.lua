@@ -9,7 +9,8 @@ return {
         -- allow function calls as statements
         _.CsV('IdExpr') * _.B(')'),
         _.CsV('Assignment'),
-        _.CsV('Declaration'),
+        _.CsV('NameDeclaration'),
+        _.CsV('FunctionDeclaration'),
         _.CsV('AssignOp'),
         _.CsV('Return'),
         _.CsV('IfElse'),
@@ -26,16 +27,19 @@ return {
     compiler = _.concat('\n'),
     formatter = _.concat('\n'),
   },
-  Declaration = {
+  BraceBlock = {
+    pattern = _.Pad('{') * _.CsV('Block') * _.Pad('}'),
+  },
+  NameDeclaration = {
     pattern = _.Product({
       _.Sum({
         _.Pad('local') * _.Cc(true),
         _.Pad('global') * _.Cc(false),
       }),
-      _.Expect(_.Sum({
+      _.Sum({
         _.V('Destructure') * _.Cc(true),
         _.CsV('Name') * _.Cc(false),
-      })),
+      }),
       (_.Pad('=') * _.CsV('Expr')) ^ -1,
     }),
     compiler = function(islocal, declaree, isdestructure, expr)

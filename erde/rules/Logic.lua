@@ -2,9 +2,6 @@ local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
 return {
-  BraceBlock = {
-    pattern = _.Pad('{') * _.CsV('Block') * _.Pad('}'),
-  },
   IfElse = {
     pattern = _.Product({
       _.Product({
