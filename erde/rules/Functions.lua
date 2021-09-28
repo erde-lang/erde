@@ -49,7 +49,7 @@ return {
   },
   Params = {
     pattern = function()
-      local ParamComma = (#_.Pad(')') * _.Pad(',') ^ -1) + _.Pad(',')
+      local ParamComma =  (_.Pad(',') ^ -1 * #_.Pad(')')) + _.Pad(',')
       return _.Sum({
         _.V('Arg'),
         _.Product({

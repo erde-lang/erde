@@ -79,13 +79,12 @@ spec('params', function()
     return test(1, 2, 3)
   ]]))
   assert.are.equal(9, erde.eval([[
-    local test = (init = 1) -> 9
-    -- local test = (init = 1, ...rest) -> {
-    --   for key, value in ipairs(args) {
-    --     sum = sum + value
-    --   }
-    --   return init
-    -- }
+    local test = (init = 1, ...rest) -> {
+      for key, value in ipairs(rest) {
+        init = init + value
+      }
+      return init
+    }
     return test(2, 3, 4)
   ]]))
 end)

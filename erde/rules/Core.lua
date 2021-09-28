@@ -19,8 +19,9 @@ return {
     }) / '',
   },
   Name = {
-    pattern = _.Product({
-      -_.Pad(_.Sum({
+    pattern = function()
+      local bodychar = _.alnum + _.P('_')
+      local keyword = _.Sum({
         'local',
         'global',
         'if',
@@ -37,10 +38,9 @@ return {
         'true',
         'nil',
         'return',
-      })),
-      _.alpha + _.P('_'),
-      (_.alnum + _.P('_')) ^ 0,
-    }),
+      }) * #-bodychar
+      return (_.alpha + _.P('_')) * bodychar ^ 0 - keyword
+    end,
   },
   IndexChain = {
     pattern = function()
