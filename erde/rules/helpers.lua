@@ -96,7 +96,10 @@ function _.concat(sep)
 end
 
 function _.pack(...)
-  return supertable({ ... })
+  return supertable({ ... }):filter(function(s)
+    -- Do not pack empty strings from zero capture matches
+    return type(s) ~= 'string' or #s > 0
+  end)
 end
 
 function _.template(str)

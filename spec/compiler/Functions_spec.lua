@@ -31,6 +31,21 @@ spec('function declaration', function()
     }
     return test(1)
   ]]))
+  assert.are.equal(1, erde.eval([[
+    local test = {}
+    function test.x(a) { return a }
+    return test.x(1)
+  ]]))
+  assert.are.equal(1, erde.eval([[
+    local test = { y: {} }
+    function test.y.z() { return 1 }
+    return test.y.z()
+  ]]))
+  assert.are.equal(1, erde.eval([[
+    local test = { y: 1 }
+    function test:x() { return self.y }
+    return test:x()
+  ]]))
 end)
 
 spec('arrow functions', function()

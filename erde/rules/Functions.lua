@@ -1,5 +1,6 @@
 local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
+local inspect = require('inspect')
 
 return {
   Arg = {
@@ -111,13 +112,16 @@ return {
       _.Pad('local') * _.Cc(true) + _.Cc(false),
       _.Pad('function'),
       _.CsV('Name'),
+      (_.Pad('.') * _.CsV('Name')) ^ 0 / _.pack,
+      _.Pad(':') * _.CsV('Name') + _.Cc(false),
       _.V('Params'),
       _.CsV('BraceBlock'),
     }),
-    compiler = function(isLocal, name, params, body)
-      return ('%s function %s(%s) %s %s end'):format(
+    compiler = function(isLocal, base, chain, method, params, body)
+      return ('%s function %s%s(%s) %s %s end'):format(
         isLocal and 'local' or '',
-        name,
+        chain and chain:insert(1, base):join('.') or base,
+        method and ':'..method or '',
         params.names:join(','),
         params.prebody,
         body
