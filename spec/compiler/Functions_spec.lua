@@ -1,5 +1,7 @@
 local erde = require('erde')
 
+-- TODO: Add destructuring args tests
+
 spec('function declaration', function()
   assert.are.equal(1, erde.eval([[
     function test() {
@@ -40,6 +42,10 @@ spec('arrow functions', function()
   ]]))
   assert.are.equal(1, erde.eval([[
     local test = () -> 1
+    return test()
+  ]]))
+  assert.are.same({ x = 10 }, erde.eval([[
+    local test = () -> ({ x: 10 })
     return test()
   ]]))
   assert.are.equal(10, erde.eval([[

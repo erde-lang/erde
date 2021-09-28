@@ -14,8 +14,18 @@ spec('numbers', function()
   assert.are.equal(.001, erde.eval('return 1E-3'))
 end)
 
-spec('strings', function()
+spec('short strings', function()
   assert.are.equal('hello world', erde.eval('return "hello world"'))
   assert.are.equal('hello world', erde.eval("return 'hello world'"))
   assert.are.equal('hello\nworld', erde.eval('return "hello\\nworld"'))
+end)
+
+spec('long strings', function()
+  assert.are.equal('hello world', erde.eval('return `hello world`'))
+  assert.are.equal('hello { world }', erde.eval('return `hello \\{ world \\}`'))
+  assert.are.equal('hello ` world `', erde.eval('return `hello \\` world \\``'))
+  assert.are.equal('hello world', erde.eval([[
+    local msg = 'world'
+    return `hello {msg}`
+  ]]))
 end)
