@@ -120,7 +120,7 @@ return {
     compiler = function(isLocal, base, chain, method, params, body)
       return ('%s function %s%s(%s) %s %s end'):format(
         isLocal and 'local' or '',
-        chain and chain:insert(1, base):join('.') or base,
+        chain:insert(1, base):join('.'),
         method and ':'..method or '',
         params.names:join(','),
         params.prebody,
