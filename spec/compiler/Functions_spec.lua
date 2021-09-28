@@ -66,8 +66,16 @@ spec('params', function()
     }
     return test(2)
   ]]))
-  -- TODO: Need to test unnamed varargs. Hard to test as of now, since currently
-  -- `{ ... }` is invalid syntax.
+  assert.are.equal(6, erde.eval([[
+    local test = (...) -> {
+      local sum = 0
+      for key, value in ipairs({ ... }) {
+        sum = sum + value
+      }
+      return sum
+    }
+    return test(1, 2, 3)
+  ]]))
   assert.are.equal(6, erde.eval([[
     local test = (...args) -> {
       local sum = 0

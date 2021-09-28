@@ -8,6 +8,7 @@ return {
      _.V('Table'),
      _.V('String'),
      _.V('Number'),
+     _.P('...'),
      _.P('true'),
      _.P('false'),
      _.Parens(_.V('Expr')),

@@ -2,7 +2,6 @@
 
 ## TODO
 
-- add `...` as expr
 - integrate official erde-lang spec
 - custom keywords
   - `kpairs`
