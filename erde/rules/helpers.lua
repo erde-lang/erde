@@ -18,10 +18,6 @@ function _.Pad(pattern)
   return _.V('Space') * pattern * _.V('Space')
 end
 
-function _.PadC(pattern)
-  return _.V('Space') * _.C(pattern) * _.V('Space')
-end
-
 function _.Parens(pattern)
   return _.Pad('(') * pattern * _.Pad(')')
 end

@@ -2,11 +2,9 @@ local _ = require('erde.rules.helpers')
 
 return {
   UnaryOp = {
-    pattern = _.PadC(_.S('~-#')) * _.CsV('Expr'),
+    pattern = _.Pad(_.C(_.S('~-#'))) * _.CsV('Expr'),
     compiler = function(op, expr)
-      return op == '~'
-        and ('not %s'):format(expr)
-        or op .. expr
+      return op == '~' and 'not '..expr or op..expr
     end,
   },
   TernaryOp = {
@@ -15,12 +13,12 @@ return {
   },
   BinaryOp = {
     pattern = _.CsV('SubExpr') * _.Product({
-      _.PadC(_.Sum({
+      _.Pad(_.C(_.Sum({
         '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%', -- arithmetic
         '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
         '==', '~=', '<=', '>=', '<', '>',   -- relational
         '&', '|', '..', '??',               -- misc
-      })),
+      }))),
       _.CsV('Expr'),
     }),
     compiler = function(lhs, op, rhs)
