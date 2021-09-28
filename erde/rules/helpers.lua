@@ -49,7 +49,7 @@ function _.List(pattern, config)
   if config.maxLen == 0 then
     return _.V('Space')
   elseif config.maxLen then
-    chain = chain - chainBase ^ math.max(0, config.maxLen)
+    chain = chain - chainBase ^ config.maxLen
   end
 
   return (

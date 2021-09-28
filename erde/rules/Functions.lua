@@ -91,7 +91,7 @@ return {
       }),
       _.Sum({
         _.Cc(false) * _.CsV('BraceBlock'),
-        _.Cc(true) * _.CsV('Expr'),
+        _.Cc(true) * _.V('ExprList'),
       }),
     }),
     compiler = function(params, isFat, isExprBody, body)
@@ -102,7 +102,7 @@ return {
       return ('function(%s) %s %s end'):format(
         params.names:join(','),
         params.prebody,
-        (isExprBody and 'return ' or '') .. body
+        isExprBody and 'return '..body:join(',') or body
       )
     end,
   },

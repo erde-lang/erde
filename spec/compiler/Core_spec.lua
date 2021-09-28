@@ -37,3 +37,28 @@ describe('ids', function()
     assert.are.equal('', erde.compile('a.b'))
   end)
 end)
+
+spec('returns', function()
+  assert.are.equal(2, erde.eval('return 2'))
+  assert.is_nil(erde.eval('return'))
+  assert.are.same({ 1, 2, 3 }, erde.eval([[
+    local test = () -> 1, 2, 3
+    return { test() }
+  ]]))
+  assert.are.same({ 1, 2, 3 }, erde.eval([[
+    local test = () -> {
+      return 1, 2, 3
+    }
+    return { test() }
+  ]]))
+  assert.are.same({ 1, 2, 3 }, erde.eval([[
+    local test = () -> {
+      return (
+        1,
+        2,
+        3,
+      )
+    }
+    return { test() }
+  ]]))
+end)

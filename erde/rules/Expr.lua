@@ -3,24 +3,24 @@ local _ = require('erde.rules.helpers')
 return {
   SubExpr = {
     pattern = _.Sum({
-     _.V('ArrowFunction'),
-     _.V('IdExpr'),
-     _.V('Table'),
-     _.V('String'),
-     _.V('Number'),
-     _.P('...'),
-     _.P('true'),
-     _.P('false'),
-     _.Parens(_.V('Expr')),
+     _.CsV('ArrowFunction'),
+     _.CsV('IdExpr'),
+     _.CsV('Table'),
+     _.CsV('String'),
+     _.CsV('Number'),
+     _.C('...'),
+     _.C('true'),
+     _.C('false'),
+     _.Parens(_.CsV('Expr')),
     }),
   },
   Expr = {
     pattern = _.Sum({
-      _.V('Operation'),
-      _.V('SubExpr'),
+      _.CsV('Operation'),
+      _.CsV('SubExpr'),
     }),
   },
   ExprList = {
-    pattern = _.Parens(_.V('ExprList')) + _.List(_.V('Expr')),
+    pattern = _.Parens(_.V('ExprList')) + _.List(_.CsV('Expr')),
   },
 }
