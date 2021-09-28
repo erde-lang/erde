@@ -8,8 +8,14 @@ return {
     end,
   },
   TernaryOp = {
-    pattern = _.V('SubExpr') * _.Pad('?') * _.V('Expr') * _.Pad(':') * _.V('Expr'),
-    compiler = _.iife('if %1 then return %2 else return %3 end'),
+    pattern = _.Product({
+      _.CsV('SubExpr'),
+      _.Pad('?'),
+      _.CsV('Expr'),
+      _.Pad(':'),
+      _.CsV('Expr'),
+    }),
+    compiler = '(function() if %1 then return %2 else return %3 end end)()',
   },
   BinaryOp = {
     pattern = _.CsV('SubExpr') * _.Product({
@@ -36,12 +42,15 @@ return {
   AssignOp = {
     pattern = _.Product({
       _.V('Id'),
-      _.Pad(_.C(_.Sum({
-        '+', '-', '*', '//', '/', '^', '%', -- arithmetic
-        '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
-        '&', '|', '..', '??',               -- misc
-      })) * _.P('=')),
-      _.V('Expr'),
+      _.Pad(_.Product({
+        _.C(_.Sum({
+          '+', '-', '*', '//', '/', '^', '%', -- arithmetic
+          '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
+          '&', '|', '..', '??',               -- misc
+        })),
+        _.P('=')
+      })),
+      _.CsV('Expr'),
     }),
     compiler = function(id, op, expr)
       if op == '??' then
@@ -58,10 +67,10 @@ return {
   },
   Operation = {
     pattern = _.Sum({
-      _.V('UnaryOp'),
-      _.V('TernaryOp'),
-      _.V('BinaryOp'),
-      _.V('AssignOp'),
+      _.CsV('UnaryOp'),
+      _.CsV('TernaryOp'),
+      _.CsV('BinaryOp'),
+      _.CsV('AssignOp'),
     }),
     compiler = _.echo,
   },
