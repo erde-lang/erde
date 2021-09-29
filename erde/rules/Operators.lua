@@ -1,4 +1,11 @@
 local _ = require('erde.rules.helpers')
+local supertable = require('erde.supertable')
+
+local ArithmeticOp = { '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%' }
+local Bitop = { '.|', '.&', '.~', '.>>', '.<<' }
+local RelationalOp = { '==', '~=', '<=', '>=', '<', '>' }
+local LogicalOp = { '&', '|' }
+local MiscOp = { '..', '??' }
 
 return {
   UnaryOp = {
@@ -18,13 +25,9 @@ return {
     compiler = '(function() if %1 then return %2 else return %3 end end)()',
   },
   BinaryOp = {
-    pattern = _.CsV('SubExpr') * _.Product({
-      _.Pad(_.C(_.Sum({
-        '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%', -- arithmetic
-        '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
-        '==', '~=', '<=', '>=', '<', '>',   -- relational
-        '&', '|', '..', '??',               -- misc
-      }))),
+    pattern = _.Product({
+      _.CsV('SubExpr'),
+      _.Pad(_.C(_.Sum(supertable(ArithmeticOp, Bitop, RelationalOp, LogicalOp, MiscOp)))),
       _.CsV('Expr'),
     }),
     compiler = function(lhs, op, rhs)
@@ -51,11 +54,7 @@ return {
     pattern = _.Product({
       _.V('Id'),
       _.Pad(_.Product({
-        _.C(_.Sum({
-          '+', '-', '*', '//', '/', '^', '%', -- arithmetic
-          '.|', '.&', '.~', '.>>', '.<<',     -- bitwise
-          '&', '|', '..', '??',               -- misc
-        })),
+        _.C(_.Sum(supertable(ArithmeticOp, Bitop, LogicalOp, MiscOp))),
         _.P('=')
       })),
       _.CsV('Expr'),
