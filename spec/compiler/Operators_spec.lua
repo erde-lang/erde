@@ -33,7 +33,24 @@ spec('relational binop', function()
   assert.are.equal(false, erde.eval('return 4 >= 5'))
 end)
 
+spec('bitwise op', function()
+  -- TODO: add bitwise operator tests
+end)
+
 spec('misc binop', function()
   assert.are.equal('helloworld', erde.eval("return 'hello' .. 'world'"))
   assert.are.equal(4, erde.eval('return nil ?? 4'))
+end)
+
+spec('assign op', function()
+  assert.are.equal(5, erde.eval([[
+    local x = 1
+    x += 4
+    return x
+  ]]))
+  assert.are.equal(true, erde.eval([[
+    local x = false
+    x |= true
+    return x
+  ]]))
 end)
