@@ -29,13 +29,21 @@ return {
     }),
     compiler = function(lhs, op, rhs)
       if op == '??' then
-        return _.iife('local %1 = %2 if %1 ~= nil then return %1 else return %3 end')(_.newtmpname(), lhs, rhs)
+        return _.iife('local %1 = %2 if %1 ~= nil then return %1 else return %3 end')(_.newTmpName(), lhs, rhs)
       elseif op == '&' then
         return ('%s and %s'):format(lhs, rhs)
       elseif op == '|' then
         return ('%s or %s'):format(lhs, rhs)
+      elseif op == '//' then
+        -- This operator was added in Lua5.3, but we always use math.floor
+        -- because its easier
+        return ('math.floor(%s / %s)'):format(lhs, rhs)
+      elseif op == '-' then
+        -- Need the space, otherwise expressions like `1 - -1` will produce
+        -- comments!
+        return lhs ..op..' '..rhs
       else
-        return lhs .. op .. rhs
+        return lhs ..op..rhs
       end
     end,
   },

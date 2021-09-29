@@ -11,6 +11,7 @@ return {
      _.C('...'),
      _.C('true'),
      _.C('false'),
+     _.C('nil'),
      _.Parens(_.CsV('Expr')),
     }),
   },
