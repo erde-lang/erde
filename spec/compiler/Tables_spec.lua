@@ -1,0 +1,10 @@
+local erde = require('erde')
+
+spec('table construction', function()
+  assert.are.same({ 1, 2, 3 }, erde.eval('return { 1, 2, 3 }'))
+  assert.are.same({ 1, 2, 3 }, erde.eval('return { 1, 2, 3, }'))
+  assert.are.same({ a = 'b' }, erde.eval('return { a: "b" }'))
+  assert.are.same({ a = 'b' }, erde.eval('local a = "b" return { :a }'))
+  assert.are.same({ ['x-y'] = 1 }, erde.eval('return { "x-y": 1 }'))
+  assert.are.same({ 1, a = 'b', 2 }, erde.eval('return { 1, a: "b", 2 }'))
+end)

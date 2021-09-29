@@ -2,38 +2,40 @@ local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
 return {
-  StringTableKey = {
-    pattern = _.CsV('String'),
-    compiler = '[ %1 ]',
-  },
-  MapTableField = {
-    pattern = _.Product({
+  KeyValuePair = {
+    pattern = 
+    _.Product({
       _.Sum({
-        _.CsV('Name'),
-        _.CsV('StringTableKey'),
-        _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
+        _.Cc(1) * _.CsV('Name'),
+        _.Cc(2) * _.CsV('String'),
+        _.Cc(3) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
       }),
       _.Pad(':'),
       _.CsV('Expr'),
     }),
-    compiler = '%1 = %2',
-  },
-  ShorthandTableField = {
-    pattern = _.Pad(_.P(':') * _.CsV('Name')),
-    compiler = '%1 = %1',
+    compiler = function(variant, key, value)
+      return variant == 1 and key..' = '..value or '['..key..'] = '..value
+    end,
   },
   Table = {
     pattern = _.Product({
       _.Pad('{'),
-      _.List(_.Sum({
-        _.CsV('ShorthandTableField'),
-        _.CsV('MapTableField'),
-        _.CsV('Expr'),
-      })),
+      _.List(
+        _.Sum({
+          _.Cc(1) * _.CsV('KeyValuePair'),
+          _.Cc(2) * _.Pad(_.P(':') * _.CsV('Name')),
+          _.Cc(3) * _.CsV('Expr'),
+        }) / _.map('variant', 'capture')
+      ),
       _.Pad('}')
     }),
     compiler = function(fields)
-      return ('{ %s }'):format(fields:join(','))
+      local joinedFields = fields:map(function(field)
+        return field.variant == 2
+          and field.capture..' = '..field.capture
+          or field.capture
+      end):join(',')
+      return '{'..joinedFields..'}'
     end,
   },
   Destruct = {
