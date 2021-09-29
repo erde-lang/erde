@@ -53,4 +53,9 @@ spec('assign op', function()
     x |= true
     return x
   ]]))
+  assert.are.equal(1, erde.eval([[
+    local x = nil
+    x ??= 1
+    return x
+  ]]))
 end)
