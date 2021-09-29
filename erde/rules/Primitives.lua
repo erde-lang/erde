@@ -59,6 +59,5 @@ return {
       _.P('"') * (_.V('EscapedChar') + _.P(1) - _.P('"')) ^ 0 * _.P('"'),
       _.V('LongString'),
     })),
-    compiler = _.concat(),
   },
 }

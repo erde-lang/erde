@@ -19,13 +19,14 @@ return {
         _.CsV('WhileLoop'),
         _.CsV('RepeatUntil'),
         _.CsV('DoBlock'),
-      })) ^ 1,
+      })) ^ 1 / _.pack,
       -- Allow empty blocks. We have to produce at least one capture here or the
       -- entire V('Space') match will be passed
       _.Cc(true) * _.V('Space')
     }),
-    compiler = _.concat('\n'),
-    formatter = _.concat('\n'),
+    compiler = function(block)
+      return type(block) == 'table' and table.concat(block, '\n') or ''
+    end,
   },
   BraceBlock = {
     pattern = _.Pad('{') * _.CsV('Block') * _.Pad('}') / 1,
@@ -59,6 +60,8 @@ return {
   },
   Assignment = {
     pattern = _.V('Id') * _.Pad('=') * _.CsV('Expr'),
-    compiler = _.indexChain(_.template('%1 = %2')),
+    compiler = _.indexChain(function(id, expr)
+      return id..' = '..expr
+    end),
   },
 }

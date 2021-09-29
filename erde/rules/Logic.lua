@@ -70,7 +70,7 @@ return {
       _.CsV('Expr'),
       _.CsV('BraceBlock'),
     }),
-    compiler = _.template('while %1 do %2 end'),
+    compiler = 'while %1 do %2 end',
   },
   RepeatUntil = {
     pattern = _.Product({
@@ -79,7 +79,7 @@ return {
       _.Pad('until'),
       _.Parens(_.CsV('Expr')),
     }),
-    compiler = _.template('repeat %1 until (%2)'),
+    compiler = 'repeat %1 until (%2)',
   },
   DoBlock = {
     pattern = _.Product({

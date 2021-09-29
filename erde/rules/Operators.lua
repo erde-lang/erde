@@ -9,7 +9,11 @@ local MiscOp = { '..', '??' }
 
 local function compileBinop(lhs, op, rhs)
   if op == '??' then
-    return _.iife('local %1 = %2 if %1 ~= nil then return %1 else return %3 end')(_.newTmpName(), lhs, rhs)
+    local tmpName = _.newTmpName()
+    return ([[(function()
+      local %s = %s
+      if %s ~= nil then return %s else return %s end
+    end)()]]):format(tmpName, lhs, tmpName, tmpName, rhs)
   elseif op == '&' then
     return ('%s and %s'):format(lhs, rhs)
   elseif op == '|' then

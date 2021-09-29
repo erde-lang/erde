@@ -79,35 +79,11 @@ function _.newTmpName()
   return ('__ERDE_TMP_%d__'):format(state.tmpNameCounter)
 end
 
-function _.echo(...)
-  return ...
-end
-
-function _.concat(sep)
-  return function(...)
-    return supertable({ ... })
-      :filter(function(v) return type(v) == 'string' end)
-      :join(sep)
-  end
-end
-
 function _.pack(...)
   return supertable({ ... }):filter(function(s)
     -- Do not pack empty strings from zero capture matches
     return type(s) ~= 'string' or #s > 0
   end)
-end
-
-function _.template(str)
-  return function(...)
-    return supertable({ ... }):reduce(function(compiled, v, i)
-      return compiled:gsub('%%'..i, v)
-    end, str)
-  end
-end
-
-function _.iife(str)
-  return _.template(('(function() %s end)()'):format(str))
 end
 
 function _.map(...)

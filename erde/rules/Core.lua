@@ -70,7 +70,10 @@ return {
   },
   IdExpr = {
     pattern = _.V('Id'),
-    compiler = _.indexChain(_.template('%1'), _.template('return %1')),
+    compiler = _.indexChain(
+      function(id) return id end,
+      function(id) return 'return '..id end
+    ),
   },
   Return = {
     pattern = _.Pad('return') * _.V('ExprList'),
