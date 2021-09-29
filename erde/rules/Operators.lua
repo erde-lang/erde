@@ -48,7 +48,7 @@ return {
         _.P('-'),
         _.P('#'),
       }))),
-      _.CsV('Expr'),
+      _.CsV('SubExpr'),
     }),
     compiler = function(op, expr)
       if op == '.~' then
@@ -92,14 +92,5 @@ return {
     compiler = _.indexChain(function(id, op, expr)
       return id..'='..compileBinop(id, op, expr)
     end),
-  },
-  Operator = {
-    pattern = _.Sum({
-      _.CsV('UnaryOp'),
-      _.CsV('TernaryOp'),
-      _.CsV('BinaryOp'),
-      _.CsV('AssignOp'),
-    }),
-    compiler = _.echo,
   },
 }
