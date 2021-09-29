@@ -14,14 +14,26 @@ local function compileBinop(lhs, op, rhs)
     return ('%s and %s'):format(lhs, rhs)
   elseif op == '|' then
     return ('%s or %s'):format(lhs, rhs)
-  elseif op == '//' then
-    -- This operator was added in Lua5.3, but we always use math.floor
-    -- because its easier
+  elseif op == '//' and not _VERSION:find('5.[34]') then
     return ('math.floor(%s / %s)'):format(lhs, rhs)
   elseif op == '-' then
     -- Need the space, otherwise expressions like `1 - -1` will produce
     -- comments!
     return lhs ..op..' '..rhs
+  elseif op:sub(1, 1) == '.' and op ~= '..' then
+    if _VERSION:find('5.[34]') then
+      return lhs..op:sub(2)..rhs
+    elseif op == '.|' then
+      return ('require("bit").bor(%s,%s)'):format(lhs, rhs)
+    elseif op == '.&' then
+      return ('require("bit").band(%s,%s)'):format(lhs, rhs)
+    elseif op == '.~' then
+      return ('require("bit").bxor(%s,%s)'):format(lhs, rhs)
+    elseif op == '.>>' then
+      return ('require("bit").rshift(%s,%s)'):format(lhs, rhs)
+    elseif op == '.<<' then
+      return ('require("bit").lshift(%s,%s)'):format(lhs, rhs)
+    end
   else
     return lhs ..op..rhs
   end
@@ -29,9 +41,25 @@ end
 
 return {
   UnaryOp = {
-    pattern = _.Pad(_.C(_.S('~-#'))) * _.CsV('Expr'),
+    pattern = _.Product({
+      _.Pad(_.C(_.Sum({
+        _.P('.~'),
+        _.P('~'),
+        _.P('-'),
+        _.P('#'),
+      }))),
+      _.CsV('Expr'),
+    }),
     compiler = function(op, expr)
-      return op == '~' and 'not '..expr or op..expr
+      if op == '.~' then
+        return _VERSION:find('5.[34]')
+          and '~'..expr
+          or 'require("bit").bnot('..expr..')'
+      elseif op == '~' then
+        return 'not '..expr
+      else
+        return op..expr
+      end
     end,
   },
   TernaryOp = {

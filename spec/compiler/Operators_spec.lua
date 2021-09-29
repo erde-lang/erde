@@ -34,7 +34,12 @@ spec('relational binop', function()
 end)
 
 spec('bitwise op', function()
-  -- TODO: add bitwise operator tests
+  assert.are.equal(1, erde.eval('return .~2 .& 3'))
+  assert.are.equal(1, erde.eval('return 1 .& 1'))
+  assert.are.equal(3, erde.eval('return 2 .| 1'))
+  assert.are.equal(2, erde.eval('return 1 .<< 1'))
+  assert.are.equal(1, erde.eval('return 2 .>> 1'))
+  assert.are.equal(2, erde.eval('return 3 .~ 1'))
 end)
 
 spec('misc binop', function()
