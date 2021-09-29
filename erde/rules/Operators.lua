@@ -65,7 +65,7 @@ return {
       end
     end,
   },
-  Operation = {
+  Operator = {
     pattern = _.Sum({
       _.CsV('UnaryOp'),
       _.CsV('TernaryOp'),

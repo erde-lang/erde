@@ -16,7 +16,7 @@ return {
   },
   Expr = {
     pattern = _.Sum({
-      _.CsV('Operation'),
+      _.CsV('Operator'),
       _.CsV('SubExpr'),
     }),
   },
