@@ -136,9 +136,9 @@ end
 function _.compileDestructure(isLocal, destructure, expr)
   local function extractNames(destructure)
     return destructure:reduce(function(names, destruct)
-      return destruct.nested == false
-        and names:push(destruct.name)
-        or names:push(unpack(extractNames(destruct.nested)))
+      return type(destruct.nested) == 'table'
+        and names:push(extractNames(destruct.nested):unpack())
+        or names:push(destruct.name)
     end, supertable())
   end
 

@@ -34,16 +34,16 @@ return {
   NameDeclaration = {
     pattern = _.Product({
       _.Sum({
-        _.Pad('local') * _.Cc(true),
-        _.Pad('global') * _.Cc(false),
+        _.Cc(true) * _.Pad('local'),
+        _.Cc(false) * _.Pad('global'),
       }),
       _.Sum({
-        _.V('Destructure') * _.Cc(true),
-        _.CsV('Name') * _.Cc(false),
+        _.Cc(true) * _.V('Destructure'),
+        _.Cc(false) * _.CsV('Name'),
       }),
       (_.Pad('=') * _.CsV('Expr')) ^ -1,
     }),
-    compiler = function(isLocal, declaree, isDestructure, expr)
+    compiler = function(isLocal, isDestructure, declaree, expr)
       local prefix = isLocal and 'local ' or ''
       if isDestructure then
         return _.compileDestructure(isLocal, declaree, expr)

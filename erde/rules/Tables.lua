@@ -38,20 +38,22 @@ return {
       return '{'..joinedFields..'}'
     end,
   },
-  Destruct = {
-    pattern = _.Product({
-      _.C(':') + _.Cc(false),
-      _.V('Name'),
-      _.V('Destructure') + _.Cc(false),
-      (_.Pad('=') * _.Expect(_.V('Expr'))) + _.Cc(false),
-    }),
-    compiler = _.map('keyed', 'name', 'nested', 'default'),
-  },
   Destructure = {
-    pattern = _.Pad('{') * _.List(_.V('Destruct')) * _.Pad('}'),
-    compiler = function(...)
+    pattern = _.Product({
+      _.Pad('{'),
+      _.List(
+        _.Product({
+          _.P(':') * _.Cc(true) + _.Cc(false),
+          _.CsV('Name'),
+          _.V('Destructure') + _.Cc(false),
+          _.Pad('=') * _.CsV('Expr') + _.Cc(false),
+        }) / _.map('keyed', 'name', 'nested', 'default')
+      ),
+      _.Pad('}'),
+    }),
+    compiler = function(destructure)
       local keyCounter = 1
-      return supertable({ ... }):each(function(destruct)
+      return destructure:each(function(destruct)
         if destruct.keyed then
           destruct.index = ('.%s'):format(destruct.name)
         else
