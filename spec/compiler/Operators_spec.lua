@@ -3,7 +3,7 @@ local erde = require('erde')
 spec('unary op', function()
   assert.are.equal(-2, erde.eval('return -2'))
   assert.are.equal(true, erde.eval('return ~false'))
-  assert.are.equal(false, erde.eval('return ~(1 == 2)'))
+  assert.are.equal(true, erde.eval('return ~(1 == 2)'))
   assert.are.equal(3, erde.eval('return #{1, 2, 3}'))
 end)
 
@@ -73,5 +73,9 @@ spec('pipes', function()
   assert.are.equal(5, erde.eval([[
     local function test(a) { return a + 1 }
     return 4 >> test
+  ]]))
+  assert.are.equal(5, erde.eval([[
+    local function test(a) { return a + 1 }
+    return 4 >> (test | nil)
   ]]))
 end)

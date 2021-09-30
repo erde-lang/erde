@@ -65,7 +65,7 @@ return {
   Id = {
     pattern = _.Product({
       _.Sum({
-        _.Parens(_.CsV('Expr')),
+        _.Parens(_.CsV('Expr')) / function(expr) return '('..expr..')' end,
         _.CsV('Name'),
       }),
       _.V('IndexChain'),
