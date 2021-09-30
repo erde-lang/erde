@@ -37,4 +37,18 @@ spec('destructure', function()
     local { { b, c } } = x
     return b + c
   ]]))
+  assert.are.same(true, erde.eval([[
+    local { ?{ b } } = {}
+    return b == nil
+  ]]))
+  assert.are.same(true, erde.eval([[
+    local x = { a: { } }
+    local { :a { :b? { c } } } = x
+    return c == nil
+  ]]))
+  assert.are.same(1, erde.eval([[
+    local x = { a: { b: { 1 } } }
+    local { :a { :b? { c } } } = x
+    return c
+  ]]))
 end)

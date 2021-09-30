@@ -135,7 +135,7 @@ end
 
 function _.compileDestructure(isLocal, destructure, expr)
   local function extractNames(destructure)
-    return destructure:reduce(function(names, destruct)
+    return destructure.destructs:reduce(function(names, destruct)
       return type(destruct.nested) == 'table'
         and names:push(extractNames(destruct.nested):unpack())
         or names:push(destruct.name)
@@ -143,26 +143,42 @@ function _.compileDestructure(isLocal, destructure, expr)
   end
 
   local function bodyCompiler(destructure, exprName)
-    return destructure
-      :map(function(destruct)
-        local destructExpr = exprName .. destruct.index
-        local destructExprName = destruct.nested and _.newTmpName() or destruct.name
-        return supertable({
-          ('%s%s = %s'):format(
-            destruct.nested and 'local ' or '',
-            destructExprName,
-            destructExpr
-          ),
-          destruct.default and
-            ('if %s == nil then %s = %s end')
-              :format(destructExprName, destructExprName, destruct.default),
-          destruct.nested and
-            bodyCompiler(destruct.nested, destructExprName),
-        })
-          :filter(function(compiled) return compiled end)
-          :join(' ')
-      end)
-      :join(' ')
+    local compileParts = supertable()
+    local arrayDestructCounter = 1
+
+    destructure.destructs:each(function(destruct)
+      local destructExprName = destruct.nested and _.newTmpName() or destruct.name
+
+      compileParts:push(('%s%s = %s%s'):format(
+        destruct.nested and 'local ' or '',
+        destructExprName,
+        exprName,
+        destruct.keyed and '.'..destruct.name or '['..arrayDestructCounter..']'
+      ))
+
+      if destruct.default then
+        compileParts:push((' if %s == nil then %s = %s end'):format(
+          destructExprName,
+          destructExprName,
+          destruct.default
+        ))
+      end
+
+      if destruct.nested then
+        compileParts:push(bodyCompiler(destruct.nested, destructExprName))
+      end
+
+      if not destruct.keyed then
+        arrayDestructCounter = arrayDestructCounter + 1
+      end
+    end)
+
+    if destructure.opt then
+      compileParts:insert(1, 'if '..exprName..' ~= nil then')
+      compileParts:push('end')
+    end
+
+    return compileParts:join(' ')
   end
 
   local exprName = _.newTmpName()
