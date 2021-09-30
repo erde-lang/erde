@@ -38,17 +38,38 @@ return {
       return '{'..joinedFields..'}'
     end,
   },
+  Destruct = {
+    pattern = _.Product({
+      _.Sum({
+        _.Cc(1) * _.CsV('Name'),
+        _.Cc(2) * _.V('Destructure'),
+        _.Cc(3) * _.Product({
+          _.P(':'),
+          _.CsV('Name'),
+          _.V('Destructure') ^ -1,
+        }),
+      }),
+      (_.Pad('=') * _.CsV('Expr')) ^ -1,
+    }),
+    compiler = function(variant, expr1, expr2, expr3)
+      if variant == 1 then
+        return { name = expr1, default = expr2 }
+      elseif variant == 2 then
+        return { nested = expr1, default = expr2 }
+      elseif variant == 3 then
+        return {
+          keyed = true,
+          name = expr1,
+          nested = expr2,
+          default = expr3,
+        }
+      end
+    end,
+  },
   Destructure = {
     pattern = _.Product({
       _.Pad('{'),
-      _.List(
-        _.Product({
-          _.P(':') * _.Cc(true) + _.Cc(false),
-          _.CsV('Name'),
-          _.V('Destructure') + _.Cc(false),
-          _.Pad('=') * _.CsV('Expr') + _.Cc(false),
-        }) / _.map('keyed', 'name', 'nested', 'default')
-      ),
+      _.List(_.V('Destruct')),
       _.Pad('}'),
     }),
     compiler = function(destructure)
