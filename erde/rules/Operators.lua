@@ -1,6 +1,9 @@
 local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
+-- NOTE1: Need to refactor to use arbitrary expressions (+ tests)
+-- Probably need to recursively generate Expr based on order of operations.
+
 local ArithmeticOp = { '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%' }
 local Bitop = { '.|', '.&', '.~', '.>>', '.<<' }
 local RelationalOp = { '==', '~=', '<=', '>=', '<', '>' }
@@ -52,7 +55,7 @@ return {
         _.P('-'),
         _.P('#'),
       }))),
-      _.CsV('SubExpr'),
+      _.CsV('SubExpr'), -- NOTE1
     }),
     compiler = function(op, expr)
       if op == '.~' then
@@ -68,7 +71,7 @@ return {
   },
   TernaryOp = {
     pattern = _.Product({
-      _.CsV('SubExpr'),
+      _.CsV('SubExpr'), -- NOTE1
       _.Pad('?'),
       _.CsV('Expr'),
       _.Pad(':'),
@@ -78,7 +81,7 @@ return {
   },
   BinaryOp = {
     pattern = _.Product({
-      _.CsV('SubExpr'),
+      _.CsV('SubExpr'), -- NOTE1
       _.Pad(_.C(_.Sum(supertable(ArithmeticOp, Bitop, RelationalOp, LogicalOp, MiscOp)))),
       _.CsV('Expr'),
     }),
@@ -96,5 +99,50 @@ return {
     compiler = _.indexChain(function(id, op, expr)
       return id..'='..compileBinop(id, op, expr)
     end),
+  },
+  PipeOp = {
+    pattern = _.Product({
+      _.CsV('SubExpr'), -- NOTE1
+      _.Pad('>>'),
+      _.Sum({
+        _.Cc(1) * _.V('Id'),
+        _.Cc(2) * _.CsV('Expr'),
+      }),
+      _.Product({
+        -_.Pad(')'),
+        _.Pad('?') * _.Cc(true) + _.Cc(false),
+      }),
+    }),
+    compiler = function(pipee, variant, id, opt)
+      local idCompiler = _.indexChain(
+        function(id) return id end,
+        function(id) return 'return '..id end
+      )
+
+      if variant == 1 then
+        local lastChain = id.chain[#id.chain]
+
+        if lastChain and lastChain.variant == 3 then
+          lastChain.value:insert(1, pipee)
+        else
+          id.chain:push({
+            opt = opt,
+            variant = 3,
+            value = supertable({ pipee }),
+          })
+        end
+
+        return idCompiler(id)
+      else
+        return idCompiler({
+          base = id,
+          chain = {
+            opt = opt,
+            variant = 3,
+            value = supertable({ pipee }),
+          },
+        })
+      end
+    end,
   },
 }

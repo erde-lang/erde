@@ -100,8 +100,8 @@ function _.map(...)
 end
 
 function _.indexChain(bodyCompiler, optBodyCompiler)
-  return function(base, chain, ...)
-    local chainExpr = supertable({ base }, chain:map(function(index)
+  return function(id, ...)
+    local chainExpr = supertable({ id.base }, id.chain:map(function(index)
       if index.variant == 1 then
         return '.'..index.value
       elseif index.variant == 2 then
@@ -113,17 +113,17 @@ function _.indexChain(bodyCompiler, optBodyCompiler)
       end
     end)):join()
 
-    if not chain:find(function(index) return index.opt end) then
+    if not id.chain:find(function(index) return index.opt end) then
       return bodyCompiler(chainExpr, ...)
     else
-      local prebody = chain:reduce(function(prebody, index)
+      local prebody = id.chain:reduce(function(prebody, index)
         return {
           partialChain = prebody.partialChain .. index.suffix,
           parts = not index.opt and prebody.parts or
             prebody.parts:push(('if %s == nil then return end')
               :format(prebody.partialChain)),
         }
-      end, { partialChain = base, parts = supertable() })
+      end, { partialChain = id.base, parts = supertable() })
 
       return ('(function() %s %s end)()'):format(
         prebody.parts:join(' '),

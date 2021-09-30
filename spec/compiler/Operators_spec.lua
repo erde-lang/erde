@@ -64,3 +64,14 @@ spec('assign op', function()
     return x
   ]]))
 end)
+
+spec('pipes', function()
+  assert.are.equal(5, erde.eval([[
+    local function test(a, b) { return a + b }
+    return 4 >> test(1)
+  ]]))
+  assert.are.equal(5, erde.eval([[
+    local function test(a) { return a + 1 }
+    return 4 >> test
+  ]]))
+end)

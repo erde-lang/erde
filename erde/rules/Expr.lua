@@ -20,6 +20,7 @@ return {
     pattern = _.Sum({
       _.CsV('BinaryOp'),
       _.CsV('TernaryOp'),
+      _.CsV('PipeOp'),
       _.CsV('SubExpr'),
     }),
   },

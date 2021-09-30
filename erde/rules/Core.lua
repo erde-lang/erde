@@ -63,10 +63,13 @@ return {
     end
   },
   Id = {
-    pattern = _.Sum({
-      _.Parens(_.CsV('Expr')),
-      _.CsV('Name'),
-    }) * _.V('IndexChain'),
+    pattern = _.Product({
+      _.Sum({
+        _.Parens(_.CsV('Expr')),
+        _.CsV('Name'),
+      }),
+      _.V('IndexChain'),
+    }) / _.map('base', 'chain'),
   },
   IdExpr = {
     pattern = _.V('Id'),

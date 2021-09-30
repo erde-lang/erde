@@ -5,10 +5,9 @@
 - integrate official erde-lang spec
 - custom keywords
   - `kpairs`
-- lua versions (bit operators, possibly use `goto` for performance??)
 - order of operations?
 
-## Proposals
+## Proposals (need community input)
 
 - import / export
 - case statement?
@@ -16,6 +15,9 @@
 
 ## Long Term TODO
 
+- finish docs site
+- erde runtime lib
+  - allow mutating `require` (similar to moonscript)
 - erde cli
   - `erde`: repl
   - `erde check`: compile/error checking (slow)
@@ -23,13 +25,11 @@
   - `erde run`: run script
   - `erde format`: formatter
   - `erde parse`: print ast
+  - `erde debug`: custom debugger???
+- Formatter
 - Syntax highlighting
   - Vim
   - Emacs
   - Vscode
   - Treesitter
-- erde runtime lib
-  - allow mutating `require` (similar to moonscript)
-- finish docs site
-- Formatter
 - Source maps?
