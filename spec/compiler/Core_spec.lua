@@ -56,16 +56,6 @@ spec('returns', function()
     }
     return { test() }
   ]]))
-  print(erde.compile([[
-    local test = () -> {
-      return (
-        1,
-        2,
-        3,
-      )
-    }
-    return { test() }
-  ]]))
   assert.are.same({ 1, 2, 3 }, erde.eval([[
     local test = () -> {
       return (

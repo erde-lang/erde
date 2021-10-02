@@ -4,6 +4,7 @@ return {
   SubExpr = {
     pattern = _.Sum({
      _.CsV('ArrowFunction'),
+     _.CsV('DoBlock'),
      _.CsV('IdExpr'),
      _.CsV('UnaryOp'),
      _.CsV('Table'),
@@ -26,7 +27,7 @@ return {
   },
   ExprList = {
     pattern = _.Sum({
-      _.List(_.CsV('Expr')),
+      _.List(_.CsV('Expr'), { minLen = 1 }),
       _.Parens(_.V('ExprList')),
     }),
   },
