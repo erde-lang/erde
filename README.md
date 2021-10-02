@@ -6,6 +6,7 @@
 - custom keywords
   - `kpairs`
 - order of operations?
+- turbo error (empty string) tests
 
 ## Proposals (need community input)
 

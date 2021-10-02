@@ -33,8 +33,13 @@ describe('ids', function()
     assert.has_error(function() erde.compile('a:c.d = 1') end)
   end)
 
-  spec('disallow non-function-call ids as statements', function()
-    assert.are.equal('', erde.compile('a.b'))
+  spec('opt index', function()
+    assert.are.equal(1, erde.eval([[
+      local x = { a: 1 }
+      return x?.a
+    ]]))
+    assert.are.equal(true, erde.eval('return x?.b == nil'))
+    assert.are.equal(1, erde.eval('return ({ x: 1 })?.x'))
   end)
 end)
 
@@ -48,6 +53,16 @@ spec('returns', function()
   assert.are.same({ 1, 2, 3 }, erde.eval([[
     local test = () -> {
       return 1, 2, 3
+    }
+    return { test() }
+  ]]))
+  print(erde.compile([[
+    local test = () -> {
+      return (
+        1,
+        2,
+        3,
+      )
     }
     return { test() }
   ]]))

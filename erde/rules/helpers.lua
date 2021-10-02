@@ -101,28 +101,31 @@ end
 
 function _.indexChain(bodyCompiler, optBodyCompiler)
   return function(id, ...)
-    local chainExpr = supertable({ id.base }, id.chain:map(function(index)
+    id.chain:each(function(index)
       if index.variant == 1 then
-        return '.'..index.value
+        index.suffix = '.'..index.value
       elseif index.variant == 2 then
-        return '['..index.value..']'
+        index.suffix = '['..index.value..']'
       elseif index.variant == 3 then
-        return '('..index.value:join(',')..')'
+        index.suffix = '('..index.value:join(',')..')'
       elseif index.variant == 4 then
-        return ':'..index.value
+        index.suffix = ':'..index.value
       end
+    end)
+
+    local chainExpr = supertable({ id.base }, id.chain:map(function(index)
+      return index.suffix
     end)):join()
 
     if not id.chain:find(function(index) return index.opt end) then
       return bodyCompiler(chainExpr, ...)
     else
       local prebody = id.chain:reduce(function(prebody, index)
-        return {
-          partialChain = prebody.partialChain .. index.suffix,
-          parts = not index.opt and prebody.parts or
-            prebody.parts:push(('if %s == nil then return end')
-              :format(prebody.partialChain)),
-        }
+        if index.opt then
+          prebody.parts:push('if '..prebody.partialChain..' == nil then return end')
+        end
+        prebody.partialChain = prebody.partialChain .. index.suffix
+        return prebody
       end, { partialChain = id.base, parts = supertable() })
 
       return ('(function() %s %s end)()'):format(

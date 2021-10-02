@@ -25,6 +25,9 @@ return {
     }),
   },
   ExprList = {
-    pattern = _.Parens(_.V('ExprList')) + _.List(_.CsV('Expr')),
+    pattern = _.Sum({
+      _.List(_.CsV('Expr')),
+      _.Parens(_.V('ExprList')),
+    }),
   },
 }
