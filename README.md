@@ -34,3 +34,5 @@
   - Vscode
   - Treesitter
 - Source maps?
+- port erde to c handwritten parser?
+- optimization levels

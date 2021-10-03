@@ -65,11 +65,16 @@ return {
   Id = {
     pattern = _.Product({
       _.Sum({
-        _.Parens(_.CsV('Expr')) / function(expr) return '('..expr..')' end,
-        _.CsV('Name'),
+        _.Cc(1) * _.CsV('Name'),
+        _.Cc(2) * _.Parens(_.CsV('Expr')),
       }),
       _.V('IndexChain'),
-    }) / _.map('base', 'chain'),
+    }),
+    compiler = function(variant, base, chain)
+      return variant == 1
+        and { base = base, chain = chain }
+        or { base = '('..base..')', chain = chain }
+    end,
   },
   IdExpr = {
     pattern = _.V('Id'),
