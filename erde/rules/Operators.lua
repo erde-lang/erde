@@ -1,92 +1,11 @@
 local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
--- NOTE1: Need to refactor to use arbitrary expressions (+ tests)
--- Probably need to recursively generate Expr based on order of operations.
+-- -----------------------------------------------------------------------------
+-- Operators
+-- -----------------------------------------------------------------------------
 
-local ArithmeticOp = { '+', _.P('-') - _.P('--'), '*', '//', '/', '^', '%' }
-local Bitop = { '.|', '.&', '.~', '.>>', '.<<' }
-local RelationalOp = { '==', '~=', '<=', '>=', '<', '>' }
-local LogicalOp = { '&', '|' }
-local MiscOp = { '..', '??' }
-
-local function compileBinop(lhs, op, rhs)
-  if op == '??' then
-    local tmpName = _.newTmpName()
-    return ([[(function()
-      local %s = %s
-      if %s ~= nil then return %s else return %s end
-    end)()]]):format(tmpName, lhs, tmpName, tmpName, rhs)
-  elseif op == '&' then
-    return ('%s and %s'):format(lhs, rhs)
-  elseif op == '|' then
-    return ('%s or %s'):format(lhs, rhs)
-  elseif op == '//' and not _VERSION:find('5.[34]') then
-    return ('math.floor(%s / %s)'):format(lhs, rhs)
-  elseif op == '-' then
-    -- Need the space, otherwise expressions like `1 - -1` will produce
-    -- comments!
-    return lhs ..op..' '..rhs
-  elseif op:sub(1, 1) == '.' and op ~= '..' then
-    if _VERSION:find('5.[34]') then
-      return lhs..op:sub(2)..rhs
-    elseif op == '.|' then
-      return ('require("bit").bor(%s,%s)'):format(lhs, rhs)
-    elseif op == '.&' then
-      return ('require("bit").band(%s,%s)'):format(lhs, rhs)
-    elseif op == '.~' then
-      return ('require("bit").bxor(%s,%s)'):format(lhs, rhs)
-    elseif op == '.>>' then
-      return ('require("bit").rshift(%s,%s)'):format(lhs, rhs)
-    elseif op == '.<<' then
-      return ('require("bit").lshift(%s,%s)'):format(lhs, rhs)
-    end
-  else
-    return lhs ..op..rhs
-  end
-end
-
-return {
-  UnaryOp = {
-    pattern = _.Product({
-      _.Pad(_.C(_.Sum({
-        _.P('.~'),
-        _.P('~'),
-        _.P('-'),
-        _.P('#'),
-      }))),
-      _.CsV('SubExpr'), -- NOTE1
-    }),
-    compiler = function(op, expr)
-      if op == '.~' then
-        return _VERSION:find('5.[34]')
-          and '~'..expr
-          or 'require("bit").bnot('..expr..')'
-      elseif op == '~' then
-        return 'not '..expr
-      else
-        return op..expr
-      end
-    end,
-  },
-  TernaryOp = {
-    pattern = _.Product({
-      _.CsV('SubExpr'), -- NOTE1
-      _.Pad('?'),
-      _.CsV('Expr'),
-      _.Pad(':'),
-      _.CsV('Expr'),
-    }),
-    compiler = '(function() if %1 then return %2 else return %3 end end)()',
-  },
-  BinaryOp = {
-    pattern = _.Product({
-      _.CsV('SubExpr'), -- NOTE1
-      _.Pad(_.C(_.Sum(supertable(ArithmeticOp, Bitop, RelationalOp, LogicalOp, MiscOp)))),
-      _.CsV('Expr'),
-    }),
-    compiler = compileBinop,
-  },
+local Operators = {
   AssignOp = {
     pattern = _.Product({
       _.V('Id'),
@@ -100,9 +19,45 @@ return {
       return id..'='..compileBinop(id, op, expr)
     end),
   },
-  PipeOp = {
+}
+
+-- -----------------------------------------------------------------------------
+-- Complex Operators
+--
+-- These are operators that are either nonbinary or require a custom compiler.
+-- -----------------------------------------------------------------------------
+
+local function UnaryOp(Operand)
+  return {
+    pattern = _.Pad(_.C(_.Sum({ '.~', '~', '-', '#' }))) * Operand,
+    compiler = function(op, expr)
+      if op == '.~' then
+        return _VERSION:find('5.[34]')
+          and '~'..expr
+          or 'require("bit").bnot('..expr..')'
+      elseif op == '~' then
+        return 'not '..expr
+      else
+        return op..expr
+      end
+    end,
+  }
+end
+
+local function TernaryOp(Operand)
+  return {
+    pattern = Operand * _.Pad('?') * Operand * _.Pad(':') * Operand,
+    compiler = function(op1, op2, op3)
+      return ('(function() if %s then return %s else return %s end end)()')
+        :format(op1, op2, op3)
+    end,
+  }
+end
+
+local function PipeOp(Operand)
+  return {
     pattern = _.Product({
-      _.CsV('SubExpr'), -- NOTE1
+      Operand,
       _.Pad('>>'),
       _.Sum({
         _.Cc(1) * _.V('Id'),
@@ -144,5 +99,115 @@ return {
         })
       end
     end,
-  },
+  }
+end
+
+-- -----------------------------------------------------------------------------
+-- Precedence Levels
+-- -----------------------------------------------------------------------------
+
+local function compileOp(lhs, op, rhs, ...)
+  if op == nil then
+    return lhs
+  elseif op == '??' then
+    local tmpName = _.newTmpName()
+    lhs = ([[(function()
+      local %s = %s
+      if %s ~= nil then return %s else return %s end
+    end)()]]):format(tmpName, lhs, tmpName, tmpName, rhs)
+  elseif op == '&' then
+    lhs = ('%s and %s'):format(lhs, rhs)
+  elseif op == '|' then
+    lhs = ('%s or %s'):format(lhs, rhs)
+  elseif op == '//' and not _VERSION:find('5.[34]') then
+    lhs = ('math.floor(%s / %s)'):format(lhs, rhs)
+  elseif op == '-' then
+    -- Need the space, otherwise expressions like `1 - -1` will produce
+    -- comments!
+    lhs = lhs..op..' '..rhs
+  elseif op:sub(1, 1) == '.' and op ~= '..' then
+    if _VERSION:find('5.[34]') then
+      lhs = lhs..op:sub(2)..rhs
+    elseif op == '.|' then
+      lhs = ('require("bit").bor(%s,%s)'):format(lhs, rhs)
+    elseif op == '.&' then
+      lhs = ('require("bit").band(%s,%s)'):format(lhs, rhs)
+    elseif op == '.~' then
+      lhs = ('require("bit").bxor(%s,%s)'):format(lhs, rhs)
+    elseif op == '.>>' then
+      lhs = ('require("bit").rshift(%s,%s)'):format(lhs, rhs)
+    elseif op == '.<<' then
+      lhs = ('require("bit").lshift(%s,%s)'):format(lhs, rhs)
+    end
+  else
+    lhs = lhs..op..rhs
+  end
+
+  local rest = supertable({ ... })
+  if #rest > 0 then
+    op, rhs = rest:remove(1, 2)
+    return compileOp(lhs, op, rhs, rest:unpack())
+  else
+    return lhs
+  end
+end
+
+local Precedence = {
+  PipeOp,
+  TernaryOp,
+  { '??' },
+  { '|' },
+  { '&' },
+  { '==', '~=', '<=', '>=', '<', '>' },
+  { '.|' },
+  { '.~' },
+  { '.&' },
+  { '.<<', '.>>' },
+  { '..' },
+  { '+', '-' },
+  { '*', '/', '//', '%' },
+  UnaryOp,
+  { '^' },
 }
+
+for i, ops in ipairs(Precedence) do
+  local Operand = i < #Precedence
+    and _.CsV('Op'..tostring(i + 1)) + _.CsV('SubExpr')
+    or _.CsV('SubExpr')
+
+  -- For complex operators, we provide a function that returns the
+  -- { pattern, compiler } table. Here we only check whether we have a function
+  -- to generate the grammar but this is quite crude, as it will fail if there
+  -- are multiple complex operators that require the same precedence level.
+  -- However, as of October 4, 2021, this perfectly suffices and greatly reduces
+  -- the code complexity. If a new complex operator is added, it is worth great
+  -- consideration to simply give it its own precedence level.
+  if type(ops) == 'function' then
+    local op = ops(Operand)
+    -- Make sure we match 'Operand' so we can recurse the precedence levels!
+    Operators['Op'..i] = {
+      pattern = _.Sum({
+        _.Cc(true) * op.pattern,
+        _.Cc(false) * Operand,
+      }),
+      compiler = function(isComplex, ...)
+        if isComplex and type(op.compiler) == 'function' then
+          return op.compiler(...)
+        else
+          return ...
+        end
+      end,
+    }
+  else
+    Operators['Op'..i] = {
+      pattern = Operand * (_.Pad(_.C(_.Sum(ops))) * Operand) ^ 0,
+      compiler = compileOp,
+    }
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
+
+return Operators

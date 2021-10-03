@@ -78,4 +78,9 @@ spec('pipes', function()
     local function test(a) { return a + 1 }
     return 4 >> (test | nil)
   ]]))
+  assert.are.equal(7, erde.eval([[
+    local function test(a) { return a + 1 }
+    local function sum(a, b) { return a + b }
+    return 4 >> (test | nil) >> sum(2)
+  ]]))
 end)

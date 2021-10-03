@@ -124,7 +124,7 @@ end
 function supertable:remove(index, n)
   local removed = constructor()
   for _ = 1, n or 1 do
-    table.insert(removed, table.remove(self))
+    table.insert(removed, table.remove(self, index))
   end
   return removed:unpack()
 end

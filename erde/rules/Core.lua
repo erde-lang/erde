@@ -52,11 +52,7 @@ return {
             _.Cc(1) * _.Pad('.') * _.CsV('Name'),
             _.Cc(2) * _.Pad('[') * _.CsV('Expr') * _.Pad(']'),
             _.Cc(3) * ArgList,
-            _.Cc(4) * _.Product({
-              _.Pad(':'),
-              _.CsV('Name'),
-              #(_.Pad('?') ^ -1 * ArgList) + _.Expect(false),
-            }),
+            _.Cc(4) * _.Pad(':') * _.CsV('Name'),
           }),
         }) / _.map('opt', 'variant', 'value')
       ) ^ 0 / _.pack

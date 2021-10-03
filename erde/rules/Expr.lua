@@ -6,7 +6,6 @@ return {
      _.CsV('ArrowFunction'),
      _.CsV('DoBlock'),
      _.CsV('IdExpr'),
-     _.CsV('UnaryOp'),
      _.CsV('Table'),
      _.CsV('String'),
      _.CsV('Number'),
@@ -19,9 +18,7 @@ return {
   },
   Expr = {
     pattern = _.Sum({
-      _.CsV('BinaryOp'),
-      _.CsV('TernaryOp'),
-      _.CsV('PipeOp'),
+      _.CsV('Op1'),
       _.CsV('SubExpr'),
     }),
   },

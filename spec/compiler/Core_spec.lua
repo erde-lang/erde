@@ -30,7 +30,8 @@ describe('ids', function()
 
   spec('method calls', function()
     assert.are.equal('a:c().d = 1', erde.compile('a:c().d = 1'))
-    assert.has_error(function() erde.compile('a:c.d = 1') end)
+    -- TODO: readd this. Need to take it out for now to support method piping
+    -- assert.has_error(function() erde.compile('a:c.d = 1') end)
   end)
 
   spec('opt index', function()
