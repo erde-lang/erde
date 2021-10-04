@@ -2,108 +2,7 @@ local _ = require('erde.rules.helpers')
 local supertable = require('erde.supertable')
 
 -- -----------------------------------------------------------------------------
--- Operators
--- -----------------------------------------------------------------------------
-
-local Operators = {
-  AssignOp = {
-    pattern = _.Product({
-      _.V('Id'),
-      _.Pad(_.Product({
-        _.C(_.Sum(supertable(ArithmeticOp, Bitop, LogicalOp, MiscOp))),
-        _.P('=')
-      })),
-      _.CsV('Expr'),
-    }),
-    compiler = _.indexChain(function(id, op, expr)
-      return id..'='..compileBinop(id, op, expr)
-    end),
-  },
-}
-
--- -----------------------------------------------------------------------------
--- Complex Operators
---
--- These are operators that are either nonbinary or require a custom compiler.
--- -----------------------------------------------------------------------------
-
-local function UnaryOp(Operand)
-  return {
-    pattern = _.Pad(_.C(_.Sum({ '.~', '~', '-', '#' }))) * Operand,
-    compiler = function(op, expr)
-      if op == '.~' then
-        return _VERSION:find('5.[34]')
-          and '~'..expr
-          or 'require("bit").bnot('..expr..')'
-      elseif op == '~' then
-        return 'not '..expr
-      else
-        return op..expr
-      end
-    end,
-  }
-end
-
-local function TernaryOp(Operand)
-  return {
-    pattern = Operand * _.Pad('?') * Operand * _.Pad(':') * Operand,
-    compiler = function(op1, op2, op3)
-      return ('(function() if %s then return %s else return %s end end)()')
-        :format(op1, op2, op3)
-    end,
-  }
-end
-
-local function PipeOp(Operand)
-  return {
-    pattern = _.Product({
-      Operand,
-      _.Pad('>>'),
-      _.Sum({
-        _.Cc(1) * _.V('Id'),
-        _.Cc(2) * _.CsV('Expr'),
-      }),
-      _.Product({
-        -_.Pad(')'),
-        _.Pad('?') * _.Cc(true) + _.Cc(false),
-      }),
-    }),
-    compiler = function(pipee, variant, id, opt)
-      local idCompiler = _.indexChain(
-        function(id) return id end,
-        function(id) return 'return '..id end
-      )
-
-      if variant == 1 then
-        local lastChain = id.chain[#id.chain]
-
-        if lastChain and lastChain.variant == 3 then
-          lastChain.value:insert(1, pipee)
-        else
-          id.chain:push({
-            opt = opt,
-            variant = 3,
-            value = supertable({ pipee }),
-          })
-        end
-
-        return idCompiler(id)
-      else
-        return idCompiler({
-          base = id,
-          chain = {
-            opt = opt,
-            variant = 3,
-            value = supertable({ pipee }),
-          },
-        })
-      end
-    end,
-  }
-end
-
--- -----------------------------------------------------------------------------
--- Precedence Levels
+-- Helpers
 -- -----------------------------------------------------------------------------
 
 local function compileOp(lhs, op, rhs, ...)
@@ -152,6 +51,119 @@ local function compileOp(lhs, op, rhs, ...)
   end
 end
 
+-- -----------------------------------------------------------------------------
+-- Operators
+-- -----------------------------------------------------------------------------
+
+local Operators = {
+  AssignOp = {
+    pattern = _.Product({
+      _.V('Id'),
+      _.Pad(_.Product({
+        _.C(_.Sum({
+          '??', '|', '&', '==', '~=', '<=', '>=', '<', '>', '.|', '.~', '.&',
+          '.<<', '.>>', '..', '+', '-', '*', '//', '/', '%', '^',
+        })),
+        _.P('=')
+      })),
+      _.CsV('Expr'),
+    }),
+    compiler = _.indexChain(function(id, op, expr)
+      return id..'='..compileOp(id, op, expr)
+    end),
+  },
+}
+
+-- -----------------------------------------------------------------------------
+-- Complex Operators
+--
+-- These are operators that are either nonbinary or require a custom compiler.
+-- -----------------------------------------------------------------------------
+
+local function UnaryOp(Operand)
+  return {
+    pattern = _.Pad(_.C(_.Sum({ '.~', '~', '-', '#' }))) * Operand,
+    compiler = function(op, expr)
+      if op == '.~' then
+        return _VERSION:find('5.[34]')
+          and '~'..expr
+          or 'require("bit").bnot('..expr..')'
+      elseif op == '~' then
+        return 'not '..expr
+      else
+        return op..expr
+      end
+    end,
+  }
+end
+
+local function TernaryOp(Operand)
+  return {
+    pattern = Operand * _.Pad('?') * Operand * _.Pad(':') * Operand,
+    compiler = function(op1, op2, op3)
+      return ('(function() if %s then return %s else return %s end end)()')
+        :format(op1, op2, op3)
+    end,
+  }
+end
+
+local function PipeOp(Operand)
+  return {
+    pattern = Operand * (
+      _.Product({
+        _.Pad('>>'),
+        _.Sum({
+          _.Cc(1) * _.V('Id'),
+          _.Cc(2) * _.CsV('Expr'),
+        }),
+        _.Product({
+          -_.Pad(')'),
+          _.Pad('?') * _.Cc(true) + _.Cc(false),
+        }),
+      }) / _.pack
+    ) ^ 1,
+    compiler = function(pipee, ...)
+      local idCompiler = _.indexChain(
+        function(id) return id end,
+        function(id) return 'return '..id end
+      )
+
+      return supertable({ ... }):reduce(function(pipeOp, capture)
+        local variant, pipe, opt = capture[1], capture[2], capture[3]
+
+        if variant == 1 then
+          local lastChain = pipe.chain[#pipe.chain]
+
+          if lastChain and lastChain.variant == 3 then
+            lastChain.value:insert(1, pipeOp)
+          else
+            pipe.chain:push({
+              opt = opt,
+              variant = 3,
+              value = supertable({ pipeOp }),
+            })
+          end
+
+          return idCompiler(pipe)
+        else
+          return idCompiler({
+              base = pipe,
+              chain = {
+                opt = opt,
+                variant = 3,
+                value = supertable({ pipeOp }),
+              },
+            })
+        end
+      end, pipee)
+    end,
+  }
+end
+
+-- -----------------------------------------------------------------------------
+-- Precedence Levels
+-- -----------------------------------------------------------------------------
+
 local Precedence = {
   PipeOp,
   TernaryOp,
@@ -165,7 +177,7 @@ local Precedence = {
   { '.<<', '.>>' },
   { '..' },
   { '+', '-' },
-  { '*', '/', '//', '%' },
+  { '*', '//', '/', '%' },
   UnaryOp,
   { '^' },
 }
