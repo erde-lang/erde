@@ -57,7 +57,11 @@ return {
       elseif variant == 2 then
         return { nested = c1, default = c2 }
       elseif variant == 3 then
-        return { keyed = true, name = c1, nested = c2, default = c3 }
+        if type(c2) == 'table' then
+          return { keyed = true, name = c1, nested = c2, default = c3 }
+        else
+          return { keyed = true, name = c1, default = c2 }
+        end
       end
     end,
   },
