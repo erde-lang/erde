@@ -30,16 +30,16 @@ local function benchmark(label, callback, stress)
   if stress then
     for i = 1, 1000 do callback() end
   end
-  print(callback())
   print(label, ' => ', os.clock() - start)
+  print(callback())
 end
 
 -- local input = read_file('./examples/scratchpad.erde')
 local input = read_file('./examples/benchmark.erde')
 print('LOAD => ', os.clock() - loadstart)
--- benchmark('LUA', function()
---   return erde.compile(input)
--- end, true)
-benchmark('C', function()
-  return erdec.compile(input)
+benchmark('LUA', function()
+  return erde.compile(input)
 end, true)
+-- benchmark('C', function()
+--   return erdec.compile(input)
+-- end, true)
