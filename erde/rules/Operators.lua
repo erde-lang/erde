@@ -212,7 +212,10 @@ for i, ops in ipairs(Precedence) do
     }
   else
     Operators['Op'..i] = {
-      pattern = Operand * (_.Pad(_.C(_.Sum(ops))) * Operand) ^ 0,
+      pattern = _.Sum({
+        Operand - _.Pad(_.C(_.Sum(ops))),
+        Operand * (_.Pad(_.C(_.Sum(ops))) * Operand) ^ 1,
+      }),
       compiler = compileOp,
     }
   end
