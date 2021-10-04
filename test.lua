@@ -1,7 +1,9 @@
-local loadstart = os.clock()
 package.path = './?/init.lua;' .. package.path
+package.cpath = './build/?.so;' .. package.cpath
+local loadstart = os.clock()
 
 local erde = require('erde')
+local erdec = require('erdec')
 local inspect = require('inspect')
 
 local function read_file(path)
@@ -35,9 +37,9 @@ end
 -- local input = read_file('./examples/scratchpad.erde')
 local input = read_file('./examples/benchmark.erde')
 print('LOAD => ', os.clock() - loadstart)
-benchmark('COMPILE', function()
-  return erde.compile(input)
+-- benchmark('LUA', function()
+--   return erde.compile(input)
+-- end, true)
+benchmark('C', function()
+  return erdec.compile(input)
 end, true)
--- benchmark('FORMAT', function()
---   return erde.format(input)
--- end, false)

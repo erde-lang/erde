@@ -13,10 +13,10 @@ LINKFLAGS = -shared
 
 .PHONY: clean
 	
-erde: $(OBJFILES)
+erdec: $(OBJFILES)
 	$(CC) $(CFLAGS) $(LINKFLAGS) $(OBJFILES) -o $(BUILDDIR)/$@.so
 
-$(OBJFILES): $(SRCFILES)
+$(BUILDDIR)/obj/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(OBJFLAGS) -c $< -o $@
 
