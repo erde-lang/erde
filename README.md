@@ -2,11 +2,9 @@
 
 ## TODO
 
-- integrate official erde-lang spec
+- error handling
 - custom keywords
   - `kpairs`
-- order of operations?
-- turbo error (empty string) tests
 
 ## Proposals (need community input)
 
