@@ -1,8 +1,1 @@
-local p12 = (
-  x,
-  y = 3,
-  z = 2,
-  ...test,
-) => {}
--- Function Body
-local y
+4

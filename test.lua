@@ -3,6 +3,7 @@ local loadstart = os.clock()
 
 local erde = require('erde')
 local inspect = require('inspect')
+local parser = require('erde.parser')
 
 local function read_file(path)
   local file = io.open(path, 'r')
@@ -26,15 +27,20 @@ end
 local function benchmark(label, callback, stress)
   local start = os.clock()
   if stress then
-    for i = 1, 1000 do callback() end
+    for i = 1, 1000 do
+      callback()
+    end
   end
   print(label, ' => ', os.clock() - start)
   print(callback())
 end
 
--- local input = read_file('./examples/scratchpad.erde')
-local input = read_file('./examples/benchmark.erde')
+local input = read_file('./examples/scratchpad.erde')
+-- local input = read_file('./examples/benchmark.erde')
 print('LOAD => ', os.clock() - loadstart)
-benchmark('COMPILE', function()
-  return erde.compile(input)
-end, true)
+-- benchmark('COMPILE', function()
+--   return erde.compile(input)
+-- end, true)
+benchmark('LEX', function()
+  return parser.parse(input)
+end, false)
