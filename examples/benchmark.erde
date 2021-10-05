@@ -40,18 +40,18 @@ local b1 = () -> {
 }
 
 local b2 = () -> { local x = 'hello' }
-local b3 = () -> {
+local b3 = () -> ({
   x: 'hello',
   y: 'bye',
-}
+})
 
 -- Function Call
 
-myfunc()
-(() -> {})()
-a.b[1]()
-a.b[3].c(x, 4 + 5)
-a.b[3]:c()
+-- myfunc()
+-- (() -> {})()
+-- a.b[1]()
+-- a.b[3].c(x, 4 + 5)
+-- a.b[3]:c()
 
 -- Returns
 

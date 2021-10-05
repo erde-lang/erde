@@ -55,6 +55,8 @@ end
 -- Operators
 -- -----------------------------------------------------------------------------
 
+local Minus = _.P('-') - _.P('--')
+
 local Operators = {
   AssignOp = {
     pattern = _.Product({
@@ -62,7 +64,7 @@ local Operators = {
       _.Pad(_.Product({
         _.C(_.Sum({
           '??', '|', '&', '==', '~=', '<=', '>=', '<', '>', '.|', '.~', '.&',
-          '.<<', '.>>', '..', '+', '-', '*', '//', '/', '%', '^',
+          '.<<', '.>>', '..', '+', Minus, '*', '//', '/', '%', '^',
         })),
         _.P('=')
       })),
@@ -82,7 +84,7 @@ local Operators = {
 
 local function UnaryOp(Operand)
   return {
-    pattern = _.Pad(_.C(_.Sum({ '.~', '~', '-', '#' }))) * Operand,
+    pattern = _.Pad(_.C(_.Sum({ '.~', '~', Minus, '#' }))) * Operand,
     compiler = function(op, expr)
       if op == '.~' then
         return _VERSION:find('5.[34]')
@@ -176,7 +178,7 @@ local Precedence = {
   { '.&' },
   { '.<<', '.>>' },
   { '..' },
-  { '+', '-' },
+  { '+', Minus },
   { '*', '//', '/', '%' },
   UnaryOp,
   { '^' },

@@ -13,10 +13,10 @@ return {
     pattern = (_.V('Newline') + _.space) ^ 0,
   },
   Comment = {
-    pattern = _.Sum({
+    pattern = _.Pad(_.Sum({
       _.Pad('---') * (_.P(1) - _.P('---')) ^ 0 * _.Pad('---'),
       _.Pad('--') * (_.P(1) - _.V('Newline')) ^ 0,
-    }) / '',
+    })) / '',
   },
   Name = {
     pattern = function()

@@ -7,7 +7,7 @@ return {
       _.Pad(_.Sum({
         _.CsV('Comment'),
         -- allow function calls as statements
-        _.CsV('IdExpr') * _.B(')'),
+        _.CsV('IdExpr') * _.Pad(_.B(')')),
         _.CsV('Assignment'),
         _.CsV('NameDeclaration'),
         _.CsV('FunctionDeclaration'),
