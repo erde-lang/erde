@@ -1,27 +1,32 @@
 local bytes = require('erde.bytes')
 local utils = require('erde.utils')
-local sbyte = string.byte
 
-local lexer = {}
-local state = {
-  pointer = 1,
-  byte = 0,
-  bytes = {},
-}
+-- -----------------------------------------------------------------------------
+-- State
+-- -----------------------------------------------------------------------------
 
-local function lexCheckNumber()
-  if state.byte ~= DOT then
+local buffer = {}
+local char = 0
+local bufIndex = 1
 
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function lexNumber()
+  if not bytes.isNum(state.byte) then
+    if not state.byte == bytes.Dot then
+      return
+    end
   end
 end
 
-local function lexNumber()
-end
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
 
-function lexer.lex(input)
-  state.bytes = { sbyte(input, 1, #input) }
-  state.pointer = 1
-  state.byte = state.bytes[1]
+return function (input)
+  buffer = { string.byte(input, 1, #input) }
+  bufIndex = 1
+  bufValue = buffer[bufIndex]
 end
-
-return lexer
