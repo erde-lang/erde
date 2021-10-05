@@ -1,23 +1,6 @@
 _ENV = require('erde.parser._env').load()
 
 -- -----------------------------------------------------------------------------
--- State
--- -----------------------------------------------------------------------------
-
-local STATE_FREE = 0
-local STATE_NUMBER = 1
-local STATE_NUMBER_DECIMAL = 2
-local STATE_STRING = 3
-
-local state = STATE_NUMBER
-local buffer = {}
-local bufIndex = 1
-local bufValue = 0
-
-local line = 1
-local column = 1
-
--- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
 
@@ -33,23 +16,26 @@ local function parseNext()
   end
 end
 
-local STATE_DECIMAL = 0
-
 local function parseNumber()
-  local state = STATE_NUMBER
-
   while bufValue do
-    if bufValue == Dot then
-      if state == STATE_DECIMAL then
-        error('Found 2 dots')
-      else
-        state = STATE_DECIMAL
+    if state == STATE_DIGIT then
+      if bufValue == x or bufValue == X then
+        if #token == 0 then
+          error('Must have at least one digit before hex x')
+        else
+          state = STATE_HEX
+        end
+      elseif bufValue == Dot then
+        state = STATE_FRACTION
+      elseif not Digit[bufValue] then
+        break
       end
+    else
+      break
     end
 
-    if not Digits[bufValue] then
-      error('expected digit')
-    end
+    token[#token + 1] = bufValue
+    parseNext()
   end
 end
 
@@ -63,5 +49,11 @@ return {
     bufIndex = 1
     bufValue = buffer[bufIndex]
     parseNumber()
+
+    local result = {}
+    for key, value in pairs(token) do
+      result[key] = string.char(value)
+    end
+    return table.concat(result)
   end,
 }

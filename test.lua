@@ -30,8 +30,8 @@ local function benchmark(label, callback, stress)
     for i = 1, 1000 do
       callback()
     end
+    print(label, ' => ', os.clock() - start)
   end
-  print(label, ' => ', os.clock() - start)
   print(callback())
 end
 
@@ -41,6 +41,6 @@ print('LOAD => ', os.clock() - loadstart)
 -- benchmark('COMPILE', function()
 --   return erde.compile(input)
 -- end, true)
-benchmark('LEX', function()
+benchmark('PARSE', function()
   return parser.parse(input)
 end, false)
