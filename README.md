@@ -2,29 +2,24 @@
 
 ## TODO
 
-- error handling
 - custom keywords
   - `kpairs`
-
-## Proposals (need community input)
-
-- import / export
-- case statement?
-- shorthand self? need to support optional op?
+- rewrite erde in erde using custom lexer / parser
+  - stricter rules (require `global`, throw on undefined variable, etc)
+  - proper error handling
 
 ## Long Term TODO
 
 - finish docs site
-- erde runtime lib
-  - allow mutating `require` (similar to moonscript)
 - erde cli
   - `erde`: repl
-  - `erde check`: compile/error checking (slow)
-  - `erde compile`: compile (fast)
+  - `erde check`: error checking
+  - `erde compile`: compile
   - `erde run`: run script
   - `erde format`: formatter
-  - `erde parse`: print ast
   - `erde debug`: custom debugger???
+- erde runtime lib
+  - allow mutating `require` (similar to moonscript)
 - Formatter
 - Syntax highlighting
   - Vim
@@ -32,5 +27,9 @@
   - Vscode
   - Treesitter
 - Source maps?
-- port erde to c handwritten parser?
-- optimization levels
+
+## Long Term Proposals (need community input)
+
+- import / export
+- case statement?
+- shorthand self? need to support optional op?
