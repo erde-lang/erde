@@ -5,9 +5,7 @@ local _ENV = require('erde.parser._env').load()
 -- -----------------------------------------------------------------------------
 
 local function parse()
-  if state ~= STATE_STRING then
-    error('tried to parse in bad state: ' .. tostring(state))
-  end
+  assert.state(STATE_STRING)
 
   while bufValue do
     if state == STATE_STRING then

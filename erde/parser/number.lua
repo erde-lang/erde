@@ -17,10 +17,7 @@ local LOCAL_STATE_EXPONENT_SIGN = 4
 -- -----------------------------------------------------------------------------
 
 local function parse()
-  if state ~= STATE_NUMBER then
-    error('tried to parse in bad state: ' .. tostring(state))
-  end
-
+  assert.state(STATE_NUMBER)
   local localState = LOCAL_STATE_DIGIT
 
   while bufValue do
@@ -47,6 +44,7 @@ local function parse()
           growToken()
         end
       elseif #token == 0 then
+        -- TODO: abstract to env error handling, get word
         error('expected number, found ' .. string.char(bufValue))
       else
         break
@@ -84,7 +82,7 @@ local function parse()
         break
       end
     else
-      error('tried to parse in bad state: ' .. tostring(localState))
+      throw.badState(localState)
     end
   end
 end

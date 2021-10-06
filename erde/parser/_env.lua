@@ -117,6 +117,34 @@ function _env.growToken()
 end
 
 -- -----------------------------------------------------------------------------
+-- Error Handling
+-- -----------------------------------------------------------------------------
+
+_env.assert = {
+  state = function(expectedState, receivedState)
+    receivedState = receivedState or state
+    if expectedState ~= receivedState then
+      throw.badState(receivedState, expectedState)
+    end
+  end,
+}
+
+_env.throw = {
+  badState = function(receivedState, expectedState)
+    if expectedState == nil then
+      error(('Invalid state: %s'):format(receivedState or state))
+    else
+      error(
+        ('Invalid state. Expected %s, got %s'):format(
+          receivedState,
+          expectedState
+        )
+      )
+    end
+  end,
+}
+
+-- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
