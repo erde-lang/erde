@@ -4,11 +4,11 @@ local _ENV = require('erde.parser._env').load()
 -- Local States
 -- -----------------------------------------------------------------------------
 
-local LOCAL_STATE_DIGIT = 0
-local LOCAL_STATE_HEX = 1
-local LOCAL_STATE_FLOAT = 2
-local LOCAL_STATE_EXPONENT = 3
-local LOCAL_STATE_EXPONENT_SIGN = 4
+local LOCAL_STATE_DIGIT = 'LOCAL_STATE_DIGIT'
+local LOCAL_STATE_HEX = 'LOCAL_STATE_HEX'
+local LOCAL_STATE_FLOAT = 'LOCAL_STATE_FLOAT'
+local LOCAL_STATE_EXPONENT = 'LOCAL_STATE_EXPONENT'
+local LOCAL_STATE_EXPONENT_SIGN = 'LOCAL_STATE_EXPONENT_SIGN'
 
 -- -----------------------------------------------------------------------------
 -- Parse

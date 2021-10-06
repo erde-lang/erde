@@ -34,7 +34,7 @@ local states = {
 }
 
 for key, value in pairs(states) do
-  _env[value] = key
+  _env[value] = value
 end
 
 -- -----------------------------------------------------------------------------
@@ -111,9 +111,11 @@ function _env.next()
   end
 end
 
-function _env.growToken()
-  token[#token + 1] = bufValue
-  next()
+function _env.growToken(n)
+  for i = 1, n or 1 do
+    token[#token + 1] = bufValue
+    next()
+  end
 end
 
 -- -----------------------------------------------------------------------------
