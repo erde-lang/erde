@@ -6,6 +6,7 @@ local _env = {
   -- Constants
   EOF = -1,
 
+  -- Lookup Tables
   Alpha = {},
   Digit = {},
   Hex = {},
@@ -26,21 +27,13 @@ for key, value in pairs(_G) do
   end
 end
 
-local _states = {
+local states = {
   'STATE_FREE',
-
-  -- Number
   'STATE_NUMBER',
-  'STATE_HEX',
-  'STATE_FLOAT',
-  'STATE_EXPONENT',
-  'STATE_EXPONENT_SIGN',
-
-  -- String
   'STATE_STRING',
 }
 
-for key, value in pairs(_states) do
+for key, value in pairs(states) do
   _env[value] = key
 end
 
