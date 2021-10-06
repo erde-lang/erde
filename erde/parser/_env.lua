@@ -28,11 +28,15 @@ end
 
 local _states = {
   'STATE_FREE',
+
+  -- Number
   'STATE_NUMBER',
   'STATE_HEX',
   'STATE_FLOAT',
   'STATE_EXPONENT',
   'STATE_EXPONENT_SIGN',
+
+  -- String
   'STATE_STRING',
 }
 
@@ -56,7 +60,7 @@ end
 -- Setup
 -- -----------------------------------------------------------------------------
 
-_ENV = load()
+local _ENV = load()
 
 for byte = string.byte('0'), string.byte('9') do
   local char = string.char(byte)
