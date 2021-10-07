@@ -25,17 +25,17 @@ local function parse()
     error('Invalid quote: ' .. bufValue)
   end
 
-  growToken()
+  consume(1, token)
 
   if localState == LOCAL_STATE_SHORT then
     while bufValue do
       if bufValue == quote then
-        growToken()
+        consume(1, token)
         break
       elseif bufValue == '\\' then
-        growToken(2)
+        consume(2, token)
       else
-        growToken()
+        consume(1, token)
       end
     end
   elseif localState == LOCAL_STATE_LONG then

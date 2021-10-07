@@ -16,7 +16,6 @@ local _env = {
   buffer = {},
   bufIndex = 1,
   bufValue = 0,
-  token = {},
   line = 1,
   column = 1,
 }
@@ -94,7 +93,6 @@ function _env.loadBuffer(input)
 
   bufIndex = 1
   bufValue = buffer[bufIndex]
-  token = {}
   line = 1
   column = 1
 end
@@ -111,9 +109,11 @@ function _env.next()
   end
 end
 
-function _env.growToken(n)
+function _env.consume(n, target)
   for i = 1, n or 1 do
-    token[#token + 1] = bufValue
+    if type(target) == 'table' then
+      target[#target + 1] = bufValue
+    end
     next()
   end
 end

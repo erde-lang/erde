@@ -19,14 +19,15 @@ local LOCAL_STATE_EXPONENT_SIGN = 'LOCAL_STATE_EXPONENT_SIGN'
 local function parse()
   assert.state(STATE_NUMBER)
   local localState = LOCAL_STATE_DIGIT
+  local token = {}
 
   while bufValue do
     if localState == LOCAL_STATE_DIGIT then
       if Digit[bufValue] then
-        growToken()
+        consume(1, token)
       elseif bufValue == '.' then
         localState = LOCAL_STATE_FLOAT
-        growToken()
+        consume(1, token)
       elseif bufValue == 'x' or bufValue == 'X' then
         if #token == 0 then
           error('Must have at least one digit before hex x')
@@ -34,14 +35,14 @@ local function parse()
           error('hex numbers must start with 0')
         else
           localState = LOCAL_STATE_HEX
-          growToken()
+          consume(1, token)
         end
       elseif bufValue == 'e' or bufValue == 'E' then
         if #token == 0 then
           error('Must have at least one digit before hex x')
         else
           localState = LOCAL_STATE_EXPONENT_SIGN
-          growToken()
+          consume(1, token)
         end
       elseif #token == 0 then
         -- TODO: abstract to env error handling, get word
@@ -51,7 +52,7 @@ local function parse()
       end
     elseif localState == LOCAL_STATE_HEX then
       if Hex[bufValue] then
-        growToken()
+        consume(1, token)
       elseif not Hex[token[#token]] then
         error('malformed number, cannot end with "' .. token[#token] .. '"')
       else
@@ -59,10 +60,10 @@ local function parse()
       end
     elseif localState == LOCAL_STATE_FLOAT then
       if Digit[bufValue] then
-        growToken()
+        consume(1, token)
       elseif bufValue == 'e' or bufValue == 'E' then
         localState = LOCAL_STATE_EXPONENT_SIGN
-        growToken()
+        consume(1, token)
       elseif not Digit[token[#token]] then
         error('malformed number, cannot end with "' .. token[#token] .. '"')
       else
@@ -70,12 +71,12 @@ local function parse()
       end
     elseif localState == LOCAL_STATE_EXPONENT_SIGN then
       if bufValue == '+' or bufValue == '-' then
-        growToken()
+        consume(1, token)
       end
       localState = LOCAL_STATE_EXPONENT
     elseif localState == LOCAL_STATE_EXPONENT then
       if Digit[bufValue] then
-        growToken()
+        consume(1, token)
       elseif not Digit[token[#token]] then
         error('malformed number, cannot end with "' .. token[#token] .. '"')
       else
@@ -85,6 +86,8 @@ local function parse()
       throw.badState(localState)
     end
   end
+
+  return table.concat(token)
 end
 
 -- -----------------------------------------------------------------------------
@@ -95,8 +98,7 @@ return {
   unit = function(input)
     loadBuffer(input)
     state = STATE_NUMBER
-    parse()
-    return table.concat(token)
+    return parse()
   end,
   parse = parse,
 }
