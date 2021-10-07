@@ -37,7 +37,7 @@ local function parse()
         break
       elseif bufValue == '\\' then
         consume(2, token)
-      elseif bufValue == EOF then
+      elseif bufValue == '\n' or bufValue == EOF then
         error('unterminated string')
       else
         consume(1, token)
