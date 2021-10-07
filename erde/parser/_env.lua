@@ -36,6 +36,14 @@ for key, value in pairs(states) do
   _env[value] = value
 end
 
+local tags = {
+  'TAG_LONG_STRING',
+}
+
+for key, value in pairs(tags) do
+  _env[value] = value
+end
+
 -- -----------------------------------------------------------------------------
 -- Loader
 -- -----------------------------------------------------------------------------

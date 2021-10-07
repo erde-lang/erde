@@ -22,23 +22,54 @@ local function parse()
   elseif bufValue == '`' then
     localState = LOCAL_STATE_LONG
   else
-    error('Invalid quote: ' .. bufValue)
+    error('Expected quote (",\',`), found ' .. bufValue)
   end
 
-  consume(1, token)
-
   if localState == LOCAL_STATE_SHORT then
+    local token = {}
+    consume(1, token)
+
     while bufValue do
-      if bufValue == quote then
+      if Alpha[bufValue] or Digit[bufValue] then -- most common case
+        consume(1, token)
+      elseif bufValue == quote then
         consume(1, token)
         break
       elseif bufValue == '\\' then
         consume(2, token)
+      elseif bufValue == EOF then
+        error('unterminated string')
       else
         consume(1, token)
       end
     end
+
+    return table.concat(token)
   elseif localState == LOCAL_STATE_LONG then
+    local node = { tag = TAG_LONG_STRING }
+    local token = {}
+
+    while bufValue do
+      if Alpha[bufValue] or Digit[bufValue] then -- most common case
+        consume(1, token)
+      elseif bufValue == '{' then
+        -- TODO: interpolation
+      elseif bufValue == quote then
+        node[#node + 1] = table.concat(token)
+        consume(1, token)
+        break
+      elseif bufValue == '\\' then
+        next()
+        if bufValue ~= '{' and bufValue ~= '`' then
+          token[#token + 1] = '\\'
+        end
+        consume(1, token)
+      elseif bufValue == EOF then
+        error('unterminated string')
+      else
+        consume(1, token)
+      end
+    end
   else
     throw.badState(localState)
   end
@@ -52,8 +83,7 @@ return {
   unit = function(input)
     loadBuffer(input)
     state = STATE_STRING
-    parse()
-    return table.concat(token)
+    return parse()
   end,
   parse = parse,
 }
