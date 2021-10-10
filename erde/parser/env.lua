@@ -11,15 +11,19 @@ local env = {
   Digit = {},
   Hex = {},
 
-  -- Private State
-  _buffer = {},
-  _bufIndex = 1,
-  _bufValue = 0,
-
   -- Public State
   state = 1,
+  buffer = {},
+  bufIndex = 1,
+  bufValue = 0,
   line = 1,
   column = 1,
+
+  -- Parsers
+  -- `parser` is the actual parser. `unit` is used to parse individual
+  -- components and is particularly useful for unit tests.
+  parser = {},
+  unit = {},
 }
 
 for key, value in pairs(_G) do
@@ -28,23 +32,34 @@ for key, value in pairs(_G) do
   end
 end
 
-local states = {
+local STATES = {
   'STATE_FREE',
+
+  -- Number
   'STATE_NUMBER',
+  'STATE_HEX',
+  'STATE_FLOAT',
+  'STATE_EXPONENT',
+  'STATE_EXPONENT_SIGN',
+
+  -- String
   'STATE_STRING',
+  'STATE_SHORT_STRING',
+  'STATE_LONG_STRING',
+
   'STATE_EXPR',
 }
 
-for key, value in pairs(states) do
+for key, value in pairs(STATES) do
   env[value] = value
 end
 
-local tags = {
+local TAGS = {
   'TAG_NUMBER',
   'TAG_LONG_STRING',
 }
 
-for key, value in pairs(tags) do
+for key, value in pairs(TAGS) do
   env[value] = value
 end
 
@@ -91,34 +106,6 @@ for byte = string.byte('g'), string.byte('z') do
 end
 
 -- -----------------------------------------------------------------------------
--- Token
--- -----------------------------------------------------------------------------
-
-local Token_mt = {
-  __index = {
-    consume = function(self, n)
-      for i = 1, n or 1 do
-        self.buffer[#self.buffer + 1] = bufValue
-        next()
-      end
-    end,
-    commit = function(self)
-      self[#self + 1] = table.concat(self.buffer)
-      self.buffer = {}
-    end,
-  },
-}
-
-function env.Token(tag)
-  return setmetatable({
-    line = line,
-    column = column,
-    buffer = {},
-    tag = tag,
-  }, Token_mt)
-end
-
--- -----------------------------------------------------------------------------
 -- Functions
 -- -----------------------------------------------------------------------------
 
@@ -151,9 +138,7 @@ end
 
 function env.consume(n, target)
   for i = 1, n or 1 do
-    if type(target) == 'table' then
-      target[#target + 1] = bufValue
-    end
+    target[#target + 1] = bufValue
     next()
   end
 end
@@ -163,25 +148,19 @@ end
 -- -----------------------------------------------------------------------------
 
 env.assert = {
-  state = function(expectedState, receivedState)
-    receivedState = receivedState or state
-    if expectedState ~= receivedState then
-      throw.badState(receivedState, expectedState)
+  state = function(expectedState)
+    if state ~= expectedState then
+      throw.badState(expectedState)
     end
   end,
 }
 
 env.throw = {
-  badState = function(receivedState, expectedState)
+  badState = function(expectedState)
     if expectedState == nil then
-      error(('Invalid state: %s'):format(receivedState or state))
+      error(('Invalid state: %s'):format(state))
     else
-      error(
-        ('Invalid state. Expected %s, got %s'):format(
-          receivedState,
-          expectedState
-        )
-      )
+      error(('Invalid state. Expected %s, got %s'):format(expectedState, state))
     end
   end,
 }

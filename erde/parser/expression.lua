@@ -1,4 +1,4 @@
-local _ENV = require('erde.parser._env').load()
+local _ENV = require('erde.parser.env').load()
 local number = require('erde.parser.number')
 
 -- -----------------------------------------------------------------------------

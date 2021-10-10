@@ -1,31 +1,22 @@
-local _ENV = require('erde.parser._env').load()
-
--- -----------------------------------------------------------------------------
--- Constants
--- -----------------------------------------------------------------------------
-
-local LOCAL_STATE_SHORT = 'LOCAL_STATE_INNER'
-local LOCAL_STATE_LONG = 'LOCAL_STATE_LONG_INNER'
-local LOCAL_STATE_ESCAPE = 'LOCAL_STATE_ESCAPE'
+local _ENV = require('erde.parser.env').load()
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-local function parse()
+function parser.string()
   assert.state(STATE_STRING)
   local quote = bufValue
 
-  local localState
   if bufValue == "'" or bufValue == '"' then
-    localState = LOCAL_STATE_SHORT
+    state = STATE_SHORT_STRING
   elseif bufValue == '`' then
-    localState = LOCAL_STATE_LONG
+    state = STATE_LONG_STRING
   else
     error('Expected quote (",\',`), found ' .. bufValue)
   end
 
-  if localState == LOCAL_STATE_SHORT then
+  if state == STATE_SHORT_STRING then
     local token = {}
     consume(1, token)
 
@@ -45,7 +36,7 @@ local function parse()
     end
 
     return table.concat(token)
-  elseif localState == LOCAL_STATE_LONG then
+  elseif state == STATE_LONG_STRING then
     local node = { tag = TAG_LONG_STRING }
     local token = {}
 
@@ -71,19 +62,16 @@ local function parse()
       end
     end
   else
-    throw.badState(localState)
+    throw.badState()
   end
 end
 
 -- -----------------------------------------------------------------------------
--- Return
+-- Unit Parse
 -- -----------------------------------------------------------------------------
 
-return {
-  unit = function(input)
-    loadBuffer(input)
-    state = STATE_STRING
-    return parse()
-  end,
-  parse = parse,
-}
+function unit.string(input)
+  loadBuffer(input)
+  state = STATE_STRING
+  return parser.string()
+end
