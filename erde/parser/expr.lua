@@ -26,9 +26,15 @@ local PRECEDENCE_LEVELS = {
 }
 
 local OPERATORS = {
-  ['+'] = { precedence = 1, associativity = LEFT_ASSOCIATIVE },
-  ['-'] = { precedence = 1, associativity = LEFT_ASSOCIATIVE },
+  ['.|'] = { tag = 'TAG_BOR', prec = 1, assoc = LEFT_ASSOCIATIVE },
+  ['+'] = { prec = 1, assoc = LEFT_ASSOCIATIVE },
+  ['-'] = { prec = 1, assoc = LEFT_ASSOCIATIVE },
 }
+
+local OPERATOR_MAX_LEN = 1
+for key, value in pairs(OPERATORS) do
+  OPERATOR_MAX_LEN = math.max(OPERATOR_MAX_LEN, #key)
+end
 
 local OPTREE = {}
 
@@ -39,14 +45,15 @@ local OPTREE = {}
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-function parser.expr(minPrecedence)
-  local minPrecedence = minPrecedence or 1
+function parser.expr(minPrec)
+  minPrec = minPrec or 1
+  local expr = {}
 
-  local lhs
   if bufValue == '(' then
     parser.space()
-    lhs = parser.expr()
+    local lhs = parser.expr()
     lhs.parens = true
+    expr[#expr + 1] = lhs
 
     parser.space()
     if bufValue ~= ')' then
@@ -54,25 +61,41 @@ function parser.expr(minPrecedence)
     end
   elseif bufValue == EOF then
     error('unexpected EOF')
+    -- TODO: parse unary op here
   else
     parser.space()
-    lhs = parser.number()
+    expr[#expr + 1] = parser.number()
   end
 
   while true do
     parser.space()
-    local op = OPERATORS[bufValue]
-    if not op or op.precedence < minPrecedence then
+
+    local op
+    for i = OPERATOR_MAX_LEN, 1, -1 do
+      local opToken = bufValue
+      for j = 1, i - 1 do
+        opToken = opToken .. buffer[bufIndex + j]
+      end
+
+      op = OPERATORS[opToken]
+      if op then
+        break
+      end
+    end
+
+    if not op or op.prec < minPrec then
       break
+    else
+      expr[#expr + 1] = op
     end
 
     parser.space()
-    local rhs = op.associativity == LEFT_ASSOCIATIVE
-        and parser.expr(minPrecedence + 1)
-      or parser.expr(minPrecedence)
+    expr[#expr + 1] = op.assoc == LEFT_ASSOCIATIVE
+        and parser.expr(minPrec + 1)
+      or parser.expr(minPrec)
   end
 
-  return lhs
+  return expr
 end
 
 -- -----------------------------------------------------------------------------

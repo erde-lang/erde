@@ -33,7 +33,7 @@ function parser.number()
         end
       elseif #number == 0 then
         -- TODO: abstract to env error handling, get word
-        error('expected number, found ' .. string.char(bufValue))
+        error('expected number, found ' .. bufValue)
       else
         break
       end
