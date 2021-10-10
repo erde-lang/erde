@@ -1,7 +1,7 @@
-local _ENV = require('erde.parser._env').load()
+local _ENV = require('erde.lexer._env').load()
 
 -- -----------------------------------------------------------------------------
--- Local States
+-- Constants
 -- -----------------------------------------------------------------------------
 
 local LOCAL_STATE_SHORT = 'LOCAL_STATE_INNER'
@@ -9,10 +9,10 @@ local LOCAL_STATE_LONG = 'LOCAL_STATE_LONG_INNER'
 local LOCAL_STATE_ESCAPE = 'LOCAL_STATE_ESCAPE'
 
 -- -----------------------------------------------------------------------------
--- Parse
+-- Lex
 -- -----------------------------------------------------------------------------
 
-local function parse()
+local function lex()
   assert.state(STATE_STRING)
   local quote = bufValue
 
@@ -83,7 +83,7 @@ return {
   unit = function(input)
     loadBuffer(input)
     state = STATE_STRING
-    return parse()
+    return lex()
   end,
-  parse = parse,
+  lex = lex,
 }

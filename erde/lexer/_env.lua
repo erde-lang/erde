@@ -30,6 +30,7 @@ local states = {
   'STATE_FREE',
   'STATE_NUMBER',
   'STATE_STRING',
+  'STATE_EXPR',
 }
 
 for key, value in pairs(states) do

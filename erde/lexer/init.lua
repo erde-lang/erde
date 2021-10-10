@@ -1,10 +1,10 @@
-local _ENV = require('erde.parser._env').load()
+local _ENV = require('erde.lexer._env').load()
 
 -- -----------------------------------------------------------------------------
--- Parse
+-- Lex
 -- -----------------------------------------------------------------------------
 
-local function parse()
+local function lex()
   -- TODO
 end
 
@@ -13,7 +13,7 @@ end
 -- -----------------------------------------------------------------------------
 
 return {
-  parse = function(input)
+  lex = function(input)
     loadBuffer(input)
     state = STATE_FREE
   end,

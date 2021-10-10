@@ -1,7 +1,7 @@
-local _ENV = require('erde.parser._env').load()
+local _ENV = require('erde.lexer._env').load()
 
 -- -----------------------------------------------------------------------------
--- Local States
+-- Constants
 -- -----------------------------------------------------------------------------
 
 local LOCAL_STATE_DIGIT = 'LOCAL_STATE_DIGIT'
@@ -11,12 +11,10 @@ local LOCAL_STATE_EXPONENT = 'LOCAL_STATE_EXPONENT'
 local LOCAL_STATE_EXPONENT_SIGN = 'LOCAL_STATE_EXPONENT_SIGN'
 
 -- -----------------------------------------------------------------------------
--- Parse
---
--- TODO: negative numbers? Should be handled by operations?
+-- Lex
 -- -----------------------------------------------------------------------------
 
-local function parse()
+local function lex()
   assert.state(STATE_NUMBER)
   local localState = LOCAL_STATE_DIGIT
   local token = {}
@@ -98,7 +96,7 @@ return {
   unit = function(input)
     loadBuffer(input)
     state = STATE_NUMBER
-    return parse()
+    return lex()
   end,
-  parse = parse,
+  lex = lex,
 }
