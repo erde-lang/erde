@@ -1,4 +1,4 @@
-local _ENV = require('erde.lexer._env').load()
+local _ENV = require('erde.parser._env').load()
 
 -- -----------------------------------------------------------------------------
 -- Constants
@@ -11,13 +11,14 @@ local LOCAL_STATE_EXPONENT = 'LOCAL_STATE_EXPONENT'
 local LOCAL_STATE_EXPONENT_SIGN = 'LOCAL_STATE_EXPONENT_SIGN'
 
 -- -----------------------------------------------------------------------------
--- Lex
+-- Parse
 -- -----------------------------------------------------------------------------
 
-local function lex()
+local function parse()
   assert.state(STATE_NUMBER)
   local localState = LOCAL_STATE_DIGIT
-  local token = {}
+  local localBuffer = {}
+  local token = Token(TAG_NUMBER)
 
   while bufValue do
     if localState == LOCAL_STATE_DIGIT then
@@ -96,7 +97,7 @@ return {
   unit = function(input)
     loadBuffer(input)
     state = STATE_NUMBER
-    return lex()
+    return parse()
   end,
-  lex = lex,
+  parse = parse,
 }

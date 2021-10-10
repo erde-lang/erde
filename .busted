@@ -1,7 +1,7 @@
 return {
   default = {
     ROOT = {
-      'spec/lexer',
+      'spec/parser',
     },
     verbose = true,
   },

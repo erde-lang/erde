@@ -2,7 +2,7 @@
 -- Init
 -- -----------------------------------------------------------------------------
 
-local _env = {
+local env = {
   -- Constants
   EOF = -1,
 
@@ -11,18 +11,20 @@ local _env = {
   Digit = {},
   Hex = {},
 
-  -- State
+  -- Private State
+  _buffer = {},
+  _bufIndex = 1,
+  _bufValue = 0,
+
+  -- Public State
   state = 1,
-  buffer = {},
-  bufIndex = 1,
-  bufValue = 0,
   line = 1,
   column = 1,
 }
 
 for key, value in pairs(_G) do
-  if _env[key] == nil then
-    _env[key] = value
+  if env[key] == nil then
+    env[key] = value
   end
 end
 
@@ -34,15 +36,16 @@ local states = {
 }
 
 for key, value in pairs(states) do
-  _env[value] = value
+  env[value] = value
 end
 
 local tags = {
+  'TAG_NUMBER',
   'TAG_LONG_STRING',
 }
 
 for key, value in pairs(tags) do
-  _env[value] = value
+  env[value] = value
 end
 
 -- -----------------------------------------------------------------------------
@@ -51,9 +54,9 @@ end
 
 local function load()
   if _VERSION:find('5.1') then
-    setfenv(2, _env)
+    setfenv(2, env)
   else
-    return _env
+    return env
   end
 end
 
@@ -88,10 +91,38 @@ for byte = string.byte('g'), string.byte('z') do
 end
 
 -- -----------------------------------------------------------------------------
+-- Token
+-- -----------------------------------------------------------------------------
+
+local Token_mt = {
+  __index = {
+    consume = function(self, n)
+      for i = 1, n or 1 do
+        self.buffer[#self.buffer + 1] = bufValue
+        next()
+      end
+    end,
+    commit = function(self)
+      self[#self + 1] = table.concat(self.buffer)
+      self.buffer = {}
+    end,
+  },
+}
+
+function env.Token(tag)
+  return setmetatable({
+    line = line,
+    column = column,
+    buffer = {},
+    tag = tag,
+  }, Token_mt)
+end
+
+-- -----------------------------------------------------------------------------
 -- Functions
 -- -----------------------------------------------------------------------------
 
-function _env.loadBuffer(input)
+function env.loadBuffer(input)
   state = STATE_FREE
 
   buffer = {}
@@ -106,7 +137,7 @@ function _env.loadBuffer(input)
   column = 1
 end
 
-function _env.next()
+function env.next()
   bufIndex = bufIndex + 1
   bufValue = buffer[bufIndex]
 
@@ -118,7 +149,7 @@ function _env.next()
   end
 end
 
-function _env.consume(n, target)
+function env.consume(n, target)
   for i = 1, n or 1 do
     if type(target) == 'table' then
       target[#target + 1] = bufValue
@@ -131,7 +162,7 @@ end
 -- Error Handling
 -- -----------------------------------------------------------------------------
 
-_env.assert = {
+env.assert = {
   state = function(expectedState, receivedState)
     receivedState = receivedState or state
     if expectedState ~= receivedState then
@@ -140,7 +171,7 @@ _env.assert = {
   end,
 }
 
-_env.throw = {
+env.throw = {
   badState = function(receivedState, expectedState)
     if expectedState == nil then
       error(('Invalid state: %s'):format(receivedState or state))
