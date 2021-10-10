@@ -10,6 +10,10 @@ local env = {
   Alpha = {},
   Digit = {},
   Hex = {},
+  Whitespace = {
+    ['\n'] = true,
+    [' '] = true,
+  },
 
   -- Public State
   state = 1,
@@ -36,14 +40,13 @@ local STATES = {
   'STATE_FREE',
 
   -- Number
-  'STATE_NUMBER',
+  'STATE_DIGIT',
   'STATE_HEX',
   'STATE_FLOAT',
   'STATE_EXPONENT',
   'STATE_EXPONENT_SIGN',
 
   -- String
-  'STATE_STRING',
   'STATE_SHORT_STRING',
   'STATE_LONG_STRING',
 

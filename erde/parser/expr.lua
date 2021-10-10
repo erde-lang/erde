@@ -1,5 +1,4 @@
 local _ENV = require('erde.parser.env').load()
-local number = require('erde.parser.number')
 
 -- -----------------------------------------------------------------------------
 -- Constants
@@ -27,16 +26,8 @@ local PRECEDENCE_LEVELS = {
 }
 
 local OPERATORS = {
-  {
-    token = '+',
-    associativity = LEFT_ASSOCIATIVE,
-    precedence = 1,
-  },
-  {
-    token = '-',
-    associativity = LEFT_ASSOCIATIVE,
-    precedence = 1,
-  },
+  ['+'] = { precedence = 1, associativity = LEFT_ASSOCIATIVE },
+  ['-'] = { precedence = 1, associativity = LEFT_ASSOCIATIVE },
 }
 
 local OPTREE = {}
@@ -48,49 +39,47 @@ local OPTREE = {}
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-local function parse_atom()
-  local atom = { parens = false, value = nil }
+function parser.expr(minPrecedence)
+  local minPrecedence = minPrecedence or 1
 
+  local lhs
   if bufValue == '(' then
-    atom.parens = true
-    atom.value = parse_expr()
+    parser.space()
+    lhs = parser.expr()
+    lhs.parens = true
+
+    parser.space()
     if bufValue ~= ')' then
       error('unbalanced parens')
     end
   elseif bufValue == EOF then
     error('unexpected EOF')
   else
-    return atom.value = number.parse()
+    parser.space()
+    lhs = parser.number()
   end
 
-  return atom
-end
+  while true do
+    parser.space()
+    local op = OPERATORS[bufValue]
+    if not op or op.precedence < minPrecedence then
+      break
+    end
 
-local function parse_op()
-end
+    parser.space()
+    local rhs = op.associativity == LEFT_ASSOCIATIVE
+        and parser.expr(minPrecedence + 1)
+      or parser.expr(minPrecedence)
+  end
 
-local function parse_expr(minPrecedence)
-  local expr = parse_atom()
-
-
-
-  return expr
-end
-
-local function parse()
-  assert.state(STATE_EXPR)
-  return parse_expr(0)
+  return lhs
 end
 
 -- -----------------------------------------------------------------------------
--- Return
+-- Unit Parse
 -- -----------------------------------------------------------------------------
 
-return {
-  unit = function(input)
-    loadBuffer(input)
-    state = STATE_EXPR
-    return parse()
-  end,
-  parse = parse,
-}
+function unit.expr(input)
+  loadBuffer(input)
+  return parser.expr()
+end

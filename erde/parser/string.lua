@@ -5,7 +5,6 @@ local _ENV = require('erde.parser.env').load()
 -- -----------------------------------------------------------------------------
 
 function parser.string()
-  assert.state(STATE_STRING)
   local quote = bufValue
 
   if bufValue == "'" or bufValue == '"' then
@@ -72,6 +71,5 @@ end
 
 function unit.string(input)
   loadBuffer(input)
-  state = STATE_STRING
   return parser.string()
 end

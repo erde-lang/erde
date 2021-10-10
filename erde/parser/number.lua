@@ -6,9 +6,10 @@ local _ENV = require('erde.parser.env').load()
 
 function parser.number()
   local number = {}
+  state = STATE_DIGIT
 
   while bufValue do
-    if state == STATE_NUMBER then
+    if state == STATE_DIGIT then
       if Digit[bufValue] then
         consume(1, number)
       elseif bufValue == '.' then
@@ -82,6 +83,5 @@ end
 
 function unit.number(input)
   loadBuffer(input)
-  state = STATE_NUMBER
   return parser.number().value
 end
