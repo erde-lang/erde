@@ -70,7 +70,6 @@ function parser.expr(minPrec)
 
   while true do
     parser.space()
-
     local op
     for i = OPERATOR_MAX_LEN, 1, -1 do
       if buffer[bufIndex + i - 1] then

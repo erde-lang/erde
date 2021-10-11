@@ -24,3 +24,8 @@ spec('valid binops', function()
   assert.are.equal('TAG_MOD', unit.expr('1 % 2')[2].tag)
   assert.are.equal('TAG_EXP', unit.expr('1 ^ 2')[2].tag)
 end)
+
+spec('op precedence', function()
+  assert.has_subtable('TAG_EXP', unit.expr('1 * 2 + 3'))
+  assert.has_subtable('TAG_EXP', unit.expr('1 + 2 * 3'))
+end)
