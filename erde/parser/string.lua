@@ -49,7 +49,7 @@ function parser.string()
         consume(1, token)
         break
       elseif bufValue == '\\' then
-        next()
+        consume()
         if bufValue ~= '{' and bufValue ~= '`' then
           token[#token + 1] = '\\'
         end

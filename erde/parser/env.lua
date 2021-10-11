@@ -60,6 +60,30 @@ end
 local TAGS = {
   'TAG_NUMBER',
   'TAG_LONG_STRING',
+
+  -- Expr
+  'TAG_NC',
+  'TAG_OR',
+  'TAG_AND',
+  'TAG_EQ',
+  'TAG_NEQ',
+  'TAG_LTE',
+  'TAG_GTE',
+  'TAG_LT',
+  'TAG_GT',
+  'TAG_BOR',
+  'TAG_BNOT',
+  'TAG_BAND',
+  'TAG_LSHIFT',
+  'TAG_RSHIFT',
+  'TAG_CONCAT',
+  'TAG_ADD',
+  'TAG_SUB',
+  'TAG_MULT',
+  'TAG_DIV',
+  'TAG_INTDIV',
+  'TAG_MOD',
+  'TAG_EXP',
 }
 
 for key, value in pairs(TAGS) do
@@ -127,22 +151,25 @@ function env.loadBuffer(input)
   column = 1
 end
 
-function env.next()
-  bufIndex = bufIndex + 1
-  bufValue = buffer[bufIndex]
-
-  if bufValue == Newline then
-    line = line + 1
-    column = 1
-  else
-    column = column + 1
-  end
-end
-
 function env.consume(n, target)
-  for i = 1, n or 1 do
-    target[#target + 1] = bufValue
-    next()
+  n = n or 1
+
+  if type(target) == 'table' then
+    for i = 0, n - 1 do
+      target[#target + 1] = buffer[bufIndex + i]
+    end
+  end
+
+  for i = 1, n do
+    bufIndex = bufIndex + 1
+    bufValue = buffer[bufIndex]
+
+    if bufValue == Newline then
+      line = line + 1
+      column = 1
+    else
+      column = column + 1
+    end
   end
 end
 

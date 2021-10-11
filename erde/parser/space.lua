@@ -10,6 +10,6 @@ function parser.space(demand)
   end
 
   while Whitespace[bufValue] do
-    next()
+    consume()
   end
 end
