@@ -46,15 +46,19 @@ end
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-function parser.expr(minPrec)
+function parser.terminal()
+  -- TODO: add more terminals
+  return parser.number()
+end
+
+function parser.binop(minPrec)
   minPrec = minPrec or 1
-  local expr = {}
+  local binop = {}
 
   if bufValue == '(' then
     parser.space()
-    local lhs = parser.expr()
-    lhs.parens = true
-    expr[#expr + 1] = lhs
+    binop[2] = lhs
+    binop[2].parens = true
 
     parser.space()
     if bufValue ~= ')' then
@@ -62,10 +66,9 @@ function parser.expr(minPrec)
     end
   elseif bufValue == EOF then
     error('unexpected EOF')
-    -- TODO: parse unary op here
   else
     parser.space()
-    expr[#expr + 1] = parser.number()
+    binop[2] = parser.terminal()
   end
 
   while true do
@@ -91,16 +94,26 @@ function parser.expr(minPrec)
     if not op or op.prec < minPrec then
       break
     else
-      expr[#expr + 1] = op
+      binop[1] = op
     end
 
     parser.space()
-    expr[#expr + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.expr(minPrec + 1)
-      or parser.expr(minPrec)
+    binop[#binop + 1] = op.assoc == LEFT_ASSOCIATIVE
+        and parser.expr(op.prec + 1)
+      or parser.expr(op.prec)
   end
 
-  return expr
+  if not binop[1] then
+    -- Remove unnecessary nesting for terminals
+    return binop[2]
+  else
+    return binop
+  end
+end
+
+function parser.expr()
+  -- TODO: unary ops
+  return parser.binop()
 end
 
 -- -----------------------------------------------------------------------------
