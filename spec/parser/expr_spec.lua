@@ -26,6 +26,9 @@ spec('valid binops', function()
 end)
 
 spec('op precedence', function()
-  assert.has_subtable('TAG_EXP', unit.expr('1 * 2 + 3'))
-  assert.has_subtable('TAG_EXP', unit.expr('1 + 2 * 3'))
+  assert.has_subtable(
+    { { value = '1' }, { tag = 'TAG_MULT' } },
+    unit.expr('1 * 2 + 3')
+  )
+  assert.has_subtable({}, unit.expr('1 + 2 * 3'))
 end)

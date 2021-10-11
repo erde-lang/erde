@@ -1,23 +1,29 @@
 local function has_subtable(state, args)
-  local has_key = false
-
-  if not type(args[1]) == 'table' or #args ~= 2 then
+  if type(args[1]) ~= 'table' or type(args[2]) ~= 'table' then
     return false
   end
 
   for key, value in pairs(args[1]) do
-    if key == args[2] then
-      has_key = true
+    if type(value) == 'table' then
+      if not has_subtable(state, { value, args[2][key] }) then
+        return false
+      end
+    elseif value ~= args[2][key] then
+      return false
     end
   end
 
-  return has_key
+  return true
 end
+
+require('say'):set(
+  'assertion.has_subtable.positive',
+  '%s \nis not a subtable of\n%s'
+)
 
 assert:register(
   'assertion',
   'has_subtable',
   has_subtable,
-  'Expected %s \nto have property: %s',
-  'Expected %s \nto not have property: %s'
+  'assertion.has_subtable.positive'
 )
