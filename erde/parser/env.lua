@@ -36,7 +36,34 @@ for key, value in pairs(_G) do
   end
 end
 
-local STATES = {
+local function load()
+  if _VERSION:find('5.1') then
+    setfenv(2, env)
+  else
+    return env
+  end
+end
+
+local _ENV = load()
+
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function enumify(enum)
+  for _, value in pairs(enum) do
+    if env[value] ~= nil then
+      error('Duplicate enum: ' .. value)
+    end
+    env[value] = value
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- States
+-- -----------------------------------------------------------------------------
+
+enumify({
   'STATE_FREE',
 
   -- Number
@@ -51,38 +78,50 @@ local STATES = {
   'STATE_LONG_STRING',
 
   'STATE_EXPR',
-}
+})
 
-for key, value in pairs(STATES) do
-  env[value] = value
-end
+-- -----------------------------------------------------------------------------
+-- Tags
+-- -----------------------------------------------------------------------------
 
-local TAGS = {
+enumify({
   'TAG_NUMBER',
   'TAG_LONG_STRING',
-}
 
-for key, value in pairs(TAGS) do
-  env[value] = value
-end
+  -- Unops
+  'TAG_NEG',
+  'TAG_LEN',
+  'TAG_NOT',
+  'TAG_BNOT',
+
+  -- Binops
+  'TAG_NC',
+  'TAG_OR',
+  'TAG_AND',
+  'TAG_EQ',
+  'TAG_NEQ',
+  'TAG_LTE',
+  'TAG_GTE',
+  'TAG_LT',
+  'TAG_GT',
+  'TAG_BOR',
+  'TAG_BXOR',
+  'TAG_BAND',
+  'TAG_LSHIFT',
+  'TAG_RSHIFT',
+  'TAG_CONCAT',
+  'TAG_ADD',
+  'TAG_SUB',
+  'TAG_MULT',
+  'TAG_DIV',
+  'TAG_INTDIV',
+  'TAG_MOD',
+  'TAG_EXP',
+})
 
 -- -----------------------------------------------------------------------------
--- Loader
+-- Lookup Tables
 -- -----------------------------------------------------------------------------
-
-local function load()
-  if _VERSION:find('5.1') then
-    setfenv(2, env)
-  else
-    return env
-  end
-end
-
--- -----------------------------------------------------------------------------
--- Setup
--- -----------------------------------------------------------------------------
-
-local _ENV = load()
 
 for byte = string.byte('0'), string.byte('9') do
   local char = string.char(byte)
@@ -127,22 +166,25 @@ function env.loadBuffer(input)
   column = 1
 end
 
-function env.next()
-  bufIndex = bufIndex + 1
-  bufValue = buffer[bufIndex]
-
-  if bufValue == Newline then
-    line = line + 1
-    column = 1
-  else
-    column = column + 1
-  end
-end
-
 function env.consume(n, target)
-  for i = 1, n or 1 do
-    target[#target + 1] = bufValue
-    next()
+  n = n or 1
+
+  if type(target) == 'table' then
+    for i = 0, n - 1 do
+      target[#target + 1] = buffer[bufIndex + i]
+    end
+  end
+
+  for i = 1, n do
+    bufIndex = bufIndex + 1
+    bufValue = buffer[bufIndex]
+
+    if bufValue == Newline then
+      line = line + 1
+      column = 1
+    else
+      column = column + 1
+    end
   end
 end
 
