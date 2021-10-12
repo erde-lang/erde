@@ -11,7 +11,7 @@ spec('valid binops', function()
   assert.are.equal('TAG_LT', unit.expr('1 < 2')[1].tag)
   assert.are.equal('TAG_GT', unit.expr('1 > 2')[1].tag)
   assert.are.equal('TAG_BOR', unit.expr('1 .| 2')[1].tag)
-  assert.are.equal('TAG_BNOT', unit.expr('1 .~ 2')[1].tag)
+  assert.are.equal('TAG_BXOR', unit.expr('1 .~ 2')[1].tag)
   assert.are.equal('TAG_BAND', unit.expr('1 .& 2')[1].tag)
   assert.are.equal('TAG_LSHIFT', unit.expr('1 .<< 2')[1].tag)
   assert.are.equal('TAG_RSHIFT', unit.expr('1 .>> 2')[1].tag)
@@ -87,5 +87,20 @@ spec('right associative binop precedence', function()
     { value = '3' },
   }, unit.expr(
     '1 ^ 2 + 3'
+  ))
+end)
+
+spec('binop parens', function()
+  assert.has_subtable({
+    { tag = 'TAG_MULT' },
+    { value = '1' },
+    {
+      parens = true,
+      { tag = 'TAG_ADD' },
+      { value = '2' },
+      { value = '3' },
+    },
+  }, unit.expr(
+    '1 * (2 + 3)'
   ))
 end)

@@ -9,6 +9,13 @@ local _ENV = require('erde.parser.env').load()
 local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
+local UNOPS = {
+  ['-'] = { tag = TAG_NEG, prec = 1 },
+  ['#'] = { tag = TAG_LEN, prec = 2 },
+  ['~'] = { tag = TAG_NOT, prec = 2 },
+  ['.~'] = { tag = TAG_BNOT, prec = 2 },
+}
+
 local OPERATORS = {
   ['??'] = { tag = TAG_NC, prec = 1, assoc = LEFT_ASSOCIATIVE },
   ['|'] = { tag = TAG_OR, prec = 2, assoc = LEFT_ASSOCIATIVE },
@@ -20,7 +27,7 @@ local OPERATORS = {
   ['<'] = { tag = TAG_LT, prec = 4, assoc = LEFT_ASSOCIATIVE },
   ['>'] = { tag = TAG_GT, prec = 4, assoc = LEFT_ASSOCIATIVE },
   ['.|'] = { tag = TAG_BOR, prec = 5, assoc = LEFT_ASSOCIATIVE },
-  ['.~'] = { tag = TAG_BNOT, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['.~'] = { tag = TAG_BXOR, prec = 6, assoc = LEFT_ASSOCIATIVE },
   ['.&'] = { tag = TAG_BAND, prec = 7, assoc = LEFT_ASSOCIATIVE },
   ['.<<'] = { tag = TAG_LSHIFT, prec = 8, assoc = LEFT_ASSOCIATIVE },
   ['.>>'] = { tag = TAG_RSHIFT, prec = 8, assoc = LEFT_ASSOCIATIVE },
@@ -46,18 +53,14 @@ end
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-function parser.terminal()
-  -- TODO: add more terminals
-  return parser.number()
-end
-
-function parser.binop(minPrec)
-  local binop = {}
-
+function parser.operand()
+  local operand
   if bufValue == '(' then
+    consume()
+
     parser.space()
-    binop[2] = lhs
-    binop[2].parens = true
+    operand = parser.expr()
+    operand.parens = true
 
     parser.space()
     if bufValue ~= ')' then
@@ -66,9 +69,20 @@ function parser.binop(minPrec)
   elseif bufValue == EOF then
     error('unexpected EOF')
   else
-    parser.space()
-    binop[2] = parser.terminal()
+    -- TODO: more terminals
+    operand = parser.number()
   end
+  return operand
+end
+
+function parser.unop(minPrec)
+  local unop = { nil, parser.operand() }
+
+  return unop
+end
+
+function parser.binop(minPrec)
+  local binop = { nil, parser.operand(), nil }
 
   while true do
     parser.space()

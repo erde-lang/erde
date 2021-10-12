@@ -36,7 +36,34 @@ for key, value in pairs(_G) do
   end
 end
 
-local STATES = {
+local function load()
+  if _VERSION:find('5.1') then
+    setfenv(2, env)
+  else
+    return env
+  end
+end
+
+local _ENV = load()
+
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function enumify(enum)
+  for _, value in pairs(enum) do
+    if env[value] ~= nil then
+      error('Duplicate enum: ' .. value)
+    end
+    env[value] = value
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- States
+-- -----------------------------------------------------------------------------
+
+enumify({
   'STATE_FREE',
 
   -- Number
@@ -51,17 +78,23 @@ local STATES = {
   'STATE_LONG_STRING',
 
   'STATE_EXPR',
-}
+})
 
-for key, value in pairs(STATES) do
-  env[value] = value
-end
+-- -----------------------------------------------------------------------------
+-- Tags
+-- -----------------------------------------------------------------------------
 
-local TAGS = {
+enumify({
   'TAG_NUMBER',
   'TAG_LONG_STRING',
 
-  -- Expr
+  -- Unops
+  'TAG_NEG',
+  'TAG_LEN',
+  'TAG_NOT',
+  'TAG_BNOT',
+
+  -- Binops
   'TAG_NC',
   'TAG_OR',
   'TAG_AND',
@@ -72,7 +105,7 @@ local TAGS = {
   'TAG_LT',
   'TAG_GT',
   'TAG_BOR',
-  'TAG_BNOT',
+  'TAG_BXOR',
   'TAG_BAND',
   'TAG_LSHIFT',
   'TAG_RSHIFT',
@@ -84,29 +117,11 @@ local TAGS = {
   'TAG_INTDIV',
   'TAG_MOD',
   'TAG_EXP',
-}
-
-for key, value in pairs(TAGS) do
-  env[value] = value
-end
+})
 
 -- -----------------------------------------------------------------------------
--- Loader
+-- Lookup Tables
 -- -----------------------------------------------------------------------------
-
-local function load()
-  if _VERSION:find('5.1') then
-    setfenv(2, env)
-  else
-    return env
-  end
-end
-
--- -----------------------------------------------------------------------------
--- Setup
--- -----------------------------------------------------------------------------
-
-local _ENV = load()
 
 for byte = string.byte('0'), string.byte('9') do
   local char = string.char(byte)
