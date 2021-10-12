@@ -1,6 +1,6 @@
 local _ENV = require('erde.parser.env').load()
 
--- TODO: unary ops, ternary
+-- TODO: ternary
 
 -- -----------------------------------------------------------------------------
 -- Constants
@@ -10,13 +10,13 @@ local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
 local UNOPS = {
-  ['-'] = { tag = TAG_NEG, prec = 1 },
-  ['#'] = { tag = TAG_LEN, prec = 2 },
-  ['~'] = { tag = TAG_NOT, prec = 2 },
-  ['.~'] = { tag = TAG_BNOT, prec = 2 },
+  ['-'] = { tag = TAG_NEG, prec = 12 },
+  ['#'] = { tag = TAG_LEN, prec = 12 },
+  ['~'] = { tag = TAG_NOT, prec = 12 },
+  ['.~'] = { tag = TAG_BNOT, prec = 12 },
 }
 
-local OPERATORS = {
+local BINOPS = {
   ['??'] = { tag = TAG_NC, prec = 1, assoc = LEFT_ASSOCIATIVE },
   ['|'] = { tag = TAG_OR, prec = 2, assoc = LEFT_ASSOCIATIVE },
   ['&'] = { tag = TAG_AND, prec = 3, assoc = LEFT_ASSOCIATIVE },
@@ -38,22 +38,24 @@ local OPERATORS = {
   ['/'] = { tag = TAG_DIV, prec = 11, assoc = LEFT_ASSOCIATIVE },
   ['//'] = { tag = TAG_INTDIV, prec = 11, assoc = LEFT_ASSOCIATIVE },
   ['%'] = { tag = TAG_MOD, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['^'] = { tag = TAG_EXP, prec = 12, assoc = RIGHT_ASSOCIATIVE },
+  ['^'] = { tag = TAG_EXP, prec = 13, assoc = RIGHT_ASSOCIATIVE },
 }
 
-local OPERATOR_MAX_LEN = 1
-for key, value in pairs(OPERATORS) do
-  OPERATOR_MAX_LEN = math.max(OPERATOR_MAX_LEN, #key)
+local BINOP_MAX_LEN = 1
+for key, value in pairs(BINOPS) do
+  BINOP_MAX_LEN = math.max(BINOP_MAX_LEN, #key)
 end
 
 -- -----------------------------------------------------------------------------
 -- Parse
 --
--- Based on this amazing blog post:
+-- This uses precedence climbing and is based on this amazing blog post:
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-function parser.operand()
+function parser.expr(minPrec)
+  minPrec = minPrec or 1
+
   local operand
   if bufValue == '(' then
     consume()
@@ -66,28 +68,23 @@ function parser.operand()
     if bufValue ~= ')' then
       error('unbalanced parens')
     end
+  elseif UNOPS[bufValue] ~= nil then
+    local op = UNOPS[bufValue]
+    consume()
+    operand = { op, parser.expr(op.prec + 1) }
   elseif bufValue == EOF then
     error('unexpected EOF')
   else
     -- TODO: more terminals
     operand = parser.number()
   end
-  return operand
-end
 
-function parser.unop(minPrec)
-  local unop = { nil, parser.operand() }
-
-  return unop
-end
-
-function parser.binop(minPrec)
-  local binop = { nil, parser.operand(), nil }
+  local expr = { nil, operand, nil }
 
   while true do
     parser.space()
     local op, opToken
-    for i = OPERATOR_MAX_LEN, 1, -1 do
+    for i = BINOP_MAX_LEN, 1, -1 do
       if buffer[bufIndex + i - 1] then
         opToken = bufValue
         for j = 1, i - 1 do
@@ -96,7 +93,7 @@ function parser.binop(minPrec)
           end
         end
 
-        op = OPERATORS[opToken]
+        op = BINOPS[opToken]
         if op then
           break
         end
@@ -109,29 +106,23 @@ function parser.binop(minPrec)
       consume(#opToken)
     end
 
-    if binop[1] then
-      binop = { op, binop }
+    if expr[1] then
+      expr = { op, expr }
     else
-      binop[1] = op
+      expr[1] = op
     end
 
     parser.space()
-    binop[3] = op.assoc == LEFT_ASSOCIATIVE and parser.expr(op.prec + 1)
+    expr[3] = op.assoc == LEFT_ASSOCIATIVE and parser.expr(op.prec + 1)
       or parser.expr(op.prec)
   end
 
-  if not binop[1] then
+  if not expr[1] then
     -- Remove unnecessary nesting for terminals
-    return binop[2]
+    return expr[2]
   else
-    return binop
+    return expr
   end
-end
-
-function parser.expr(minPrec)
-  minPrec = minPrec or 1
-  -- TODO: unary ops
-  return parser.binop(minPrec)
 end
 
 -- -----------------------------------------------------------------------------

@@ -104,3 +104,36 @@ spec('binop parens', function()
     '1 * (2 + 3)'
   ))
 end)
+
+spec('unops', function()
+  assert.has_subtable({
+    { tag = 'TAG_MULT' },
+    { value = '1' },
+    {
+      { tag = 'TAG_NEG' },
+      { value = '3' },
+    },
+  }, unit.expr(
+    '1 * -3'
+  ))
+  assert.has_subtable({
+    { tag = 'TAG_NEG' },
+    {
+      { tag = 'TAG_EXP' },
+      { value = '2' },
+      { value = '3' },
+    },
+  }, unit.expr(
+    '-2 ^ 3'
+  ))
+  assert.has_subtable({
+    { tag = 'TAG_MULT' },
+    {
+      { tag = 'TAG_NEG' },
+      { value = '2' },
+    },
+    { value = '3' },
+  }, unit.expr(
+    '-2 * 3'
+  ))
+end)
