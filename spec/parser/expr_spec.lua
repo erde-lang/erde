@@ -25,7 +25,7 @@ spec('valid binops', function()
   assert.are.equal('TAG_EXP', unit.expr('1 ^ 2')[1].tag)
 end)
 
-spec('op precedence', function()
+spec('left associative op precedence', function()
   assert.has_subtable({
     { tag = 'TAG_ADD' },
     {
@@ -47,5 +47,45 @@ spec('op precedence', function()
     },
   }, unit.expr(
     '1 + 2 * 3'
+  ))
+  assert.has_subtable({
+    { tag = 'TAG_ADD' },
+    {
+      { tag = 'TAG_ADD' },
+      { value = '1' },
+      {
+        { tag = 'TAG_MULT' },
+        { value = '2' },
+        { value = '3' },
+      },
+    },
+    { value = '4' },
+  }, unit.expr(
+    '1 + 2 * 3 + 4'
+  ))
+end)
+
+spec('right associative binop precedence', function()
+  assert.has_subtable({
+    { tag = 'TAG_EXP' },
+    { value = '1' },
+    {
+      { tag = 'TAG_EXP' },
+      { value = '2' },
+      { value = '3' },
+    },
+  }, unit.expr(
+    '1 ^ 2 ^ 3'
+  ))
+  assert.has_subtable({
+    { tag = 'TAG_ADD' },
+    {
+      { tag = 'TAG_EXP' },
+      { value = '1' },
+      { value = '2' },
+    },
+    { value = '3' },
+  }, unit.expr(
+    '1 ^ 2 + 3'
   ))
 end)
