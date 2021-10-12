@@ -27,20 +27,22 @@ end)
 
 spec('op precedence', function()
   assert.has_subtable({
-    { value = '1' },
-    { tag = 'TAG_MULT' },
-    { value = '2' },
     { tag = 'TAG_ADD' },
+    {
+      { tag = 'TAG_MULT' },
+      { value = '1' },
+      { value = '2' },
+    },
     { value = '3' },
   }, unit.expr(
     '1 * 2 + 3'
   ))
   assert.has_subtable({
-    { value = '1' },
     { tag = 'TAG_ADD' },
+    { value = '1' },
     {
-      { value = '2' },
       { tag = 'TAG_MULT' },
+      { value = '2' },
       { value = '3' },
     },
   }, unit.expr(

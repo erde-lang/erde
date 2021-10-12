@@ -52,7 +52,6 @@ function parser.terminal()
 end
 
 function parser.binop(minPrec)
-  minPrec = minPrec or 1
   local binop = {}
 
   if bufValue == '(' then
@@ -73,10 +72,10 @@ function parser.binop(minPrec)
 
   while true do
     parser.space()
-    local op
+    local op, opToken
     for i = OPERATOR_MAX_LEN, 1, -1 do
       if buffer[bufIndex + i - 1] then
-        local opToken = bufValue
+        opToken = bufValue
         for j = 1, i - 1 do
           if buffer[bufIndex + j] then
             opToken = opToken .. buffer[bufIndex + j]
@@ -85,7 +84,6 @@ function parser.binop(minPrec)
 
         op = OPERATORS[opToken]
         if op then
-          consume(i)
           break
         end
       end
@@ -94,12 +92,17 @@ function parser.binop(minPrec)
     if not op or op.prec < minPrec then
       break
     else
+      consume(#opToken)
+    end
+
+    if binop[1] then
+      binop = { op, binop }
+    else
       binop[1] = op
     end
 
     parser.space()
-    binop[#binop + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.expr(op.prec + 1)
+    binop[3] = op.assoc == LEFT_ASSOCIATIVE and parser.expr(op.prec + 1)
       or parser.expr(op.prec)
   end
 
@@ -111,9 +114,10 @@ function parser.binop(minPrec)
   end
 end
 
-function parser.expr()
+function parser.expr(minPrec)
+  minPrec = minPrec or 1
   -- TODO: unary ops
-  return parser.binop()
+  return parser.binop(minPrec)
 end
 
 -- -----------------------------------------------------------------------------
