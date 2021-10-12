@@ -10,13 +10,13 @@ local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
 local UNOPS = {
-  ['-'] = { tag = TAG_NEG, prec = 1 },
-  ['#'] = { tag = TAG_LEN, prec = 2 },
-  ['~'] = { tag = TAG_NOT, prec = 2 },
-  ['.~'] = { tag = TAG_BNOT, prec = 2 },
+  ['-'] = { tag = TAG_NEG, prec = 12 },
+  ['#'] = { tag = TAG_LEN, prec = 12 },
+  ['~'] = { tag = TAG_NOT, prec = 12 },
+  ['.~'] = { tag = TAG_BNOT, prec = 12 },
 }
 
-local OPERATORS = {
+local BINOPS = {
   ['??'] = { tag = TAG_NC, prec = 1, assoc = LEFT_ASSOCIATIVE },
   ['|'] = { tag = TAG_OR, prec = 2, assoc = LEFT_ASSOCIATIVE },
   ['&'] = { tag = TAG_AND, prec = 3, assoc = LEFT_ASSOCIATIVE },
@@ -38,12 +38,12 @@ local OPERATORS = {
   ['/'] = { tag = TAG_DIV, prec = 11, assoc = LEFT_ASSOCIATIVE },
   ['//'] = { tag = TAG_INTDIV, prec = 11, assoc = LEFT_ASSOCIATIVE },
   ['%'] = { tag = TAG_MOD, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['^'] = { tag = TAG_EXP, prec = 12, assoc = RIGHT_ASSOCIATIVE },
+  ['^'] = { tag = TAG_EXP, prec = 13, assoc = RIGHT_ASSOCIATIVE },
 }
 
-local OPERATOR_MAX_LEN = 1
-for key, value in pairs(OPERATORS) do
-  OPERATOR_MAX_LEN = math.max(OPERATOR_MAX_LEN, #key)
+local BINOP_MAX_LEN = 1
+for key, value in pairs(BINOPS) do
+  BINOP_MAX_LEN = math.max(BINOP_MAX_LEN, #key)
 end
 
 -- -----------------------------------------------------------------------------
@@ -66,6 +66,10 @@ function parser.operand()
     if bufValue ~= ')' then
       error('unbalanced parens')
     end
+  elseif UNOPS[bufValue] ~= nil then
+    local op = UNOPS[bufValue]
+    consume()
+    operand = { op, parser.expr(op.prec + 1) }
   elseif bufValue == EOF then
     error('unexpected EOF')
   else
@@ -75,19 +79,13 @@ function parser.operand()
   return operand
 end
 
-function parser.unop(minPrec)
-  local unop = { nil, parser.operand() }
-
-  return unop
-end
-
 function parser.binop(minPrec)
   local binop = { nil, parser.operand(), nil }
 
   while true do
     parser.space()
     local op, opToken
-    for i = OPERATOR_MAX_LEN, 1, -1 do
+    for i = BINOP_MAX_LEN, 1, -1 do
       if buffer[bufIndex + i - 1] then
         opToken = bufValue
         for j = 1, i - 1 do
@@ -96,7 +94,7 @@ function parser.binop(minPrec)
           end
         end
 
-        op = OPERATORS[opToken]
+        op = BINOPS[opToken]
         if op then
           break
         end
