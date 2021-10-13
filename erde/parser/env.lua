@@ -72,12 +72,6 @@ enumify({
   'STATE_FLOAT',
   'STATE_EXPONENT',
   'STATE_EXPONENT_SIGN',
-
-  -- String
-  'STATE_SHORT_STRING',
-  'STATE_LONG_STRING',
-
-  'STATE_EXPR',
 })
 
 -- -----------------------------------------------------------------------------
@@ -85,7 +79,9 @@ enumify({
 -- -----------------------------------------------------------------------------
 
 enumify({
+  -- Primitives
   'TAG_NUMBER',
+  'TAG_SHORT_STRING',
   'TAG_LONG_STRING',
 
   -- Unops
