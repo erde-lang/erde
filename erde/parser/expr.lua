@@ -85,18 +85,10 @@ function parser.expr(minPrec)
     parser.space()
     local op, opToken
     for i = BINOP_MAX_LEN, 1, -1 do
-      if buffer[bufIndex + i - 1] then
-        opToken = bufValue
-        for j = 1, i - 1 do
-          if buffer[bufIndex + j] then
-            opToken = opToken .. buffer[bufIndex + j]
-          end
-        end
-
-        op = BINOPS[opToken]
-        if op then
-          break
-        end
+      opToken = word(i)
+      op = BINOPS[opToken]
+      if op then
+        break
       end
     end
 
