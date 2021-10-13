@@ -86,6 +86,7 @@ enumify({
 
 enumify({
   'TAG_NUMBER',
+  'TAG_SHORT_STRING',
   'TAG_LONG_STRING',
 
   -- Unops

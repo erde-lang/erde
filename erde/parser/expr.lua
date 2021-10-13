@@ -1,7 +1,5 @@
 local _ENV = require('erde.parser.env').load()
 
--- TODO: ternary
-
 -- -----------------------------------------------------------------------------
 -- Constants
 -- -----------------------------------------------------------------------------
@@ -81,7 +79,7 @@ function parser.expr(minPrec)
     operand = parser.number()
   end
 
-  local expr = { nil, operand, nil }
+  local node = { nil, operand, nil }
 
   while true do
     parser.space()
@@ -108,15 +106,15 @@ function parser.expr(minPrec)
       consume(#opToken)
     end
 
-    if expr[1] then
-      expr = { op, expr }
+    if node[1] then
+      node = { op, node }
     else
-      expr[1] = op
+      node[1] = op
     end
 
     if op.tag == TAG_TERNARY then
       parser.space()
-      expr[3] = parser.expr()
+      node[3] = parser.expr()
       parser.space()
       if bufValue ~= ':' then
         error('missing : in ternary')
@@ -126,16 +124,16 @@ function parser.expr(minPrec)
     end
 
     parser.space()
-    expr[#expr + 1] = op.assoc == LEFT_ASSOCIATIVE
+    node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
         and parser.expr(op.prec + 1)
       or parser.expr(op.prec)
   end
 
-  if not expr[1] then
+  if not node[1] then
     -- Remove unnecessary nesting for terminals
-    return expr[2]
+    return node[2]
   else
-    return expr
+    return node
   end
 end
 
