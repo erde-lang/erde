@@ -16,7 +16,6 @@ local env = {
   },
 
   -- Public State
-  state = 1,
   buffer = {},
   bufIndex = 1,
   bufValue = 0,
@@ -60,27 +59,25 @@ local function enumify(enum)
 end
 
 -- -----------------------------------------------------------------------------
--- States
--- -----------------------------------------------------------------------------
-
-enumify({
-  'STATE_FREE',
-
-  -- Number
-  'STATE_DIGIT',
-  'STATE_HEX',
-  'STATE_FLOAT',
-  'STATE_EXPONENT',
-  'STATE_EXPONENT_SIGN',
-})
-
--- -----------------------------------------------------------------------------
 -- Tags
 -- -----------------------------------------------------------------------------
 
 enumify({
-  -- Primitives
+  -- Comment
+  'TAG_SHORT_COMMENT',
+  'TAG_LONG_COMMENT',
+
+  -- Id
+  'TAG_NAME',
+
+  -- Var
+  'TAG_LOCAL_VAR',
+  'TAG_GLOBAL_VAR',
+
+  -- Number
   'TAG_NUMBER',
+
+  -- Strings
   'TAG_SHORT_STRING',
   'TAG_LONG_STRING',
 
@@ -150,8 +147,6 @@ end
 -- -----------------------------------------------------------------------------
 
 function env.loadBuffer(input)
-  state = STATE_FREE
-
   buffer = {}
   for i = 1, #input do
     buffer[i] = input:sub(i, i)
@@ -164,12 +159,12 @@ function env.loadBuffer(input)
   column = 1
 end
 
-function env.consume(n, target)
+function env.consume(n, capture)
   n = n or 1
 
-  if type(target) == 'table' then
+  if type(capture) == 'table' then
     for i = 0, n - 1 do
-      target[#target + 1] = buffer[bufIndex + i]
+      capture[#capture + 1] = buffer[bufIndex + i]
     end
   end
 
@@ -186,27 +181,69 @@ function env.consume(n, target)
   end
 end
 
+function env.peek(n)
+  local word = { bufValue }
+
+  for i = 1, n - 1 do
+    local char = buffer[bufIndex + i]
+    if not char or char == EOF then
+      break
+    end
+    word[#word + 1] = char
+  end
+
+  return table.concat(word)
+end
+
+function env.stream(lookupTable, capture, demand)
+  if demand and not lookupTable[bufValue] then
+    error('unexpected value')
+  end
+
+  while lookupTable[bufValue] do
+    consume(1, capture)
+  end
+end
+
+function env.branchChar(chars, capture)
+  if #chars > 1 and chars:find(bufValue) or bufValue == chars then
+    consume(1, capture)
+    return true
+  else
+    return false
+  end
+end
+
+function env.branchWord(word, capture)
+  if peek(#word) == word then
+    consume(#word, capture)
+    return true
+  else
+    return false
+  end
+end
+
+function env.pad(rule, lhs, rhs)
+  if lhs or lhs == nil then
+    parser.space()
+  end
+
+  local node = rule()
+
+  if rhs or rhs == nil then
+    parser.space()
+  end
+
+  return node
+end
+
 -- -----------------------------------------------------------------------------
 -- Error Handling
 -- -----------------------------------------------------------------------------
 
-env.assert = {
-  state = function(expectedState)
-    if state ~= expectedState then
-      throw.badState(expectedState)
-    end
-  end,
-}
+env.assert = {}
 
-env.throw = {
-  badState = function(expectedState)
-    if expectedState == nil then
-      error(('Invalid state: %s'):format(state))
-    else
-      error(('Invalid state. Expected %s, got %s'):format(expectedState, state))
-    end
-  end,
-}
+env.throw = {}
 
 -- -----------------------------------------------------------------------------
 -- Return
