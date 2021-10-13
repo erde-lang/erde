@@ -10,35 +10,37 @@ local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
 local UNOPS = {
-  ['-'] = { tag = TAG_NEG, prec = 12 },
-  ['#'] = { tag = TAG_LEN, prec = 12 },
-  ['~'] = { tag = TAG_NOT, prec = 12 },
-  ['.~'] = { tag = TAG_BNOT, prec = 12 },
+  ['-'] = { tag = TAG_NEG, prec = 14 },
+  ['#'] = { tag = TAG_LEN, prec = 14 },
+  ['~'] = { tag = TAG_NOT, prec = 14 },
+  ['.~'] = { tag = TAG_BNOT, prec = 14 },
 }
 
 local BINOPS = {
-  ['??'] = { tag = TAG_NC, prec = 1, assoc = LEFT_ASSOCIATIVE },
-  ['|'] = { tag = TAG_OR, prec = 2, assoc = LEFT_ASSOCIATIVE },
-  ['&'] = { tag = TAG_AND, prec = 3, assoc = LEFT_ASSOCIATIVE },
-  ['=='] = { tag = TAG_EQ, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['~='] = { tag = TAG_NEQ, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['<='] = { tag = TAG_LTE, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['>='] = { tag = TAG_GTE, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['<'] = { tag = TAG_LT, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['>'] = { tag = TAG_GT, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['.|'] = { tag = TAG_BOR, prec = 5, assoc = LEFT_ASSOCIATIVE },
-  ['.~'] = { tag = TAG_BXOR, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['.&'] = { tag = TAG_BAND, prec = 7, assoc = LEFT_ASSOCIATIVE },
-  ['.<<'] = { tag = TAG_LSHIFT, prec = 8, assoc = LEFT_ASSOCIATIVE },
-  ['.>>'] = { tag = TAG_RSHIFT, prec = 8, assoc = LEFT_ASSOCIATIVE },
-  ['..'] = { tag = TAG_CONCAT, prec = 9, assoc = LEFT_ASSOCIATIVE },
-  ['+'] = { tag = TAG_ADD, prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['-'] = { tag = TAG_SUB, prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['*'] = { tag = TAG_MULT, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['/'] = { tag = TAG_DIV, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['//'] = { tag = TAG_INTDIV, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['%'] = { tag = TAG_MOD, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['^'] = { tag = TAG_EXP, prec = 13, assoc = RIGHT_ASSOCIATIVE },
+  ['>>'] = { tag = TAG_PIPE, prec = 1, assoc = LEFT_ASSOCIATIVE },
+  ['?'] = { tag = TAG_TERNARY, prec = 2, assoc = LEFT_ASSOCIATIVE },
+  ['??'] = { tag = TAG_NC, prec = 3, assoc = LEFT_ASSOCIATIVE },
+  ['|'] = { tag = TAG_OR, prec = 4, assoc = LEFT_ASSOCIATIVE },
+  ['&'] = { tag = TAG_AND, prec = 5, assoc = LEFT_ASSOCIATIVE },
+  ['=='] = { tag = TAG_EQ, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['~='] = { tag = TAG_NEQ, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['<='] = { tag = TAG_LTE, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['>='] = { tag = TAG_GTE, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['<'] = { tag = TAG_LT, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['>'] = { tag = TAG_GT, prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['.|'] = { tag = TAG_BOR, prec = 7, assoc = LEFT_ASSOCIATIVE },
+  ['.~'] = { tag = TAG_BXOR, prec = 8, assoc = LEFT_ASSOCIATIVE },
+  ['.&'] = { tag = TAG_BAND, prec = 9, assoc = LEFT_ASSOCIATIVE },
+  ['.<<'] = { tag = TAG_LSHIFT, prec = 10, assoc = LEFT_ASSOCIATIVE },
+  ['.>>'] = { tag = TAG_RSHIFT, prec = 10, assoc = LEFT_ASSOCIATIVE },
+  ['..'] = { tag = TAG_CONCAT, prec = 11, assoc = LEFT_ASSOCIATIVE },
+  ['+'] = { tag = TAG_ADD, prec = 12, assoc = LEFT_ASSOCIATIVE },
+  ['-'] = { tag = TAG_SUB, prec = 12, assoc = LEFT_ASSOCIATIVE },
+  ['*'] = { tag = TAG_MULT, prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['/'] = { tag = TAG_DIV, prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['//'] = { tag = TAG_INTDIV, prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['%'] = { tag = TAG_MOD, prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['^'] = { tag = TAG_EXP, prec = 15, assoc = RIGHT_ASSOCIATIVE },
 }
 
 local BINOP_MAX_LEN = 1
@@ -112,8 +114,20 @@ function parser.expr(minPrec)
       expr[1] = op
     end
 
+    if op.tag == TAG_TERNARY then
+      parser.space()
+      expr[3] = parser.expr()
+      parser.space()
+      if bufValue ~= ':' then
+        error('missing : in ternary')
+      end
+      consume()
+    else
+    end
+
     parser.space()
-    expr[3] = op.assoc == LEFT_ASSOCIATIVE and parser.expr(op.prec + 1)
+    expr[#expr + 1] = op.assoc == LEFT_ASSOCIATIVE
+        and parser.expr(op.prec + 1)
       or parser.expr(op.prec)
   end
 
