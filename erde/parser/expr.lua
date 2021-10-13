@@ -1,6 +1,6 @@
 local _ENV = require('erde.parser.env').load()
 
--- TODO: unary ops, ternary
+-- TODO: ternary
 
 -- -----------------------------------------------------------------------------
 -- Constants
@@ -49,11 +49,13 @@ end
 -- -----------------------------------------------------------------------------
 -- Parse
 --
--- Based on this amazing blog post:
+-- This uses precedence climbing and is based on this amazing blog post:
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-function parser.operand()
+function parser.expr(minPrec)
+  minPrec = minPrec or 1
+
   local operand
   if bufValue == '(' then
     consume()
@@ -76,11 +78,8 @@ function parser.operand()
     -- TODO: more terminals
     operand = parser.number()
   end
-  return operand
-end
 
-function parser.binop(minPrec)
-  local binop = { nil, parser.operand(), nil }
+  local expr = { nil, operand, nil }
 
   while true do
     parser.space()
@@ -107,29 +106,23 @@ function parser.binop(minPrec)
       consume(#opToken)
     end
 
-    if binop[1] then
-      binop = { op, binop }
+    if expr[1] then
+      expr = { op, expr }
     else
-      binop[1] = op
+      expr[1] = op
     end
 
     parser.space()
-    binop[3] = op.assoc == LEFT_ASSOCIATIVE and parser.expr(op.prec + 1)
+    expr[3] = op.assoc == LEFT_ASSOCIATIVE and parser.expr(op.prec + 1)
       or parser.expr(op.prec)
   end
 
-  if not binop[1] then
+  if not expr[1] then
     -- Remove unnecessary nesting for terminals
-    return binop[2]
+    return expr[2]
   else
-    return binop
+    return expr
   end
-end
-
-function parser.expr(minPrec)
-  minPrec = minPrec or 1
-  -- TODO: unary ops
-  return parser.binop(minPrec)
 end
 
 -- -----------------------------------------------------------------------------
