@@ -191,21 +191,21 @@ function env.consume(n, target)
 end
 
 function env.word(n, doConsume)
-  local token = { bufValue }
+  local word = { bufValue }
 
   for i = 1, n - 1 do
     local char = buffer[bufIndex + i]
     if not char or char == EOF then
       break
     end
-    token[#token + 1] = char
+    word[#word + 1] = char
   end
 
   if doConsume then
-    consume(#token)
+    consume(#word)
   end
 
-  return table.concat(token)
+  return table.concat(word)
 end
 
 -- -----------------------------------------------------------------------------
