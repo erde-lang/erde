@@ -1,6 +1,8 @@
 local unit = require('erde.parser.unit')
 
 spec('valid binops', function()
+  assert.are.equal('TAG_PIPE', unit.expr('1 >> 2')[1].tag)
+  assert.are.equal('TAG_TERNARY', unit.expr('1 ? 2 : 3')[1].tag)
   assert.are.equal('TAG_NC', unit.expr('1 ?? 2')[1].tag)
   assert.are.equal('TAG_OR', unit.expr('1 | 2')[1].tag)
   assert.are.equal('TAG_AND', unit.expr('1 & 2')[1].tag)
@@ -135,5 +137,31 @@ spec('unops', function()
     { value = '3' },
   }, unit.expr(
     '-2 * 3'
+  ))
+end)
+
+spec('ternary', function()
+  assert.has_subtable({
+    { tag = 'TAG_TERNARY' },
+    { value = '1' },
+    { value = '2' },
+    { value = '3' },
+  }, unit.expr(
+    '1 ? 2 : 3'
+  ))
+  assert.has_subtable({
+    { tag = 'TAG_TERNARY' },
+    { value = '1' },
+    {
+      { tag = 'TAG_NEG' },
+      { value = '2' },
+    },
+    {
+      { tag = 'TAG_ADD' },
+      { value = '3' },
+      { value = '4' },
+    },
+  }, unit.expr(
+    '1 ? -2 : 3 + 4'
   ))
 end)

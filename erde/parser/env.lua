@@ -95,6 +95,8 @@ enumify({
   'TAG_BNOT',
 
   -- Binops
+  'TAG_PIPE',
+  'TAG_TERNARY',
   'TAG_NC',
   'TAG_OR',
   'TAG_AND',
