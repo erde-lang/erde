@@ -30,5 +30,5 @@ function parser.name()
     consume(1, capture)
   end
 
-  local node = { tag = TAG_NAME, value = table.concat(capture) }
+  return table.concat(capture)
 end
