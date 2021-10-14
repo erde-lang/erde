@@ -23,11 +23,8 @@ local env = {
   line = 1,
   column = 1,
 
-  -- Parsers
-  -- `parser` is the actual parser. `unit` is used to parse individual
-  -- components and is particularly useful for unit tests.
+  -- Parser
   parser = {},
-  unit = {},
 }
 
 for key, value in pairs(_G) do
@@ -222,20 +219,6 @@ function env.branchWord(word, capture)
   else
     return false
   end
-end
-
-function env.pad(rule, lhs, rhs)
-  if lhs or lhs == nil then
-    parser.space()
-  end
-
-  local node = rule()
-
-  if rhs or rhs == nil then
-    parser.space()
-  end
-
-  return node
 end
 
 -- -----------------------------------------------------------------------------

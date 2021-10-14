@@ -1,4 +1,5 @@
 local _ENV = require('erde.parser.env').load()
+require('erde.parser.utils')
 
 -- -----------------------------------------------------------------------------
 -- Constants
@@ -47,7 +48,45 @@ for key, value in pairs(BINOPS) do
 end
 
 -- -----------------------------------------------------------------------------
--- Parse
+-- Comment
+-- -----------------------------------------------------------------------------
+
+function parser.comment()
+  local capture = {}
+  local node = {}
+
+  if branchWord('---') then
+    node.tag = TAG_LONG_COMMENT
+
+    while true do
+      if bufValue == '-' and branchWord('---') then
+        break
+      elseif bufValue == EOF then
+        error('unterminated long comment')
+      else
+        consume(1, capture)
+      end
+    end
+  elseif branchWord('--') then
+    node.tag = TAG_SHORT_COMMENT
+
+    while true do
+      if bufValue == '\n' or bufValue == EOF then
+        break
+      else
+        consume(1, capture)
+      end
+    end
+  else
+    error('invalid comment')
+  end
+
+  node.value = table.concat(capture)
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Expr
 --
 -- This uses precedence climbing and is based on this amazing blog post:
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
@@ -58,7 +97,7 @@ function parser.expr(minPrec)
 
   local operand
   if branchChar('(') then
-    operand = pad(parser.expr)
+    operand = parser.pad(parser.expr)
     operand.parens = true
     if not branchChar(')') then
       error('unbalanced parens')
@@ -100,7 +139,7 @@ function parser.expr(minPrec)
     end
 
     if op.tag == TAG_TERNARY then
-      node[3] = pad(parser.expr)
+      node[3] = parser.pad(parser.expr)
       if not branchChar(':') then
         error('missing : in ternary')
       end
@@ -121,10 +160,127 @@ function parser.expr(minPrec)
 end
 
 -- -----------------------------------------------------------------------------
--- Unit Parse
+-- Number
 -- -----------------------------------------------------------------------------
 
-function unit.expr(input)
-  loadBuffer(input)
-  return parser.expr()
+function parser.number()
+  local capture = {}
+
+  if branchWord('0x', capture) or branchWord('0X', capture) then
+    stream(Hex, capture, true)
+
+    if branchChar('.', capture) then
+      stream(Hex, capture, true)
+    end
+
+    if branchChar('pP', capture) then
+      branchChar('+-', capture)
+      stream(Digit, capture, true)
+    end
+  else
+    while Digit[bufValue] do
+      consume(1, capture, true)
+    end
+
+    if branchChar('.', capture) then
+      stream(Digit, capture, true)
+    end
+
+    if #capture > 0 and branchChar('eE', capture) then
+      branchChar('+-', capture)
+      stream(Digit, capture, true)
+    end
+  end
+
+  if #capture == 0 then
+    error('expected number')
+  end
+
+  return { tag = TAG_NUMBER, value = table.concat(capture) }
+end
+
+-- -----------------------------------------------------------------------------
+-- String
+-- -----------------------------------------------------------------------------
+
+function parser.string()
+  if bufValue == "'" or bufValue == '"' then
+    local capture = {}
+    consume(1, capture)
+
+    while true do
+      if bufValue == capture[1] then
+        consume(1, capture)
+        break
+      elseif bufValue == '\n' or bufValue == EOF then
+        error('unterminated string')
+      else
+        consume(1, capture)
+      end
+    end
+
+    return { tag = TAG_SHORT_STRING, value = table.concat(capture) }
+  elseif branchChar('`') then
+    local node = { tag = TAG_LONG_STRING }
+    local capture = {}
+
+    while true do
+      if branchChar('{') then
+        if #capture > 0 then
+          node[#node + 1] = table.concat(capture)
+          capture = {}
+        end
+
+        node[#node + 1] = parser.pad(parser.expr)
+        if not branchChar('}') then
+          error('unclosed interpolation')
+        end
+      elseif branchChar('`') then
+        break
+      elseif bufValue == '\\' then
+        if ('{}`'):find(buffer[bufIndex + 1]) then
+          consume()
+          consume(1, capture)
+        else
+          consume(2, capture)
+        end
+      elseif bufValue == EOF then
+        error('unterminated string')
+      else
+        consume(1, capture)
+      end
+    end
+
+    if #capture > 0 then
+      node[#node + 1] = table.concat(capture)
+    end
+
+    return node
+  else
+    error('Expected quote (",\',`), found ' .. bufValue)
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Var
+-- -----------------------------------------------------------------------------
+
+function parser.var()
+  local node = {}
+
+  if Whitespace[buffer[bufIndex + #'local']] and branchWord('local') then
+    node.tag = TAG_LOCAL_VAR
+  elseif Whitespace[buffer[bufIndex + #'global']] and branchWord('global') then
+    node.tag = TAG_GLOBAL_VAR
+  else
+    return nil
+  end
+
+  node.name = parser.pad(parser.name)
+
+  if branchChar('=') then
+    node.initValue = parser.pad(parser.expr)
+  end
+
+  return node
 end
