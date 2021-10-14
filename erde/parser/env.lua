@@ -12,6 +12,7 @@ local env = {
   Hex = {},
   Whitespace = {
     ['\n'] = true,
+    ['\t'] = true,
     [' '] = true,
   },
 
@@ -125,8 +126,8 @@ for byte = string.byte('0'), string.byte('9') do
 end
 for byte = string.byte('A'), string.byte('F') do
   local char = string.char(byte)
-  Hex[char] = true
   Alpha[char] = true
+  Hex[char] = true
 end
 for byte = string.byte('G'), string.byte('Z') do
   local char = string.char(byte)
@@ -134,8 +135,8 @@ for byte = string.byte('G'), string.byte('Z') do
 end
 for byte = string.byte('a'), string.byte('f') do
   local char = string.char(byte)
-  Hex[char] = true
   Alpha[char] = true
+  Hex[char] = true
 end
 for byte = string.byte('g'), string.byte('z') do
   local char = string.char(byte)
