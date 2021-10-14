@@ -15,6 +15,17 @@ function parser.space(demand)
 end
 
 -- -----------------------------------------------------------------------------
+-- Pad
+-- -----------------------------------------------------------------------------
+
+function parser.pad(rule, ...)
+  parser.space()
+  local node = rule(...)
+  parser.space()
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Name
 -- -----------------------------------------------------------------------------
 
@@ -31,4 +42,25 @@ function parser.name()
   end
 
   return table.concat(capture)
+end
+
+-- -----------------------------------------------------------------------------
+-- Surround
+-- -----------------------------------------------------------------------------
+
+function parser.surround(openChar, closeChar, rule)
+  parser.space()
+
+  if not branchChar(openChar) then
+    error('expected ' .. openChar)
+  end
+
+  local capture = parser.pad(rule)
+
+  if not branchChar(closeChar) then
+    error('expected ' .. closeChar)
+  end
+
+  parser.space()
+  return capture
 end

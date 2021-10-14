@@ -23,11 +23,8 @@ local env = {
   line = 1,
   column = 1,
 
-  -- Parsers
-  -- `parser` is the actual parser. `unit` is used to parse individual
-  -- components and is particularly useful for unit tests.
+  -- Parser
   parser = {},
-  unit = {},
 }
 
 for key, value in pairs(_G) do
@@ -68,12 +65,12 @@ enumify({
   'TAG_SHORT_COMMENT',
   'TAG_LONG_COMMENT',
 
-  -- Id
-  'TAG_NAME',
-
   -- Var
   'TAG_LOCAL_VAR',
   'TAG_GLOBAL_VAR',
+
+  -- Assignment
+  'TAG_ASSIGNMENT',
 
   -- Number
   'TAG_NUMBER',
@@ -113,6 +110,9 @@ enumify({
   'TAG_INTDIV',
   'TAG_MOD',
   'TAG_EXP',
+
+  -- Logic Flows
+  'TAG_IF_ELSE',
 })
 
 -- -----------------------------------------------------------------------------
@@ -206,8 +206,8 @@ function env.stream(lookupTable, capture, demand)
   end
 end
 
-function env.branchChar(chars, capture)
-  if #chars > 1 and chars:find(bufValue) or bufValue == chars then
+function env.branchChar(char, capture)
+  if #char > 1 and char:find(bufValue) or bufValue == char then
     consume(1, capture)
     return true
   else
@@ -215,27 +215,24 @@ function env.branchChar(chars, capture)
   end
 end
 
-function env.branchWord(word, capture)
-  if peek(#word) == word then
-    consume(#word, capture)
+function env.branchStr(str, capture)
+  if peek(#str) == str then
+    consume(#str, capture)
     return true
   else
     return false
   end
 end
 
-function env.pad(rule, lhs, rhs)
-  if lhs or lhs == nil then
+function env.branchWord(word, capture)
+  parser.space()
+  local trailingChar = buffer[bufIndex + #word]
+  if Alpha[trailingChar] or Digit[trailingChar] then
+    return false
+  elseif branchStr(word, capture) then
     parser.space()
+    return true
   end
-
-  local node = rule()
-
-  if rhs or rhs == nil then
-    parser.space()
-  end
-
-  return node
 end
 
 -- -----------------------------------------------------------------------------
