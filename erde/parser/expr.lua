@@ -57,15 +57,10 @@ function parser.expr(minPrec)
   minPrec = minPrec or 1
 
   local operand
-  if bufValue == '(' then
-    consume()
-
-    parser.space()
-    operand = parser.expr()
+  if branchChar('(') then
+    operand = pad(parser.expr)
     operand.parens = true
-
-    parser.space()
-    if bufValue ~= ')' then
+    if not branchChar(')') then
       error('unbalanced parens')
     end
   elseif UNOPS[bufValue] ~= nil then
@@ -85,7 +80,7 @@ function parser.expr(minPrec)
     parser.space()
     local op, opToken
     for i = BINOP_MAX_LEN, 1, -1 do
-      opToken = word(i)
+      opToken = peek(i)
       op = BINOPS[opToken]
       if op then
         break
@@ -105,14 +100,10 @@ function parser.expr(minPrec)
     end
 
     if op.tag == TAG_TERNARY then
-      parser.space()
-      node[3] = parser.expr()
-      parser.space()
-      if bufValue ~= ':' then
+      node[3] = pad(parser.expr)
+      if not branchChar(':') then
         error('missing : in ternary')
       end
-      consume()
-    else
     end
 
     parser.space()

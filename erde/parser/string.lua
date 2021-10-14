@@ -9,12 +9,10 @@ function parser.string()
     local capture = {}
     consume(1, capture)
 
-    while bufValue do
+    while true do
       if bufValue == capture[1] then
         consume(1, capture)
         break
-      elseif bufValue == '\\' then
-        consume(2, capture)
       elseif bufValue == '\n' or bufValue == EOF then
         error('unterminated string')
       else
@@ -23,28 +21,22 @@ function parser.string()
     end
 
     return { tag = TAG_SHORT_STRING, value = table.concat(capture) }
-  elseif bufValue == '`' then
-    consume()
+  elseif branchChar('`') then
     local node = { tag = TAG_LONG_STRING }
     local capture = {}
 
-    while bufValue do
-      if bufValue == '{' then
-        consume()
-
+    while true do
+      if branchChar('{') then
         if #capture > 0 then
           node[#node + 1] = table.concat(capture)
           capture = {}
         end
 
-        node[#node + 1] = parser.expr()
-
-        parser.space()
-        if bufValue ~= '}' then
+        node[#node + 1] = pad(parser.expr)
+        if not branchChar('}') then
           error('unclosed interpolation')
         end
-      elseif bufValue == '`' then
-        consume(1)
+      elseif branchChar('`') then
         break
       elseif bufValue == '\\' then
         if ('{}`'):find(buffer[bufIndex + 1]) then

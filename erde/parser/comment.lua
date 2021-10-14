@@ -5,13 +5,14 @@ local _ENV = require('erde.parser.env').load()
 -- -----------------------------------------------------------------------------
 
 function parser.comment()
-  if word(3) == '---' then
-    consume(3)
-    local capture = {}
+  local capture = {}
+  local node = {}
+
+  if branchWord('---') then
+    node.tag = TAG_LONG_COMMENT
 
     while true do
-      if bufValue == '-' and word(3) == '---' then
-        consume(3)
+      if bufValue == '-' and branchWord('---') then
         break
       elseif bufValue == EOF then
         error('unterminated long comment')
@@ -19,11 +20,8 @@ function parser.comment()
         consume(1, capture)
       end
     end
-
-    return { tag = TAG_LONG_COMMENT, value = table.concat(capture) }
-  elseif word(2) == '--' then
-    consume(2)
-    local capture = {}
+  elseif branchWord('--') then
+    node.tag = TAG_SHORT_COMMENT
 
     while true do
       if bufValue == '\n' or bufValue == EOF then
@@ -32,11 +30,12 @@ function parser.comment()
         consume(1, capture)
       end
     end
-
-    return { tag = TAG_SHORT_COMMENT, value = table.concat(capture) }
   else
     error('invalid comment')
   end
+
+  node.value = table.concat(capture)
+  return node
 end
 
 -- -----------------------------------------------------------------------------
