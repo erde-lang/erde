@@ -48,7 +48,29 @@ for key, value in pairs(BINOPS) do
 end
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- Rule: Assignment
+-- -----------------------------------------------------------------------------
+
+function parser.assignment(demand)
+  local node = {}
+
+  node.name = parser.name()
+
+  parser.space()
+  local op, opToken
+  for i = BINOP_MAX_LEN, 1, -1 do
+    opToken = peek(i)
+    op = BINOPS[opToken]
+    if op then
+      break
+    end
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: Comment
 -- -----------------------------------------------------------------------------
 
 function parser.comment()
@@ -86,7 +108,7 @@ function parser.comment()
 end
 
 -- -----------------------------------------------------------------------------
--- Expr
+-- Rule: Expr
 --
 -- This uses precedence climbing and is based on this amazing blog post:
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
@@ -160,7 +182,7 @@ function parser.expr(minPrec)
 end
 
 -- -----------------------------------------------------------------------------
--- Number
+-- Rule: Number
 -- -----------------------------------------------------------------------------
 
 function parser.number()
@@ -200,7 +222,7 @@ function parser.number()
 end
 
 -- -----------------------------------------------------------------------------
--- String
+-- Rule: String
 -- -----------------------------------------------------------------------------
 
 function parser.string()
@@ -262,7 +284,7 @@ function parser.string()
 end
 
 -- -----------------------------------------------------------------------------
--- Var
+-- Rule: Var
 -- -----------------------------------------------------------------------------
 
 function parser.var()

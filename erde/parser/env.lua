@@ -65,12 +65,12 @@ enumify({
   'TAG_SHORT_COMMENT',
   'TAG_LONG_COMMENT',
 
-  -- Id
-  'TAG_NAME',
-
   -- Var
   'TAG_LOCAL_VAR',
   'TAG_GLOBAL_VAR',
+
+  -- Assignment
+  'TAG_ASSIGNMENT',
 
   -- Number
   'TAG_NUMBER',
