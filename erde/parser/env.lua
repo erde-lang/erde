@@ -195,6 +195,16 @@ function env.peek(n)
   return table.concat(word)
 end
 
+function env.stream(lookupTable, capture, demand)
+  if demand and not lookupTable[bufValue] then
+    error('unexpected value')
+  end
+
+  while lookupTable[bufValue] do
+    consume(1, capture)
+  end
+end
+
 function env.branchChar(chars, capture)
   if #chars > 1 and chars:find(bufValue) or bufValue == chars then
     consume(1, capture)
@@ -210,16 +220,6 @@ function env.branchWord(word, capture)
     return true
   else
     return false
-  end
-end
-
-function env.stream(lookupTable, capture, demand)
-  if demand and not lookupTable[bufValue] then
-    error('unexpected value')
-  end
-
-  while lookupTable[bufValue] do
-    consume(1, capture)
   end
 end
 
