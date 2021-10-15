@@ -225,11 +225,13 @@ function env.branchStr(str, capture)
 end
 
 function env.branchWord(word, capture)
+  parser.space()
   local trailingChar = buffer[bufIndex + #word]
   if Alpha[trailingChar] or Digit[trailingChar] then
     return false
-  else
-    return branchStr(word, capture)
+  elseif branchStr(word, capture) then
+    parser.space()
+    return true
   end
 end
 

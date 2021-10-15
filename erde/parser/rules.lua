@@ -100,11 +100,11 @@ function parser.comment()
   local capture = {}
   local node = {}
 
-  if branchWord('---') then
+  if branchStr('---') then
     node.tag = TAG_LONG_COMMENT
 
     while true do
-      if bufValue == '-' and branchWord('---') then
+      if bufValue == '-' and branchStr('---') then
         break
       elseif bufValue == EOF then
         error('unterminated long comment')
@@ -112,7 +112,7 @@ function parser.comment()
         consume(1, capture)
       end
     end
-  elseif branchWord('--') then
+  elseif branchStr('--') then
     node.tag = TAG_SHORT_COMMENT
 
     while true do
@@ -159,9 +159,9 @@ function parser.expr(minPrec)
   end
 
   local node = operand
+  parser.space()
 
   while true do
-    parser.space()
     local op, opToken
     for i = BINOP_MAX_LEN, 1, -1 do
       opToken = peek(i)
@@ -185,10 +185,9 @@ function parser.expr(minPrec)
       end
     end
 
-    parser.space()
     node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.expr(op.prec + 1)
-      or parser.expr(op.prec)
+        and parser.pad(parser.expr, op.prec + 1)
+      or parser.pad(parser.expr, op.prec)
   end
 
   return node
@@ -210,18 +209,14 @@ function parser.ifElse()
     block = parser.surround('{', '}', parser.block),
   }
 
-  parser.space()
   while branchWord('elseif') do
     node.elseifNodes[#node.elseifNodes + 1] = {
-      cond = parser.pad(parser.expr),
+      cond = parser.expr(),
       block = parser.surround('{', '}', parser.block),
     }
-    parser.space()
   end
 
-  parser.space()
   if branchWord('else') then
-    parser.space()
     node.elseNode = { block = parser.surround('{', '}', parser.block) }
   end
 
@@ -235,7 +230,7 @@ end
 function parser.number()
   local capture = {}
 
-  if branchWord('0x', capture) or branchWord('0X', capture) then
+  if branchStr('0x', capture) or branchStr('0X', capture) then
     stream(Hex, capture, true)
 
     if branchChar('.', capture) then

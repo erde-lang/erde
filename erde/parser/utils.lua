@@ -18,17 +18,10 @@ end
 -- Pad
 -- -----------------------------------------------------------------------------
 
-function parser.pad(rule, lhs, rhs)
-  if lhs or lhs == nil then
-    parser.space()
-  end
-
-  local node = rule()
-
-  if rhs or rhs == nil then
-    parser.space()
-  end
-
+function parser.pad(rule, ...)
+  parser.space()
+  local node = rule(...)
+  parser.space()
   return node
 end
 
@@ -56,15 +49,18 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.surround(openChar, closeChar, rule)
+  parser.space()
+
   if not branchChar(openChar) then
     error('expected ' .. openChar)
   end
 
-  local capture = rule()
+  local capture = parser.pad(rule)
 
   if not branchChar(closeChar) then
     error('expected ' .. closeChar)
   end
 
+  parser.space()
   return capture
 end
