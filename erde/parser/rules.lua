@@ -141,7 +141,7 @@ function parser.expr(minPrec)
   elseif UNOPS[bufValue] ~= nil then
     local op = UNOPS[bufValue]
     consume()
-    operand = { op, parser.expr(op.prec + 1) }
+    operand = { tag = op.tag, parser.expr(op.prec + 1) }
   elseif bufValue == EOF then
     error('unexpected EOF')
   else
@@ -149,7 +149,7 @@ function parser.expr(minPrec)
     operand = parser.number()
   end
 
-  local node = { nil, operand, nil }
+  local node = operand
 
   while true do
     parser.space()
@@ -166,16 +166,11 @@ function parser.expr(minPrec)
       break
     else
       consume(#opToken)
-    end
-
-    if node[1] then
-      node = { op, node }
-    else
-      node[1] = op
+      node = { tag = op.tag, node }
     end
 
     if op.tag == TAG_TERNARY then
-      node[3] = parser.pad(parser.expr)
+      node[#node + 1] = parser.pad(parser.expr)
       if not branchChar(':') then
         error('missing : in ternary')
       end
@@ -187,12 +182,7 @@ function parser.expr(minPrec)
       or parser.expr(op.prec)
   end
 
-  if not node[1] then
-    -- Remove unnecessary nesting for terminals
-    return node[2]
-  else
-    return node
-  end
+  return node
 end
 
 -- -----------------------------------------------------------------------------
