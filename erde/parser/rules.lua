@@ -51,20 +51,34 @@ end
 -- Rule: Assignment
 -- -----------------------------------------------------------------------------
 
-function parser.assignment(demand)
-  local node = {}
+local BINOP_ASSIGNMENT_BLACKLIST = {
+  ['?'] = true,
+  ['=='] = true,
+  ['~='] = true,
+  ['<='] = true,
+  ['>='] = true,
+  ['<'] = true,
+  ['>'] = true,
+}
 
-  node.name = parser.name()
+function parser.assignment()
+  local node = { tag = TAG_ASSIGNMENT, name = parser.pad(parser.name) }
 
-  parser.space()
-  local op, opToken
   for i = BINOP_MAX_LEN, 1, -1 do
-    opToken = peek(i)
-    op = BINOPS[opToken]
-    if op then
+    local opToken = peek(i)
+    local op = BINOPS[opToken]
+    if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
+      consume(i)
+      node.opTag = op.tag
       break
     end
   end
+
+  if not branchChar('=') then
+    error('expected =')
+  end
+
+  node.expr = parser.pad(parser.expr)
 
   return node
 end
