@@ -50,3 +50,21 @@ function parser.name()
 
   return table.concat(capture)
 end
+
+-- -----------------------------------------------------------------------------
+-- Surround
+-- -----------------------------------------------------------------------------
+
+function parser.surround(openChar, closeChar, rule)
+  if not branchChar(openChar) then
+    error('expected ' .. openChar)
+  end
+
+  local capture = rule()
+
+  if not branchChar(closeChar) then
+    error('expected ' .. closeChar)
+  end
+
+  return capture
+end

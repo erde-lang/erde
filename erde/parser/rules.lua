@@ -84,6 +84,15 @@ function parser.assignment()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: Block
+-- -----------------------------------------------------------------------------
+
+function parser.block()
+  -- TODO
+  return {}
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Comment
 -- -----------------------------------------------------------------------------
 
@@ -180,6 +189,40 @@ function parser.expr(minPrec)
     node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
         and parser.expr(op.prec + 1)
       or parser.expr(op.prec)
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: IfElse
+-- -----------------------------------------------------------------------------
+
+function parser.ifElse()
+  local node = { tag = TAG_IF_ELSE, elseifNodes = {} }
+
+  if not branchWord('if') then
+    error('expected if')
+  end
+
+  node.ifNode = {
+    cond = parser.pad(parser.expr),
+    block = parser.surround('{', '}', parser.block),
+  }
+
+  parser.space()
+  while branchWord('elseif') do
+    node.elseifNodes[#node.elseifNodes + 1] = {
+      cond = parser.pad(parser.expr),
+      block = parser.surround('{', '}', parser.block),
+    }
+    parser.space()
+  end
+
+  parser.space()
+  if branchWord('else') then
+    parser.space()
+    node.elseNode = { block = parser.surround('{', '}', parser.block) }
   end
 
   return node
