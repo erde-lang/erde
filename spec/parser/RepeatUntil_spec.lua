@@ -8,22 +8,22 @@ spec('valid repeat until', function()
       { value = '1' },
       { value = '0' },
     },
-  }, unit.repeatUntil(
+  }, unit.RepeatUntil(
     'repeat {} until (1 > 0)'
   ))
 end)
 
 spec('invalid repeat until', function()
   assert.has_error(function()
-    unit.repeatUntil('repeat {} until 1 > 0')
+    unit.RepeatUntil('repeat {} until 1 > 0')
   end)
   assert.has_error(function()
-    unit.repeatUntil('repeat until 1 > 0')
+    unit.RepeatUntil('repeat until 1 > 0')
   end)
   assert.has_error(function()
-    unit.repeatUntil('repeat {} until ()')
+    unit.RepeatUntil('repeat {} until ()')
   end)
   assert.has_error(function()
-    unit.repeatUntil('repeat {}')
+    unit.RepeatUntil('repeat {}')
   end)
 end)

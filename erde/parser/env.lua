@@ -1,44 +1,8 @@
 -- -----------------------------------------------------------------------------
--- Init
+-- Environment
 -- -----------------------------------------------------------------------------
 
-local env = {
-  -- Constants
-  EOF = -1,
-
-  -- Lookup Tables
-  Alpha = {},
-  Digit = {},
-  Hex = {},
-  Whitespace = {
-    ['\n'] = true,
-    ['\t'] = true,
-    [' '] = true,
-  },
-
-  -- Public State
-  buffer = {},
-  bufIndex = 1,
-  bufValue = 0,
-  line = 1,
-  column = 1,
-
-  -- Parser
-  parser = setmetatable({}, {
-    __newindex = function(parser, key, value)
-      if key == 'space' then
-        rawset(parser, key, value)
-      else
-        rawset(parser, key, function(...)
-          parser.space()
-          local node = value(...)
-          parser.space()
-          return node
-        end)
-      end
-    end,
-  }),
-}
+local env = {}
 
 for key, value in pairs(_G) do
   if env[key] == nil then
@@ -70,10 +34,76 @@ local function enumify(enum)
 end
 
 -- -----------------------------------------------------------------------------
+-- Constants / State
+-- -----------------------------------------------------------------------------
+
+EOF = -1
+
+buffer = {}
+bufIndex = 1
+bufValue = 0
+line = 1
+column = 1
+
+parser = setmetatable({}, {
+  __newindex = function(parser, key, value)
+    if key == 'space' then
+      rawset(parser, key, value)
+    else
+      rawset(parser, key, function(...)
+        parser.space()
+        local node = value(...)
+        parser.space()
+        return node
+      end)
+    end
+  end,
+})
+
+-- -----------------------------------------------------------------------------
+-- Lookup Tables
+-- -----------------------------------------------------------------------------
+
+Alpha = {}
+Digit = {}
+Hex = {}
+Whitespace = {
+  ['\n'] = true,
+  ['\t'] = true,
+  [' '] = true,
+}
+
+for byte = string.byte('0'), string.byte('9') do
+  local char = string.char(byte)
+  Digit[char] = true
+  Hex[char] = true
+end
+for byte = string.byte('A'), string.byte('F') do
+  local char = string.char(byte)
+  Alpha[char] = true
+  Hex[char] = true
+end
+for byte = string.byte('G'), string.byte('Z') do
+  local char = string.char(byte)
+  Alpha[char] = true
+end
+for byte = string.byte('a'), string.byte('f') do
+  local char = string.char(byte)
+  Alpha[char] = true
+  Hex[char] = true
+end
+for byte = string.byte('g'), string.byte('z') do
+  local char = string.char(byte)
+  Alpha[char] = true
+end
+
+-- -----------------------------------------------------------------------------
 -- Tags
 -- -----------------------------------------------------------------------------
 
 enumify({
+  'TAG_NAME',
+
   -- Comment
   'TAG_SHORT_COMMENT',
   'TAG_LONG_COMMENT',
@@ -91,6 +121,9 @@ enumify({
   -- Strings
   'TAG_SHORT_STRING',
   'TAG_LONG_STRING',
+
+  -- Tables
+  'TAG_TABLE',
 
   -- Unops
   'TAG_NEG',
@@ -135,38 +168,45 @@ enumify({
 })
 
 -- -----------------------------------------------------------------------------
--- Lookup Tables
+-- Error Handling
 -- -----------------------------------------------------------------------------
 
-for byte = string.byte('0'), string.byte('9') do
-  local char = string.char(byte)
-  Digit[char] = true
-  Hex[char] = true
+throw = {}
+
+local function getErrorToken()
+  if Alpha[bufValue] or Digit[bufValue] then
+    local word = {}
+
+    while Alpha[bufValue] or Digit[bufValue] do
+      consume(1, word)
+    end
+
+    return table.concat(word)
+  elseif bufValue == EOF then
+    return 'EOF'
+  else
+    return bufValue
+  end
 end
-for byte = string.byte('A'), string.byte('F') do
-  local char = string.char(byte)
-  Alpha[char] = true
-  Hex[char] = true
+
+function throw.error(msg)
+  error(('Error (Line %d, Col %d): %s'):format(line, column, msg))
 end
-for byte = string.byte('G'), string.byte('Z') do
-  local char = string.char(byte)
-  Alpha[char] = true
+
+function throw.expected(expectation, noLiteral)
+  local msg = 'Expected ' .. (noLiteral and '%s' or '`%s`') .. ' got `%s`'
+  throw.error(msg:format(expectation, getErrorToken()))
 end
-for byte = string.byte('a'), string.byte('f') do
-  local char = string.char(byte)
-  Alpha[char] = true
-  Hex[char] = true
-end
-for byte = string.byte('g'), string.byte('z') do
-  local char = string.char(byte)
-  Alpha[char] = true
+
+function throw.unexpected()
+  throw.error(('Unexpected token %s'):format(getErrorToken()))
 end
 
 -- -----------------------------------------------------------------------------
 -- Functions
 -- -----------------------------------------------------------------------------
 
-function env.loadBuffer(input)
+function loadBuffer(input)
   buffer = {}
   for i = 1, #input do
     buffer[i] = input:sub(i, i)
@@ -179,7 +219,7 @@ function env.loadBuffer(input)
   column = 1
 end
 
-function env.consume(n, capture)
+function consume(n, capture)
   n = n or 1
 
   if type(capture) == 'table' then
@@ -189,6 +229,10 @@ function env.consume(n, capture)
   end
 
   for i = 1, n do
+    if bufValue == EOF then
+      throw.unexpected()
+    end
+
     bufIndex = bufIndex + 1
     bufValue = buffer[bufIndex]
 
@@ -201,7 +245,7 @@ function env.consume(n, capture)
   end
 end
 
-function env.peek(n)
+function peek(n)
   local word = { bufValue }
 
   for i = 1, n - 1 do
@@ -215,7 +259,7 @@ function env.peek(n)
   return table.concat(word)
 end
 
-function env.stream(lookupTable, capture, demand)
+function stream(lookupTable, capture, demand)
   if demand and not lookupTable[bufValue] then
     error('unexpected value')
   end
@@ -225,7 +269,7 @@ function env.stream(lookupTable, capture, demand)
   end
 end
 
-function env.branchChar(char, capture)
+function branchChar(char, capture)
   if #char > 1 and char:find(bufValue) or bufValue == char then
     consume(1, capture)
     return true
@@ -234,7 +278,7 @@ function env.branchChar(char, capture)
   end
 end
 
-function env.branchStr(str, capture)
+function branchStr(str, capture)
   if peek(#str) == str then
     consume(#str, capture)
     return true
@@ -243,7 +287,7 @@ function env.branchStr(str, capture)
   end
 end
 
-function env.branchWord(word, capture)
+function branchWord(word, capture)
   parser.space()
   local trailingChar = buffer[bufIndex + #word]
   if Alpha[trailingChar] or Digit[trailingChar] then
@@ -253,14 +297,6 @@ function env.branchWord(word, capture)
     return true
   end
 end
-
--- -----------------------------------------------------------------------------
--- Error Handling
--- -----------------------------------------------------------------------------
-
-env.assert = {}
-
-env.throw = {}
 
 -- -----------------------------------------------------------------------------
 -- Return

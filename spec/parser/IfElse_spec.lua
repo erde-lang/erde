@@ -10,7 +10,7 @@ spec('valid if else', function()
         { value = '1' },
       },
     },
-  }, unit.ifElse(
+  }, unit.IfElse(
     'if 2 > 1 {}'
   ))
   assert.has_subtable({
@@ -24,7 +24,7 @@ spec('valid if else', function()
         },
       },
     },
-  }, unit.ifElse(
+  }, unit.IfElse(
     'if 2 > 1 {} elseif 3 > 1 {}'
   ))
   assert.has_subtable({
@@ -45,40 +45,40 @@ spec('valid if else', function()
         },
       },
     },
-  }, unit.ifElse(
+  }, unit.IfElse(
     'if 2 > 1 {} elseif 3 > 1 {} elseif 4 > 1 {}'
   ))
   assert.has_subtable({
     tag = 'TAG_IF_ELSE',
     elseNode = {},
-  }, unit.ifElse(
+  }, unit.IfElse(
     'if 2 > 1 {} elseif 3 > 1 {} else {}'
   ))
   assert.has_subtable({
     tag = 'TAG_IF_ELSE',
     elseNode = {},
-  }, unit.ifElse(
+  }, unit.IfElse(
     'if 2 > 1 {} else {}'
   ))
 end)
 
 spec('invalid if else', function()
   assert.has_error(function()
-    unit.ifElse('if {}')
+    unit.IfElse('if {}')
   end)
   assert.has_error(function()
-    unit.ifElse('if 2 > 1 {')
+    unit.IfElse('if 2 > 1 {')
   end)
   assert.has_error(function()
-    unit.ifElse('if 2 > 1 {} elseif {}')
+    unit.IfElse('if 2 > 1 {} elseif {}')
   end)
   assert.has_error(function()
-    unit.ifElse('if 2 > 1 {} else 2 > 1 {}')
+    unit.IfElse('if 2 > 1 {} else 2 > 1 {}')
   end)
   assert.has_error(function()
-    unit.ifElse('elseif 2 > 1 {}')
+    unit.IfElse('elseif 2 > 1 {}')
   end)
   assert.has_error(function()
-    unit.ifElse('else {}')
+    unit.IfElse('else {}')
   end)
 end)

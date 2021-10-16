@@ -61,8 +61,8 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
   ['>'] = true,
 }
 
-function parser.assignment()
-  local node = { tag = TAG_ASSIGNMENT, name = parser.name() }
+function parser.Assignment()
+  local node = { tag = TAG_ASSIGNMENT, name = parser.Name().value }
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
@@ -75,10 +75,10 @@ function parser.assignment()
   end
 
   if not branchChar('=') then
-    error('expected =')
+    throw.expected('=')
   end
 
-  node.expr = parser.expr()
+  node.expr = parser.Expr()
 
   return node
 end
@@ -87,20 +87,20 @@ end
 -- Rule: Block
 -- -----------------------------------------------------------------------------
 
-function parser.block()
+function parser.Block()
   local node = {}
 
   while true do
     local statement = parser.switch({
-      parser.comment,
+      parser.Comment,
       parser.Return,
     })
 
-    if statement then
-      node[#node + 1] = statement
-    else
+    if not statement then
       break
     end
+
+    node[#node + 1] = statement
   end
 
   return node
@@ -110,7 +110,7 @@ end
 -- Rule: Comment
 -- -----------------------------------------------------------------------------
 
-function parser.comment()
+function parser.Comment()
   local capture = {}
   local node = {}
 
@@ -120,8 +120,6 @@ function parser.comment()
     while true do
       if bufValue == '-' and branchStr('---') then
         break
-      elseif bufValue == EOF then
-        error('unterminated long comment')
       else
         consume(1, capture)
       end
@@ -137,7 +135,7 @@ function parser.comment()
       end
     end
   else
-    error('invalid comment')
+    throw.expected('comment', true)
   end
 
   node.value = table.concat(capture)
@@ -148,14 +146,14 @@ end
 -- Rule: DoBlock
 -- -----------------------------------------------------------------------------
 
-function parser.doBlock()
+function parser.DoBlock()
   if not branchWord('do') then
-    error('expected do')
+    throw.expected('do')
   end
 
   local node = {
     tag = TAG_DO_BLOCK,
-    block = parser.surround('{', '}', parser.block),
+    block = parser.surround('{', '}', parser.Block),
   }
 
   for _, statement in pairs(node.block) do
@@ -174,25 +172,32 @@ end
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
-function parser.expr(minPrec)
+function parser.Expr(minPrec)
   minPrec = minPrec or 1
 
   local operand
   if branchChar('(') then
-    operand = parser.expr()
+    operand = parser.Expr()
     operand.parens = true
     if not branchChar(')') then
-      error('unbalanced parens')
+      throw.expected(')')
     end
   elseif UNOPS[bufValue] ~= nil then
     local op = UNOPS[bufValue]
     consume()
-    operand = { tag = op.tag, parser.expr(op.prec + 1) }
-  elseif bufValue == EOF then
-    error('unexpected EOF')
+    operand = { tag = op.tag, parser.Expr(op.prec + 1) }
   else
     -- TODO: more terminals
-    operand = parser.number()
+    operand = parser.switch({
+      parser.Table,
+      parser.Number,
+      parser.String,
+      parser.Name,
+    })
+
+    if operand == nil then
+      throw.expected('expression', true)
+    end
   end
 
   local node = operand
@@ -216,15 +221,15 @@ function parser.expr(minPrec)
     end
 
     if op.tag == TAG_TERNARY then
-      node[#node + 1] = parser.expr()
+      node[#node + 1] = parser.Expr()
       if not branchChar(':') then
-        error('missing : in ternary')
+        throw.expected(':')
       end
     end
 
     node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.expr(op.prec + 1)
-      or parser.expr(op.prec)
+        and parser.Expr(op.prec + 1)
+      or parser.Expr(op.prec)
   end
 
   return node
@@ -234,45 +239,45 @@ end
 -- Rule: ForLoop
 -- -----------------------------------------------------------------------------
 
-function parser.forLoop()
+function parser.ForLoop()
   if not branchWord('for') then
-    error('expected for')
+    throw.expected('for')
   end
 
-  local firstName = parser.name()
+  local firstName = parser.Name().value
   local node
 
   if branchChar('=') then
-    node = { tag = TAG_NUMERIC_FOR, name = firstName, var = parser.expr() }
+    node = { tag = TAG_NUMERIC_FOR, name = firstName, var = parser.Expr() }
 
     if not branchChar(',') then
-      error('expected ,')
+      throw.expected(',')
     end
 
-    node.limit = parser.expr()
+    node.limit = parser.Expr()
 
     if branchChar(',') then
-      node.step = parser.expr()
+      node.step = parser.Expr()
     end
   else
     node = { tag = TAG_GENERIC_FOR, nameList = {}, exprList = {} }
 
     node.nameList[1] = firstName
     while branchChar(',') do
-      node.nameList[#node.nameList + 1] = parser.name()
+      node.nameList[#node.nameList + 1] = parser.Name().value
     end
 
     if not branchWord('in') then
-      error('expected in')
+      throw.expected('in')
     end
 
-    node.exprList[1] = parser.expr()
+    node.exprList[1] = parser.Expr()
     while branchChar(',') do
-      node.exprList[#node.exprList + 1] = parser.expr()
+      node.exprList[#node.exprList + 1] = parser.Expr()
     end
   end
 
-  node.block = parser.surround('{', '}', parser.block)
+  node.block = parser.surround('{', '}', parser.Block)
 
   return node
 end
@@ -281,37 +286,56 @@ end
 -- Rule: IfElse
 -- -----------------------------------------------------------------------------
 
-function parser.ifElse()
+function parser.IfElse()
   local node = { tag = TAG_IF_ELSE, elseifNodes = {} }
 
   if not branchWord('if') then
-    error('expected if')
+    throw.expected('if')
   end
 
   node.ifNode = {
-    cond = parser.expr(),
-    block = parser.surround('{', '}', parser.block),
+    cond = parser.Expr(),
+    block = parser.surround('{', '}', parser.Block),
   }
 
   while branchWord('elseif') do
     node.elseifNodes[#node.elseifNodes + 1] = {
-      cond = parser.expr(),
-      block = parser.surround('{', '}', parser.block),
+      cond = parser.Expr(),
+      block = parser.surround('{', '}', parser.Block),
     }
   end
 
   if branchWord('else') then
-    node.elseNode = { block = parser.surround('{', '}', parser.block) }
+    node.elseNode = { block = parser.surround('{', '}', parser.Block) }
   end
 
   return node
 end
 
 -- -----------------------------------------------------------------------------
+-- Name
+-- -----------------------------------------------------------------------------
+
+function parser.Name()
+  if not Alpha[bufValue] then
+    error('name must start with alpha')
+  end
+
+  local capture = {}
+  consume(1, capture)
+
+  while Alpha[bufValue] or Digit[bufValue] do
+    consume(1, capture)
+  end
+
+  return { tag = TAG_NAME, value = table.concat(capture) }
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Number
 -- -----------------------------------------------------------------------------
 
-function parser.number()
+function parser.Number()
   local capture = {}
 
   if branchStr('0x', capture) or branchStr('0X', capture) then
@@ -341,7 +365,7 @@ function parser.number()
   end
 
   if #capture == 0 then
-    error('expected number')
+    throw.expected('number', true)
   end
 
   return { tag = TAG_NUMBER, value = table.concat(capture) }
@@ -351,21 +375,21 @@ end
 -- Rule: RepeatUntil
 -- -----------------------------------------------------------------------------
 
-function parser.repeatUntil()
+function parser.RepeatUntil()
   if not branchWord('repeat') then
-    error('expected repeat')
+    throw.expected('repeat')
   end
 
   local node = {
     tag = TAG_REPEAT_UNTIL,
-    block = parser.surround('{', '}', parser.block),
+    block = parser.surround('{', '}', parser.Block),
   }
 
   if not branchWord('until') then
-    error('expected until')
+    throw.expected('until')
   end
 
-  node.cond = parser.surround('(', ')', parser.expr)
+  node.cond = parser.surround('(', ')', parser.Expr)
 
   return node
 end
@@ -376,17 +400,17 @@ end
 
 function parser.Return()
   if not branchWord('return') then
-    error('expected return')
+    throw.expected('return')
   end
 
-  return { tag = 'TAG_RETURN', value = parser.expr() }
+  return { tag = 'TAG_RETURN', value = parser.Expr() }
 end
 
 -- -----------------------------------------------------------------------------
 -- Rule: String
 -- -----------------------------------------------------------------------------
 
-function parser.string()
+function parser.String()
   if bufValue == "'" or bufValue == '"' then
     local capture = {}
     consume(1, capture)
@@ -395,8 +419,8 @@ function parser.string()
       if bufValue == capture[1] then
         consume(1, capture)
         break
-      elseif bufValue == '\n' or bufValue == EOF then
-        error('unterminated string')
+      elseif bufValue == '\n' then
+        throw.error('Unterminated string')
       else
         consume(1, capture)
       end
@@ -414,9 +438,9 @@ function parser.string()
           capture = {}
         end
 
-        node[#node + 1] = parser.expr()
+        node[#node + 1] = parser.Expr()
         if not branchChar('}') then
-          error('unclosed interpolation')
+          throw.expected('}')
         end
       elseif branchChar('`') then
         break
@@ -427,8 +451,6 @@ function parser.string()
         else
           consume(2, capture)
         end
-      elseif bufValue == EOF then
-        error('unterminated string')
       else
         consume(1, capture)
       end
@@ -440,15 +462,75 @@ function parser.string()
 
     return node
   else
-    error('Expected quote (",\',`), found ' .. bufValue)
+    throw.expected('quote (",\',`)', true)
   end
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: Table
+-- -----------------------------------------------------------------------------
+
+function parser.Table()
+  local node = { tag = TAG_TABLE, fields = {} }
+  local keyCounter = 1
+
+  if not branchChar('{') then
+    throw.expected('{')
+  end
+
+  parser.space()
+
+  while not branchChar('}') do
+    if branchChar(':') then
+      local name = parser.Name().value
+      node.fields[#node.fields + 1] = { key = name, value = name }
+    else
+      local expr = parser.try(parser.Expr)
+      local key
+
+      if expr then
+        if not branchChar(':') then
+          local value = expr.tag == TAG_NAME and expr.value or expr
+          node.fields[#node.fields + 1] = { key = keyCounter, value = value }
+          keyCounter = keyCounter + 1
+        elseif expr.tag == TAG_NAME then
+          key = expr.value
+        elseif expr.tag == TAG_SHORT_STRING or expr.tag == TAG_LONG_STRING then
+          key = expr
+        else
+          throw.unexpected('expression')
+        end
+      else
+        key = parser.surround('[', ']', parser.Expr)
+
+        if not branchChar(':') then
+          throw.expected(':')
+        end
+      end
+
+      if key then
+        node.fields[#node.fields + 1] = { key = key, value = parser.Expr() }
+      end
+    end
+
+    if not branchChar(',') then
+      parser.space()
+      if branchChar('}') then
+        break
+      else
+        throw.error('Missing comma')
+      end
+    end
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Var
 -- -----------------------------------------------------------------------------
 
-function parser.var()
+function parser.Var()
   local node = {}
 
   if Whitespace[buffer[bufIndex + #'local']] and branchWord('local') then
@@ -459,10 +541,10 @@ function parser.var()
     return nil
   end
 
-  node.name = parser.name()
+  node.name = parser.Name().value
 
   if branchChar('=') then
-    node.initValue = parser.expr()
+    node.initValue = parser.Expr()
   end
 
   return node
@@ -472,14 +554,14 @@ end
 -- Rule: WhileLoop
 -- -----------------------------------------------------------------------------
 
-function parser.whileLoop()
+function parser.WhileLoop()
   if not branchWord('while') then
-    error('expected while')
+    throw.expected('while')
   end
 
   return {
     tag = TAG_WHILE_LOOP,
-    cond = parser.expr(),
-    block = parser.surround('{', '}', parser.block),
+    cond = parser.Expr(),
+    block = parser.surround('{', '}', parser.Block),
   }
 end
