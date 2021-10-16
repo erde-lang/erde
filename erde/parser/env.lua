@@ -24,7 +24,20 @@ local env = {
   column = 1,
 
   -- Parser
-  parser = {},
+  parser = setmetatable({}, {
+    __newindex = function(parser, key, value)
+      if key == 'space' then
+        rawset(parser, key, value)
+      else
+        rawset(parser, key, function(...)
+          parser.space()
+          local node = value(...)
+          parser.space()
+          return node
+        end)
+      end
+    end,
+  }),
 }
 
 for key, value in pairs(_G) do
@@ -113,6 +126,8 @@ enumify({
 
   -- Logic Flows
   'TAG_IF_ELSE',
+  'TAG_NUMERIC_FOR',
+  'TAG_GENERIC_FOR',
 })
 
 -- -----------------------------------------------------------------------------
