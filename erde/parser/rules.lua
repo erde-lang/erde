@@ -192,7 +192,14 @@ function parser.Expr(minPrec)
     error('unexpected EOF')
   else
     -- TODO: more terminals
-    operand = parser.Number()
+    operand = parser.switch({
+      parser.Number,
+      parser.String,
+    })
+
+    if operand == nil then
+      error('expected expr')
+    end
   end
 
   local node = operand
