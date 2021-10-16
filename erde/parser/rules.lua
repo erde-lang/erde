@@ -88,8 +88,21 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.block()
-  -- TODO
-  return {}
+  local node = {}
+
+  while true do
+    local statement = parser.switch({
+      parser.comment,
+    })
+
+    if statement then
+      node[#node + 1] = statement
+    else
+      break
+    end
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
