@@ -62,7 +62,7 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
 }
 
 function parser.assignment()
-  local node = { tag = TAG_ASSIGNMENT, name = parser.pad(parser.name) }
+  local node = { tag = TAG_ASSIGNMENT, name = parser.name() }
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
@@ -78,7 +78,7 @@ function parser.assignment()
     error('expected =')
   end
 
-  node.expr = parser.pad(parser.expr)
+  node.expr = parser.expr()
 
   return node
 end
@@ -155,7 +155,7 @@ function parser.expr(minPrec)
 
   local operand
   if branchChar('(') then
-    operand = parser.pad(parser.expr)
+    operand = parser.expr()
     operand.parens = true
     if not branchChar(')') then
       error('unbalanced parens')
@@ -192,16 +192,63 @@ function parser.expr(minPrec)
     end
 
     if op.tag == TAG_TERNARY then
-      node[#node + 1] = parser.pad(parser.expr)
+      node[#node + 1] = parser.expr()
       if not branchChar(':') then
         error('missing : in ternary')
       end
     end
 
     node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.pad(parser.expr, op.prec + 1)
-      or parser.pad(parser.expr, op.prec)
+        and parser.expr(op.prec + 1)
+      or parser.expr(op.prec)
   end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: ForLoop
+-- -----------------------------------------------------------------------------
+
+function parser.forLoop()
+  if not branchWord('for') then
+    error('expected for')
+  end
+
+  local firstName = parser.name()
+  local node
+
+  if branchChar('=') then
+    node = { tag = TAG_NUMERIC_FOR, name = firstName, var = parser.expr() }
+
+    if not branchChar(',') then
+      error('expected ,')
+    end
+
+    node.limit = parser.expr()
+
+    if branchChar(',') then
+      node.step = parser.expr()
+    end
+  else
+    node = { tag = TAG_GENERIC_FOR, nameList = {}, exprList = {} }
+
+    node.nameList[1] = firstName
+    while branchChar(',') do
+      node.nameList[#node.nameList + 1] = parser.name()
+    end
+
+    if not branchWord('in') then
+      error('expected in')
+    end
+
+    node.exprList[1] = parser.expr()
+    while branchChar(',') do
+      node.exprList[#node.exprList + 1] = parser.expr()
+    end
+  end
+
+  node.block = parser.surround('{', '}', parser.block)
 
   return node
 end
@@ -218,7 +265,7 @@ function parser.ifElse()
   end
 
   node.ifNode = {
-    cond = parser.pad(parser.expr),
+    cond = parser.expr(),
     block = parser.surround('{', '}', parser.block),
   }
 
@@ -308,7 +355,7 @@ function parser.string()
           capture = {}
         end
 
-        node[#node + 1] = parser.pad(parser.expr)
+        node[#node + 1] = parser.expr()
         if not branchChar('}') then
           error('unclosed interpolation')
         end
@@ -353,10 +400,10 @@ function parser.var()
     return nil
   end
 
-  node.name = parser.pad(parser.name)
+  node.name = parser.name()
 
   if branchChar('=') then
-    node.initValue = parser.pad(parser.expr)
+    node.initValue = parser.expr()
   end
 
   return node
