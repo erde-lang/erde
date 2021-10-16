@@ -93,6 +93,7 @@ function parser.block()
   while true do
     local statement = parser.switch({
       parser.comment,
+      parser.Return,
     })
 
     if statement then
@@ -140,6 +141,29 @@ function parser.comment()
   end
 
   node.value = table.concat(capture)
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: DoBlock
+-- -----------------------------------------------------------------------------
+
+function parser.doBlock()
+  if not branchWord('do') then
+    error('expected do')
+  end
+
+  local node = {
+    tag = TAG_DO_BLOCK,
+    block = parser.surround('{', '}', parser.block),
+  }
+
+  for _, statement in pairs(node.block) do
+    if statement.tag == TAG_RETURN then
+      node.hasReturn = true
+    end
+  end
+
   return node
 end
 
@@ -324,6 +348,41 @@ function parser.number()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: RepeatUntil
+-- -----------------------------------------------------------------------------
+
+function parser.repeatUntil()
+  if not branchWord('repeat') then
+    error('expected repeat')
+  end
+
+  local node = {
+    tag = TAG_REPEAT_UNTIL,
+    block = parser.surround('{', '}', parser.block),
+  }
+
+  if not branchWord('until') then
+    error('expected until')
+  end
+
+  node.cond = parser.surround('(', ')', parser.expr)
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: Return
+-- -----------------------------------------------------------------------------
+
+function parser.Return()
+  if not branchWord('return') then
+    error('expected return')
+  end
+
+  return { tag = 'TAG_RETURN', value = parser.expr() }
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: String
 -- -----------------------------------------------------------------------------
 
@@ -407,4 +466,20 @@ function parser.var()
   end
 
   return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: WhileLoop
+-- -----------------------------------------------------------------------------
+
+function parser.whileLoop()
+  if not branchWord('while') then
+    error('expected while')
+  end
+
+  return {
+    tag = TAG_WHILE_LOOP,
+    cond = parser.expr(),
+    block = parser.surround('{', '}', parser.block),
+  }
 end
