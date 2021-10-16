@@ -8,22 +8,22 @@ spec('valid while loop', function()
       { value = '1' },
       { value = '0' },
     },
-  }, unit.whileLoop(
+  }, unit.WhileLoop(
     'while 1 > 0 {}'
   ))
 end)
 
 spec('invalid while loop', function()
   assert.has_error(function()
-    unit.whileLoop('while {}')
+    unit.WhileLoop('while {}')
   end)
   assert.has_error(function()
-    unit.whileLoop('while 1 > 0')
+    unit.WhileLoop('while 1 > 0')
   end)
   assert.has_error(function()
-    unit.whileLoop('while 1 > 0 {')
+    unit.WhileLoop('while 1 > 0 {')
   end)
   assert.has_error(function()
-    unit.whileLoop('wihle 1 > 0 {}')
+    unit.WhileLoop('wihle 1 > 0 {}')
   end)
 end)
