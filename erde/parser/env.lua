@@ -125,9 +125,13 @@ enumify({
   'TAG_EXP',
 
   -- Logic Flows
+  'TAG_RETURN',
   'TAG_IF_ELSE',
   'TAG_NUMERIC_FOR',
   'TAG_GENERIC_FOR',
+  'TAG_WHILE_LOOP',
+  'TAG_REPEAT_UNTIL',
+  'TAG_DO_BLOCK',
 })
 
 -- -----------------------------------------------------------------------------
