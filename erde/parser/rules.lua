@@ -75,7 +75,7 @@ function parser.Assignment()
   end
 
   if not branchChar('=') then
-    error('expected =')
+    throw.expected('=')
   end
 
   node.expr = parser.Expr()
@@ -96,11 +96,11 @@ function parser.Block()
       parser.Return,
     })
 
-    if statement then
-      node[#node + 1] = statement
-    else
+    if not statement then
       break
     end
+
+    node[#node + 1] = statement
   end
 
   return node
@@ -121,7 +121,7 @@ function parser.Comment()
       if bufValue == '-' and branchStr('---') then
         break
       elseif bufValue == EOF then
-        error('unterminated long comment')
+        throw.error('Unterminated multi-line comment')
       else
         consume(1, capture)
       end
@@ -137,7 +137,7 @@ function parser.Comment()
       end
     end
   else
-    error('invalid comment')
+    throw.expected('comment', true)
   end
 
   node.value = table.concat(capture)
@@ -150,7 +150,7 @@ end
 
 function parser.DoBlock()
   if not branchWord('do') then
-    error('expected do')
+    throw.expected('do')
   end
 
   local node = {
@@ -182,14 +182,14 @@ function parser.Expr(minPrec)
     operand = parser.Expr()
     operand.parens = true
     if not branchChar(')') then
-      error('unbalanced parens')
+      throw.expected(')')
     end
   elseif UNOPS[bufValue] ~= nil then
     local op = UNOPS[bufValue]
     consume()
     operand = { tag = op.tag, parser.Expr(op.prec + 1) }
   elseif bufValue == EOF then
-    error('unexpected EOF')
+    throw.unexpected()
   else
     -- TODO: more terminals
     operand = parser.switch({
@@ -198,7 +198,7 @@ function parser.Expr(minPrec)
     })
 
     if operand == nil then
-      error('expected expr')
+      throw.expected('expression', true)
     end
   end
 
@@ -225,7 +225,7 @@ function parser.Expr(minPrec)
     if op.tag == TAG_TERNARY then
       node[#node + 1] = parser.Expr()
       if not branchChar(':') then
-        error('missing : in ternary')
+        throw.expected(':')
       end
     end
 
@@ -243,7 +243,7 @@ end
 
 function parser.ForLoop()
   if not branchWord('for') then
-    error('expected for')
+    throw.expected('for')
   end
 
   local firstName = parser.name()
@@ -253,7 +253,7 @@ function parser.ForLoop()
     node = { tag = TAG_NUMERIC_FOR, name = firstName, var = parser.Expr() }
 
     if not branchChar(',') then
-      error('expected ,')
+      throw.expected(',')
     end
 
     node.limit = parser.Expr()
@@ -270,7 +270,7 @@ function parser.ForLoop()
     end
 
     if not branchWord('in') then
-      error('expected in')
+      throw.expected('in')
     end
 
     node.exprList[1] = parser.Expr()
@@ -292,7 +292,7 @@ function parser.IfElse()
   local node = { tag = TAG_IF_ELSE, elseifNodes = {} }
 
   if not branchWord('if') then
-    error('expected if')
+    throw.expected('if')
   end
 
   node.ifNode = {
@@ -348,7 +348,7 @@ function parser.Number()
   end
 
   if #capture == 0 then
-    error('expected number')
+    throw.expected('number', true)
   end
 
   return { tag = TAG_NUMBER, value = table.concat(capture) }
@@ -360,7 +360,7 @@ end
 
 function parser.RepeatUntil()
   if not branchWord('repeat') then
-    error('expected repeat')
+    throw.expected('repeat')
   end
 
   local node = {
@@ -369,7 +369,7 @@ function parser.RepeatUntil()
   }
 
   if not branchWord('until') then
-    error('expected until')
+    throw.expected('until')
   end
 
   node.cond = parser.surround('(', ')', parser.Expr)
@@ -383,7 +383,7 @@ end
 
 function parser.Return()
   if not branchWord('return') then
-    error('expected return')
+    throw.expected('return')
   end
 
   return { tag = 'TAG_RETURN', value = parser.Expr() }
@@ -403,7 +403,7 @@ function parser.String()
         consume(1, capture)
         break
       elseif bufValue == '\n' or bufValue == EOF then
-        error('unterminated string')
+        throw.error('Unterminated string')
       else
         consume(1, capture)
       end
@@ -423,7 +423,7 @@ function parser.String()
 
         node[#node + 1] = parser.Expr()
         if not branchChar('}') then
-          error('unclosed interpolation')
+          throw.expected('}')
         end
       elseif branchChar('`') then
         break
@@ -435,7 +435,7 @@ function parser.String()
           consume(2, capture)
         end
       elseif bufValue == EOF then
-        error('unterminated string')
+        throw.error('Unterminated string')
       else
         consume(1, capture)
       end
@@ -447,7 +447,7 @@ function parser.String()
 
     return node
   else
-    error('Expected quote (",\',`), found ' .. bufValue)
+    throw.expected('quote (",\',`)', true)
   end
 end
 
@@ -481,7 +481,7 @@ end
 
 function parser.WhileLoop()
   if not branchWord('while') then
-    error('expected while')
+    throw.expected('while')
   end
 
   return {

@@ -34,10 +34,20 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.switch(rules)
+  backupBufIndex = bufIndex
+  backupBufValue = bufValue
+  backupLine = line
+  backupColumn = column
+
   for _, rule in pairs(rules) do
     local ok, node = pcall(rule)
     if ok then
       return node
+    else
+      bufIndex = backupBufIndex
+      bufValue = backupBufValue
+      line = backupLine
+      column = backupColumn
     end
   end
 end
@@ -48,13 +58,13 @@ end
 
 function parser.surround(openChar, closeChar, rule)
   if not branchChar(openChar) then
-    error('expected ' .. openChar)
+    throw.expected(openChar)
   end
 
   local capture = rule()
 
   if not branchChar(closeChar) then
-    error('expected ' .. closeChar)
+    throw.expected(closeChar)
   end
 
   return capture

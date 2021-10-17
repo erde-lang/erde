@@ -260,25 +260,33 @@ end
 
 throw = {}
 
-function throw.expected(expectation)
-  local got = bufValue
-
+local function getErrorToken()
   if Alpha[bufValue] or Digit[bufValue] then
     local word = {}
+
     while Alpha[bufValue] or Digit[bufValue] do
       consume(1, word)
     end
-    got = table.concat(word)
-  end
 
-  error(
-    ('Error (Line %d, Col %d): Expected %s, got %s'):format(
-      line,
-      column,
-      expectation,
-      got
-    )
-  )
+    return table.concat(word)
+  elseif bufValue == EOF then
+    return 'EOF'
+  else
+    return bufValue
+  end
+end
+
+function throw.error(msg)
+  error(('Error (Line %d, Col %d): %s'):format(line, column, msg))
+end
+
+function throw.expected(expectation, noLiteral)
+  local msg = 'Expected ' .. (noLiteral and '%s' or '`%s`') .. ' got `%s`'
+  throw.error(msg:format(expectation, getErrorToken()))
+end
+
+function throw.unexpected()
+  throw.error(('Unexpected token %s'):format(getErrorToken()))
 end
 
 -- -----------------------------------------------------------------------------
