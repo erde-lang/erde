@@ -163,6 +163,41 @@ enumify({
 })
 
 -- -----------------------------------------------------------------------------
+-- Error Handling
+-- -----------------------------------------------------------------------------
+
+throw = {}
+
+local function getErrorToken()
+  if Alpha[bufValue] or Digit[bufValue] then
+    local word = {}
+
+    while Alpha[bufValue] or Digit[bufValue] do
+      consume(1, word)
+    end
+
+    return table.concat(word)
+  elseif bufValue == EOF then
+    return 'EOF'
+  else
+    return bufValue
+  end
+end
+
+function throw.error(msg)
+  error(('Error (Line %d, Col %d): %s'):format(line, column, msg))
+end
+
+function throw.expected(expectation, noLiteral)
+  local msg = 'Expected ' .. (noLiteral and '%s' or '`%s`') .. ' got `%s`'
+  throw.error(msg:format(expectation, getErrorToken()))
+end
+
+function throw.unexpected()
+  throw.error(('Unexpected token %s'):format(getErrorToken()))
+end
+
+-- -----------------------------------------------------------------------------
 -- Functions
 -- -----------------------------------------------------------------------------
 
@@ -189,6 +224,10 @@ function consume(n, capture)
   end
 
   for i = 1, n do
+    if bufValue == EOF then
+      throw.unexpected()
+    end
+
     bufIndex = bufIndex + 1
     bufValue = buffer[bufIndex]
 
@@ -252,41 +291,6 @@ function branchWord(word, capture)
     parser.space()
     return true
   end
-end
-
--- -----------------------------------------------------------------------------
--- Error Handling
--- -----------------------------------------------------------------------------
-
-throw = {}
-
-local function getErrorToken()
-  if Alpha[bufValue] or Digit[bufValue] then
-    local word = {}
-
-    while Alpha[bufValue] or Digit[bufValue] do
-      consume(1, word)
-    end
-
-    return table.concat(word)
-  elseif bufValue == EOF then
-    return 'EOF'
-  else
-    return bufValue
-  end
-end
-
-function throw.error(msg)
-  error(('Error (Line %d, Col %d): %s'):format(line, column, msg))
-end
-
-function throw.expected(expectation, noLiteral)
-  local msg = 'Expected ' .. (noLiteral and '%s' or '`%s`') .. ' got `%s`'
-  throw.error(msg:format(expectation, getErrorToken()))
-end
-
-function throw.unexpected()
-  throw.error(('Unexpected token %s'):format(getErrorToken()))
 end
 
 -- -----------------------------------------------------------------------------

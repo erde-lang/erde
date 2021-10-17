@@ -120,8 +120,6 @@ function parser.Comment()
     while true do
       if bufValue == '-' and branchStr('---') then
         break
-      elseif bufValue == EOF then
-        throw.error('Unterminated multi-line comment')
       else
         consume(1, capture)
       end
@@ -188,8 +186,6 @@ function parser.Expr(minPrec)
     local op = UNOPS[bufValue]
     consume()
     operand = { tag = op.tag, parser.Expr(op.prec + 1) }
-  elseif bufValue == EOF then
-    throw.unexpected()
   else
     -- TODO: more terminals
     operand = parser.switch({
@@ -402,7 +398,7 @@ function parser.String()
       if bufValue == capture[1] then
         consume(1, capture)
         break
-      elseif bufValue == '\n' or bufValue == EOF then
+      elseif bufValue == '\n' then
         throw.error('Unterminated string')
       else
         consume(1, capture)
@@ -434,8 +430,6 @@ function parser.String()
         else
           consume(2, capture)
         end
-      elseif bufValue == EOF then
-        throw.error('Unterminated string')
       else
         consume(1, capture)
       end
