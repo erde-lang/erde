@@ -478,27 +478,30 @@ function parser.Table()
     throw.expected('{')
   end
 
+  parser.space()
+
   while not branchChar('}') do
     if branchChar(':') then
       local name = parser.Name().value
-      node.fields = { key = name, value = name }
+      node.fields[#node.fields + 1] = { key = name, value = name }
     else
-      local expr = parser.try(parser.expr)
+      local expr = parser.try(parser.Expr)
       local key
 
       if expr then
         if not branchChar(':') then
-          node.fields[#node.fields + 1] = { key = keyCounter, value = expr }
+          local value = expr.tag == TAG_NAME and expr.value or expr
+          node.fields[#node.fields + 1] = { key = keyCounter, value = value }
           keyCounter = keyCounter + 1
         elseif expr.tag == TAG_NAME then
-          key = expr.name
+          key = expr.value
         elseif expr.tag == TAG_SHORT_STRING or expr.tag == TAG_LONG_STRING then
           key = expr
         else
           throw.unexpected('expression')
         end
       else
-        key = parser.surround('[', ']', parser.expr)
+        key = parser.surround('[', ']', parser.Expr)
 
         if not branchChar(':') then
           throw.expected(':')
@@ -506,19 +509,21 @@ function parser.Table()
       end
 
       if key then
-        node.fields[#node.fields + 1] = { key = key, value = parser.expr() }
+        node.fields[#node.fields + 1] = { key = key, value = parser.Expr() }
       end
     end
 
     if not branchChar(',') then
       parser.space()
-      if not branchChar('}') then
-        throw.error('Missing comma')
-      else
+      if branchChar('}') then
         break
+      else
+        throw.error('Missing comma')
       end
     end
   end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
