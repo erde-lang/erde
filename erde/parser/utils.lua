@@ -34,20 +34,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.switch(rules)
-  backupBufIndex = bufIndex
-  backupBufValue = bufValue
-  backupLine = line
-  backupColumn = column
-
   for _, rule in pairs(rules) do
-    local ok, node = pcall(rule)
-    if ok then
+    local node = parser.try(rule)
+    if node then
       return node
-    else
-      bufIndex = backupBufIndex
-      bufValue = backupBufValue
-      line = backupLine
-      column = backupColumn
     end
   end
 end
@@ -68,4 +58,26 @@ function parser.surround(openChar, closeChar, rule)
   end
 
   return capture
+end
+
+-- -----------------------------------------------------------------------------
+-- Try
+-- -----------------------------------------------------------------------------
+
+function parser.try(rule)
+  backupBufIndex = bufIndex
+  backupBufValue = bufValue
+  backupLine = line
+  backupColumn = column
+
+  local ok, node = pcall(rule)
+
+  if ok then
+    return node
+  else
+    bufIndex = backupBufIndex
+    bufValue = backupBufValue
+    line = backupLine
+    column = backupColumn
+  end
 end
