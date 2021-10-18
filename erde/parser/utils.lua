@@ -11,25 +11,6 @@ function parser.space()
 end
 
 -- -----------------------------------------------------------------------------
--- Name
--- -----------------------------------------------------------------------------
-
-function parser.name()
-  if not Alpha[bufValue] then
-    error('name must start with alpha')
-  end
-
-  local capture = {}
-  consume(1, capture)
-
-  while Alpha[bufValue] or Digit[bufValue] do
-    consume(1, capture)
-  end
-
-  return table.concat(capture)
-end
-
--- -----------------------------------------------------------------------------
 -- Switch
 -- -----------------------------------------------------------------------------
 

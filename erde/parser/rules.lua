@@ -62,7 +62,7 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
 }
 
 function parser.Assignment()
-  local node = { tag = TAG_ASSIGNMENT, name = parser.name() }
+  local node = { tag = TAG_ASSIGNMENT, name = parser.Name().value }
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
@@ -189,8 +189,10 @@ function parser.Expr(minPrec)
   else
     -- TODO: more terminals
     operand = parser.switch({
+      parser.Table,
       parser.Number,
       parser.String,
+      parser.Name,
     })
 
     if operand == nil then
@@ -242,7 +244,7 @@ function parser.ForLoop()
     throw.expected('for')
   end
 
-  local firstName = parser.name()
+  local firstName = parser.Name().value
   local node
 
   if branchChar('=') then
@@ -262,7 +264,7 @@ function parser.ForLoop()
 
     node.nameList[1] = firstName
     while branchChar(',') do
-      node.nameList[#node.nameList + 1] = parser.name()
+      node.nameList[#node.nameList + 1] = parser.Name().value
     end
 
     if not branchWord('in') then
@@ -308,6 +310,25 @@ function parser.IfElse()
   end
 
   return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Name
+-- -----------------------------------------------------------------------------
+
+function parser.Name()
+  if not Alpha[bufValue] then
+    error('name must start with alpha')
+  end
+
+  local capture = {}
+  consume(1, capture)
+
+  while Alpha[bufValue] or Digit[bufValue] do
+    consume(1, capture)
+  end
+
+  return { tag = TAG_NAME, value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------
@@ -446,6 +467,61 @@ function parser.String()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: Table
+-- -----------------------------------------------------------------------------
+
+function parser.Table()
+  local node = { tag = TAG_TABLE, fields = {} }
+  local keyCounter = 1
+
+  if not branchChar('{') then
+    throw.expected('{')
+  end
+
+  while not branchChar('}') do
+    if branchChar(':') then
+      local name = parser.Name().value
+      node.fields = { key = name, value = name }
+    else
+      local expr = parser.try(parser.expr)
+      local key
+
+      if expr then
+        if not branchChar(':') then
+          node.fields[#node.fields + 1] = { key = keyCounter, value = expr }
+          keyCounter = keyCounter + 1
+        elseif expr.tag == TAG_NAME then
+          key = expr.name
+        elseif expr.tag == TAG_SHORT_STRING or expr.tag == TAG_LONG_STRING then
+          key = expr
+        else
+          throw.unexpected('expression')
+        end
+      else
+        key = parser.surround('[', ']', parser.expr)
+
+        if not branchChar(':') then
+          throw.expected(':')
+        end
+      end
+
+      if key then
+        node.fields[#node.fields + 1] = { key = key, value = parser.expr() }
+      end
+    end
+
+    if not branchChar(',') then
+      parser.space()
+      if not branchChar('}') then
+        throw.error('Missing comma')
+      else
+        break
+      end
+    end
+  end
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Var
 -- -----------------------------------------------------------------------------
 
@@ -460,7 +536,7 @@ function parser.Var()
     return nil
   end
 
-  node.name = parser.name()
+  node.name = parser.Name().value
 
   if branchChar('=') then
     node.initValue = parser.Expr()

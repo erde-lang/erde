@@ -102,6 +102,8 @@ end
 -- -----------------------------------------------------------------------------
 
 enumify({
+  'TAG_NAME',
+
   -- Comment
   'TAG_SHORT_COMMENT',
   'TAG_LONG_COMMENT',
@@ -119,6 +121,9 @@ enumify({
   -- Strings
   'TAG_SHORT_STRING',
   'TAG_LONG_STRING',
+
+  -- Tables
+  'TAG_TABLE',
 
   -- Unops
   'TAG_NEG',
