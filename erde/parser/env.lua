@@ -124,6 +124,7 @@ enumify({
 
   -- Tables
   'TAG_TABLE',
+  'TAG_DESTRUCTURE',
 
   -- Unops
   'TAG_NEG',
@@ -269,33 +270,40 @@ function stream(lookupTable, capture, demand)
   end
 end
 
-function branchChar(char, capture)
-  if #char > 1 and char:find(bufValue) or bufValue == char then
-    consume(1, capture)
-    return true
-  else
-    return false
+function branch(n, isBranch, noPad, capture)
+  if not noPad then
+    parser.space()
   end
+
+  if isBranch then
+    consume(n, capture)
+  end
+
+  if not noPad then
+    parser.space()
+  end
+
+  return isBranch
 end
 
-function branchStr(str, capture)
-  if peek(#str) == str then
-    consume(#str, capture)
-    return true
-  else
-    return false
-  end
+function branchChar(char, noPad, capture)
+  return branch(
+    1,
+    -- Slight optimization for most common case
+    #char > 1 and char:find(bufValue) or bufValue == char,
+    noPad,
+    capture
+  )
+end
+
+function branchStr(str, noPad, capture)
+  return branch(#str, peek(#str) == str, noPad, capture)
 end
 
 function branchWord(word, capture)
-  parser.space()
   local trailingChar = buffer[bufIndex + #word]
-  if Alpha[trailingChar] or Digit[trailingChar] then
-    return false
-  elseif branchStr(word, capture) then
-    parser.space()
-    return true
-  end
+  return not (Alpha[trailingChar] or Digit[trailingChar])
+    and branchStr(word, capture)
 end
 
 -- -----------------------------------------------------------------------------

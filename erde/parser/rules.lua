@@ -114,17 +114,17 @@ function parser.Comment()
   local capture = {}
   local node = {}
 
-  if branchStr('---') then
+  if branchStr('---', true) then
     node.tag = TAG_LONG_COMMENT
 
     while true do
-      if bufValue == '-' and branchStr('---') then
+      if bufValue == '-' and branchStr('---', true) then
         break
       else
         consume(1, capture)
       end
     end
-  elseif branchStr('--') then
+  elseif branchStr('--', true) then
     node.tag = TAG_SHORT_COMMENT
 
     while true do
@@ -139,6 +139,62 @@ function parser.Comment()
   end
 
   node.value = table.concat(capture)
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: Destructure
+-- -----------------------------------------------------------------------------
+
+function parser.Destructure()
+  local node = { tag = TAG_DESTRUCTURE }
+  local keyCounter = 1
+
+  if branchChar('?') then
+    node.optional = true
+  end
+
+  if not branchChar('{') then
+    throw.expected('{')
+  end
+
+  while not branchChar('}') do
+    local field = {}
+
+    local isKeyDestruct = branchChar(':')
+
+    local name = parser.try(parser.Name)
+    if name then
+      field.name = name.value
+    end
+
+    if isKeyDestruct then
+      if not field.name then
+        throw.expected('table key', true)
+      end
+
+      field.key = field.name
+      field.destructure = parser.try(parser.Destructure)
+    else
+      field.key = keyCounter
+      keyCounter = keyCounter + 1
+
+      if not field.name then
+        field.destructure = parser.Destructure()
+      end
+    end
+
+    if branchChar('=') then
+      field.default = parser.Expr()
+    end
+
+    node[#node + 1] = field
+
+    if not branchChar(',') and bufValue ~= '}' then
+      throw.error('Missing trailing comma')
+    end
+  end
+
   return node
 end
 
@@ -201,7 +257,6 @@ function parser.Expr(minPrec)
   end
 
   local node = operand
-  parser.space()
 
   while true do
     local op, opToken
@@ -338,15 +393,15 @@ end
 function parser.Number()
   local capture = {}
 
-  if branchStr('0x', capture) or branchStr('0X', capture) then
+  if branchStr('0x', true, capture) or branchStr('0X', true, capture) then
     stream(Hex, capture, true)
 
-    if branchChar('.', capture) then
+    if branchChar('.', true, capture) then
       stream(Hex, capture, true)
     end
 
-    if branchChar('pP', capture) then
-      branchChar('+-', capture)
+    if branchChar('pP', true, capture) then
+      branchChar('+-', true, capture)
       stream(Digit, capture, true)
     end
   else
@@ -354,12 +409,12 @@ function parser.Number()
       consume(1, capture, true)
     end
 
-    if branchChar('.', capture) then
+    if branchChar('.', true, capture) then
       stream(Digit, capture, true)
     end
 
-    if #capture > 0 and branchChar('eE', capture) then
-      branchChar('+-', capture)
+    if #capture > 0 and branchChar('eE', true, capture) then
+      branchChar('+-', true, capture)
       stream(Digit, capture, true)
     end
   end
@@ -427,22 +482,22 @@ function parser.String()
     end
 
     return { tag = TAG_SHORT_STRING, value = table.concat(capture) }
-  elseif branchChar('`') then
+  elseif branchChar('`', true) then
     local node = { tag = TAG_LONG_STRING }
     local capture = {}
 
     while true do
-      if branchChar('{') then
+      if branchChar('{', true) then
         if #capture > 0 then
           node[#node + 1] = table.concat(capture)
           capture = {}
         end
 
         node[#node + 1] = parser.Expr()
-        if not branchChar('}') then
+        if not branchChar('}', true) then
           throw.expected('}')
         end
-      elseif branchChar('`') then
+      elseif branchChar('`', true) then
         break
       elseif bufValue == '\\' then
         if ('{}`'):find(buffer[bufIndex + 1]) then
@@ -471,55 +526,52 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Table()
-  local node = { tag = TAG_TABLE, fields = {} }
+  local node = { tag = TAG_TABLE }
   local keyCounter = 1
 
   if not branchChar('{') then
     throw.expected('{')
   end
 
-  parser.space()
-
   while not branchChar('}') do
+    local field = {}
+
     if branchChar(':') then
       local name = parser.Name().value
-      node.fields[#node.fields + 1] = { key = name, value = name }
+      field.key = name
+      field.value = name
     else
       local expr = parser.try(parser.Expr)
-      local key
 
       if expr then
         if not branchChar(':') then
-          local value = expr.tag == TAG_NAME and expr.value or expr
-          node.fields[#node.fields + 1] = { key = keyCounter, value = value }
+          field.key = keyCounter
+          field.value = expr.tag == TAG_NAME and expr.value or expr
           keyCounter = keyCounter + 1
         elseif expr.tag == TAG_NAME then
-          key = expr.value
+          field.key = expr.value
         elseif expr.tag == TAG_SHORT_STRING or expr.tag == TAG_LONG_STRING then
-          key = expr
+          field.key = expr
         else
           throw.unexpected('expression')
         end
       else
-        key = parser.surround('[', ']', parser.Expr)
+        field.key = parser.surround('[', ']', parser.Expr)
 
         if not branchChar(':') then
           throw.expected(':')
         end
       end
 
-      if key then
-        node.fields[#node.fields + 1] = { key = key, value = parser.Expr() }
+      if field.key and not field.value then
+        field.value = parser.Expr()
       end
     end
 
-    if not branchChar(',') then
-      parser.space()
-      if branchChar('}') then
-        break
-      else
-        throw.error('Missing comma')
-      end
+    node[#node + 1] = field
+
+    if not branchChar(',') and bufValue ~= '}' then
+      throw.error('Missing comma')
     end
   end
 
