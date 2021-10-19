@@ -143,6 +143,51 @@ function parser.Comment()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: Destructure
+-- -----------------------------------------------------------------------------
+
+function parser.Destructure()
+  local node = { tag = TAG_DESTRUCTURE, fields = {} }
+  local keyCounter = 1
+
+  if branchChar('?') then
+    tag.optional = true
+    parser.space()
+  end
+
+  if not branchChar('{') then
+    throw.expected('{')
+  end
+
+  parser.space()
+
+  while not branchChar('}') do
+    local isKeyDestruct = branchChar(':')
+    local field = { name = parser.try(parser.Name().value) }
+
+    if isKeyDestruct then
+      field.key = field.name
+    else
+      field.key = keyCounter
+      keyCounter = keyCounter + 1
+    end
+
+    if not field.name then
+      field.destructure = parser.Destructure()
+    end
+
+    node.fields[#node.fields + 1] = field
+
+    local hasComma = branchChar(',')
+    parser.space()
+
+    if not hasComma and bufValue ~= '}' then
+      throw.error('Missing comma')
+    end
+  end
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: DoBlock
 -- -----------------------------------------------------------------------------
 
@@ -481,45 +526,47 @@ function parser.Table()
   parser.space()
 
   while not branchChar('}') do
+    local field = {}
+
     if branchChar(':') then
       local name = parser.Name().value
-      node.fields[#node.fields + 1] = { key = name, value = name }
+      field.key = name
+      field.value = name
     else
       local expr = parser.try(parser.Expr)
-      local key
 
       if expr then
         if not branchChar(':') then
-          local value = expr.tag == TAG_NAME and expr.value or expr
-          node.fields[#node.fields + 1] = { key = keyCounter, value = value }
+          field.key = keyCounter
+          field.value = expr.tag == TAG_NAME and expr.value or expr
           keyCounter = keyCounter + 1
         elseif expr.tag == TAG_NAME then
-          key = expr.value
+          field.key = expr.value
         elseif expr.tag == TAG_SHORT_STRING or expr.tag == TAG_LONG_STRING then
-          key = expr
+          field.key = expr
         else
           throw.unexpected('expression')
         end
       else
-        key = parser.surround('[', ']', parser.Expr)
+        field.key = parser.surround('[', ']', parser.Expr)
 
         if not branchChar(':') then
           throw.expected(':')
         end
       end
 
-      if key then
-        node.fields[#node.fields + 1] = { key = key, value = parser.Expr() }
+      if field.key and not field.value then
+        field.value = parser.Expr()
       end
     end
 
-    if not branchChar(',') then
-      parser.space()
-      if branchChar('}') then
-        break
-      else
-        throw.error('Missing comma')
-      end
+    node.fields[#node.fields + 1] = field
+
+    local hasComma = branchChar(',')
+    parser.space()
+
+    if not hasComma and bufValue ~= '}' then
+      throw.error('Missing comma')
     end
   end
 
