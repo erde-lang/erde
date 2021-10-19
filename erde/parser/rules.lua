@@ -147,11 +147,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Destructure()
-  local node = { tag = TAG_DESTRUCTURE, fields = {} }
+  local node = { tag = TAG_DESTRUCTURE }
   local keyCounter = 1
 
   if branchChar('?') then
-    tag.optional = true
+    node.optional = true
     parser.space()
   end
 
@@ -162,29 +162,42 @@ function parser.Destructure()
   parser.space()
 
   while not branchChar('}') do
+    local field = {}
+
     local isKeyDestruct = branchChar(':')
-    local field = { name = parser.try(parser.Name().value) }
+
+    local name = parser.try(parser.Name)
+    if name then
+      field.name = name.value
+    end
 
     if isKeyDestruct then
       field.key = field.name
+      field.destructure = parser.try(parser.Destructure)
     else
       field.key = keyCounter
       keyCounter = keyCounter + 1
+
+      if not field.name then
+        field.destructure = parser.Destructure()
+      end
     end
 
-    if not field.name then
-      field.destructure = parser.Destructure()
+    if branchChar('=') then
+      field.default = parser.Expr()
     end
 
-    node.fields[#node.fields + 1] = field
+    node[#node + 1] = field
 
     local hasComma = branchChar(',')
     parser.space()
 
     if not hasComma and bufValue ~= '}' then
-      throw.error('Missing comma')
+      throw.error('Missing trailing comma')
     end
   end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
@@ -516,7 +529,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Table()
-  local node = { tag = TAG_TABLE, fields = {} }
+  local node = { tag = TAG_TABLE }
   local keyCounter = 1
 
   if not branchChar('{') then
@@ -560,7 +573,7 @@ function parser.Table()
       end
     end
 
-    node.fields[#node.fields + 1] = field
+    node[#node + 1] = field
 
     local hasComma = branchChar(',')
     parser.space()
