@@ -5,6 +5,25 @@ require('erde.parser.utils')
 -- Constants
 -- -----------------------------------------------------------------------------
 
+local KEYWORDS = {
+  'local',
+  'global',
+  'if',
+  'elseif',
+  'else',
+  'for',
+  'in',
+  'while',
+  'repeat',
+  'until',
+  'do',
+  'function',
+  'false',
+  'true',
+  'nil',
+  'return',
+}
+
 local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
@@ -353,7 +372,6 @@ end
 -- Name
 -- -----------------------------------------------------------------------------
 
--- TODO: make sure name is not a keyword!!
 function parser.Name()
   if not Alpha[bufValue] then
     error('name must start with alpha')
@@ -362,8 +380,15 @@ function parser.Name()
   local capture = {}
   consume(1, capture)
 
-  while Alpha[bufValue] or Digit[bufValue] do
+  while Alpha[bufValue] or Digit[bufValue] or bufValue == '_' do
     consume(1, capture)
+  end
+
+  local value = table.concat(capture)
+  for _, keyword in pairs(KEYWORDS) do
+    if value == keyword then
+      throw.error('name cannot be keyword')
+    end
   end
 
   return { tag = 'TAG_NAME', value = table.concat(capture) }
