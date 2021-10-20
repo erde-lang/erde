@@ -172,6 +172,10 @@ function parser.Destructure()
     end
 
     if isKeyDestruct then
+      if not field.name then
+        throw.expected('table key', true)
+      end
+
       field.key = field.name
       field.destructure = parser.try(parser.Destructure)
     else

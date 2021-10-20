@@ -3,6 +3,9 @@ local unit = require('erde.parser.unit')
 spec('valid destructure', function()
   assert.has_subtable({
     tag = TAG_DESTRUCTURE,
+  }, unit.Destructure('{}'))
+  assert.has_subtable({
+    tag = TAG_DESTRUCTURE,
     { key = 1, name = 'x' },
     { key = 2, name = 'y' },
   }, unit.Destructure(
@@ -43,8 +46,14 @@ spec('valid destructure', function()
   ))
 end)
 
-spec('invalid short comment', function()
+spec('invalid destructure', function()
   assert.has_error(function()
-    unit.Comment('')
+    unit.Destructure('{?}')
+  end)
+  assert.has_error(function()
+    unit.Destructure('{ :name { }')
+  end)
+  assert.has_error(function()
+    unit.Destructure('{ : }')
   end)
 end)
