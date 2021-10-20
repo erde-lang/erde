@@ -1,0 +1,10 @@
+local unit = require('erde.parser.unit')
+
+spec('valid terminals', function()
+  assert.are.equal('true', unit.Terminal('true').value)
+  assert.are.equal('false', unit.Terminal('false').value)
+  assert.are.equal('nil', unit.Terminal('nil').value)
+  assert.are.equal('...', unit.Terminal('...').value)
+  assert.are.equal('TAG_ADD', unit.Terminal('(1 + 2)').tag)
+  assert.are.equal('TAG_NUMBER', unit.Terminal('1').tag)
+end)

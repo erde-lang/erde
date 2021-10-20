@@ -219,7 +219,7 @@ end
 function branchWord(word, capture)
   local trailingChar = buffer[bufIndex + #word]
   return not (Alpha[trailingChar] or Digit[trailingChar])
-    and branchStr(word, capture)
+    and branchStr(word, false, capture)
 end
 
 -- -----------------------------------------------------------------------------

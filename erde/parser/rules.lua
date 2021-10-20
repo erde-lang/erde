@@ -353,6 +353,7 @@ end
 -- Name
 -- -----------------------------------------------------------------------------
 
+-- TODO: make sure name is not a keyword!!
 function parser.Name()
   if not Alpha[bufValue] then
     error('name must start with alpha')
@@ -567,7 +568,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Terminal()
-  local node, token = nil, {}
+  local node
+  local token = {}
 
   if branchChar('(') then
     node = parser.Expr()
