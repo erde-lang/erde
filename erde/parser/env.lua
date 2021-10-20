@@ -270,24 +270,34 @@ function stream(lookupTable, capture, demand)
   end
 end
 
-function branchChar(char, capture)
-  local isBranch = #char > 1 and char:find(bufValue) or bufValue == char
+function branch(n, isBranch, noPad, capture)
+  if not noPad then
+    parser.space()
+  end
 
   if isBranch then
-    consume(1, capture)
+    consume(n, capture)
+  end
+
+  if not noPad then
+    parser.space()
   end
 
   return isBranch
 end
 
-function branchStr(str, capture)
-  local isBranch = peek(#str) == str
+function branchChar(char, noPad, capture)
+  return branch(
+    1,
+    -- Slight optimization for most common case
+    #char > 1 and char:find(bufValue) or bufValue == char,
+    noPad,
+    capture
+  )
+end
 
-  if isBranch then
-    consume(#str, capture)
-  end
-
-  return isBranch
+function branchStr(str, noPad, capture)
+  return branch(#str, peek(#str) == str, noPad, capture)
 end
 
 function branchWord(word, capture)

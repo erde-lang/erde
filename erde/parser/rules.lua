@@ -114,17 +114,17 @@ function parser.Comment()
   local capture = {}
   local node = {}
 
-  if branchStr('---') then
+  if branchStr('---', true) then
     node.tag = TAG_LONG_COMMENT
 
     while true do
-      if bufValue == '-' and branchStr('---') then
+      if bufValue == '-' and branchStr('---', true) then
         break
       else
         consume(1, capture)
       end
     end
-  elseif branchStr('--') then
+  elseif branchStr('--', true) then
     node.tag = TAG_SHORT_COMMENT
 
     while true do
@@ -152,14 +152,11 @@ function parser.Destructure()
 
   if branchChar('?') then
     node.optional = true
-    parser.space()
   end
 
   if not branchChar('{') then
     throw.expected('{')
   end
-
-  parser.space()
 
   while not branchChar('}') do
     local field = {}
@@ -193,10 +190,7 @@ function parser.Destructure()
 
     node[#node + 1] = field
 
-    local hasComma = branchChar(',')
-    parser.space()
-
-    if not hasComma and bufValue ~= '}' then
+    if not branchChar(',') and bufValue ~= '}' then
       throw.error('Missing trailing comma')
     end
   end
@@ -263,7 +257,6 @@ function parser.Expr(minPrec)
   end
 
   local node = operand
-  parser.space()
 
   while true do
     local op, opToken
@@ -400,15 +393,15 @@ end
 function parser.Number()
   local capture = {}
 
-  if branchStr('0x', capture) or branchStr('0X', capture) then
+  if branchStr('0x', true, capture) or branchStr('0X', true, capture) then
     stream(Hex, capture, true)
 
-    if branchChar('.', capture) then
+    if branchChar('.', true, capture) then
       stream(Hex, capture, true)
     end
 
-    if branchChar('pP', capture) then
-      branchChar('+-', capture)
+    if branchChar('pP', true, capture) then
+      branchChar('+-', true, capture)
       stream(Digit, capture, true)
     end
   else
@@ -416,12 +409,12 @@ function parser.Number()
       consume(1, capture, true)
     end
 
-    if branchChar('.', capture) then
+    if branchChar('.', true, capture) then
       stream(Digit, capture, true)
     end
 
-    if #capture > 0 and branchChar('eE', capture) then
-      branchChar('+-', capture)
+    if #capture > 0 and branchChar('eE', true, capture) then
+      branchChar('+-', true, capture)
       stream(Digit, capture, true)
     end
   end
@@ -489,22 +482,22 @@ function parser.String()
     end
 
     return { tag = TAG_SHORT_STRING, value = table.concat(capture) }
-  elseif branchChar('`') then
+  elseif branchChar('`', true) then
     local node = { tag = TAG_LONG_STRING }
     local capture = {}
 
     while true do
-      if branchChar('{') then
+      if branchChar('{', true) then
         if #capture > 0 then
           node[#node + 1] = table.concat(capture)
           capture = {}
         end
 
         node[#node + 1] = parser.Expr()
-        if not branchChar('}') then
+        if not branchChar('}', true) then
           throw.expected('}')
         end
-      elseif branchChar('`') then
+      elseif branchChar('`', true) then
         break
       elseif bufValue == '\\' then
         if ('{}`'):find(buffer[bufIndex + 1]) then
@@ -539,8 +532,6 @@ function parser.Table()
   if not branchChar('{') then
     throw.expected('{')
   end
-
-  parser.space()
 
   while not branchChar('}') do
     local field = {}
@@ -579,10 +570,7 @@ function parser.Table()
 
     node[#node + 1] = field
 
-    local hasComma = branchChar(',')
-    parser.space()
-
-    if not hasComma and bufValue ~= '}' then
+    if not branchChar(',') and bufValue ~= '}' then
       throw.error('Missing comma')
     end
   end
