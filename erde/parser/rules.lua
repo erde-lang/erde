@@ -230,33 +230,15 @@ end
 
 function parser.Expr(minPrec)
   minPrec = minPrec or 1
+  local node
 
-  local operand
-  if branchChar('(') then
-    operand = parser.Expr()
-    operand.parens = true
-    if not branchChar(')') then
-      throw.expected(')')
-    end
-  elseif UNOPS[bufValue] ~= nil then
+  if UNOPS[bufValue] ~= nil then
     local op = UNOPS[bufValue]
     consume()
-    operand = { tag = op.tag, parser.Expr(op.prec + 1) }
+    node = { tag = op.tag, parser.Expr(op.prec + 1) }
   else
-    -- TODO: more terminals
-    operand = parser.switch({
-      parser.Table,
-      parser.Number,
-      parser.String,
-      parser.Name,
-    })
-
-    if operand == nil then
-      throw.expected('expression', true)
-    end
+    node = parser.Terminal()
   end
-
-  local node = operand
 
   while true do
     local op, opToken
@@ -573,6 +555,43 @@ function parser.Table()
     if not branchChar(',') and bufValue ~= '}' then
       throw.error('Missing comma')
     end
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: Terminal
+-- -----------------------------------------------------------------------------
+
+function parser.Terminal()
+  local node, token = nil, {}
+
+  if branchChar('(') then
+    node = parser.Expr()
+    node.parens = true
+
+    if not branchChar(')') then
+      throw.expected(')')
+    end
+  elseif
+    branchWord('true', token)
+    or branchWord('false', token)
+    or branchWord('nil', token)
+    or branchWord('...', token)
+  then
+    node = { tag = TAG_TERMINAL, value = table.concat(token) }
+  else
+    node = parser.switch({
+      parser.Table,
+      parser.Number,
+      parser.String,
+      parser.Name, -- TODO: replace with Id
+    })
+  end
+
+  if not node then
+    error.expected('terminal', true)
   end
 
   return node

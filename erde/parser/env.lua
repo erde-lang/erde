@@ -103,6 +103,7 @@ end
 
 enumify({
   'TAG_NAME',
+  'TAG_TERMINAL',
 
   -- Comment
   'TAG_SHORT_COMMENT',
