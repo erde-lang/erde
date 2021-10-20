@@ -9,37 +9,37 @@ local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
 local UNOPS = {
-  ['-'] = { tag = TAG_NEG, prec = 14 },
-  ['#'] = { tag = TAG_LEN, prec = 14 },
-  ['~'] = { tag = TAG_NOT, prec = 14 },
-  ['.~'] = { tag = TAG_BNOT, prec = 14 },
+  ['-'] = { tag = 'TAG_NEG', prec = 14 },
+  ['#'] = { tag = 'TAG_LEN', prec = 14 },
+  ['~'] = { tag = 'TAG_NOT', prec = 14 },
+  ['.~'] = { tag = 'TAG_BNOT', prec = 14 },
 }
 
 local BINOPS = {
-  ['>>'] = { tag = TAG_PIPE, prec = 1, assoc = LEFT_ASSOCIATIVE },
-  ['?'] = { tag = TAG_TERNARY, prec = 2, assoc = LEFT_ASSOCIATIVE },
-  ['??'] = { tag = TAG_NC, prec = 3, assoc = LEFT_ASSOCIATIVE },
-  ['|'] = { tag = TAG_OR, prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['&'] = { tag = TAG_AND, prec = 5, assoc = LEFT_ASSOCIATIVE },
-  ['=='] = { tag = TAG_EQ, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['~='] = { tag = TAG_NEQ, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['<='] = { tag = TAG_LTE, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['>='] = { tag = TAG_GTE, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['<'] = { tag = TAG_LT, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['>'] = { tag = TAG_GT, prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['.|'] = { tag = TAG_BOR, prec = 7, assoc = LEFT_ASSOCIATIVE },
-  ['.~'] = { tag = TAG_BXOR, prec = 8, assoc = LEFT_ASSOCIATIVE },
-  ['.&'] = { tag = TAG_BAND, prec = 9, assoc = LEFT_ASSOCIATIVE },
-  ['.<<'] = { tag = TAG_LSHIFT, prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['.>>'] = { tag = TAG_RSHIFT, prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['..'] = { tag = TAG_CONCAT, prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['+'] = { tag = TAG_ADD, prec = 12, assoc = LEFT_ASSOCIATIVE },
-  ['-'] = { tag = TAG_SUB, prec = 12, assoc = LEFT_ASSOCIATIVE },
-  ['*'] = { tag = TAG_MULT, prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['/'] = { tag = TAG_DIV, prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['//'] = { tag = TAG_INTDIV, prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['%'] = { tag = TAG_MOD, prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['^'] = { tag = TAG_EXP, prec = 15, assoc = RIGHT_ASSOCIATIVE },
+  ['>>'] = { tag = 'TAG_PIPE', prec = 1, assoc = LEFT_ASSOCIATIVE },
+  ['?'] = { tag = 'TAG_TERNARY', prec = 2, assoc = LEFT_ASSOCIATIVE },
+  ['??'] = { tag = 'TAG_NC', prec = 3, assoc = LEFT_ASSOCIATIVE },
+  ['|'] = { tag = 'TAG_OR', prec = 4, assoc = LEFT_ASSOCIATIVE },
+  ['&'] = { tag = 'TAG_AND', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  ['=='] = { tag = 'TAG_EQ', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['~='] = { tag = 'TAG_NEQ', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['<='] = { tag = 'TAG_LTE', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['>='] = { tag = 'TAG_GTE', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['<'] = { tag = 'TAG_LT', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['>'] = { tag = 'TAG_GT', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['.|'] = { tag = 'TAG_BOR', prec = 7, assoc = LEFT_ASSOCIATIVE },
+  ['.~'] = { tag = 'TAG_BXOR', prec = 8, assoc = LEFT_ASSOCIATIVE },
+  ['.&'] = { tag = 'TAG_BAND', prec = 9, assoc = LEFT_ASSOCIATIVE },
+  ['.<<'] = { tag = 'TAG_LSHIFT', prec = 10, assoc = LEFT_ASSOCIATIVE },
+  ['.>>'] = { tag = 'TAG_RSHIFT', prec = 10, assoc = LEFT_ASSOCIATIVE },
+  ['..'] = { tag = 'TAG_CONCAT', prec = 11, assoc = LEFT_ASSOCIATIVE },
+  ['+'] = { tag = 'TAG_ADD', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  ['-'] = { tag = 'TAG_SUB', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  ['*'] = { tag = 'TAG_MULT', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['/'] = { tag = 'TAG_DIV', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['//'] = { tag = 'TAG_INTDIV', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['%'] = { tag = 'TAG_MOD', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['^'] = { tag = 'TAG_EXP', prec = 15, assoc = RIGHT_ASSOCIATIVE },
 }
 
 local BINOP_MAX_LEN = 1
@@ -62,7 +62,7 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
 }
 
 function parser.Assignment()
-  local node = { tag = TAG_ASSIGNMENT, name = parser.Name().value }
+  local node = { tag = 'TAG_ASSIGNMENT', name = parser.Name().value }
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
@@ -115,7 +115,7 @@ function parser.Comment()
   local node = {}
 
   if branchStr('---', true) then
-    node.tag = TAG_LONG_COMMENT
+    node.tag = 'TAG_LONG_COMMENT'
 
     while true do
       if bufValue == '-' and branchStr('---', true) then
@@ -125,7 +125,7 @@ function parser.Comment()
       end
     end
   elseif branchStr('--', true) then
-    node.tag = TAG_SHORT_COMMENT
+    node.tag = 'TAG_SHORT_COMMENT'
 
     while true do
       if bufValue == '\n' or bufValue == EOF then
@@ -147,7 +147,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Destructure()
-  local node = { tag = TAG_DESTRUCTURE }
+  local node = { tag = 'TAG_DESTRUCTURE' }
   local keyCounter = 1
 
   if branchChar('?') then
@@ -208,12 +208,12 @@ function parser.DoBlock()
   end
 
   local node = {
-    tag = TAG_DO_BLOCK,
+    tag = 'TAG_DO_BLOCK',
     block = parser.surround('{', '}', parser.Block),
   }
 
   for _, statement in pairs(node.block) do
-    if statement.tag == TAG_RETURN then
+    if statement.tag == 'TAG_RETURN' then
       node.hasReturn = true
     end
   end
@@ -230,33 +230,15 @@ end
 
 function parser.Expr(minPrec)
   minPrec = minPrec or 1
+  local node
 
-  local operand
-  if branchChar('(') then
-    operand = parser.Expr()
-    operand.parens = true
-    if not branchChar(')') then
-      throw.expected(')')
-    end
-  elseif UNOPS[bufValue] ~= nil then
+  if UNOPS[bufValue] ~= nil then
     local op = UNOPS[bufValue]
     consume()
-    operand = { tag = op.tag, parser.Expr(op.prec + 1) }
+    node = { tag = op.tag, parser.Expr(op.prec + 1) }
   else
-    -- TODO: more terminals
-    operand = parser.switch({
-      parser.Table,
-      parser.Number,
-      parser.String,
-      parser.Name,
-    })
-
-    if operand == nil then
-      throw.expected('expression', true)
-    end
+    node = parser.Terminal()
   end
-
-  local node = operand
 
   while true do
     local op, opToken
@@ -275,7 +257,7 @@ function parser.Expr(minPrec)
       node = { tag = op.tag, node }
     end
 
-    if op.tag == TAG_TERNARY then
+    if op.tag == 'TAG_TERNARY' then
       node[#node + 1] = parser.Expr()
       if not branchChar(':') then
         throw.expected(':')
@@ -303,7 +285,7 @@ function parser.ForLoop()
   local node
 
   if branchChar('=') then
-    node = { tag = TAG_NUMERIC_FOR, name = firstName, var = parser.Expr() }
+    node = { tag = 'TAG_NUMERIC_FOR', name = firstName, var = parser.Expr() }
 
     if not branchChar(',') then
       throw.expected(',')
@@ -315,7 +297,7 @@ function parser.ForLoop()
       node.step = parser.Expr()
     end
   else
-    node = { tag = TAG_GENERIC_FOR, nameList = {}, exprList = {} }
+    node = { tag = 'TAG_GENERIC_FOR', nameList = {}, exprList = {} }
 
     node.nameList[1] = firstName
     while branchChar(',') do
@@ -342,7 +324,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.IfElse()
-  local node = { tag = TAG_IF_ELSE, elseifNodes = {} }
+  local node = { tag = 'TAG_IF_ELSE', elseifNodes = {} }
 
   if not branchWord('if') then
     throw.expected('if')
@@ -371,6 +353,7 @@ end
 -- Name
 -- -----------------------------------------------------------------------------
 
+-- TODO: make sure name is not a keyword!!
 function parser.Name()
   if not Alpha[bufValue] then
     error('name must start with alpha')
@@ -383,7 +366,7 @@ function parser.Name()
     consume(1, capture)
   end
 
-  return { tag = TAG_NAME, value = table.concat(capture) }
+  return { tag = 'TAG_NAME', value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------
@@ -423,7 +406,7 @@ function parser.Number()
     throw.expected('number', true)
   end
 
-  return { tag = TAG_NUMBER, value = table.concat(capture) }
+  return { tag = 'TAG_NUMBER', value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------
@@ -436,7 +419,7 @@ function parser.RepeatUntil()
   end
 
   local node = {
-    tag = TAG_REPEAT_UNTIL,
+    tag = 'TAG_REPEAT_UNTIL',
     block = parser.surround('{', '}', parser.Block),
   }
 
@@ -481,9 +464,9 @@ function parser.String()
       end
     end
 
-    return { tag = TAG_SHORT_STRING, value = table.concat(capture) }
+    return { tag = 'TAG_SHORT_STRING', value = table.concat(capture) }
   elseif branchChar('`', true) then
-    local node = { tag = TAG_LONG_STRING }
+    local node = { tag = 'TAG_LONG_STRING' }
     local capture = {}
 
     while true do
@@ -526,7 +509,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Table()
-  local node = { tag = TAG_TABLE }
+  local node = { tag = 'TAG_TABLE' }
   local keyCounter = 1
 
   if not branchChar('{') then
@@ -546,11 +529,13 @@ function parser.Table()
       if expr then
         if not branchChar(':') then
           field.key = keyCounter
-          field.value = expr.tag == TAG_NAME and expr.value or expr
+          field.value = expr.tag == 'TAG_NAME' and expr.value or expr
           keyCounter = keyCounter + 1
-        elseif expr.tag == TAG_NAME then
+        elseif expr.tag == 'TAG_NAME' then
           field.key = expr.value
-        elseif expr.tag == TAG_SHORT_STRING or expr.tag == TAG_LONG_STRING then
+        elseif
+          expr.tag == 'TAG_SHORT_STRING' or expr.tag == 'TAG_LONG_STRING'
+        then
           field.key = expr
         else
           throw.unexpected('expression')
@@ -579,6 +564,44 @@ function parser.Table()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: Terminal
+-- -----------------------------------------------------------------------------
+
+function parser.Terminal()
+  local node
+  local token = {}
+
+  if branchChar('(') then
+    node = parser.Expr()
+    node.parens = true
+
+    if not branchChar(')') then
+      throw.expected(')')
+    end
+  elseif
+    branchWord('true', token)
+    or branchWord('false', token)
+    or branchWord('nil', token)
+    or branchWord('...', token)
+  then
+    node = { tag = 'TAG_TERMINAL', value = table.concat(token) }
+  else
+    node = parser.switch({
+      parser.Table,
+      parser.Number,
+      parser.String,
+      parser.Name, -- TODO: replace with Id
+    })
+  end
+
+  if not node then
+    error.expected('terminal', true)
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Var
 -- -----------------------------------------------------------------------------
 
@@ -586,9 +609,9 @@ function parser.Var()
   local node = {}
 
   if Whitespace[buffer[bufIndex + #'local']] and branchWord('local') then
-    node.tag = TAG_LOCAL_VAR
+    node.tag = 'TAG_LOCAL_VAR'
   elseif Whitespace[buffer[bufIndex + #'global']] and branchWord('global') then
-    node.tag = TAG_GLOBAL_VAR
+    node.tag = 'TAG_GLOBAL_VAR'
   else
     return nil
   end
@@ -612,7 +635,7 @@ function parser.WhileLoop()
   end
 
   return {
-    tag = TAG_WHILE_LOOP,
+    tag = 'TAG_WHILE_LOOP',
     cond = parser.Expr(),
     block = parser.surround('{', '}', parser.Block),
   }
