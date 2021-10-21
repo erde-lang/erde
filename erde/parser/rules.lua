@@ -479,16 +479,6 @@ end
 -- Rule: Params
 -- -----------------------------------------------------------------------------
 
-local function Param()
-  return {
-    tag = 'TAG_PARAM',
-    value = parser.switch({
-      parser.Name,
-      parser.Destructure,
-    }),
-  }
-end
-
 function parser.Params()
   local node = { tag = 'TAG_PARAMS' }
 
@@ -497,7 +487,14 @@ function parser.Params()
   end
 
   while true do
-    local param = Param()
+    local param = {
+      tag = 'TAG_PARAM',
+      value = parser.switch({
+        parser.Name,
+        parser.Destructure,
+      }),
+    }
+
     if not param.value then
       break
     end
