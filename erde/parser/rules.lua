@@ -476,6 +476,52 @@ function parser.Number()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: Params
+-- -----------------------------------------------------------------------------
+
+function parser.Params()
+  local node = { tag = 'TAG_PARAMS' }
+
+  if not branchChar('(') then
+    throw.expected('(')
+  end
+
+  repeat
+    local param = {
+      tag = 'TAG_PARAM',
+      value = parser.switch({
+        parser.Name,
+        parser.Destructure,
+      }),
+    }
+
+    if not param.value then
+      break
+    end
+
+    if branchChar('=') then
+      param.default = parser.Expr()
+    end
+
+    node[#node + 1] = param
+  until not branchChar(',')
+
+  if branchStr('...') then
+    local name = parser.try(parser.Name)
+    node[#node + 1] = {
+      tag = 'TAG_VARARGS',
+      name = name and name.value or nil,
+    }
+  end
+
+  if not branchChar(')') then
+    throw.expected(')')
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: RepeatUntil
 -- -----------------------------------------------------------------------------
 
