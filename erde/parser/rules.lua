@@ -486,7 +486,7 @@ function parser.Params()
     throw.expected('(')
   end
 
-  while true do
+  repeat
     local param = {
       tag = 'TAG_PARAM',
       value = parser.switch({
@@ -504,9 +504,9 @@ function parser.Params()
     end
 
     node[#node + 1] = param
-  end
+  until not branchChar(',')
 
-  if branchWord('...') then
+  if branchStr('...') then
     local name = parser.try(parser.Name)
     node[#node + 1] = {
       tag = 'TAG_VARARGS',
