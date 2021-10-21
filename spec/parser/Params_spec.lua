@@ -47,6 +47,12 @@ spec('valid params', function()
   }, unit.Params(
     '(a, ...b)'
   ))
+  assert.has_subtable({
+    tag = 'TAG_PARAMS',
+    { tag = 'TAG_PARAM', value = { tag = 'TAG_DESTRUCTURE' } },
+  }, unit.Params(
+    '({ :a })'
+  ))
 end)
 
 spec('invalid params', function()
