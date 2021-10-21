@@ -339,6 +339,47 @@ function parser.ForLoop()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: Id
+-- -----------------------------------------------------------------------------
+
+function parser.Id()
+  local node = {
+    tag = 'TAG_ID',
+    base = parser.switch({
+      parser.Name,
+      function()
+        local base = parser.surround('(', ')', parser.Expr)
+        base.parens = true
+        return base
+      end,
+    }),
+  }
+
+  if not node.base then
+    throw.expected('name or expression', true)
+  end
+
+  while true do
+    local chain = { optional = branchChar('?') }
+
+    if branchChar('.') then
+      chain.variant = 'DOT_INDEX'
+      chain.value = parser.Name().value
+    elseif bufValue == '[' then
+      chain.variant = 'BRACKET_INDEX'
+      chain.value = parser.surround('[', ']', parser.Expr)
+    else
+      break
+      -- TODO function params + methods
+    end
+
+    node[#node + 1] = chain
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: IfElse
 -- -----------------------------------------------------------------------------
 

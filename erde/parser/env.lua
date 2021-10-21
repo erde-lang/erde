@@ -111,7 +111,7 @@ function throw.error(msg)
 end
 
 function throw.expected(expectation, noLiteral)
-  local msg = 'Expected ' .. (noLiteral and '%s' or '`%s`') .. ' got `%s`'
+  local msg = 'Expected ' .. (noLiteral and '%s' or '`%s`') .. ', got `%s`'
   throw.error(msg:format(expectation, getErrorToken()))
 end
 
