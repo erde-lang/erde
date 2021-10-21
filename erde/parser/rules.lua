@@ -67,6 +67,43 @@ for key, value in pairs(BINOPS) do
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: ArrowFunction
+-- -----------------------------------------------------------------------------
+
+function parser.ArrowFunction()
+  local node = {
+    tag = 'TAG_ARROW_FUNCTION',
+    params = parser.Params(),
+  }
+
+  if branchStr('->') then
+    node.variant = 'SKINNY'
+  elseif branchStr('=>') then
+    node.variant = 'FAT'
+  else
+    throw.unexpected()
+  end
+
+  if bufValue == '{' then
+    node.body = parser.surround('{', '}', parser.Block)
+  else
+    node.returns = {}
+
+    repeat
+      local expr = parser.try(parser.Expr)
+
+      if not expr then
+        break
+      end
+
+      node.returns[#node.returns + 1] = expr
+    until not branchChar(',')
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Assignment
 -- -----------------------------------------------------------------------------
 
@@ -228,10 +265,10 @@ function parser.DoBlock()
 
   local node = {
     tag = 'TAG_DO_BLOCK',
-    block = parser.surround('{', '}', parser.Block),
+    body = parser.surround('{', '}', parser.Block),
   }
 
-  for _, statement in pairs(node.block) do
+  for _, statement in pairs(node.body) do
     if statement.tag == 'TAG_RETURN' then
       node.hasReturn = true
     end
@@ -333,7 +370,30 @@ function parser.ForLoop()
     end
   end
 
-  node.block = parser.surround('{', '}', parser.Block)
+  node.body = parser.surround('{', '}', parser.Block)
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule: Function
+-- -----------------------------------------------------------------------------
+
+function parser.Function()
+  local node = { tag = 'TAG_FUNCTION' }
+
+  if branchWord('local') then
+    node.tag = 'TAG_LOCAL_FUNCTION'
+  end
+
+  if not branchWord('function') then
+    throw.expected('function')
+  end
+
+  -- TODO: nested names + methods
+  node.name = parser.Name()
+  node.params = parser.Params()
+  node.body = parser.surround('{', '}', parser.Block)
 
   return node
 end
@@ -392,18 +452,18 @@ function parser.IfElse()
 
   node.ifNode = {
     cond = parser.Expr(),
-    block = parser.surround('{', '}', parser.Block),
+    body = parser.surround('{', '}', parser.Block),
   }
 
   while branchWord('elseif') do
     node.elseifNodes[#node.elseifNodes + 1] = {
       cond = parser.Expr(),
-      block = parser.surround('{', '}', parser.Block),
+      body = parser.surround('{', '}', parser.Block),
     }
   end
 
   if branchWord('else') then
-    node.elseNode = { block = parser.surround('{', '}', parser.Block) }
+    node.elseNode = { body = parser.surround('{', '}', parser.Block) }
   end
 
   return node
@@ -532,7 +592,7 @@ function parser.RepeatUntil()
 
   local node = {
     tag = 'TAG_REPEAT_UNTIL',
-    block = parser.surround('{', '}', parser.Block),
+    body = parser.surround('{', '}', parser.Block),
   }
 
   if not branchWord('until') then
@@ -720,12 +780,11 @@ end
 function parser.Var()
   local node = {}
 
-  if Whitespace[buffer[bufIndex + #'local']] and branchWord('local') then
+  if branchWord('local') then
     node.tag = 'TAG_LOCAL_VAR'
-  elseif Whitespace[buffer[bufIndex + #'global']] and branchWord('global') then
-    node.tag = 'TAG_GLOBAL_VAR'
   else
-    return nil
+    branchWord('global')
+    node.tag = 'TAG_GLOBAL_VAR'
   end
 
   node.name = parser.Name().value
@@ -749,6 +808,6 @@ function parser.WhileLoop()
   return {
     tag = 'TAG_WHILE_LOOP',
     cond = parser.Expr(),
-    block = parser.surround('{', '}', parser.Block),
+    body = parser.surround('{', '}', parser.Block),
   }
 end
