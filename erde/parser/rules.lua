@@ -380,10 +380,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Function()
-  local node = {}
+  local node = { tag = 'TAG_FUNCTION' }
 
   if branchWord('local') then
-    node.tag = 'TAG_LOCAL_VAR'
+    node.tag = 'TAG_LOCAL_FUNCTION'
   end
 
   if not branchWord('function') then

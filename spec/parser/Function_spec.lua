@@ -51,3 +51,30 @@ spec('invalid arrow function', function()
     unit.ArrowFunction('() ~> ,1')
   end)
 end)
+
+spec('valid function', function()
+  assert.has_subtable({
+    tag = 'TAG_LOCAL_FUNCTION',
+    name = { value = 'a' },
+  }, unit.Function(
+    'local function a() {}'
+  ))
+  assert.has_subtable({
+    tag = 'TAG_FUNCTION',
+    name = { value = 'hello' },
+  }, unit.Function(
+    'function hello() {}'
+  ))
+end)
+
+spec('invalid function', function()
+  assert.has_error(function()
+    unit.ArrowFunction('global function a() {}')
+  end)
+  assert.has_error(function()
+    unit.ArrowFunction('function a {}')
+  end)
+  assert.has_error(function()
+    unit.ArrowFunction('function() {}')
+  end)
+end)
