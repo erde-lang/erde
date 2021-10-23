@@ -382,14 +382,30 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Function()
-  local node = { variant = branchWord('local') and 'local' or 'global' }
+  local node = {
+    variant = branchWord('local') and 'local' or 'global',
+    isMethod = false,
+  }
 
   if not branchWord('function') then
     throw.expected('function')
   end
 
-  -- TODO: nested names + methods
-  node.name = parser.Name()
+  node.names = { parser.Name().value }
+
+  while true do
+    if branchChar('.') then
+      node.names[#node.names + 1] = parser.Name().value
+    else
+      if branchChar(':') then
+        node.isMethod = true
+        node.names[#node.names + 1] = parser.Name().value
+      end
+
+      break
+    end
+  end
+
   node.params = parser.Params()
   node.body = parser.surround('{', '}', parser.Block)
 

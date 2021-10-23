@@ -52,16 +52,34 @@ spec('valid function', function()
   assert.has_subtable({
     rule = 'Function',
     variant = 'local',
-    name = { value = 'a' },
+    isMethod = false,
+    names = { 'a' },
   }, unit.Function(
     'local function a() {}'
   ))
   assert.has_subtable({
     rule = 'Function',
     variant = 'global',
-    name = { value = 'hello' },
+    isMethod = false,
+    names = { 'hello' },
   }, unit.Function(
     'function hello() {}'
+  ))
+  assert.has_subtable({
+    rule = 'Function',
+    variant = 'global',
+    isMethod = false,
+    names = { 'hello', 'world' },
+  }, unit.Function(
+    'function hello.world() {}'
+  ))
+  assert.has_subtable({
+    rule = 'Function',
+    variant = 'global',
+    isMethod = true,
+    names = { 'hello', 'world' },
+  }, unit.Function(
+    'function hello:world() {}'
   ))
 end)
 
