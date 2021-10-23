@@ -2,43 +2,43 @@ local unit = require('erde.parser.unit')
 
 spec('valid table', function()
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     { key = 'x', value = 'x' },
   }, unit.Table(
     '{ :x }'
   ))
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     { key = 1, value = { value = '10' } },
   }, unit.Table(
     '{ 10 }'
   ))
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     { key = 'x', value = { value = '2' } },
   }, unit.Table(
     '{ x: 2 }'
   ))
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     {
-      key = { tag = TAG_SHORT_STRING },
+      key = { rule = 'String' },
       value = { value = '3' },
     },
   }, unit.Table(
     '{ "my-key": 3 }'
   ))
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     {
-      key = { tag = TAG_ADD },
+      key = { op = 'add' },
       value = { value = '3' },
     },
   }, unit.Table(
     '{ [1 + 2]: 3 }'
   ))
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     { key = 'x', value = { value = '2' } },
     { key = 1, value = { value = '10' } },
     { key = 'y', value = { value = '1' } },
@@ -47,11 +47,11 @@ spec('valid table', function()
     '{ x: 2, 10, y: 1, 20 }'
   ))
   assert.has_subtable({
-    tag = 'TAG_TABLE',
+    rule = 'Table',
     {
       key = 'x',
       value = {
-        tag = 'TAG_TABLE',
+        rule = 'Table',
         { key = 'y', value = { value = '1' } },
       },
     },

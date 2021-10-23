@@ -32,25 +32,11 @@ bufValue = 0
 line = 1
 column = 1
 
-parser = setmetatable({}, {
-  __newindex = function(parser, key, value)
-    if key == 'space' then
-      rawset(parser, key, value)
-    else
-      rawset(parser, key, function(...)
-        parser.space()
-        local node = value(...)
-        parser.space()
-        return node
-      end)
-    end
-  end,
-})
-
 -- -----------------------------------------------------------------------------
 -- Lookup Tables
 -- -----------------------------------------------------------------------------
 
+UpperCase = {}
 Alpha = {}
 Digit = {}
 Hex = {}
@@ -69,10 +55,12 @@ for byte = string.byte('A'), string.byte('F') do
   local char = string.char(byte)
   Alpha[char] = true
   Hex[char] = true
+  UpperCase[char] = true
 end
 for byte = string.byte('G'), string.byte('Z') do
   local char = string.char(byte)
   Alpha[char] = true
+  UpperCase[char] = true
 end
 for byte = string.byte('a'), string.byte('f') do
   local char = string.char(byte)
@@ -221,6 +209,30 @@ function branchWord(word, capture)
   return not (Alpha[trailingChar] or Digit[trailingChar])
     and branchStr(word, false, capture)
 end
+
+-- -----------------------------------------------------------------------------
+-- Parser
+-- -----------------------------------------------------------------------------
+
+parser = setmetatable({}, {
+  __newindex = function(parser, key, value)
+    if UpperCase[key:sub(1, 1)] then
+      rawset(parser, key, function(...)
+        parser.space()
+
+        local node = value(...)
+        if not node.rule then
+          node.rule = key
+        end
+
+        parser.space()
+        return node
+      end)
+    else
+      rawset(parser, key, value)
+    end
+  end,
+})
 
 -- -----------------------------------------------------------------------------
 -- Return

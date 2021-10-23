@@ -2,16 +2,18 @@ local unit = require('erde.parser.unit')
 
 spec('local var', function()
   assert.has_subtable({
-    tag = 'TAG_LOCAL_VAR',
+    rule = 'Var',
+    variant = 'local',
     name = 'abc',
   }, unit.Var(
     'local abc'
   ))
   assert.has_subtable({
-    tag = 'TAG_LOCAL_VAR',
+    rule = 'Var',
+    variant = 'local',
     name = 'abc',
     initValue = {
-      tag = 'TAG_NUMBER',
+      rule = 'Number',
       value = '2',
     },
   }, unit.Var(
@@ -21,16 +23,18 @@ end)
 
 spec('global var', function()
   assert.has_subtable({
-    tag = 'TAG_GLOBAL_VAR',
+    rule = 'Var',
+    variant = 'global',
     name = 'abc',
   }, unit.Var(
     'global abc'
   ))
   assert.has_subtable({
-    tag = 'TAG_GLOBAL_VAR',
+    rule = 'Var',
+    variant = 'global',
     name = 'abc',
     initValue = {
-      tag = 'TAG_NUMBER',
+      rule = 'Number',
       value = '2',
     },
   }, unit.Var(

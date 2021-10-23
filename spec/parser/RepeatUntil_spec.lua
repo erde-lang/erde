@@ -2,9 +2,9 @@ local unit = require('erde.parser.unit')
 
 spec('valid repeat until', function()
   assert.has_subtable({
-    tag = 'TAG_REPEAT_UNTIL',
+    rule = 'RepeatUntil',
     cond = {
-      tag = 'TAG_GT',
+      op = 'gt',
       { value = '1' },
       { value = '0' },
     },

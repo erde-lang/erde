@@ -1,37 +1,37 @@
 local unit = require('erde.parser.unit')
 
 spec('valid binops', function()
-  assert.are.equal('TAG_PIPE', unit.Expr('1 >> 2').tag)
-  assert.are.equal('TAG_TERNARY', unit.Expr('1 ? 2 : 3').tag)
-  assert.are.equal('TAG_NC', unit.Expr('1 ?? 2').tag)
-  assert.are.equal('TAG_OR', unit.Expr('1 | 2').tag)
-  assert.are.equal('TAG_AND', unit.Expr('1 & 2').tag)
-  assert.are.equal('TAG_EQ', unit.Expr('1 == 2').tag)
-  assert.are.equal('TAG_NEQ', unit.Expr('1 ~= 2').tag)
-  assert.are.equal('TAG_LTE', unit.Expr('1 <= 2').tag)
-  assert.are.equal('TAG_GTE', unit.Expr('1 >= 2').tag)
-  assert.are.equal('TAG_LT', unit.Expr('1 < 2').tag)
-  assert.are.equal('TAG_GT', unit.Expr('1 > 2').tag)
-  assert.are.equal('TAG_BOR', unit.Expr('1 .| 2').tag)
-  assert.are.equal('TAG_BXOR', unit.Expr('1 .~ 2').tag)
-  assert.are.equal('TAG_BAND', unit.Expr('1 .& 2').tag)
-  assert.are.equal('TAG_LSHIFT', unit.Expr('1 .<< 2').tag)
-  assert.are.equal('TAG_RSHIFT', unit.Expr('1 .>> 2').tag)
-  assert.are.equal('TAG_CONCAT', unit.Expr('1 .. 2').tag)
-  assert.are.equal('TAG_ADD', unit.Expr('1 + 2').tag)
-  assert.are.equal('TAG_SUB', unit.Expr('1 - 2').tag)
-  assert.are.equal('TAG_MULT', unit.Expr('1 * 2').tag)
-  assert.are.equal('TAG_DIV', unit.Expr('1 / 2').tag)
-  assert.are.equal('TAG_INTDIV', unit.Expr('1 // 2').tag)
-  assert.are.equal('TAG_MOD', unit.Expr('1 % 2').tag)
-  assert.are.equal('TAG_EXP', unit.Expr('1 ^ 2').tag)
+  assert.are.equal('pipe', unit.Expr('1 >> 2').op)
+  assert.are.equal('ternary', unit.Expr('1 ? 2 : 3').op)
+  assert.are.equal('nc', unit.Expr('1 ?? 2').op)
+  assert.are.equal('or', unit.Expr('1 | 2').op)
+  assert.are.equal('and', unit.Expr('1 & 2').op)
+  assert.are.equal('eq', unit.Expr('1 == 2').op)
+  assert.are.equal('neq', unit.Expr('1 ~= 2').op)
+  assert.are.equal('lte', unit.Expr('1 <= 2').op)
+  assert.are.equal('gte', unit.Expr('1 >= 2').op)
+  assert.are.equal('lt', unit.Expr('1 < 2').op)
+  assert.are.equal('gt', unit.Expr('1 > 2').op)
+  assert.are.equal('bor', unit.Expr('1 .| 2').op)
+  assert.are.equal('bxor', unit.Expr('1 .~ 2').op)
+  assert.are.equal('band', unit.Expr('1 .& 2').op)
+  assert.are.equal('lshift', unit.Expr('1 .<< 2').op)
+  assert.are.equal('rshift', unit.Expr('1 .>> 2').op)
+  assert.are.equal('concat', unit.Expr('1 .. 2').op)
+  assert.are.equal('add', unit.Expr('1 + 2').op)
+  assert.are.equal('sub', unit.Expr('1 - 2').op)
+  assert.are.equal('mult', unit.Expr('1 * 2').op)
+  assert.are.equal('div', unit.Expr('1 / 2').op)
+  assert.are.equal('intdiv', unit.Expr('1 // 2').op)
+  assert.are.equal('mod', unit.Expr('1 % 2').op)
+  assert.are.equal('exp', unit.Expr('1 ^ 2').op)
 end)
 
 spec('left associative op precedence', function()
   assert.has_subtable({
-    tag = 'TAG_ADD',
+    op = 'add',
     {
-      tag = 'TAG_MULT',
+      op = 'mult',
       { value = '1' },
       { value = '2' },
     },
@@ -40,10 +40,10 @@ spec('left associative op precedence', function()
     '1 * 2 + 3'
   ))
   assert.has_subtable({
-    tag = 'TAG_ADD',
+    op = 'add',
     { value = '1' },
     {
-      tag = 'TAG_MULT',
+      op = 'mult',
       { value = '2' },
       { value = '3' },
     },
@@ -51,12 +51,12 @@ spec('left associative op precedence', function()
     '1 + 2 * 3'
   ))
   assert.has_subtable({
-    tag = 'TAG_ADD',
+    op = 'add',
     {
-      tag = 'TAG_ADD',
+      op = 'add',
       { value = '1' },
       {
-        tag = 'TAG_MULT',
+        op = 'mult',
         { value = '2' },
         { value = '3' },
       },
@@ -69,10 +69,10 @@ end)
 
 spec('right associative binop precedence', function()
   assert.has_subtable({
-    tag = 'TAG_EXP',
+    op = 'exp',
     { value = '1' },
     {
-      tag = 'TAG_EXP',
+      op = 'exp',
       { value = '2' },
       { value = '3' },
     },
@@ -80,9 +80,9 @@ spec('right associative binop precedence', function()
     '1 ^ 2 ^ 3'
   ))
   assert.has_subtable({
-    tag = 'TAG_ADD',
+    op = 'add',
     {
-      tag = 'TAG_EXP',
+      op = 'exp',
       { value = '1' },
       { value = '2' },
     },
@@ -94,11 +94,11 @@ end)
 
 spec('binop parens', function()
   assert.has_subtable({
-    tag = 'TAG_MULT',
+    op = 'mult',
     { value = '1' },
     {
       parens = true,
-      tag = 'TAG_ADD',
+      op = 'add',
       { value = '2' },
       { value = '3' },
     },
@@ -109,19 +109,19 @@ end)
 
 spec('unops', function()
   assert.has_subtable({
-    tag = 'TAG_MULT',
+    op = 'mult',
     { value = '1' },
     {
-      tag = 'TAG_NEG',
+      op = 'neg',
       { value = '3' },
     },
   }, unit.Expr(
     '1 * -3'
   ))
   assert.has_subtable({
-    tag = 'TAG_NEG',
+    op = 'neg',
     {
-      tag = 'TAG_EXP',
+      op = 'exp',
       { value = '2' },
       { value = '3' },
     },
@@ -129,9 +129,9 @@ spec('unops', function()
     '-2 ^ 3'
   ))
   assert.has_subtable({
-    tag = 'TAG_MULT',
+    op = 'mult',
     {
-      tag = 'TAG_NEG',
+      op = 'neg',
       { value = '2' },
     },
     { value = '3' },
@@ -142,7 +142,7 @@ end)
 
 spec('ternary', function()
   assert.has_subtable({
-    tag = 'TAG_TERNARY',
+    op = 'ternary',
     { value = '1' },
     { value = '2' },
     { value = '3' },
@@ -150,14 +150,14 @@ spec('ternary', function()
     '1 ? 2 : 3'
   ))
   assert.has_subtable({
-    tag = 'TAG_TERNARY',
+    op = 'ternary',
     { value = '1' },
     {
-      tag = 'TAG_NEG',
+      op = 'neg',
       { value = '2' },
     },
     {
-      tag = 'TAG_ADD',
+      op = 'add',
       { value = '3' },
       { value = '4' },
     },

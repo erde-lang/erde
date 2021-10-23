@@ -2,21 +2,21 @@ local unit = require('erde.parser.unit')
 
 spec('valid assignment', function()
   assert.has_subtable({
-    tag = 'TAG_ASSIGNMENT',
+    rule = 'Assignment',
     name = 'myvar',
     expr = {
-      tag = 'TAG_NUMBER',
+      rule = 'Number',
       value = '3',
     },
   }, unit.Assignment(
     'myvar = 3'
   ))
   assert.has_subtable({
-    tag = 'TAG_ASSIGNMENT',
+    rule = 'Assignment',
     name = 'myvar',
-    opTag = 'TAG_ADD',
+    op = 'add',
     expr = {
-      tag = 'TAG_NUMBER',
+      rule = 'Number',
       value = '3',
     },
   }, unit.Assignment(
@@ -34,23 +34,23 @@ spec('invalid assignment', function()
 end)
 
 spec('binop assignment', function()
-  assert.are.equal('TAG_PIPE', unit.Assignment('x >>= 1').opTag)
-  assert.are.equal('TAG_NC', unit.Assignment('x ??= 1').opTag)
-  assert.are.equal('TAG_OR', unit.Assignment('x |= 1').opTag)
-  assert.are.equal('TAG_AND', unit.Assignment('x &= 1').opTag)
-  assert.are.equal('TAG_BOR', unit.Assignment('x .|= 1').opTag)
-  assert.are.equal('TAG_BXOR', unit.Assignment('x .~= 1').opTag)
-  assert.are.equal('TAG_BAND', unit.Assignment('x .&= 1').opTag)
-  assert.are.equal('TAG_LSHIFT', unit.Assignment('x .<<= 1').opTag)
-  assert.are.equal('TAG_RSHIFT', unit.Assignment('x .>>= 1').opTag)
-  assert.are.equal('TAG_CONCAT', unit.Assignment('x ..= 1').opTag)
-  assert.are.equal('TAG_ADD', unit.Assignment('x += 1').opTag)
-  assert.are.equal('TAG_SUB', unit.Assignment('x -= 1').opTag)
-  assert.are.equal('TAG_MULT', unit.Assignment('x *= 1').opTag)
-  assert.are.equal('TAG_DIV', unit.Assignment('x /= 1').opTag)
-  assert.are.equal('TAG_INTDIV', unit.Assignment('x //= 1').opTag)
-  assert.are.equal('TAG_MOD', unit.Assignment('x %= 1').opTag)
-  assert.are.equal('TAG_EXP', unit.Assignment('x ^= 1').opTag)
+  assert.are.equal('pipe', unit.Assignment('x >>= 1').op)
+  assert.are.equal('nc', unit.Assignment('x ??= 1').op)
+  assert.are.equal('or', unit.Assignment('x |= 1').op)
+  assert.are.equal('and', unit.Assignment('x &= 1').op)
+  assert.are.equal('bor', unit.Assignment('x .|= 1').op)
+  assert.are.equal('bxor', unit.Assignment('x .~= 1').op)
+  assert.are.equal('band', unit.Assignment('x .&= 1').op)
+  assert.are.equal('lshift', unit.Assignment('x .<<= 1').op)
+  assert.are.equal('rshift', unit.Assignment('x .>>= 1').op)
+  assert.are.equal('concat', unit.Assignment('x ..= 1').op)
+  assert.are.equal('add', unit.Assignment('x += 1').op)
+  assert.are.equal('sub', unit.Assignment('x -= 1').op)
+  assert.are.equal('mult', unit.Assignment('x *= 1').op)
+  assert.are.equal('div', unit.Assignment('x /= 1').op)
+  assert.are.equal('intdiv', unit.Assignment('x //= 1').op)
+  assert.are.equal('mod', unit.Assignment('x %= 1').op)
+  assert.are.equal('exp', unit.Assignment('x ^= 1').op)
 end)
 
 spec('binop assignment blacklist', function()

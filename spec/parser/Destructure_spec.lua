@@ -2,24 +2,24 @@ local unit = require('erde.parser.unit')
 
 spec('valid destructure', function()
   assert.has_subtable({
-    tag = TAG_DESTRUCTURE,
+    rule = 'Destructure',
   }, unit.Destructure('{}'))
   assert.has_subtable({
-    tag = TAG_DESTRUCTURE,
+    rule = 'Destructure',
     { key = 1, name = 'x' },
     { key = 2, name = 'y' },
   }, unit.Destructure(
     '{ x, y }'
   ))
   assert.has_subtable({
-    tag = TAG_DESTRUCTURE,
+    rule = 'Destructure',
     { key = 'x', name = 'x' },
     { key = 1, name = 'y' },
   }, unit.Destructure(
     '{ :x, y }'
   ))
   assert.has_subtable({
-    tag = TAG_DESTRUCTURE,
+    rule = 'Destructure',
     { key = 1, name = 'x' },
     {
       key = 'y',
@@ -32,7 +32,7 @@ spec('valid destructure', function()
     '{ x, :y { z } }'
   ))
   assert.has_subtable({
-    tag = TAG_DESTRUCTURE,
+    rule = 'Destructure',
     optional = true,
     {
       key = 1,
