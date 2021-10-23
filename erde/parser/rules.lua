@@ -399,6 +399,24 @@ function parser.Function()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: FunctionCall
+-- -----------------------------------------------------------------------------
+
+function parser.FunctionCall()
+  local node = parser.OptChain()
+  local last = node[#node]
+
+  if not last then
+    throw.expected('function call', true)
+  elseif last.variant ~= 'FUNCTION_CALL' then
+    throw.error('Id cannot be function call')
+  end
+
+  node.tag = 'TAG_FUNCTION_CALL'
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Id
 -- -----------------------------------------------------------------------------
 
@@ -545,9 +563,14 @@ function parser.OptChain()
       chain.variant = 'FUNCTION_CALL'
       chain.value = parser.surround('(', ')', function()
         local args = {}
-        repeat
+
+        while bufValue ~= ')' do
           args[#args + 1] = parser.Expr()
-        until not branchChar(',')
+          if not branchChar(',') then
+            break
+          end
+        end
+
         return args
       end)
     elseif branchChar(':') then
@@ -723,7 +746,10 @@ function parser.Table()
       field.key = name
       field.value = name
     else
-      local expr = parser.try(parser.Expr)
+      local expr = parser.switch({
+        parser.Name,
+        parser.Expr,
+      })
 
       if expr then
         if not branchChar(':') then
@@ -739,12 +765,14 @@ function parser.Table()
         else
           throw.unexpected('expression')
         end
-      else
+      elseif bufValue == '[' then
         field.key = parser.surround('[', ']', parser.Expr)
 
         if not branchChar(':') then
           throw.expected(':')
         end
+      else
+        throw.unexpected()
       end
 
       if field.key and not field.value then
@@ -789,12 +817,12 @@ function parser.Terminal()
       parser.Table,
       parser.Number,
       parser.String,
-      parser.Name, -- TODO: replace with Id
+      parser.OptChain,
     })
   end
 
   if not node then
-    error.expected('terminal', true)
+    throw.expected('terminal', true)
   end
 
   return node
