@@ -1,6 +1,26 @@
 local _ENV = require('erde.parser.env').load()
 
 -- -----------------------------------------------------------------------------
+-- Save / Restore
+-- -----------------------------------------------------------------------------
+
+function parser.saveState()
+  return {
+    bufIndex = bufIndex,
+    bufValue = bufValue,
+    line = line,
+    column = column,
+  }
+end
+
+function parser.restoreState(backup)
+  bufIndex = backup.bufIndex
+  bufValue = backup.bufValue
+  line = backup.line
+  column = backup.column
+end
+
+-- -----------------------------------------------------------------------------
 -- Space
 -- -----------------------------------------------------------------------------
 
@@ -46,19 +66,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.try(rule)
-  backupBufIndex = bufIndex
-  backupBufValue = bufValue
-  backupLine = line
-  backupColumn = column
-
+  local backup = parser.saveState()
   local ok, node = pcall(rule)
 
   if ok then
     return node
   else
-    bufIndex = backupBufIndex
-    bufValue = backupBufValue
-    line = backupLine
-    column = backupColumn
+    parser.restoreState(backup)
   end
 end
