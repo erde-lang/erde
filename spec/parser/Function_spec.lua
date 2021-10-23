@@ -87,4 +87,29 @@ spec('valid function call', function()
   }, unit.FunctionCall(
     'hello()'
   ))
+  assert.has_subtable({
+    tag = 'TAG_FUNCTION_CALL',
+    base = { value = 'hello' },
+    { variant = 'DOT_INDEX', optional = false, value = 'world' },
+    { variant = 'FUNCTION_CALL', optional = true },
+  }, unit.FunctionCall(
+    'hello.world?()'
+  ))
+  assert.has_subtable({
+    tag = 'TAG_FUNCTION_CALL',
+    base = { value = 'hello' },
+    { variant = 'METHOD_CALL', value = 'world' },
+    { variant = 'FUNCTION_CALL', optional = false },
+  }, unit.FunctionCall(
+    'hello:world()'
+  ))
+end)
+
+spec('invalid function call', function()
+  assert.has_error(function()
+    unit.FunctionCall('hello:world')
+  end)
+  assert.has_error(function()
+    unit.FunctionCall('hello?.()')
+  end)
 end)
