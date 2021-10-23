@@ -2,24 +2,19 @@ local unit = require('erde.parser.unit')
 
 spec('valid id', function()
   assert.has_subtable({
-    tag = 'TAG_ID',
     base = { value = 'a' },
-  }, unit.Id(
-    'a'
-  ))
+  }, unit.Id('a'))
   assert.has_subtable({
-    tag = 'TAG_ID',
     base = { value = 'a' },
-    { optional = false, variant = 'DOT_INDEX', value = 'b' },
+    { optional = false, variant = 'dot', value = 'b' },
   }, unit.Id(
     'a.b'
   ))
   assert.has_subtable({
-    tag = 'TAG_ID',
     base = { value = 'a' },
     {
       optional = false,
-      variant = 'BRACKET_INDEX',
+      variant = 'bracket',
       value = {
         value = '23',
       },
@@ -28,27 +23,24 @@ spec('valid id', function()
     'a[23]'
   ))
   assert.has_subtable({
-    tag = 'TAG_ID',
     base = { value = 'a' },
     {
       optional = false,
-      variant = 'BRACKET_INDEX',
-      value = { tag = 'TAG_ADD' },
+      variant = 'bracket',
+      value = { op = 'add' },
     },
   }, unit.Id(
     'a[2 + 3]'
   ))
   assert.has_subtable({
-    tag = 'TAG_ID',
     base = { value = 'a' },
-    { optional = true, variant = 'DOT_INDEX', value = 'b' },
+    { optional = true, variant = 'dot', value = 'b' },
   }, unit.Id(
     'a?.b'
   ))
   assert.has_subtable({
-    tag = 'TAG_ID',
-    base = { tag = 'TAG_ADD', parens = true },
-    { optional = false, variant = 'DOT_INDEX', value = 'b' },
+    base = { op = 'add', parens = true },
+    { optional = false, variant = 'dot', value = 'b' },
   }, unit.Id(
     '(1 + 2).b'
   ))

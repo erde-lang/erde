@@ -2,10 +2,10 @@ local unit = require('erde.parser.unit')
 
 spec('valid if else', function()
   assert.has_subtable({
-    tag = 'TAG_IF_ELSE',
+    rule = 'IfElse',
     ifNode = {
       cond = {
-        tag = 'TAG_GT',
+        op = 'gt',
         { value = '2' },
         { value = '1' },
       },
@@ -14,11 +14,11 @@ spec('valid if else', function()
     'if 2 > 1 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_IF_ELSE',
+    rule = 'IfElse',
     elseifNodes = {
       {
         cond = {
-          tag = 'TAG_GT',
+          op = 'gt',
           { value = '3' },
           { value = '1' },
         },
@@ -28,18 +28,18 @@ spec('valid if else', function()
     'if 2 > 1 {} elseif 3 > 1 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_IF_ELSE',
+    rule = 'IfElse',
     elseifNodes = {
       {
         cond = {
-          tag = 'TAG_GT',
+          op = 'gt',
           { value = '3' },
           { value = '1' },
         },
       },
       {
         cond = {
-          tag = 'TAG_GT',
+          op = 'gt',
           { value = '4' },
           { value = '1' },
         },
@@ -49,13 +49,13 @@ spec('valid if else', function()
     'if 2 > 1 {} elseif 3 > 1 {} elseif 4 > 1 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_IF_ELSE',
+    rule = 'IfElse',
     elseNode = {},
   }, unit.IfElse(
     'if 2 > 1 {} elseif 3 > 1 {} else {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_IF_ELSE',
+    rule = 'IfElse',
     elseNode = {},
   }, unit.IfElse(
     'if 2 > 1 {} else {}'

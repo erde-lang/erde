@@ -2,25 +2,24 @@ local unit = require('erde.parser.unit')
 
 spec('valid params', function()
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
+    rule = 'Params',
   }, unit.Params('()'))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
-    { tag = 'TAG_PARAM', value = { value = 'a' } },
+    rule = 'Params',
+    { value = { value = 'a' } },
   }, unit.Params(
     '(a)'
   ))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
-    { tag = 'TAG_PARAM', value = { value = 'a' } },
-    { tag = 'TAG_PARAM', value = { value = 'b' } },
+    rule = 'Params',
+    { value = { value = 'a' } },
+    { value = { value = 'b' } },
   }, unit.Params(
     '(a, b)'
   ))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
+    rule = 'Params',
     {
-      tag = 'TAG_PARAM',
       default = { value = '2' },
       value = { value = 'a' },
     },
@@ -28,28 +27,28 @@ spec('valid params', function()
     '(a = 2)'
   ))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
-    { tag = 'TAG_VARARGS' },
+    rule = 'Params',
+    { varargs = true },
   }, unit.Params(
     '(...)'
   ))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
-    { tag = 'TAG_PARAM', value = { value = 'a' } },
-    { tag = 'TAG_VARARGS' },
+    rule = 'Params',
+    { value = { value = 'a' } },
+    { varargs = true },
   }, unit.Params(
     '(a, ...)'
   ))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
-    { tag = 'TAG_PARAM', value = { value = 'a' } },
-    { tag = 'TAG_VARARGS', name = 'b' },
+    rule = 'Params',
+    { value = { value = 'a' } },
+    { varargs = true, name = 'b' },
   }, unit.Params(
     '(a, ...b)'
   ))
   assert.has_subtable({
-    tag = 'TAG_PARAMS',
-    { tag = 'TAG_PARAM', value = { tag = 'TAG_DESTRUCTURE' } },
+    rule = 'Params',
+    { value = { rule = 'Destructure' } },
   }, unit.Params(
     '({ :a })'
   ))

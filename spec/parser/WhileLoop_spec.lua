@@ -2,9 +2,9 @@ local unit = require('erde.parser.unit')
 
 spec('valid while loop', function()
   assert.has_subtable({
-    tag = 'TAG_WHILE_LOOP',
+    rule = 'WhileLoop',
     cond = {
-      tag = 'TAG_GT',
+      op = 'gt',
       { value = '1' },
       { value = '0' },
     },

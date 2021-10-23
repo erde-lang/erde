@@ -2,10 +2,10 @@ local unit = require('erde.parser.unit')
 
 spec('valid do block', function()
   assert.has_subtable({
-    tag = 'TAG_DO_BLOCK',
+    rule = 'DoBlock',
   }, unit.DoBlock('do {}'))
   assert.has_subtable({
-    tag = 'TAG_DO_BLOCK',
+    rule = 'DoBlock',
     hasReturn = true,
   }, unit.DoBlock(
     'do { return 1 }'

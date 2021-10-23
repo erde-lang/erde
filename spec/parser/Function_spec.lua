@@ -2,26 +2,22 @@ local unit = require('erde.parser.unit')
 
 spec('valid arrow function', function()
   assert.has_subtable({
-    tag = 'TAG_ARROW_FUNCTION',
-    variant = 'SKINNY',
-    body = {
-      { tag = 'TAG_RETURN' },
-    },
+    rule = 'ArrowFunction',
+    variant = 'skinny',
+    body = { { rule = 'Return' } },
   }, unit.ArrowFunction(
     '() -> { return 1 }'
   ))
   assert.has_subtable({
-    tag = 'TAG_ARROW_FUNCTION',
-    variant = 'SKINNY',
-    returns = {
-      { value = '1' },
-    },
+    rule = 'ArrowFunction',
+    variant = 'skinny',
+    returns = { { value = '1' } },
   }, unit.ArrowFunction(
     '() -> 1'
   ))
   assert.has_subtable({
-    tag = 'TAG_ARROW_FUNCTION',
-    variant = 'SKINNY',
+    rule = 'ArrowFunction',
+    variant = 'skinny',
     returns = {
       { value = '1' },
       { value = '2' },
@@ -30,8 +26,8 @@ spec('valid arrow function', function()
     '() -> 1, 2'
   ))
   assert.has_subtable({
-    tag = 'TAG_ARROW_FUNCTION',
-    variant = 'FAT',
+    rule = 'ArrowFunction',
+    variant = 'fat',
   }, unit.ArrowFunction(
     '() => { return 1 }'
   ))
@@ -54,16 +50,36 @@ end)
 
 spec('valid function', function()
   assert.has_subtable({
-    tag = 'TAG_LOCAL_FUNCTION',
-    name = { value = 'a' },
+    rule = 'Function',
+    variant = 'local',
+    isMethod = false,
+    names = { 'a' },
   }, unit.Function(
     'local function a() {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_FUNCTION',
-    name = { value = 'hello' },
+    rule = 'Function',
+    variant = 'global',
+    isMethod = false,
+    names = { 'hello' },
   }, unit.Function(
     'function hello() {}'
+  ))
+  assert.has_subtable({
+    rule = 'Function',
+    variant = 'global',
+    isMethod = false,
+    names = { 'hello', 'world' },
+  }, unit.Function(
+    'function hello.world() {}'
+  ))
+  assert.has_subtable({
+    rule = 'Function',
+    variant = 'global',
+    isMethod = true,
+    names = { 'hello', 'world' },
+  }, unit.Function(
+    'function hello:world() {}'
   ))
 end)
 
@@ -81,25 +97,22 @@ end)
 
 spec('valid function call', function()
   assert.has_subtable({
-    tag = 'TAG_FUNCTION_CALL',
     base = { value = 'hello' },
-    { variant = 'FUNCTION_CALL', optional = false, value = {} },
+    { variant = 'parens', optional = false, value = {} },
   }, unit.FunctionCall(
     'hello()'
   ))
   assert.has_subtable({
-    tag = 'TAG_FUNCTION_CALL',
     base = { value = 'hello' },
-    { variant = 'DOT_INDEX', optional = false, value = 'world' },
-    { variant = 'FUNCTION_CALL', optional = true },
+    { variant = 'dot', optional = false, value = 'world' },
+    { variant = 'parens', optional = true },
   }, unit.FunctionCall(
     'hello.world?()'
   ))
   assert.has_subtable({
-    tag = 'TAG_FUNCTION_CALL',
     base = { value = 'hello' },
-    { variant = 'METHOD_CALL', value = 'world' },
-    { variant = 'FUNCTION_CALL', optional = false },
+    { variant = 'colon', value = 'world' },
+    { variant = 'parens', optional = false },
   }, unit.FunctionCall(
     'hello:world()'
   ))

@@ -2,7 +2,8 @@ local unit = require('erde.parser.unit')
 
 spec('valid numeric for', function()
   assert.has_subtable({
-    tag = 'TAG_NUMERIC_FOR',
+    rule = 'ForLoop',
+    variant = 'numeric',
     name = 'i',
     var = { value = '1' },
     limit = { value = '2' },
@@ -11,7 +12,8 @@ spec('valid numeric for', function()
     'for i = 1, 2, 3 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_NUMERIC_FOR',
+    rule = 'ForLoop',
+    variant = 'numeric',
     name = 'i',
     var = { value = '1' },
     limit = { value = '2' },
@@ -37,21 +39,24 @@ end)
 
 spec('valid generic for', function()
   assert.has_subtable({
-    tag = 'TAG_GENERIC_FOR',
+    rule = 'ForLoop',
+    variant = 'generic',
     nameList = { 'a' },
     exprList = { { value = '1' } },
   }, unit.ForLoop(
     'for a in 1 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_GENERIC_FOR',
+    rule = 'ForLoop',
+    variant = 'generic',
     nameList = { 'a', 'b' },
     exprList = { { value = '1' } },
   }, unit.ForLoop(
     'for a, b in 1 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_GENERIC_FOR',
+    rule = 'ForLoop',
+    variant = 'generic',
     nameList = { 'a' },
     exprList = {
       { value = '1' },
@@ -61,7 +66,8 @@ spec('valid generic for', function()
     'for a in 1, 2 {}'
   ))
   assert.has_subtable({
-    tag = 'TAG_GENERIC_FOR',
+    rule = 'ForLoop',
+    variant = 'generic',
     nameList = { 'a', 'b' },
     exprList = {
       { value = '1' },
