@@ -403,39 +403,14 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Id()
-  local node = {
-    tag = 'TAG_ID',
-    base = parser.switch({
-      parser.Name,
-      function()
-        local base = parser.surround('(', ')', parser.Expr)
-        base.parens = true
-        return base
-      end,
-    }),
-  }
+  local node = parser.OptChain()
+  local last = node[#node]
 
-  if not node.base then
-    throw.expected('name or expression', true)
+  if last and last.variant == 'FUNCTION_CALL' then
+    throw.error('Id cannot be function call')
   end
 
-  while true do
-    local chain = { optional = branchChar('?') }
-
-    if branchChar('.') then
-      chain.variant = 'DOT_INDEX'
-      chain.value = parser.Name().value
-    elseif bufValue == '[' then
-      chain.variant = 'BRACKET_INDEX'
-      chain.value = parser.surround('[', ']', parser.Expr)
-    else
-      break
-      -- TODO function params + methods
-    end
-
-    node[#node + 1] = chain
-  end
-
+  node.tag = 'TAG_ID'
   return node
 end
 
@@ -536,49 +511,101 @@ function parser.Number()
 end
 
 -- -----------------------------------------------------------------------------
+-- Rule: OptChain
+-- -----------------------------------------------------------------------------
+
+function parser.OptChain()
+  local node = {
+    tag = 'TAG_OPTCHAIN',
+    base = parser.switch({
+      parser.Name,
+      function()
+        local base = parser.surround('(', ')', parser.Expr)
+        base.parens = true
+        return base
+      end,
+    }),
+  }
+
+  if not node.base then
+    throw.expected('name or expression', true)
+  end
+
+  while true do
+    local backup = parser.saveState()
+    local chain = { optional = branchChar('?') }
+
+    if branchChar('.') then
+      chain.variant = 'DOT_INDEX'
+      chain.value = parser.Name().value
+    elseif bufValue == '[' then
+      chain.variant = 'BRACKET_INDEX'
+      chain.value = parser.surround('[', ']', parser.Expr)
+    elseif bufValue == '(' then
+      chain.variant = 'FUNCTION_CALL'
+      chain.value = parser.surround('(', ')', function()
+        local args = {}
+        repeat
+          args[#args + 1] = parser.Expr()
+        until not branchChar(',')
+        return args
+      end)
+    elseif branchChar(':') then
+      chain.variant = 'METHOD_CALL'
+      chain.value = parser.Name().value
+      if bufValue ~= '(' then
+        throw.error('missing args after method call')
+      end
+    else
+      -- revert consumption from branchChar('?')
+      parser.restoreState(backup)
+      break
+    end
+
+    node[#node + 1] = chain
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: Params
 -- -----------------------------------------------------------------------------
 
 function parser.Params()
-  local node = { tag = 'TAG_PARAMS' }
+  return parser.surround('(', ')', function()
+    local node = { tag = 'TAG_PARAMS' }
 
-  if not branchChar('(') then
-    throw.expected('(')
-  end
+    repeat
+      local param = {
+        tag = 'TAG_PARAM',
+        value = parser.switch({
+          parser.Name,
+          parser.Destructure,
+        }),
+      }
 
-  repeat
-    local param = {
-      tag = 'TAG_PARAM',
-      value = parser.switch({
-        parser.Name,
-        parser.Destructure,
-      }),
-    }
+      if not param.value then
+        break
+      end
 
-    if not param.value then
-      break
+      if branchChar('=') then
+        param.default = parser.Expr()
+      end
+
+      node[#node + 1] = param
+    until not branchChar(',')
+
+    if branchStr('...') then
+      local name = parser.try(parser.Name)
+      node[#node + 1] = {
+        tag = 'TAG_VARARGS',
+        name = name and name.value or nil,
+      }
     end
 
-    if branchChar('=') then
-      param.default = parser.Expr()
-    end
-
-    node[#node + 1] = param
-  until not branchChar(',')
-
-  if branchStr('...') then
-    local name = parser.try(parser.Name)
-    node[#node + 1] = {
-      tag = 'TAG_VARARGS',
-      name = name and name.value or nil,
-    }
-  end
-
-  if not branchChar(')') then
-    throw.expected(')')
-  end
-
-  return node
+    return node
+  end)
 end
 
 -- -----------------------------------------------------------------------------
