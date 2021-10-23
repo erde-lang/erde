@@ -1,16 +1,12 @@
 local _ENV = require('erde.parser.env').load()
-require('erde.parser.loader')
+require('erde.parser.rules')
 
--- -----------------------------------------------------------------------------
--- Parse
--- -----------------------------------------------------------------------------
+return function()
+  local block = parser.Block()
 
-function parser.parse()
-  -- TODO
+  if bufValue ~= EOF then
+    throw.unexpected()
+  end
+
+  return block
 end
-
--- -----------------------------------------------------------------------------
--- Return
--- -----------------------------------------------------------------------------
-
-return parser

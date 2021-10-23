@@ -148,8 +148,16 @@ function parser.Block()
 
   while true do
     local statement = parser.switch({
+      parser.Assignment,
       parser.Comment,
+      parser.DoBlock,
+      parser.ForLoop,
+      parser.IfElse,
+      parser.Function,
+      parser.FunctionCall,
+      parser.RepeatUntil,
       parser.Return,
+      parser.Var,
     })
 
     if not statement then
