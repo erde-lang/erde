@@ -78,3 +78,13 @@ spec('invalid function', function()
     unit.ArrowFunction('function() {}')
   end)
 end)
+
+spec('valid function call', function()
+  assert.has_subtable({
+    tag = 'TAG_FUNCTION_CALL',
+    base = { value = 'hello' },
+    { variant = 'FUNCTION_CALL', optional = false, value = {} },
+  }, unit.FunctionCall(
+    'hello()'
+  ))
+end)
