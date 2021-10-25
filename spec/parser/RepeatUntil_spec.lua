@@ -4,7 +4,7 @@ spec('valid repeat until', function()
   assert.has_subtable({
     rule = 'RepeatUntil',
     cond = {
-      op = 'gt',
+      op = { tag = 'gt' },
       { value = '1' },
       { value = '0' },
     },

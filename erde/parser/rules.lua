@@ -28,37 +28,37 @@ local LEFT_ASSOCIATIVE = -1
 local RIGHT_ASSOCIATIVE = 1
 
 local UNOPS = {
-  ['-'] = { op = 'neg', prec = 14 },
-  ['#'] = { op = 'len', prec = 14 },
-  ['~'] = { op = 'not', prec = 14 },
-  ['.~'] = { op = 'bnot', prec = 14 },
+  ['-'] = { tag = 'neg', prec = 14 },
+  ['#'] = { tag = 'len', prec = 14 },
+  ['~'] = { tag = 'not', prec = 14 },
+  ['.~'] = { tag = 'bnot', prec = 14 },
 }
 
 local BINOPS = {
-  ['>>'] = { op = 'pipe', prec = 1, assoc = LEFT_ASSOCIATIVE },
-  ['?'] = { op = 'ternary', prec = 2, assoc = LEFT_ASSOCIATIVE },
-  ['??'] = { op = 'nc', prec = 3, assoc = LEFT_ASSOCIATIVE },
-  ['|'] = { op = 'or', prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['&'] = { op = 'and', prec = 5, assoc = LEFT_ASSOCIATIVE },
-  ['=='] = { op = 'eq', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['~='] = { op = 'neq', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['<='] = { op = 'lte', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['>='] = { op = 'gte', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['<'] = { op = 'lt', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['>'] = { op = 'gt', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['.|'] = { op = 'bor', prec = 7, assoc = LEFT_ASSOCIATIVE },
-  ['.~'] = { op = 'bxor', prec = 8, assoc = LEFT_ASSOCIATIVE },
-  ['.&'] = { op = 'band', prec = 9, assoc = LEFT_ASSOCIATIVE },
-  ['.<<'] = { op = 'lshift', prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['.>>'] = { op = 'rshift', prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['..'] = { op = 'concat', prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['+'] = { op = 'add', prec = 12, assoc = LEFT_ASSOCIATIVE },
-  ['-'] = { op = 'sub', prec = 12, assoc = LEFT_ASSOCIATIVE },
-  ['*'] = { op = 'mult', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['/'] = { op = 'div', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['//'] = { op = 'intdiv', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['%'] = { op = 'mod', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['^'] = { op = 'exp', prec = 15, assoc = RIGHT_ASSOCIATIVE },
+  ['>>'] = { tag = 'pipe', prec = 1, assoc = LEFT_ASSOCIATIVE },
+  ['?'] = { tag = 'ternary', prec = 2, assoc = LEFT_ASSOCIATIVE },
+  ['??'] = { tag = 'nc', prec = 3, assoc = LEFT_ASSOCIATIVE },
+  ['|'] = { tag = 'or', prec = 4, assoc = LEFT_ASSOCIATIVE },
+  ['&'] = { tag = 'and', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  ['=='] = { tag = 'eq', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['~='] = { tag = 'neq', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['<='] = { tag = 'lte', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['>='] = { tag = 'gte', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['<'] = { tag = 'lt', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['>'] = { tag = 'gt', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  ['.|'] = { tag = 'bor', prec = 7, assoc = LEFT_ASSOCIATIVE },
+  ['.~'] = { tag = 'bxor', prec = 8, assoc = LEFT_ASSOCIATIVE },
+  ['.&'] = { tag = 'band', prec = 9, assoc = LEFT_ASSOCIATIVE },
+  ['.<<'] = { tag = 'lshift', prec = 10, assoc = LEFT_ASSOCIATIVE },
+  ['.>>'] = { tag = 'rshift', prec = 10, assoc = LEFT_ASSOCIATIVE },
+  ['..'] = { tag = 'concat', prec = 11, assoc = LEFT_ASSOCIATIVE },
+  ['+'] = { tag = 'add', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  ['-'] = { tag = 'sub', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  ['*'] = { tag = 'mult', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['/'] = { tag = 'div', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['//'] = { tag = 'intdiv', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['%'] = { tag = 'mod', prec = 13, assoc = LEFT_ASSOCIATIVE },
+  ['^'] = { tag = 'exp', prec = 15, assoc = RIGHT_ASSOCIATIVE },
 }
 
 local BINOP_MAX_LEN = 1
@@ -122,7 +122,7 @@ function parser.Assignment()
     local op = BINOPS[opToken]
     if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
       consume(i)
-      node.op = op.op
+      node.op = op
       break
     end
   end
@@ -293,7 +293,7 @@ function parser.Expr(minPrec)
   if UNOPS[bufValue] ~= nil then
     local op = UNOPS[bufValue]
     consume()
-    node = { op = op.op, parser.Expr(op.prec + 1) }
+    node = { op = op, parser.Expr(op.prec + 1) }
   else
     node = parser.Terminal()
   end
@@ -312,10 +312,10 @@ function parser.Expr(minPrec)
       break
     else
       consume(#opToken)
-      node = { op = op.op, node }
+      node = { op = op, node }
     end
 
-    if op.op == 'ternary' then
+    if op.tag == 'ternary' then
       node[#node + 1] = parser.Expr()
       if not branchChar(':') then
         throw.expected(':')
@@ -475,7 +475,7 @@ function parser.IfElse()
 end
 
 -- -----------------------------------------------------------------------------
--- Name
+-- Rule: Name
 -- -----------------------------------------------------------------------------
 
 function parser.Name()
@@ -749,39 +749,42 @@ function parser.Table()
     local field = {}
 
     if branchChar(':') then
-      local name = parser.Name().value
-      field.key = name
-      field.value = name
+      field.variant = 'inlineKey'
+      field.key = parser.Name().value
+    elseif bufValue == '[' then
+      field.variant = 'exprKey'
+      field.key = parser.surround('[', ']', parser.Expr)
+
+      if not branchChar(':') then
+        throw.expected(':')
+      end
+
+      field.value = parser.Expr()
     else
       local expr = parser.switch({
         parser.Name,
         parser.Expr,
       })
 
-      if expr then
-        if not branchChar(':') then
-          field.key = keyCounter
-          field.value = expr.rule == 'Name' and expr.value or expr
-          keyCounter = keyCounter + 1
-        elseif expr.rule == 'Name' then
-          field.key = expr.value
-        elseif expr.rule == 'String' then
-          field.key = expr
-        else
-          throw.unexpected('expression')
-        end
-      elseif bufValue == '[' then
-        field.key = parser.surround('[', ']', parser.Expr)
-
-        if not branchChar(':') then
-          throw.expected(':')
-        end
-      else
+      if not expr then
         throw.unexpected()
       end
 
-      if field.key and not field.value then
+      if not branchChar(':') then
+        field.variant = 'arrayKey'
+        field.key = keyCounter
+        field.value = expr
+        keyCounter = keyCounter + 1
+      elseif expr.rule == 'Name' then
+        field.variant = 'nameKey'
+        field.key = expr.value
         field.value = parser.Expr()
+      elseif expr.rule == 'String' then
+        field.variant = 'stringKey'
+        field.key = expr
+        field.value = parser.Expr()
+      else
+        throw.unexpected('expression')
       end
     end
 

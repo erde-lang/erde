@@ -4,7 +4,7 @@ spec('valid while loop', function()
   assert.has_subtable({
     rule = 'WhileLoop',
     cond = {
-      op = 'gt',
+      op = { tag = 'gt' },
       { value = '1' },
       { value = '0' },
     },

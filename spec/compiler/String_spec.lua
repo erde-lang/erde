@@ -1,0 +1,16 @@
+local unit = require('erde.compiler.unit')
+
+spec('compile short string', function()
+  assert.are.equal('"hello"', unit.String('"hello"'))
+  assert.are.equal("'hello'", unit.String("'hello'"))
+  assert.are.equal("'hello\\nworld'", unit.String("'hello\\nworld'"))
+  assert.are.equal("'\\\\'", unit.String("'\\\\'"))
+end)
+
+spec('compile long string', function()
+  assert.erde_compile_expr('hello world', unit.String('`hello world`'))
+  assert.erde_compile_expr('hello\nworld', unit.String('`hello\nworld`'))
+  assert.erde_compile_expr('a{bc}d', unit.String('`a\\{bc}d`'))
+  assert.erde_compile_expr('a`b', unit.String('`a\\`b`'))
+  assert.erde_compile_expr('hello 3', unit.String('`hello {3}`'))
+end)

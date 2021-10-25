@@ -31,3 +31,27 @@ assert:register(
   has_subtable,
   'assertion.has_subtable.positive'
 )
+
+-- -----------------------------------------------------------------------------
+-- erde_compile_expr
+-- -----------------------------------------------------------------------------
+
+local function erde_compile_expr(state, args)
+  if _VERSION:find('5.1') then
+    return args[1] == loadstring('return ' .. args[2])()
+  else
+    return args[1] == load('return ' .. args[2])()
+  end
+end
+
+require('say'):set(
+  'assertion.erde_compile_expr.positive',
+  'Compilation error. Expected %s, got %s'
+)
+
+assert:register(
+  'assertion',
+  'erde_compile_expr',
+  erde_compile_expr,
+  'assertion.erde_compile_expr.positive'
+)
