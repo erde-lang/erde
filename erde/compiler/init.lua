@@ -133,7 +133,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Name(node)
-  return node.value
+  local compiled = {}
+  return table.concat(compiled, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -185,8 +186,32 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.String(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  if node.variant == 'short' then
+    return node.value
+  else
+    local eqStr = '='
+    local content = {}
+
+    for _, capture in ipairs(node) do
+      if type(capture) == 'string' and capture:find(eqStr) then
+        eqStr = ('='):rep(#eqStr + 1)
+      end
+    end
+
+    for _, capture in ipairs(node) do
+      if type(capture) == 'string' then
+        content[#content + 1] = capture
+      else
+        content[#content + 1] = (']%s]..tostring(%s)..[%s['):format(
+          eqStr,
+          compileNode(capture),
+          eqStr
+        )
+      end
+    end
+
+    return ('[%s[%s]%s]'):format(eqStr, table.concat(content), eqStr)
+  end
 end
 
 -- -----------------------------------------------------------------------------
