@@ -1,3 +1,7 @@
+-- -----------------------------------------------------------------------------
+-- has_subtable
+-- -----------------------------------------------------------------------------
+
 local function has_subtable(state, args)
   if type(args[1]) ~= 'table' or type(args[2]) ~= 'table' then
     return false
