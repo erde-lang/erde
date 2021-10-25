@@ -69,12 +69,12 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: DoBlock
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.DoBlock(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return (node.hasReturn and 'function()\n%s\nend' or 'do\n%s\nend'):format(
+    compile(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------
@@ -89,12 +89,22 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: ForLoop
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.ForLoop(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return node.variant == 'numeric'
+      and ('for %s=%s,%s,%s do\n%s\nend'):format(
+        node.name,
+        node.var,
+        node.limit,
+        node.step or '1',
+        compile(node.body)
+      )
+    or ('for %s in %s do\n%s\nend'):format(
+      table.concat(node.nameList, ','),
+      table.concat(node.exprList, ','),
+      compile(node.body)
+    )
 end
 
 -- -----------------------------------------------------------------------------
@@ -129,22 +139,34 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: IfElse
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.IfElse(node)
-  local compiled = {}
+  local compiled = {
+    'if ' .. node.cond .. ' then',
+    compile(node.body),
+  }
+
+  for _, elseifNode in ipairs(node.elseifNodes) do
+    compiled[#compiled + 1] = 'elseif ' .. elseifNode.cond .. ' then'
+    compiled[#compiled + 1] = compile(node.body)
+  end
+
+  if node.elseNode then
+    compiled[#compiled + 1] = 'else'
+    compiled[#compiled + 1] = compile(node.body)
+  end
+
+  compiled[#compiled + 1] = 'end'
   return table.concat(compiled, '\n')
 end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Name
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Name(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return node.value
 end
 
 -- -----------------------------------------------------------------------------
@@ -187,12 +209,10 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Return
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Return(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return 'return ' .. node.value
 end
 
 -- -----------------------------------------------------------------------------
@@ -240,7 +260,6 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Terminal
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Terminal(node)
