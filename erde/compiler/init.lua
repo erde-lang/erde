@@ -21,18 +21,44 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.ArrowFunction(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  -- TODO: param prebody!!
+  local params = compile(node.params)
+  if node.variant == 'fat' then
+    table.insert(params, 1, 'self')
+  end
+
+  local body
+  if node.body then
+    body = compile(node.body)
+  else
+    local returns = {}
+
+    for i, value in ipairs(node.returns) do
+      returns[i] = compile(value)
+    end
+
+    body = 'return ' .. table.concat(returns, ',')
+  end
+
+  return ('function(%s)\n%s\nend'):format(table.concat(params, ','), body)
 end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Assignment
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Assignment(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  local compiled = { node.name, '=', nil, nil, nil }
+
+  if node.op then
+    compiled[3] = node.name
+    compiled[4] = node.op
+    compiled[5] = compile(node.expr)
+  else
+    compiled[3] = compile(node.expr)
+  end
+
+  return table.concat(compiled, ' ')
 end
 
 -- -----------------------------------------------------------------------------
@@ -92,19 +118,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.ForLoop(node)
-  return node.variant == 'numeric'
-      and ('for %s=%s,%s,%s do\n%s\nend'):format(
-        node.name,
-        node.var,
-        node.limit,
-        node.step or '1',
-        compile(node.body)
-      )
-    or ('for %s in %s do\n%s\nend'):format(
-      table.concat(node.nameList, ','),
-      table.concat(node.exprList, ','),
+  if node.variant == 'numeric' then
+    return ('for %s=%s,%s,%s do\n%s\nend'):format(
+      node.name,
+      compile(node.var),
+      compile(node.limit),
+      node.step and compile(node.step) or '1',
       compile(node.body)
     )
+  else
+    local exprList = {}
+    for i, expr in ipairs(node.exprList) do
+      exprList[i] = compile(expr)
+    end
+
+    return ('for %s in %s do\n%s\nend'):format(
+      table.concat(node.nameList, ','),
+      table.concat(exprList, ','),
+      compile(node.body)
+    )
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -113,28 +146,20 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Function(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
-end
+  local methodName 
+  if node.isMethod then
+    methodName = table.remove(node.names)
+  end
 
--- -----------------------------------------------------------------------------
--- Rule: FunctionCall
--- TODO
--- -----------------------------------------------------------------------------
+  -- TODO: param prebody!!
 
-function compiler.FunctionCall(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
-end
-
--- -----------------------------------------------------------------------------
--- Rule: Id
--- TODO
--- -----------------------------------------------------------------------------
-
-function compiler.Id(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return ('%s function %s%s(%s)\n%s\nend'):format(
+    node.variant == 'local' and 'local' or '',
+    table.concat(node.names, '.'),
+    methodName and ':'..methodName or '',
+    table.concat(compile(node.params), ',')
+    compile(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------
@@ -143,12 +168,12 @@ end
 
 function compiler.IfElse(node)
   local compiled = {
-    'if ' .. node.cond .. ' then',
+    'if ' .. compile(elseifNode.cond) .. ' then',
     compile(node.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
-    compiled[#compiled + 1] = 'elseif ' .. elseifNode.cond .. ' then'
+    compiled[#compiled + 1] = 'elseif ' .. compile(elseifNode.cond) .. ' then'
     compiled[#compiled + 1] = compile(node.body)
   end
 
@@ -199,12 +224,13 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: RepeatUntil
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.RepeatUntil(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return ('repeat\n%s\nuntil (%s)'):format(
+    compile(node.body),
+    compile(node.cond)
+  )
 end
 
 -- -----------------------------------------------------------------------------
@@ -268,22 +294,31 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Var
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Var(node)
   local compiled = {}
-  return table.concat(compiled, '\n')
+
+  if node.variant == 'local' then
+    compiled[#compiled + 1] = 'local'
+  end
+
+  compiled[#compiled + 1] = node.name
+
+  if node.initValue then
+    compiled[#compiled + 1] = '='
+    compiled[#compiled + 1] = compile(node.initValue)
+  end
+
+  return table.concat(compiled, ' ')
 end
 
 -- -----------------------------------------------------------------------------
 -- Rule: WhileLoop
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.WhileLoop(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  return ('while %s do\n%s\nend'):format(compile(node.cond), compile(node.body))
 end
 
 -- -----------------------------------------------------------------------------
