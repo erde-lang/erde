@@ -37,7 +37,11 @@ assert:register(
 -- -----------------------------------------------------------------------------
 
 local function erde_compile_expr(state, args)
-  return args[1] == loadstring('return ' .. args[2])()
+  if _VERSION:find('5.1') then
+    return args[1] == loadstring('return ' .. args[2])()
+  else
+    return args[1] == load('return ' .. args[2])()
+  end
 end
 
 require('say'):set(

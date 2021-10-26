@@ -146,7 +146,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Function(node)
-  local methodName 
+  local methodName
   if node.isMethod then
     methodName = table.remove(node.names)
   end
@@ -156,8 +156,8 @@ function compiler.Function(node)
   return ('%s function %s%s(%s)\n%s\nend'):format(
     node.variant == 'local' and 'local' or '',
     table.concat(node.names, '.'),
-    methodName and ':'..methodName or '',
-    table.concat(compile(node.params), ',')
+    methodName and ':' .. methodName or '',
+    table.concat(compile(node.params), ','),
     compile(node.body)
   )
 end
