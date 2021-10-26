@@ -58,17 +58,17 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Assignment(node)
-  local compiled = { node.name, '=', nil, nil, nil }
+  local compileParts = { node.name, '=', nil, nil, nil }
 
   if node.op then
-    compiled[3] = node.name
-    compiled[4] = node.op
-    compiled[5] = compile(node.expr)
+    compileParts[3] = node.name
+    compileParts[4] = node.op
+    compileParts[5] = compile(node.expr)
   else
-    compiled[3] = compile(node.expr)
+    compileParts[3] = compile(node.expr)
   end
 
-  return table.concat(compiled, ' ')
+  return table.concat(compileParts, ' ')
 end
 
 -- -----------------------------------------------------------------------------
@@ -76,13 +76,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Block(node)
-  local compiled = {}
+  local compileParts = {}
 
   for _, statement in ipairs(node) do
-    compiled[#compiled + 1] = compileNode(statement)
+    compileParts[#compileParts + 1] = compileNode(statement)
   end
 
-  return table.concat(compiled, '\n')
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -99,8 +99,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Destructure(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  local compileParts = {}
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -119,8 +119,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Expr(minPrec)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  local compileParts = {}
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -177,23 +177,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.IfElse(node)
-  local compiled = {
-    'if ' .. compile(elseifNode.cond) .. ' then',
+  local compileParts = {
+    format('if %1 then', compile(elseifNode.cond)),
     compile(node.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
-    compiled[#compiled + 1] = 'elseif ' .. compile(elseifNode.cond) .. ' then'
-    compiled[#compiled + 1] = compile(node.body)
+    compileParts[#compileParts + 1] = format(
+      'elseif %1 then',
+      compile(elseifNode.cond)
+    )
+    compileParts[#compileParts + 1] = compile(node.body)
   end
 
   if node.elseNode then
-    compiled[#compiled + 1] = 'else'
-    compiled[#compiled + 1] = compile(node.body)
+    compileParts[#compileParts + 1] = 'else'
+    compileParts[#compileParts + 1] = compile(node.body)
   end
 
-  compiled[#compiled + 1] = 'end'
-  return table.concat(compiled, '\n')
+  compileParts[#compileParts + 1] = 'end'
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -218,8 +221,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.OptChain(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  local compileParts = {}
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -308,27 +311,27 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Table(node)
-  local compiled = { '{' }
+  local compileParts = { '{' }
 
   for i, field in ipairs(node) do
     if field.variant == 'arrayKey' then
-      compiled[#compiled + 1] = format('%1,', compile(field.value))
+      compileParts[#compileParts + 1] = format('%1,', compile(field.value))
     elseif field.variant == 'inlineKey' then
-      compiled[#compiled + 1] = format('%1 = %1,', field.key)
+      compileParts[#compileParts + 1] = format('%1 = %1,', field.key)
     elseif field.variant == 'exprKey' then
-      compiled[#compiled + 1] = format(
+      compileParts[#compileParts + 1] = format(
         '[%1] = %2,',
         field.key,
         compile(field.value)
       )
     elseif variant == 'nameKey' then
-      compiled[#compiled + 1] = format(
+      compileParts[#compileParts + 1] = format(
         '%1 = %2,',
         field.key,
         compile(field.value)
       )
     elseif variant == 'stringKey' then
-      compiled[#compiled + 1] = format(
+      compileParts[#compileParts + 1] = format(
         '[%1] = %2,',
         compile(field.key),
         compile(field.value)
@@ -336,8 +339,8 @@ function compiler.Table(node)
     end
   end
 
-  compiled[#compiled + 1] = '}'
-  return table.concat(compiled, '\n')
+  compileParts[#compileParts + 1] = '}'
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -353,20 +356,20 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Var(node)
-  local compiled = {}
+  local compileParts = {}
 
   if node.variant == 'local' then
-    compiled[#compiled + 1] = 'local'
+    compileParts[#compileParts + 1] = 'local'
   end
 
-  compiled[#compiled + 1] = node.name
+  compileParts[#compileParts + 1] = node.name
 
   if node.initValue then
-    compiled[#compiled + 1] = '='
-    compiled[#compiled + 1] = compile(node.initValue)
+    compileParts[#compileParts + 1] = '='
+    compileParts[#compileParts + 1] = compile(node.initValue)
   end
 
-  return table.concat(compiled, ' ')
+  return table.concat(compileParts, ' ')
 end
 
 -- -----------------------------------------------------------------------------
