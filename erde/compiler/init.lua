@@ -17,14 +17,12 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: ArrowFunction
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.ArrowFunction(node)
-  -- TODO: param prebody!!
   local params = compile(node.params)
   if node.variant == 'fat' then
-    table.insert(params, 1, 'self')
+    table.insert(params.names, 1, 'self')
   end
 
   local body
@@ -40,7 +38,11 @@ function compiler.ArrowFunction(node)
     body = 'return ' .. table.concat(returns, ',')
   end
 
-  return ('function(%s)\n%s\nend'):format(table.concat(params, ','), body)
+  return ('function(%s)\n%s\n%s\nend'):format(
+    table.concat(params.names, ','),
+    params.prebody,
+    body
+  )
 end
 
 -- -----------------------------------------------------------------------------
@@ -142,22 +144,22 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Function
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Function(node)
+  local params = compile(node.params)
+
   local methodName
   if node.isMethod then
     methodName = table.remove(node.names)
   end
 
-  -- TODO: param prebody!!
-
-  return ('%s function %s%s(%s)\n%s\nend'):format(
+  return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
     node.variant == 'local' and 'local' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
-    table.concat(compile(node.params), ','),
+    table.concat(compile(params.names), ','),
+    params.prebody,
     compile(node.body)
   )
 end
@@ -218,8 +220,27 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Params(node)
-  local compiled = {}
-  return table.concat(compiled, '\n')
+  local names = {}
+  local prebody = {}
+
+  for i, param in ipairs(node) do
+    local name
+    if param.value.rule == 'Name' then
+      name = param.value.value
+    else
+      -- TODO: destructure
+    end
+
+    if param.default then
+      prebody[#prebody + 1] = 'if ' .. name .. ' == nil then'
+      prebody[#prebody + 1] = compile(param.default)
+      prebody[#prebody + 1] = 'end'
+    end
+
+    names[#names + 1] = name
+  end
+
+  return { names = names, prebody = table.concat(prebody, '\n') }
 end
 
 -- -----------------------------------------------------------------------------
