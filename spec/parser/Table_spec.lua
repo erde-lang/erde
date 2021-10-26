@@ -1,27 +1,39 @@
 local unit = require('erde.parser.unit')
 
-spec('valid table', function()
+spec('table rule', function()
+  assert.has_subtable({ rule = 'Table' }, unit.Table('{}'))
+end)
+
+spec('table field variants', function()
   assert.has_subtable({
-    rule = 'Table',
-    { key = 'x', value = 'x' },
-  }, unit.Table(
-    '{ :x }'
-  ))
-  assert.has_subtable({
-    rule = 'Table',
-    { key = 1, value = { value = '10' } },
+    {
+      variant = 'array',
+      key = 1,
+      value = { value = '10' },
+    },
   }, unit.Table(
     '{ 10 }'
   ))
   assert.has_subtable({
-    rule = 'Table',
-    { key = 'x', value = { value = '2' } },
+    {
+      variant = 'inlineKey',
+      key = 'x',
+    },
+  }, unit.Table(
+    '{ :x }'
+  ))
+  assert.has_subtable({
+    {
+      variant = 'nameKey',
+      key = 'x',
+      value = { value = '2' },
+    },
   }, unit.Table(
     '{ x: 2 }'
   ))
   assert.has_subtable({
-    rule = 'Table',
     {
+      variant = 'stringKey',
       key = { rule = 'String' },
       value = { value = '3' },
     },
@@ -29,16 +41,19 @@ spec('valid table', function()
     '{ "my-key": 3 }'
   ))
   assert.has_subtable({
-    rule = 'Table',
     {
+      variant = 'exprKey',
       key = { op = 'add' },
       value = { value = '3' },
     },
   }, unit.Table(
     '{ [1 + 2]: 3 }'
   ))
+end)
+
+spec('valid table', function()
+  assert.has_subtable({ rule = 'Table' }, unit.Table('{}'))
   assert.has_subtable({
-    rule = 'Table',
     { key = 'x', value = { value = '2' } },
     { key = 1, value = { value = '10' } },
     { key = 'y', value = { value = '1' } },
@@ -47,11 +62,9 @@ spec('valid table', function()
     '{ x: 2, 10, y: 1, 20 }'
   ))
   assert.has_subtable({
-    rule = 'Table',
     {
       key = 'x',
       value = {
-        rule = 'Table',
         { key = 'y', value = { value = '1' } },
       },
     },

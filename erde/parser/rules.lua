@@ -749,39 +749,42 @@ function parser.Table()
     local field = {}
 
     if branchChar(':') then
-      local name = parser.Name().value
-      field.key = name
-      field.value = name
+      field.variant = 'inlineKey'
+      field.key = parser.Name().value
+    elseif bufValue == '[' then
+      field.variant = 'exprKey'
+      field.key = parser.surround('[', ']', parser.Expr)
+
+      if not branchChar(':') then
+        throw.expected(':')
+      end
+
+      field.value = parser.Expr()
     else
       local expr = parser.switch({
         parser.Name,
         parser.Expr,
       })
 
-      if expr then
-        if not branchChar(':') then
-          field.key = keyCounter
-          field.value = expr.rule == 'Name' and expr.value or expr
-          keyCounter = keyCounter + 1
-        elseif expr.rule == 'Name' then
-          field.key = expr.value
-        elseif expr.rule == 'String' then
-          field.key = expr
-        else
-          throw.unexpected('expression')
-        end
-      elseif bufValue == '[' then
-        field.key = parser.surround('[', ']', parser.Expr)
-
-        if not branchChar(':') then
-          throw.expected(':')
-        end
-      else
+      if not expr then
         throw.unexpected()
       end
 
-      if field.key and not field.value then
+      if not branchChar(':') then
+        field.variant = 'array'
+        field.key = keyCounter
+        field.value = expr
+        keyCounter = keyCounter + 1
+      elseif expr.rule == 'Name' then
+        field.variant = 'nameKey'
+        field.key = expr.value
         field.value = parser.Expr()
+      elseif expr.rule == 'String' then
+        field.variant = 'stringKey'
+        field.key = expr
+        field.value = parser.Expr()
+      else
+        throw.unexpected('expression')
       end
     end
 

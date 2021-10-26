@@ -15,6 +15,14 @@ local function compileNode(node)
   return type(nodeCompiler) == 'function' and nodeCompiler(node) or ''
 end
 
+local function format(str, values)
+  for i, value in ipairs(values) do
+    str = str:gsub(i .. '%', tostring(value))
+  end
+
+  return str
+end
+
 -- -----------------------------------------------------------------------------
 -- Rule: ArrowFunction
 -- -----------------------------------------------------------------------------
@@ -297,11 +305,38 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: Table
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.Table(node)
-  local compiled = {}
+  local compiled = { '{' }
+
+  for i, field in ipairs(node) do
+    if field.variant == 'array' then
+      compiled[#compiled + 1] = format('%1,', compile(field.value))
+    elseif field.variant == 'inlineKey' then
+      compiled[#compiled + 1] = format('%1 = %1,', field.key)
+    elseif field.variant == 'exprKey' then
+      compiled[#compiled + 1] = format(
+        '[%1] = %2,',
+        field.key,
+        compile(field.value)
+      )
+    elseif variant == 'nameKey' then
+      compiled[#compiled + 1] = format(
+        '%1 = %2,',
+        field.key,
+        compile(field.value)
+      )
+    elseif variant == 'stringKey' then
+      compiled[#compiled + 1] = format(
+        '[%1] = %2,',
+        compile(field.key),
+        compile(field.value)
+      )
+    end
+  end
+
+  compiled[#compiled + 1] = '}'
   return table.concat(compiled, '\n')
 end
 
