@@ -311,7 +311,7 @@ function compiler.Table(node)
   local compiled = { '{' }
 
   for i, field in ipairs(node) do
-    if field.variant == 'array' then
+    if field.variant == 'arrayKey' then
       compiled[#compiled + 1] = format('%1,', compile(field.value))
     elseif field.variant == 'inlineKey' then
       compiled[#compiled + 1] = format('%1 = %1,', field.key)

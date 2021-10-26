@@ -771,7 +771,7 @@ function parser.Table()
       end
 
       if not branchChar(':') then
-        field.variant = 'array'
+        field.variant = 'arrayKey'
         field.key = keyCounter
         field.value = expr
         keyCounter = keyCounter + 1
