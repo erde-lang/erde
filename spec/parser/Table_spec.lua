@@ -108,7 +108,7 @@ spec('table exprKey', function()
   assert.has_subtable({
     {
       variant = 'exprKey',
-      key = { op = 'add' },
+      key = { op = { tag = 'add' } },
       value = { value = '3' },
     },
   }, unit.Table(

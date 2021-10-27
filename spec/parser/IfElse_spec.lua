@@ -5,7 +5,7 @@ spec('valid if else', function()
     rule = 'IfElse',
     ifNode = {
       cond = {
-        op = 'gt',
+        op = { tag = 'gt' },
         { value = '2' },
         { value = '1' },
       },
@@ -18,7 +18,7 @@ spec('valid if else', function()
     elseifNodes = {
       {
         cond = {
-          op = 'gt',
+          op = { tag = 'gt' },
           { value = '3' },
           { value = '1' },
         },
@@ -32,14 +32,14 @@ spec('valid if else', function()
     elseifNodes = {
       {
         cond = {
-          op = 'gt',
+          op = { tag = 'gt' },
           { value = '3' },
           { value = '1' },
         },
       },
       {
         cond = {
-          op = 'gt',
+          op = { tag = 'gt' },
           { value = '4' },
           { value = '1' },
         },

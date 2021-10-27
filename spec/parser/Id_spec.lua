@@ -27,7 +27,7 @@ spec('valid id', function()
     {
       optional = false,
       variant = 'bracket',
-      value = { op = 'add' },
+      value = { op = { tag = 'add' } },
     },
   }, unit.Id(
     'a[2 + 3]'
@@ -39,7 +39,7 @@ spec('valid id', function()
     'a?.b'
   ))
   assert.has_subtable({
-    base = { op = 'add', parens = true },
+    base = { op = { tag = 'add' }, parens = true },
     { optional = false, variant = 'dot', value = 'b' },
   }, unit.Id(
     '(1 + 2).b'
