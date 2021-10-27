@@ -165,3 +165,17 @@ spec('ternary', function()
     '1 ? -2 : 3 + 4'
   ))
 end)
+
+spec('parens', function()
+  assert.has_subtable({
+    op = { tag = 'mult' },
+    {
+      op = { tag = 'add' },
+      { value = '1' },
+      { value = '2' },
+    },
+    { value = '3' },
+  }, unit.Expr(
+    '(1 + 2) * 3'
+  ))
+end)
