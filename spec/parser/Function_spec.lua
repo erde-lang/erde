@@ -42,34 +42,3 @@ spec('method function', function()
     unit.FunctionCall('function a:b.c() {}')
   end)
 end)
-
-spec('function call', function()
-  assert.has_subtable({
-    { variant = 'parens', optional = false },
-  }, unit.FunctionCall(
-    'hello()'
-  ))
-  assert.has_subtable({
-    base = { value = 'hello' },
-    { variant = 'dot', optional = false, value = 'world' },
-    { variant = 'parens', optional = true },
-  }, unit.FunctionCall(
-    'hello.world?()'
-  ))
-  assert.has_error(function()
-    unit.FunctionCall('hello?.()')
-  end)
-end)
-
-spec('method call', function()
-  assert.has_subtable({
-    base = { value = 'hello' },
-    { variant = 'colon', value = 'world' },
-    { variant = 'parens' },
-  }, unit.FunctionCall(
-    'hello:world()'
-  ))
-  assert.has_error(function()
-    unit.FunctionCall('hello:world.c()')
-  end)
-end)

@@ -417,7 +417,7 @@ function parser.FunctionCall()
 
   if not last then
     throw.expected('function call', true)
-  elseif last.variant ~= 'parens' then
+  elseif last.variant ~= 'params' then
     throw.error('Id cannot be function call')
   end
 
@@ -432,7 +432,7 @@ function parser.Id()
   local node = parser.OptChain()
   local last = node[#node]
 
-  if last and last.variant == 'parens' then
+  if last and last.variant == 'params' then
     throw.error('Id cannot be function call')
   end
 
@@ -560,13 +560,13 @@ function parser.OptChain()
     local chain = { optional = branchChar('?') }
 
     if branchChar('.') then
-      chain.variant = 'dot'
+      chain.variant = 'dotIndex'
       chain.value = parser.Name().value
     elseif bufValue == '[' then
-      chain.variant = 'bracket'
+      chain.variant = 'bracketIndex'
       chain.value = parser.surround('[', ']', parser.Expr)
     elseif bufValue == '(' then
-      chain.variant = 'parens'
+      chain.variant = 'params'
       chain.value = parser.surround('(', ')', function()
         local args = {}
 
@@ -580,7 +580,7 @@ function parser.OptChain()
         return args
       end)
     elseif branchChar(':') then
-      chain.variant = 'colon'
+      chain.variant = 'method'
       chain.value = parser.Name().value
       if bufValue ~= '(' then
         throw.error('missing args after method call')
