@@ -1,8 +1,11 @@
 local unit = require('erde.parser.unit')
 
-spec('valid assignment', function()
+spec('assignment rule', function()
+  assert.are.equal('Assignment', unit.Assignment('myvar = 1').rule)
+end)
+
+spec('assignment', function()
   assert.has_subtable({
-    rule = 'Assignment',
     name = 'myvar',
     expr = {
       rule = 'Number',
@@ -11,26 +14,6 @@ spec('valid assignment', function()
   }, unit.Assignment(
     'myvar = 3'
   ))
-  assert.has_subtable({
-    rule = 'Assignment',
-    name = 'myvar',
-    op = { tag = 'add' },
-    expr = {
-      rule = 'Number',
-      value = '3',
-    },
-  }, unit.Assignment(
-    'myvar += 3'
-  ))
-end)
-
-spec('invalid assignment', function()
-  assert.has_error(function()
-    unit.Assignment('myvar')
-  end)
-  assert.has_error(function()
-    unit.Assignment('myvar +')
-  end)
 end)
 
 spec('binop assignment', function()
@@ -51,6 +34,17 @@ spec('binop assignment', function()
   assert.are.equal('intdiv', unit.Assignment('x //= 1').op.tag)
   assert.are.equal('mod', unit.Assignment('x %= 1').op.tag)
   assert.are.equal('exp', unit.Assignment('x ^= 1').op.tag)
+
+  assert.has_subtable({
+    name = 'myvar',
+    op = { tag = 'add' },
+    expr = {
+      rule = 'Number',
+      value = '3',
+    },
+  }, unit.Assignment(
+    'myvar += 3'
+  ))
 end)
 
 spec('binop assignment blacklist', function()

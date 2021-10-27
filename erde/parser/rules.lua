@@ -120,6 +120,7 @@ function parser.Assignment()
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
     local op = BINOPS[opToken]
+
     if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
       consume(i)
       node.op = op
@@ -178,28 +179,21 @@ function parser.Comment()
   if branchStr('---', true) then
     node.variant = 'long'
 
-    while true do
-      if bufValue == '-' and branchStr('---', true) then
-        break
-      else
-        consume(1, capture)
-      end
+    while bufValue ~= '-' or not branchStr('---', true) do
+      consume(1, capture)
     end
   elseif branchStr('--', true) then
     node.variant = 'short'
 
-    while true do
-      if bufValue == '\n' or bufValue == EOF then
-        break
-      else
-        consume(1, capture)
-      end
+    while bufValue ~= '\n' and bufValue ~= EOF do
+      consume(1, capture)
     end
   else
     throw.expected('comment', true)
   end
 
   node.value = table.concat(capture)
+
   return node
 end
 
@@ -273,6 +267,7 @@ function parser.DoBlock()
   for _, statement in pairs(node.body) do
     if statement.rule == 'Return' then
       node.hasReturn = true
+      break
     end
   end
 

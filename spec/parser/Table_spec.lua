@@ -1,7 +1,7 @@
 local unit = require('erde.parser.unit')
 
 spec('table rule', function()
-  assert.has_subtable({ rule = 'Table' }, unit.Table('{}'))
+  assert.are.equal('Table', unit.Table('{}').rule)
 end)
 
 spec('table arrayKey', function()
