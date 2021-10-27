@@ -1,18 +1,18 @@
 local unit = require('erde.parser.unit')
 
 spec('assignment rule', function()
-  assert.are.equal('Assignment', unit.Assignment('myvar = 1').rule)
+  assert.are.equal('Assignment', unit.Assignment('a = 1').rule)
 end)
 
 spec('assignment', function()
   assert.has_subtable({
-    name = 'myvar',
+    name = 'a',
     expr = {
       rule = 'Number',
       value = '3',
     },
   }, unit.Assignment(
-    'myvar = 3'
+    'a = 3'
   ))
 end)
 
@@ -34,16 +34,12 @@ spec('binop assignment', function()
   assert.are.equal('intdiv', unit.Assignment('x //= 1').op.tag)
   assert.are.equal('mod', unit.Assignment('x %= 1').op.tag)
   assert.are.equal('exp', unit.Assignment('x ^= 1').op.tag)
-
   assert.has_subtable({
-    name = 'myvar',
+    name = 'a',
     op = { tag = 'add' },
-    expr = {
-      rule = 'Number',
-      value = '3',
-    },
+    expr = { value = '3' },
   }, unit.Assignment(
-    'myvar += 3'
+    'a += 3'
   ))
 end)
 

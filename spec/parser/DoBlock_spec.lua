@@ -10,7 +10,7 @@ spec('do block', function()
       { rule = 'Assignment' },
     },
   }, unit.DoBlock(
-    'do { x = 3 }'
+    'do { a = 3 }'
   ))
 end)
 

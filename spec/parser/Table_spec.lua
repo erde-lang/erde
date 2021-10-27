@@ -119,6 +119,19 @@ spec('table exprKey', function()
   end)
 end)
 
+spec('table mixed variants', function()
+  assert.has_subtable({
+    { key = 1 },
+    { key = 'b' },
+    { key = 2 },
+    { key = 'd' },
+    { key = { variant = 'short' } },
+    { key = { variant = 'long' } },
+  }, unit.Table(
+    '{ a, :b, c, d: 1, "e": 3, [`f`]: 2 }'
+  ))
+end)
+
 spec('nested table', function()
   assert.has_subtable({
     {

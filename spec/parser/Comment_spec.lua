@@ -15,7 +15,6 @@ spec('long comments', function()
     ' hello world\nblah ',
     unit.Comment('--- hello world\nblah ---').value
   )
-
   assert.has_error(function()
     unit.Comment('--- hello')
   end)

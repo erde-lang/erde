@@ -216,25 +216,19 @@ function parser.Destructure()
   while not branchChar('}') do
     local field = {}
 
-    local isKeyDestruct = branchChar(':')
-
-    local name = parser.try(parser.Name)
-    if name then
-      field.name = name.value
-    end
-
-    if isKeyDestruct then
-      if not field.name then
-        throw.expected('table key', true)
-      end
-
-      field.key = field.name
+    if branchChar(':') then
+      field.variant = 'mapDestruct'
+      field.name = parser.Name().value
       field.destructure = parser.try(parser.Destructure)
     else
+      field.variant = 'arrayDestruct'
       field.key = keyCounter
       keyCounter = keyCounter + 1
 
-      if not field.name then
+      local name = parser.try(parser.Name)
+      if name then
+        field.name = name.value
+      else
         field.destructure = parser.Destructure()
       end
     end
