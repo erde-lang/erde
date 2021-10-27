@@ -4,53 +4,48 @@ spec('function rules', function()
   assert.are.equal('Function', unit.Function('function a() {}').rule)
 end)
 
-spec('valid function', function()
+spec('local function', function()
   assert.has_subtable({
     variant = 'local',
-    isMethod = false,
     names = { 'a' },
   }, unit.Function(
     'local function a() {}'
   ))
-  assert.has_subtable({
-    variant = 'global',
-    isMethod = false,
-    names = { 'hello' },
-  }, unit.Function(
-    'function hello() {}'
-  ))
-  assert.has_subtable({
-    variant = 'global',
-    isMethod = false,
-    names = { 'hello', 'world' },
-  }, unit.Function(
-    'function hello.world() {}'
-  ))
-  assert.has_subtable({
-    variant = 'global',
-    isMethod = true,
-    names = { 'hello', 'world' },
-  }, unit.Function(
-    'function hello:world() {}'
-  ))
+  assert.has_error(function()
+    unit.ArrowFunction('local function() {}')
+  end)
 end)
 
-spec('invalid function', function()
-  assert.has_error(function()
-    unit.ArrowFunction('global function a() {}')
-  end)
-  assert.has_error(function()
-    unit.ArrowFunction('function a {}')
-  end)
+spec('global function', function()
+  assert.has_subtable({
+    variant = 'global',
+    names = { 'a' },
+  }, unit.Function(
+    'function a() {}'
+  ))
   assert.has_error(function()
     unit.ArrowFunction('function() {}')
   end)
+  assert.has_error(function()
+    unit.ArrowFunction('global function a() {}')
+  end)
 end)
 
-spec('valid function call', function()
+spec('method function', function()
   assert.has_subtable({
-    base = { value = 'hello' },
-    { variant = 'parens', optional = false, value = {} },
+    isMethod = true,
+    names = { 'a', 'b' },
+  }, unit.Function(
+    'function a:b() {}'
+  ))
+  assert.has_error(function()
+    unit.FunctionCall('function a:b.c() {}')
+  end)
+end)
+
+spec('function call', function()
+  assert.has_subtable({
+    { variant = 'parens', optional = false },
   }, unit.FunctionCall(
     'hello()'
   ))
@@ -61,20 +56,20 @@ spec('valid function call', function()
   }, unit.FunctionCall(
     'hello.world?()'
   ))
+  assert.has_error(function()
+    unit.FunctionCall('hello?.()')
+  end)
+end)
+
+spec('method call', function()
   assert.has_subtable({
     base = { value = 'hello' },
     { variant = 'colon', value = 'world' },
-    { variant = 'parens', optional = false },
+    { variant = 'parens' },
   }, unit.FunctionCall(
     'hello:world()'
   ))
-end)
-
-spec('invalid function call', function()
   assert.has_error(function()
-    unit.FunctionCall('hello:world')
-  end)
-  assert.has_error(function()
-    unit.FunctionCall('hello?.()')
+    unit.FunctionCall('hello:world.c()')
   end)
 end)
