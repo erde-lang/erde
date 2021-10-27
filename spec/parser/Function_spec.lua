@@ -1,56 +1,11 @@
 local unit = require('erde.parser.unit')
 
-spec('valid arrow function', function()
-  assert.has_subtable({
-    rule = 'ArrowFunction',
-    variant = 'skinny',
-    body = { { rule = 'Return' } },
-  }, unit.ArrowFunction(
-    '() -> { return 1 }'
-  ))
-  assert.has_subtable({
-    rule = 'ArrowFunction',
-    variant = 'skinny',
-    returns = { { value = '1' } },
-  }, unit.ArrowFunction(
-    '() -> 1'
-  ))
-  assert.has_subtable({
-    rule = 'ArrowFunction',
-    variant = 'skinny',
-    returns = {
-      { value = '1' },
-      { value = '2' },
-    },
-  }, unit.ArrowFunction(
-    '() -> 1, 2'
-  ))
-  assert.has_subtable({
-    rule = 'ArrowFunction',
-    variant = 'fat',
-  }, unit.ArrowFunction(
-    '() => { return 1 }'
-  ))
-end)
-
-spec('invalid arrow function', function()
-  assert.has_error(function()
-    unit.ArrowFunction('-> {}')
-  end)
-  assert.has_error(function()
-    unit.ArrowFunction('() ~> {}')
-  end)
-  assert.has_error(function()
-    unit.ArrowFunction('() ~> 1,')
-  end)
-  assert.has_error(function()
-    unit.ArrowFunction('() ~> ,1')
-  end)
+spec('function rules', function()
+  assert.are.equal('Function', unit.Function('function a() {}').rule)
 end)
 
 spec('valid function', function()
   assert.has_subtable({
-    rule = 'Function',
     variant = 'local',
     isMethod = false,
     names = { 'a' },
@@ -58,7 +13,6 @@ spec('valid function', function()
     'local function a() {}'
   ))
   assert.has_subtable({
-    rule = 'Function',
     variant = 'global',
     isMethod = false,
     names = { 'hello' },
@@ -66,7 +20,6 @@ spec('valid function', function()
     'function hello() {}'
   ))
   assert.has_subtable({
-    rule = 'Function',
     variant = 'global',
     isMethod = false,
     names = { 'hello', 'world' },
@@ -74,7 +27,6 @@ spec('valid function', function()
     'function hello.world() {}'
   ))
   assert.has_subtable({
-    rule = 'Function',
     variant = 'global',
     isMethod = true,
     names = { 'hello', 'world' },

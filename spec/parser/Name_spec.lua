@@ -17,6 +17,7 @@ local KEYWORDS = {
   'true',
   'nil',
   'return',
+  'self',
 }
 
 spec('valid names', function()

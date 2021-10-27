@@ -22,6 +22,7 @@ local KEYWORDS = {
   'true',
   'nil',
   'return',
+  'self',
 }
 
 local LEFT_ASSOCIATIVE = -1
@@ -71,7 +72,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.ArrowFunction()
-  local node = { params = parser.Params() }
+  local node = { params = parser.Params(), hasImplicitReturns = false }
 
   if branchStr('->') then
     node.variant = 'skinny'
@@ -84,6 +85,7 @@ function parser.ArrowFunction()
   if bufValue == '{' then
     node.body = parser.surround('{', '}', parser.Block)
   else
+    node.hasImplicitReturns = true
     node.returns = {}
 
     repeat
@@ -95,6 +97,10 @@ function parser.ArrowFunction()
 
       node.returns[#node.returns + 1] = expr
     until not branchChar(',')
+
+    if #node.returns == 0 then
+      throw.exprected('expression', true)
+    end
   end
 
   return node
