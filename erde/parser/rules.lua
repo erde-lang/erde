@@ -2,76 +2,11 @@ local _ENV = require('erde.parser.env').load()
 require('erde.parser.utils')
 
 -- -----------------------------------------------------------------------------
--- Constants
--- -----------------------------------------------------------------------------
-
-local KEYWORDS = {
-  'local',
-  'global',
-  'if',
-  'elseif',
-  'else',
-  'for',
-  'in',
-  'while',
-  'repeat',
-  'until',
-  'do',
-  'function',
-  'false',
-  'true',
-  'nil',
-  'return',
-}
-
-local LEFT_ASSOCIATIVE = -1
-local RIGHT_ASSOCIATIVE = 1
-
-local UNOPS = {
-  ['-'] = { tag = 'neg', prec = 14 },
-  ['#'] = { tag = 'len', prec = 14 },
-  ['~'] = { tag = 'not', prec = 14 },
-  ['.~'] = { tag = 'bnot', prec = 14 },
-}
-
-local BINOPS = {
-  ['>>'] = { tag = 'pipe', prec = 1, assoc = LEFT_ASSOCIATIVE },
-  ['?'] = { tag = 'ternary', prec = 2, assoc = LEFT_ASSOCIATIVE },
-  ['??'] = { tag = 'nc', prec = 3, assoc = LEFT_ASSOCIATIVE },
-  ['|'] = { tag = 'or', prec = 4, assoc = LEFT_ASSOCIATIVE },
-  ['&'] = { tag = 'and', prec = 5, assoc = LEFT_ASSOCIATIVE },
-  ['=='] = { tag = 'eq', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['~='] = { tag = 'neq', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['<='] = { tag = 'lte', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['>='] = { tag = 'gte', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['<'] = { tag = 'lt', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['>'] = { tag = 'gt', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  ['.|'] = { tag = 'bor', prec = 7, assoc = LEFT_ASSOCIATIVE },
-  ['.~'] = { tag = 'bxor', prec = 8, assoc = LEFT_ASSOCIATIVE },
-  ['.&'] = { tag = 'band', prec = 9, assoc = LEFT_ASSOCIATIVE },
-  ['.<<'] = { tag = 'lshift', prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['.>>'] = { tag = 'rshift', prec = 10, assoc = LEFT_ASSOCIATIVE },
-  ['..'] = { tag = 'concat', prec = 11, assoc = LEFT_ASSOCIATIVE },
-  ['+'] = { tag = 'add', prec = 12, assoc = LEFT_ASSOCIATIVE },
-  ['-'] = { tag = 'sub', prec = 12, assoc = LEFT_ASSOCIATIVE },
-  ['*'] = { tag = 'mult', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['/'] = { tag = 'div', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['//'] = { tag = 'intdiv', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['%'] = { tag = 'mod', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  ['^'] = { tag = 'exp', prec = 15, assoc = RIGHT_ASSOCIATIVE },
-}
-
-local BINOP_MAX_LEN = 1
-for key, value in pairs(BINOPS) do
-  BINOP_MAX_LEN = math.max(BINOP_MAX_LEN, #key)
-end
-
--- -----------------------------------------------------------------------------
 -- Rule: ArrowFunction
 -- -----------------------------------------------------------------------------
 
 function parser.ArrowFunction()
-  local node = { params = parser.Params() }
+  local node = { params = parser.Params(), hasImplicitReturns = false }
 
   if branchStr('->') then
     node.variant = 'skinny'
@@ -84,6 +19,7 @@ function parser.ArrowFunction()
   if bufValue == '{' then
     node.body = parser.surround('{', '}', parser.Block)
   else
+    node.hasImplicitReturns = true
     node.returns = {}
 
     repeat
@@ -95,6 +31,10 @@ function parser.ArrowFunction()
 
       node.returns[#node.returns + 1] = expr
     until not branchChar(',')
+
+    if #node.returns == 0 then
+      throw.exprected('expression', true)
+    end
   end
 
   return node
@@ -120,6 +60,7 @@ function parser.Assignment()
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
     local op = BINOPS[opToken]
+
     if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
       consume(i)
       node.op = op
@@ -178,28 +119,21 @@ function parser.Comment()
   if branchStr('---', true) then
     node.variant = 'long'
 
-    while true do
-      if bufValue == '-' and branchStr('---', true) then
-        break
-      else
-        consume(1, capture)
-      end
+    while bufValue ~= '-' or not branchStr('---', true) do
+      consume(1, capture)
     end
   elseif branchStr('--', true) then
     node.variant = 'short'
 
-    while true do
-      if bufValue == '\n' or bufValue == EOF then
-        break
-      else
-        consume(1, capture)
-      end
+    while bufValue ~= '\n' and bufValue ~= EOF do
+      consume(1, capture)
     end
   else
     throw.expected('comment', true)
   end
 
   node.value = table.concat(capture)
+
   return node
 end
 
@@ -222,25 +156,19 @@ function parser.Destructure()
   while not branchChar('}') do
     local field = {}
 
-    local isKeyDestruct = branchChar(':')
-
-    local name = parser.try(parser.Name)
-    if name then
-      field.name = name.value
-    end
-
-    if isKeyDestruct then
-      if not field.name then
-        throw.expected('table key', true)
-      end
-
-      field.key = field.name
+    if branchChar(':') then
+      field.variant = 'mapDestruct'
+      field.name = parser.Name().value
       field.destructure = parser.try(parser.Destructure)
     else
+      field.variant = 'arrayDestruct'
       field.key = keyCounter
       keyCounter = keyCounter + 1
 
-      if not field.name then
+      local name = parser.try(parser.Name)
+      if name then
+        field.name = name.value
+      else
         field.destructure = parser.Destructure()
       end
     end
@@ -273,6 +201,7 @@ function parser.DoBlock()
   for _, statement in pairs(node.body) do
     if statement.rule == 'Return' then
       node.hasReturn = true
+      break
     end
   end
 
@@ -310,10 +239,10 @@ function parser.Expr(minPrec)
 
     if not op or op.prec < minPrec then
       break
-    else
-      consume(#opToken)
-      node = { op = op, node }
     end
+
+    consume(#opToken)
+    node = { op = op, node }
 
     if op.tag == 'ternary' then
       node[#node + 1] = parser.Expr()
@@ -422,7 +351,7 @@ function parser.FunctionCall()
 
   if not last then
     throw.expected('function call', true)
-  elseif last.variant ~= 'parens' then
+  elseif last.variant ~= 'params' then
     throw.error('Id cannot be function call')
   end
 
@@ -437,7 +366,7 @@ function parser.Id()
   local node = parser.OptChain()
   local last = node[#node]
 
-  if last and last.variant == 'parens' then
+  if last and last.variant == 'params' then
     throw.error('Id cannot be function call')
   end
 
@@ -565,13 +494,13 @@ function parser.OptChain()
     local chain = { optional = branchChar('?') }
 
     if branchChar('.') then
-      chain.variant = 'dot'
+      chain.variant = 'dotIndex'
       chain.value = parser.Name().value
     elseif bufValue == '[' then
-      chain.variant = 'bracket'
+      chain.variant = 'bracketIndex'
       chain.value = parser.surround('[', ']', parser.Expr)
     elseif bufValue == '(' then
-      chain.variant = 'parens'
+      chain.variant = 'params'
       chain.value = parser.surround('(', ')', function()
         local args = {}
 
@@ -585,7 +514,7 @@ function parser.OptChain()
         return args
       end)
     elseif branchChar(':') then
-      chain.variant = 'colon'
+      chain.variant = 'method'
       chain.value = parser.Name().value
       if bufValue ~= '(' then
         throw.error('missing args after method call')
@@ -803,31 +732,29 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Terminal()
-  local node
-  local token = {}
-
   if branchChar('(') then
-    node = parser.Expr()
+    local node = parser.Expr()
     node.parens = true
 
     if not branchChar(')') then
       throw.expected(')')
     end
-  elseif
-    branchWord('true', token)
-    or branchWord('false', token)
-    or branchWord('nil', token)
-    or branchWord('...', token)
-  then
-    node = { value = table.concat(token) }
-  else
-    node = parser.switch({
-      parser.Table,
-      parser.Number,
-      parser.String,
-      parser.OptChain,
-    })
+
+    return node
   end
+
+  for _, terminal in pairs(TERMINALS) do
+    if branchWord(terminal) then
+      return { value = terminal }
+    end
+  end
+
+  local node = parser.switch({
+    parser.Table,
+    parser.Number,
+    parser.String,
+    parser.OptChain,
+  })
 
   if not node then
     throw.expected('terminal', true)

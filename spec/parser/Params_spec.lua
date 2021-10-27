@@ -1,24 +1,29 @@
 local unit = require('erde.parser.unit')
 
-spec('valid params', function()
+spec('params rule', function()
+  assert.are.equal('Params', unit.Params('()').rule)
+end)
+
+spec('params', function()
+  assert.are.equal(0, #unit.Params('()'))
   assert.has_subtable({
-    rule = 'Params',
-  }, unit.Params('()'))
-  assert.has_subtable({
-    rule = 'Params',
     { value = { value = 'a' } },
-  }, unit.Params(
-    '(a)'
-  ))
+  }, unit.Params('(a)'))
   assert.has_subtable({
-    rule = 'Params',
     { value = { value = 'a' } },
     { value = { value = 'b' } },
   }, unit.Params(
     '(a, b)'
   ))
   assert.has_subtable({
-    rule = 'Params',
+    { value = { rule = 'Destructure' } },
+  }, unit.Params(
+    '({ :a })'
+  ))
+end)
+
+spec('optional params', function()
+  assert.has_subtable({
     {
       default = { value = '2' },
       value = { value = 'a' },
@@ -26,39 +31,25 @@ spec('valid params', function()
   }, unit.Params(
     '(a = 2)'
   ))
+end)
+
+spec('params varargs', function()
   assert.has_subtable({
-    rule = 'Params',
     { varargs = true },
-  }, unit.Params(
-    '(...)'
-  ))
+  }, unit.Params('(...)'))
   assert.has_subtable({
-    rule = 'Params',
     { value = { value = 'a' } },
     { varargs = true },
   }, unit.Params(
     '(a, ...)'
   ))
   assert.has_subtable({
-    rule = 'Params',
     { value = { value = 'a' } },
     { varargs = true, name = 'b' },
   }, unit.Params(
     '(a, ...b)'
   ))
-  assert.has_subtable({
-    rule = 'Params',
-    { value = { rule = 'Destructure' } },
-  }, unit.Params(
-    '({ :a })'
-  ))
-end)
-
-spec('invalid params', function()
   assert.has_error(function()
     unit.Params('(..., a)')
-  end)
-  assert.has_error(function()
-    unit.Params('(a b)')
   end)
 end)

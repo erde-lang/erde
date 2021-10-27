@@ -1,25 +1,20 @@
 local unit = require('erde.parser.unit')
 
-spec('valid short comment', function()
+spec('comment rule', function()
+  assert.are.equal('Comment', unit.Comment('-- hello world').rule)
+end)
+
+spec('short comments', function()
   assert.are.equal(' hello world', unit.Comment('-- hello world').value)
   assert.are.equal(' hello world', unit.Comment('-- hello world\nblah').value)
 end)
 
-spec('invalid short comment', function()
-  assert.has_error(function()
-    unit.Comment('')
-  end)
-end)
-
-spec('valid long comment', function()
+spec('long comments', function()
   assert.are.equal(' hello world', unit.Comment('--- hello world---').value)
   assert.are.equal(
     ' hello world\nblah ',
     unit.Comment('--- hello world\nblah ---').value
   )
-end)
-
-spec('invalid long comment', function()
   assert.has_error(function()
     unit.Comment('--- hello')
   end)

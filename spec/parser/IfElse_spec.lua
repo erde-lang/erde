@@ -1,84 +1,54 @@
 local unit = require('erde.parser.unit')
 
-spec('valid if else', function()
+spec('if else rule', function()
+  assert.are.equal('IfElse', unit.IfElse('if true {}').rule)
+end)
+
+spec('if', function()
   assert.has_subtable({
-    rule = 'IfElse',
     ifNode = {
-      cond = {
-        op = { tag = 'gt' },
-        { value = '2' },
-        { value = '1' },
-      },
+      cond = { value = 'true' },
+      body = {},
     },
   }, unit.IfElse(
-    'if 2 > 1 {}'
-  ))
-  assert.has_subtable({
-    rule = 'IfElse',
-    elseifNodes = {
-      {
-        cond = {
-          op = { tag = 'gt' },
-          { value = '3' },
-          { value = '1' },
-        },
-      },
-    },
-  }, unit.IfElse(
-    'if 2 > 1 {} elseif 3 > 1 {}'
-  ))
-  assert.has_subtable({
-    rule = 'IfElse',
-    elseifNodes = {
-      {
-        cond = {
-          op = { tag = 'gt' },
-          { value = '3' },
-          { value = '1' },
-        },
-      },
-      {
-        cond = {
-          op = { tag = 'gt' },
-          { value = '4' },
-          { value = '1' },
-        },
-      },
-    },
-  }, unit.IfElse(
-    'if 2 > 1 {} elseif 3 > 1 {} elseif 4 > 1 {}'
-  ))
-  assert.has_subtable({
-    rule = 'IfElse',
-    elseNode = {},
-  }, unit.IfElse(
-    'if 2 > 1 {} elseif 3 > 1 {} else {}'
-  ))
-  assert.has_subtable({
-    rule = 'IfElse',
-    elseNode = {},
-  }, unit.IfElse(
-    'if 2 > 1 {} else {}'
+    'if true {}'
   ))
 end)
 
-spec('invalid if else', function()
-  assert.has_error(function()
-    unit.IfElse('if {}')
+spec('if + elseif', function()
+  assert.has_subtable({
+    ifNode = {},
+    elseifNodes = {
+      { cond = { value = 'true' } },
+    },
+  }, unit.IfElse(
+    'if false {} elseif true {}'
+  ))
+  assert.has_subtable({
+    ifNode = {},
+    elseifNodes = {
+      { cond = { value = 'false' } },
+      { cond = { value = 'true' } },
+    },
+  }, unit.IfElse(
+    'if false {} elseif false {} elseif true {}'
+  ))
+end)
+
+spec('if + else', function()
+  assert.has_subtable({
+    ifNode = {},
+    elseNode = { body = {} },
+  }, unit.IfElse(
+    'if true {} else {}'
+  ))
+end)
+
+spec('if + elseif + else', function()
+  assert.has_no.errors(function()
+    unit.IfElse('if false {} elseif false {} else {}')
   end)
-  assert.has_error(function()
-    unit.IfElse('if 2 > 1 {')
-  end)
-  assert.has_error(function()
-    unit.IfElse('if 2 > 1 {} elseif {}')
-  end)
-  assert.has_error(function()
-    unit.IfElse('if 2 > 1 {} else 2 > 1 {}')
-  end)
-  assert.has_error(function()
-    unit.IfElse('elseif 2 > 1 {}')
-  end)
-  assert.has_error(function()
-    unit.IfElse('else {}')
+  assert.has_no.errors(function()
+    unit.IfElse('if false {} elseif false {} elseif true {} else {}')
   end)
 end)
