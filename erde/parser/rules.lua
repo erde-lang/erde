@@ -299,10 +299,10 @@ function parser.Expr(minPrec)
 
     if not op or op.prec < minPrec then
       break
-    else
-      consume(#opToken)
-      node = { op = op, node }
     end
+
+    consume(#opToken)
+    node = { op = op, node }
 
     if op.tag == 'ternary' then
       node[#node + 1] = parser.Expr()

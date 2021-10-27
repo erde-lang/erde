@@ -1,6 +1,12 @@
 local unit = require('erde.parser.unit')
 
-spec('valid binops', function()
+spec('expr rule', function()
+  assert.are.equal('Expr', unit.Expr('1 + 2').rule)
+  assert.are.equal('Number', unit.Expr('1').rule)
+  assert.are.equal('String', unit.Expr('"hello"').rule)
+end)
+
+spec('binop tags', function()
   assert.are.equal('pipe', unit.Expr('1 >> 2').op.tag)
   assert.are.equal('ternary', unit.Expr('1 ? 2 : 3').op.tag)
   assert.are.equal('nc', unit.Expr('1 ?? 2').op.tag)
@@ -140,7 +146,7 @@ spec('unops', function()
   ))
 end)
 
-spec('ternary', function()
+spec('ternary operator', function()
   assert.has_subtable({
     op = { tag = 'ternary' },
     { value = '1' },
@@ -163,19 +169,5 @@ spec('ternary', function()
     },
   }, unit.Expr(
     '1 ? -2 : 3 + 4'
-  ))
-end)
-
-spec('parens', function()
-  assert.has_subtable({
-    op = { tag = 'mult' },
-    {
-      op = { tag = 'add' },
-      { value = '1' },
-      { value = '2' },
-    },
-    { value = '3' },
-  }, unit.Expr(
-    '(1 + 2) * 3'
   ))
 end)
