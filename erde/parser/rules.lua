@@ -747,6 +747,7 @@ function parser.Terminal()
     or branchWord('false', token)
     or branchWord('nil', token)
     or branchWord('...', token)
+    or branchWord('self', token)
   then
     node = { value = table.concat(token) }
   else
