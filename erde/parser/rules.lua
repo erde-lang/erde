@@ -732,32 +732,29 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Terminal()
-  local node
-  local token = {}
-
   if branchChar('(') then
-    node = parser.Expr()
+    local node = parser.Expr()
     node.parens = true
 
     if not branchChar(')') then
       throw.expected(')')
     end
-  elseif
-    branchWord('true', token)
-    or branchWord('false', token)
-    or branchWord('nil', token)
-    or branchWord('...', token)
-    or branchWord('self', token)
-  then
-    node = { value = table.concat(token) }
-  else
-    node = parser.switch({
-      parser.Table,
-      parser.Number,
-      parser.String,
-      parser.OptChain,
-    })
+
+    return node
   end
+
+  for _, terminal in pairs(TERMINALS) do
+    if branchWord(terminal) then
+      return { value = terminal }
+    end
+  end
+
+  local node = parser.switch({
+    parser.Table,
+    parser.Number,
+    parser.String,
+    parser.OptChain,
+  })
 
   if not node then
     throw.expected('terminal', true)

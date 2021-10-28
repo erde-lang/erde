@@ -78,4 +78,11 @@ return {
     'return',
     'self',
   },
+
+  TERMINALS = {
+    'true',
+    'false',
+    'nil',
+    'self',
+  },
 }
