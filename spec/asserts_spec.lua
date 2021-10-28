@@ -33,10 +33,10 @@ assert:register(
 )
 
 -- -----------------------------------------------------------------------------
--- erde_compile_expr
+-- erde_eval
 -- -----------------------------------------------------------------------------
 
-local function erde_compile_expr(state, args)
+local function erde_eval(state, args)
   if _VERSION:find('5.1') then
     return args[1] == loadstring('return ' .. args[2])()
   else
@@ -45,13 +45,37 @@ local function erde_compile_expr(state, args)
 end
 
 require('say'):set(
-  'assertion.erde_compile_expr.positive',
+  'assertion.erde_eval.positive',
   'Compilation error. Expected %s, got %s'
 )
 
 assert:register(
   'assertion',
-  'erde_compile_expr',
-  erde_compile_expr,
-  'assertion.erde_compile_expr.positive'
+  'erde_eval',
+  erde_eval,
+  'assertion.erde_eval.positive'
+)
+
+-- -----------------------------------------------------------------------------
+-- erde_run
+-- -----------------------------------------------------------------------------
+
+local function erde_run(state, args)
+  if _VERSION:find('5.1') then
+    return args[1] == loadstring('return ' .. args[2])()
+  else
+    return args[1] == load('return ' .. args[2])()
+  end
+end
+
+require('say'):set(
+  'assertion.erde_run.positive',
+  'Compilation error. Expected %s, got %s'
+)
+
+assert:register(
+  'assertion',
+  'erde_run',
+  erde_run,
+  'assertion.erde_run.positive'
 )
