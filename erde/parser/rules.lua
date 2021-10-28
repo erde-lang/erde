@@ -735,6 +735,7 @@ function parser.Terminal()
   if bufValue == '(' then
     local node = parser.switch({
       parser.ArrowFunction,
+      parser.OptChain,
       function()
         return parser.surround('(', ')', parser.Expr)
       end,

@@ -1,4 +1,23 @@
 -- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function loadLua(code)
+  local runner
+  if _VERSION:find('5.1') then
+    runner = loadstring(code)
+  else
+    runner = load(code)
+  end
+
+  if runner == nil then
+    error('Invalid Lua code: ' .. code)
+  end
+
+  return runner
+end
+
+-- -----------------------------------------------------------------------------
 -- has_subtable
 -- -----------------------------------------------------------------------------
 
@@ -37,16 +56,12 @@ assert:register(
 -- -----------------------------------------------------------------------------
 
 local function erde_eval(state, args)
-  if _VERSION:find('5.1') then
-    return args[1] == loadstring('return ' .. args[2])()
-  else
-    return args[1] == load('return ' .. args[2])()
-  end
+  return args[1] == loadLua('return ' .. args[2])()
 end
 
 require('say'):set(
   'assertion.erde_eval.positive',
-  'Compilation error. Expected %s, got %s'
+  'Eval error. Expected %s, got %s'
 )
 
 assert:register(
@@ -61,16 +76,12 @@ assert:register(
 -- -----------------------------------------------------------------------------
 
 local function erde_run(state, args)
-  if _VERSION:find('5.1') then
-    return args[1] == loadstring('return ' .. args[2])()
-  else
-    return args[1] == load('return ' .. args[2])()
-  end
+  return args[1] == loadLua(args[2])()
 end
 
 require('say'):set(
   'assertion.erde_run.positive',
-  'Compilation error. Expected %s, got %s'
+  'Run error. Expected %s, got %s'
 )
 
 assert:register(
