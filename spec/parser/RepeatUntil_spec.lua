@@ -1,29 +1,22 @@
 local unit = require('erde.parser.unit')
 
-spec('valid repeat until', function()
-  assert.has_subtable({
-    rule = 'RepeatUntil',
-    cond = {
-      op = { tag = 'gt' },
-      { value = '1' },
-      { value = '0' },
-    },
-  }, unit.RepeatUntil(
-    'repeat {} until (1 > 0)'
-  ))
+spec('repeat until rule', function()
+  assert.are.equal(
+    'RepeatUntil',
+    unit.RepeatUntil('repeat {} until (true)').rule
+  )
 end)
 
-spec('invalid repeat until', function()
+spec('repeat until', function()
+  assert.has_subtable({
+    cond = { value = 'true' },
+  }, unit.RepeatUntil(
+    'repeat {} until (true)'
+  ))
   assert.has_error(function()
-    unit.RepeatUntil('repeat {} until 1 > 0')
-  end)
-  assert.has_error(function()
-    unit.RepeatUntil('repeat until 1 > 0')
+    unit.RepeatUntil('repeat {} until true')
   end)
   assert.has_error(function()
     unit.RepeatUntil('repeat {} until ()')
-  end)
-  assert.has_error(function()
-    unit.RepeatUntil('repeat {}')
   end)
 end)
