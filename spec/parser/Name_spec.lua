@@ -20,6 +20,10 @@ local KEYWORDS = {
   'self',
 }
 
+spec('name rule', function()
+  assert.are.equal('Name', unit.Name('a').rule)
+end)
+
 spec('valid names', function()
   assert.are.equal('x', unit.Name('x').value)
   assert.are.equal('hello', unit.Name('hello').value)

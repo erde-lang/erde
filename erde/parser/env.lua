@@ -1,14 +1,21 @@
+local constants = require('erde.constants')
+
 -- -----------------------------------------------------------------------------
 -- Environment
 -- -----------------------------------------------------------------------------
 
 local env = {}
 
-for key, value in pairs(_G) do
-  if env[key] == nil then
-    env[key] = value
+local function copyToEnv(t)
+  for key, value in pairs(t) do
+    if env[key] == nil then
+      env[key] = value
+    end
   end
 end
+
+copyToEnv(constants)
+copyToEnv(_G)
 
 local function load()
   if _VERSION:find('5.1') then
@@ -21,10 +28,8 @@ end
 local _ENV = load()
 
 -- -----------------------------------------------------------------------------
--- Constants / State
+-- State
 -- -----------------------------------------------------------------------------
-
-EOF = -1
 
 buffer = {}
 bufIndex = 1
