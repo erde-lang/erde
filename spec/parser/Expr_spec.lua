@@ -1,3 +1,4 @@
+local constants = require('erde.constants')
 local unit = require('erde.parser.unit')
 
 spec('expr rule', function()
@@ -6,31 +7,28 @@ spec('expr rule', function()
   assert.are.equal('String', unit.Expr('"hello"').rule)
 end)
 
+spec('unop tags', function()
+  for _, op in pairs(constants.UNOPS) do
+    assert.has_subtable({
+      variant = 'unop',
+      op = { tag = op.tag },
+    }, unit.Expr(
+      op.token .. '1'
+    ))
+  end
+end)
+
 spec('binop tags', function()
-  assert.are.equal('pipe', unit.Expr('1 >> 2').op.tag)
-  assert.are.equal('ternary', unit.Expr('1 ? 2 : 3').op.tag)
-  assert.are.equal('nc', unit.Expr('1 ?? 2').op.tag)
-  assert.are.equal('or', unit.Expr('1 | 2').op.tag)
-  assert.are.equal('and', unit.Expr('1 & 2').op.tag)
-  assert.are.equal('eq', unit.Expr('1 == 2').op.tag)
-  assert.are.equal('neq', unit.Expr('1 ~= 2').op.tag)
-  assert.are.equal('lte', unit.Expr('1 <= 2').op.tag)
-  assert.are.equal('gte', unit.Expr('1 >= 2').op.tag)
-  assert.are.equal('lt', unit.Expr('1 < 2').op.tag)
-  assert.are.equal('gt', unit.Expr('1 > 2').op.tag)
-  assert.are.equal('bor', unit.Expr('1 .| 2').op.tag)
-  assert.are.equal('bxor', unit.Expr('1 .~ 2').op.tag)
-  assert.are.equal('band', unit.Expr('1 .& 2').op.tag)
-  assert.are.equal('lshift', unit.Expr('1 .<< 2').op.tag)
-  assert.are.equal('rshift', unit.Expr('1 .>> 2').op.tag)
-  assert.are.equal('concat', unit.Expr('1 .. 2').op.tag)
-  assert.are.equal('add', unit.Expr('1 + 2').op.tag)
-  assert.are.equal('sub', unit.Expr('1 - 2').op.tag)
-  assert.are.equal('mult', unit.Expr('1 * 2').op.tag)
-  assert.are.equal('div', unit.Expr('1 / 2').op.tag)
-  assert.are.equal('intdiv', unit.Expr('1 // 2').op.tag)
-  assert.are.equal('mod', unit.Expr('1 % 2').op.tag)
-  assert.are.equal('exp', unit.Expr('1 ^ 2').op.tag)
+  for _, op in pairs(constants.BINOPS) do
+    local testExpr = op.tag == 'ternary' and '1 ? 2 : 3'
+      or '1' .. op.token .. '2'
+    assert.has_subtable({
+      variant = 'binop',
+      op = { tag = op.tag },
+    }, unit.Expr(
+      testExpr
+    ))
+  end
 end)
 
 spec('left associative op precedence', function()

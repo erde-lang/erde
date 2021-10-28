@@ -12,3 +12,22 @@ spec('terminals', function()
     assert.are.equal(terminal, unit.Terminal(terminal).value)
   end
 end)
+
+spec('terminal parens', function()
+  assert.has_subtable({
+    rule = 'Number',
+    value = '1',
+    parens = true,
+  }, unit.Terminal(
+    '(1)'
+  ))
+  assert.has_subtable({
+    rule = 'ArrowFunction',
+    parens = true,
+  }, unit.Terminal(
+    '(() -> {})'
+  ))
+  assert.has_error(function()
+    unit.Terminal('()')
+  end)
+end)

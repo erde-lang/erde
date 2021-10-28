@@ -1,5 +1,18 @@
-local _ENV = require('erde.parser.env').load()
+local _ENV = require('erde.parser.env'):load()
 require('erde.parser.utils')
+
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function getOp(opMap, opMaxLen)
+  for i = opMaxLen, 1, -1 do
+    local op = opMap[peek(i)]
+    if op then
+      return op
+    end
+  end
+end
 
 -- -----------------------------------------------------------------------------
 -- Rule: ArrowFunction
@@ -59,7 +72,7 @@ function parser.Assignment()
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
-    local op = BINOPS[opToken]
+    local op = BINOP_MAP[opToken]
 
     if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
       consume(i)
@@ -219,41 +232,34 @@ function parser.Expr(minPrec)
   minPrec = minPrec or 1
   local node
 
-  if UNOPS[bufValue] ~= nil then
-    local op = UNOPS[bufValue]
-    consume()
-    node = { op = op, parser.Expr(op.prec + 1) }
+  local unop = getOp(UNOP_MAP, UNOP_MAX_LEN)
+  if unop ~= nil then
+    consume(#unop.token)
+    node = { variant = 'unop', op = unop, parser.Expr(unop.prec + 1) }
   else
     node = parser.Terminal()
   end
 
   while true do
-    local op, opToken
-    for i = BINOP_MAX_LEN, 1, -1 do
-      opToken = peek(i)
-      op = BINOPS[opToken]
-      if op then
-        break
-      end
-    end
+    local binop = getOp(BINOP_MAP, BINOP_MAX_LEN)
 
-    if not op or op.prec < minPrec then
+    if not binop or binop.prec < minPrec then
       break
     end
 
-    consume(#opToken)
-    node = { op = op, node }
+    consume(#binop.token)
+    node = { variant = 'binop', op = binop, node }
 
-    if op.tag == 'ternary' then
+    if binop.tag == 'ternary' then
       node[#node + 1] = parser.Expr()
       if not branchChar(':') then
         throw.expected(':')
       end
     end
 
-    node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.Expr(op.prec + 1)
-      or parser.Expr(op.prec)
+    node[#node + 1] = binop.assoc == LEFT_ASSOCIATIVE
+        and parser.Expr(binop.prec + 1)
+      or parser.Expr(binop.prec)
   end
 
   return node
@@ -439,7 +445,8 @@ function parser.Number()
   if branchStr('0x', true, capture) or branchStr('0X', true, capture) then
     stream(Hex, capture, true)
 
-    if branchChar('.', true, capture) then
+    if bufValue == '.' and not getOp(BINOP_MAP, BINOP_MAX_LEN) then
+      consume(1, capture)
       stream(Hex, capture, true)
     end
 
@@ -449,10 +456,11 @@ function parser.Number()
     end
   else
     while Digit[bufValue] do
-      consume(1, capture, true)
+      consume(1, capture)
     end
 
-    if branchChar('.', true, capture) then
+    if bufValue == '.' and not getOp(BINOP_MAP, BINOP_MAX_LEN) then
+      consume(1, capture)
       stream(Digit, capture, true)
     end
 
@@ -528,7 +536,8 @@ function parser.OptChain()
     node[#node + 1] = chain
   end
 
-  return node
+  -- unpack trivial OptChain
+  return #node == 0 and node.base or node
 end
 
 -- -----------------------------------------------------------------------------
@@ -732,14 +741,20 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Terminal()
-  if branchChar('(') then
-    local node = parser.Expr()
-    node.parens = true
+  if bufValue == '(' then
+    local node = parser.switch({
+      parser.ArrowFunction,
+      parser.OptChain,
+      function()
+        return parser.surround('(', ')', parser.Expr)
+      end,
+    })
 
-    if not branchChar(')') then
-      throw.expected(')')
+    if node == nil then
+      throw.unexpected()
     end
 
+    node.parens = true
     return node
   end
 
