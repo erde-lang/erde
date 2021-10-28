@@ -1,5 +1,9 @@
 local unit = require('erde.parser.unit')
 
+spec('number rule', function()
+  assert.are.equal('Number', unit.Number('0').rule)
+end)
+
 spec('integer', function()
   assert.are.equal('9', unit.Number('9').value)
   assert.are.equal('43', unit.Number('43').value)
