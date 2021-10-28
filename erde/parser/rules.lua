@@ -732,14 +732,19 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Terminal()
-  if branchChar('(') then
-    local node = parser.Expr()
-    node.parens = true
+  if bufValue == '(' then
+    local node = parser.switch({
+      parser.ArrowFunction,
+      function()
+        return parser.surround('(', ')', parser.Expr)
+      end,
+    })
 
-    if not branchChar(')') then
-      throw.expected(')')
+    if node == nil then
+      throw.unexpected()
     end
 
+    node.parens = true
     return node
   end
 
