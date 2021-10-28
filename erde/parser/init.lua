@@ -1,4 +1,4 @@
-local _ENV = require('erde.parser.env').load()
+local _ENV = require('erde.parser.env'):load()
 require('erde.parser.rules')
 
 return function()

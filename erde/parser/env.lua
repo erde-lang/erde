@@ -1,31 +1,14 @@
+local Environment = require('erde.Environment')
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Environment
 -- -----------------------------------------------------------------------------
 
-local env = {}
-
-local function copyToEnv(t)
-  for key, value in pairs(t) do
-    if env[key] == nil then
-      env[key] = value
-    end
-  end
-end
-
-copyToEnv(constants)
-copyToEnv(_G)
-
-local function load()
-  if _VERSION:find('5.1') then
-    setfenv(2, env)
-  else
-    return env
-  end
-end
-
-local _ENV = load()
+local env = Environment()
+env:merge(constants)
+env:merge(_G)
+local _ENV = env:load()
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -243,4 +226,4 @@ parser = setmetatable({}, {
 -- Return
 -- -----------------------------------------------------------------------------
 
-return { load = load }
+return env
