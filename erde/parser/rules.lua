@@ -528,7 +528,8 @@ function parser.OptChain()
     node[#node + 1] = chain
   end
 
-  return node
+  -- unpack trivial OptChain
+  return #node == 0 and node.base or node
 end
 
 -- -----------------------------------------------------------------------------

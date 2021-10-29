@@ -8,7 +8,7 @@ end)
 
 spec('optchain base', function()
   assert.has_subtable({
-    base = { value = 'a' },
+    value = 'a',
   }, unit.OptChain('a'))
   assert.has_subtable({
     base = { value = 'a' },
