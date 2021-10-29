@@ -179,13 +179,22 @@ function branch(n, isBranch, noPad, capture)
 end
 
 function branchChar(char, noPad, capture)
-  return branch(
-    1,
+  if #char == 1 then
     -- Slight optimization for most common case
-    #char > 1 and char:find(bufValue) or bufValue == char,
-    noPad,
-    capture
-  )
+    return branch(1, bufValue == char, noPad, capture)
+  else
+    -- DO NOT USE FIND. It takes regex and will cause errors if we pass tokens
+    -- such as '.'
+    local found = false
+    for i = 1, #char do
+      if char:sub(i, i) == bufValue then
+        found = true
+        break
+      end
+    end
+
+    return branch(1, found, noPad, capture)
+  end
 end
 
 function branchStr(str, noPad, capture)

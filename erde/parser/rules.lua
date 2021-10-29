@@ -2,6 +2,19 @@ local _ENV = require('erde.parser.env'):load()
 require('erde.parser.utils')
 
 -- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function getOp(opMap, opMaxLen)
+  for i = opMaxLen, 1, -1 do
+    local op = opMap[peek(i)]
+    if op then
+      return op
+    end
+  end
+end
+
+-- -----------------------------------------------------------------------------
 -- Rule: ArrowFunction
 -- -----------------------------------------------------------------------------
 
@@ -214,15 +227,6 @@ end
 -- This uses precedence climbing and is based on this amazing blog post:
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
-
-local function getOp(opMap, opMaxLen)
-  for i = opMaxLen, 1, -1 do
-    local op = opMap[peek(i)]
-    if op then
-      return op
-    end
-  end
-end
 
 function parser.Expr(minPrec)
   minPrec = minPrec or 1
@@ -441,7 +445,8 @@ function parser.Number()
   if branchStr('0x', true, capture) or branchStr('0X', true, capture) then
     stream(Hex, capture, true)
 
-    if branchChar('.', true, capture) then
+    if bufValue == '.' and not getOp(BINOP_MAP, BINOP_MAX_LEN) then
+      consume(1, capture)
       stream(Hex, capture, true)
     end
 
@@ -451,10 +456,11 @@ function parser.Number()
     end
   else
     while Digit[bufValue] do
-      consume(1, capture, true)
+      consume(1, capture)
     end
 
-    if branchChar('.', true, capture) then
+    if bufValue == '.' and not getOp(BINOP_MAP, BINOP_MAX_LEN) then
+      consume(1, capture)
       stream(Digit, capture, true)
     end
 

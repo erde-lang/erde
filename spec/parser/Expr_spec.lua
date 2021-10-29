@@ -20,14 +20,14 @@ end)
 
 spec('binop tags', function()
   for _, op in pairs(constants.BINOPS) do
-    if op.tag ~= 'ternary' then
-      assert.has_subtable({
-        variant = 'binop',
-        op = { tag = op.tag },
-      }, unit.Expr(
-        '1' .. op.token .. '2'
-      ))
-    end
+    local testExpr = op.tag == 'ternary' and '1 ? 2 : 3'
+      or '1' .. op.token .. '2'
+    assert.has_subtable({
+      variant = 'binop',
+      op = { tag = op.tag },
+    }, unit.Expr(
+      testExpr
+    ))
   end
 end)
 
