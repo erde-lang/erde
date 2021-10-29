@@ -1,14 +1,8 @@
 local parse = require('erde.parser')
 
 -- -----------------------------------------------------------------------------
--- Compiler
+-- Helpers
 -- -----------------------------------------------------------------------------
-
-local compiler = {}
-
-function compiler.compile(input)
-  return compiler.Block(parse(input))
-end
 
 local tmpNameCounter = 1
 local function newTmpName()
@@ -24,7 +18,17 @@ local function format(str, ...)
   return str
 end
 
-local function compileNode(node)
+-- -----------------------------------------------------------------------------
+-- Compiler
+-- -----------------------------------------------------------------------------
+
+local compiler = {
+  compile = function(input)
+    return compile(parse(input))
+  end,
+}
+
+local function compile(node)
   local nodeCompiler = compiler[node.rule]
   if type(nodeCompiler) == 'function' then
     if node.parens then
@@ -33,7 +37,8 @@ local function compileNode(node)
       return nodeCompiler(node)
     end
   else
-    error('no compiler for rule: ' .. node.rule)
+    print(require('inspect')(node))
+    error('No node compiler for')
   end
 end
 
@@ -93,7 +98,7 @@ function compiler.Block(node)
   local compileParts = {}
 
   for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = compileNode(statement)
+    compileParts[#compileParts + 1] = compile(statement)
   end
 
   return table.concat(compileParts, '\n')
@@ -130,6 +135,7 @@ end
 -- -----------------------------------------------------------------------------
 -- Rule: Expr
 -- TODO
+-- TODO: create BINOP map, remove trivial compilations
 -- -----------------------------------------------------------------------------
 
 function compiler.Expr(node)
@@ -169,7 +175,7 @@ function compiler.Expr(node)
       }, '\n'),
       lhs,
       rhs,
-      compileNode(node[3])
+      compile(node[3])
     )
   elseif op.tag == 'nc' then
     return format(
@@ -406,7 +412,7 @@ function compiler.String(node)
       else
         content[#content + 1] = (']%s]..tostring(%s)..[%s['):format(
           eqStr,
-          compileNode(capture),
+          compile(capture),
           eqStr
         )
       end
