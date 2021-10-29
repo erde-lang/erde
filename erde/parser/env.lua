@@ -6,8 +6,8 @@ local constants = require('erde.constants')
 -- -----------------------------------------------------------------------------
 
 local env = Environment()
-env:merge(constants)
-env:merge(_G)
+env:addReference(constants)
+env:addReference(_G)
 local _ENV = env:load()
 
 -- -----------------------------------------------------------------------------

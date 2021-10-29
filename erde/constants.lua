@@ -1,28 +1,69 @@
+local Environment = require('erde.Environment')
+
+-- -----------------------------------------------------------------------------
+-- Environment
+-- -----------------------------------------------------------------------------
+
+local env = Environment()
+env:addReference(_G)
+local _ENV = env:load()
+
+-- -----------------------------------------------------------------------------
+-- Keywords / Terminals
+-- -----------------------------------------------------------------------------
+
+KEYWORDS = {
+  'local',
+  'global',
+  'if',
+  'elseif',
+  'else',
+  'for',
+  'in',
+  'while',
+  'repeat',
+  'until',
+  'do',
+  'function',
+  'false',
+  'true',
+  'nil',
+  'return',
+  'self',
+}
+
+TERMINALS = {
+  'true',
+  'false',
+  'nil',
+  'self',
+}
+
 -- -----------------------------------------------------------------------------
 -- Unops / Binops
 -- -----------------------------------------------------------------------------
 
-local LEFT_ASSOCIATIVE = -1
-local RIGHT_ASSOCIATIVE = 1
+LEFT_ASSOCIATIVE = -1
+RIGHT_ASSOCIATIVE = 1
 
-local UNOPS = {
+UNOPS = {
   { tag = 'neg', token = '-', prec = 14 },
   { tag = 'len', token = '#', prec = 14 },
   { tag = 'not', token = '~', prec = 14 },
   { tag = 'bnot', token = '.~', prec = 14 },
 }
 
-local UNOP_MAP = {}
+UNOP_MAP = {}
 for _, op in pairs(UNOPS) do
   UNOP_MAP[op.token] = op
 end
 
-local UNOP_MAX_LEN = 0
+UNOP_MAX_LEN = 0
 for _, op in pairs(UNOPS) do
   UNOP_MAX_LEN = math.max(UNOP_MAX_LEN, #op.token)
 end
 
-local BINOPS = {
+BINOPS = {
   { tag = 'pipe', token = '>>', prec = 1, assoc = LEFT_ASSOCIATIVE },
   { tag = 'ternary', token = '?', prec = 2, assoc = LEFT_ASSOCIATIVE },
   { tag = 'nc', token = '??', prec = 3, assoc = LEFT_ASSOCIATIVE },
@@ -49,57 +90,24 @@ local BINOPS = {
   { tag = 'exp', token = '^', prec = 15, assoc = RIGHT_ASSOCIATIVE },
 }
 
-local BINOP_MAP = {}
+BINOP_MAP = {}
 for _, op in pairs(BINOPS) do
   BINOP_MAP[op.token] = op
 end
 
-local BINOP_MAX_LEN = 0
+BINOP_MAX_LEN = 0
 for _, op in pairs(BINOPS) do
   BINOP_MAX_LEN = math.max(BINOP_MAX_LEN, #op.token)
 end
 
 -- -----------------------------------------------------------------------------
--- Return
--- TODO: use env here instead of copying over?
+-- Misc
 -- -----------------------------------------------------------------------------
 
-return {
-  EOF = -1,
+EOF = -1
 
-  LEFT_ASSOCIATIVE = LEFT_ASSOCIATIVE,
-  RIGHT_ASSOCIATIVE = RIGHT_ASSOCIATIVE,
-  UNOPS = UNOPS,
-  UNOP_MAP = UNOP_MAP,
-  UNOP_MAX_LEN = UNOP_MAX_LEN,
-  BINOPS = BINOPS,
-  BINOP_MAP = BINOP_MAP,
-  BINOP_MAX_LEN = BINOP_MAX_LEN,
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
 
-  KEYWORDS = {
-    'local',
-    'global',
-    'if',
-    'elseif',
-    'else',
-    'for',
-    'in',
-    'while',
-    'repeat',
-    'until',
-    'do',
-    'function',
-    'false',
-    'true',
-    'nil',
-    'return',
-    'self',
-  },
-
-  TERMINALS = {
-    'true',
-    'false',
-    'nil',
-    'self',
-  },
-}
+return _ENV
