@@ -135,107 +135,87 @@ end
 -- -----------------------------------------------------------------------------
 -- Rule: Expr
 -- TODO
--- TODO: create BINOP map, remove trivial compilations
 -- -----------------------------------------------------------------------------
 
 function compiler.Expr(node)
   local op = node.op
-  local lhs = compile(node[1])
-  local rhs = node[2] and compile(node[2])
 
-  local function compileUnop(token)
-    return table.concat({ token, lhs }, ' ')
-  end
+  if node.variant == 'unop' then
+    local operand = compile(node[1])
 
-  local function compileBinop(token)
-    return table.concat({ lhs, token, rhs }, ' ')
-  end
+    local function compileUnop(token)
+      return table.concat({ token, operand }, ' ')
+    end
 
-  if op.tag == 'bnot' then
-    return _VERSION:find('5.[34]') and compileUnop('~')
-      or format('require("bit").bnot(%1)', lhs)
-  elseif op.tag == 'not' then
-    return compileUnop('not')
-  elseif op.tag == 'len' then
-    return compileUnop('#')
-  elseif op.tag == 'neg' then
-    return compileUnop('-')
-  elseif op.tag == 'pipe' then
-    -- TODO: pipe
-  elseif op.tag == 'ternary' then
-    return format(
-      table.concat({
-        '(function()',
-        'if %1 then',
-        'return %2',
-        'else',
-        'return %3',
-        'end',
-        'end)()',
-      }, '\n'),
-      lhs,
-      rhs,
-      compile(node[3])
-    )
-  elseif op.tag == 'nc' then
-    return format(
-      table.concat({
-        '(function()',
-        'local %1 = %2',
-        'if %1 ~= nil then',
-        'return %1',
-        'else',
-        'return %3',
-        'end',
-        'end)()',
-      }, '\n'),
-      newTmpName(),
-      lhs,
-      rhs
-    )
-  elseif op.tag == 'or' then
-    return compileBinop('or')
-  elseif op.tag == 'and' then
-    return compileBinop('and')
-  elseif op.tag == 'eq' then
-    return compileBinop('==')
-  elseif op.tag == 'neq' then
-    return compileBinop('~=')
-  elseif op.tag == 'lte' then
-    return compileBinop('<=')
-  elseif op.tag == 'gte' then
-    return compileBinop('>=')
-  elseif op.tag == 'lt' then
-    return compileBinop('<')
-  elseif op.tag == 'gt' then
-    return compileBinop('>')
-  elseif op.tag == 'bor' then
-    return format('require("bit").bor(%1, %2)', lhs, rhs)
-  elseif op.tag == 'bxor' then
-    return format('require("bit").bxor(%1, %2)', lhs, rhs)
-  elseif op.tag == 'band' then
-    return format('require("bit").band(%1, %2)', lhs, rhs)
-  elseif op.tag == 'lshift' then
-    return format('require("bit").lshift(%1, %2)', lhs, rhs)
-  elseif op.tag == 'rshift' then
-    return format('require("bit").rshift(%1, %2)', lhs, rhs)
-  elseif op.tag == 'concat' then
-    return compileBinop('..')
-  elseif op.tag == 'add' then
-    return compileBinop('+')
-  elseif op.tag == 'sub' then
-    return compileBinop('-')
-  elseif op.tag == 'mult' then
-    return compileBinop('*')
-  elseif op.tag == 'div' then
-    return compileBinop('/')
-  elseif op.tag == 'intdiv' then
-    return _VERSION:find('5.[34]') and compileBinop('//')
-      or format('math.floor(%s / %s)', lhs, rhs)
-  elseif op.tag == 'mod' then
-    return compileBinop('%')
-  elseif op.tag == 'exp' then
-    return compileBinop('^')
+    if op.tag == 'bnot' then
+      return _VERSION:find('5.[34]') and compileUnop('~')
+        or format('require("bit").bnot(%1)', operand)
+    elseif op.tag == 'not' then
+      return compileUnop('not')
+    else
+      return op.token .. operand
+    end
+  elseif op.variant == 'binop' then
+    local lhs = compile(node[1])
+    local rhs = compile(node[2])
+
+    local function compileBinop(token)
+      return table.concat({ lhs, token, rhs }, ' ')
+    end
+
+    if op.tag == 'pipe' then
+      -- TODO: pipe
+    elseif op.tag == 'ternary' then
+      return format(
+        table.concat({
+          '(function()',
+          'if %1 then',
+          'return %2',
+          'else',
+          'return %3',
+          'end',
+          'end)()',
+        }, '\n'),
+        lhs,
+        rhs,
+        compile(node[3])
+      )
+    elseif op.tag == 'nc' then
+      return format(
+        table.concat({
+          '(function()',
+          'local %1 = %2',
+          'if %1 ~= nil then',
+          'return %1',
+          'else',
+          'return %3',
+          'end',
+          'end)()',
+        }, '\n'),
+        newTmpName(),
+        lhs,
+        rhs
+      )
+    elseif op.tag == 'or' then
+      return compileBinop('or')
+    elseif op.tag == 'and' then
+      return compileBinop('and')
+    elseif op.tag == 'bor' then
+      return format('require("bit").bor(%1, %2)', lhs, rhs)
+    elseif op.tag == 'bxor' then
+      return format('require("bit").bxor(%1, %2)', lhs, rhs)
+    elseif op.tag == 'band' then
+      return format('require("bit").band(%1, %2)', lhs, rhs)
+    elseif op.tag == 'lshift' then
+      return format('require("bit").lshift(%1, %2)', lhs, rhs)
+    elseif op.tag == 'rshift' then
+      return format('require("bit").rshift(%1, %2)', lhs, rhs)
+    elseif op.tag == 'intdiv' then
+      return _VERSION:find('5.[34]') and compileBinop('//')
+        or format('math.floor(%s / %s)', lhs, rhs)
+    else
+      return compileBinop(op.token)
+    end
   end
 end
 
