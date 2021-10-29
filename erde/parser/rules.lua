@@ -59,7 +59,7 @@ function parser.Assignment()
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
-    local op = BINOPS[opToken]
+    local op = BINOP_MAP[opToken]
 
     if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
       consume(i)
@@ -215,45 +215,47 @@ end
 -- https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
 -- -----------------------------------------------------------------------------
 
+local function getOp(opMap, opMaxLen)
+  for i = opMaxLen, 1, -1 do
+    local op = opMap[peek(i)]
+    if op then
+      return op
+    end
+  end
+end
+
 function parser.Expr(minPrec)
   minPrec = minPrec or 1
   local node
 
-  if UNOPS[bufValue] ~= nil then
-    local op = UNOPS[bufValue]
-    consume()
-    node = { op = op, parser.Expr(op.prec + 1) }
+  local unop = getOp(UNOP_MAP, UNOP_MAX_LEN)
+  if unop ~= nil then
+    consume(#unop.token)
+    node = { variant = 'unop', op = unop, parser.Expr(unop.prec + 1) }
   else
     node = parser.Terminal()
   end
 
   while true do
-    local op, opToken
-    for i = BINOP_MAX_LEN, 1, -1 do
-      opToken = peek(i)
-      op = BINOPS[opToken]
-      if op then
-        break
-      end
-    end
+    local binop = getOp(BINOP_MAP, BINOP_MAX_LEN)
 
-    if not op or op.prec < minPrec then
+    if not binop or binop.prec < minPrec then
       break
     end
 
-    consume(#opToken)
-    node = { op = op, node }
+    consume(#binop.token)
+    node = { variant = 'binop', op = binop, node }
 
-    if op.tag == 'ternary' then
+    if binop.tag == 'ternary' then
       node[#node + 1] = parser.Expr()
       if not branchChar(':') then
         throw.expected(':')
       end
     end
 
-    node[#node + 1] = op.assoc == LEFT_ASSOCIATIVE
-        and parser.Expr(op.prec + 1)
-      or parser.Expr(op.prec)
+    node[#node + 1] = binop.assoc == LEFT_ASSOCIATIVE
+        and parser.Expr(binop.prec + 1)
+      or parser.Expr(binop.prec)
   end
 
   return node
