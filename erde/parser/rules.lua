@@ -444,14 +444,14 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.Name()
-  if not Alpha[bufValue] then
+  if not ALPHA[bufValue] then
     error('name must start with alpha')
   end
 
   local capture = {}
   consume(1, capture)
 
-  while Alpha[bufValue] or Digit[bufValue] or bufValue == '_' do
+  while ALPHA[bufValue] or DIGIT[bufValue] or bufValue == '_' do
     consume(1, capture)
   end
 
@@ -473,30 +473,30 @@ function parser.Number()
   local capture = {}
 
   if branchStr('0x', true, capture) or branchStr('0X', true, capture) then
-    stream(Hex, capture, true)
+    stream(HEX, capture, true)
 
     if bufValue == '.' and not getOp(BINOP_MAP, BINOP_MAX_LEN) then
       consume(1, capture)
-      stream(Hex, capture, true)
+      stream(HEX, capture, true)
     end
 
     if branchChar('pP', true, capture) then
       branchChar('+-', true, capture)
-      stream(Digit, capture, true)
+      stream(DIGIT, capture, true)
     end
   else
-    while Digit[bufValue] do
+    while DIGIT[bufValue] do
       consume(1, capture)
     end
 
     if bufValue == '.' and not getOp(BINOP_MAP, BINOP_MAX_LEN) then
       consume(1, capture)
-      stream(Digit, capture, true)
+      stream(DIGIT, capture, true)
     end
 
     if #capture > 0 and branchChar('eE', true, capture) then
       branchChar('+-', true, capture)
-      stream(Digit, capture, true)
+      stream(DIGIT, capture, true)
     end
   end
 

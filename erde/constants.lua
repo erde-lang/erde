@@ -99,6 +99,46 @@ for _, op in pairs(BINOPS) do
 end
 
 -- -----------------------------------------------------------------------------
+-- Lookup Tables
+-- -----------------------------------------------------------------------------
+
+UPPERCASE = {}
+ALPHA = {}
+DIGIT = {}
+HEX = {}
+WHITESPACE = {
+  ['\n'] = true,
+  ['\t'] = true,
+  [' '] = true,
+}
+
+for byte = string.byte('0'), string.byte('9') do
+  local char = string.char(byte)
+  DIGIT[char] = true
+  HEX[char] = true
+end
+for byte = string.byte('A'), string.byte('F') do
+  local char = string.char(byte)
+  ALPHA[char] = true
+  HEX[char] = true
+  UPPERCASE[char] = true
+end
+for byte = string.byte('G'), string.byte('Z') do
+  local char = string.char(byte)
+  ALPHA[char] = true
+  UPPERCASE[char] = true
+end
+for byte = string.byte('a'), string.byte('f') do
+  local char = string.char(byte)
+  ALPHA[char] = true
+  HEX[char] = true
+end
+for byte = string.byte('g'), string.byte('z') do
+  local char = string.char(byte)
+  ALPHA[char] = true
+end
+
+-- -----------------------------------------------------------------------------
 -- Misc
 -- -----------------------------------------------------------------------------
 

@@ -25,7 +25,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.space()
-  while Whitespace[bufValue] do
+  while WHITESPACE[bufValue] do
     consume()
   end
 end

@@ -21,56 +21,16 @@ line = 1
 column = 1
 
 -- -----------------------------------------------------------------------------
--- Lookup Tables
--- -----------------------------------------------------------------------------
-
-UpperCase = {}
-Alpha = {}
-Digit = {}
-Hex = {}
-Whitespace = {
-  ['\n'] = true,
-  ['\t'] = true,
-  [' '] = true,
-}
-
-for byte = string.byte('0'), string.byte('9') do
-  local char = string.char(byte)
-  Digit[char] = true
-  Hex[char] = true
-end
-for byte = string.byte('A'), string.byte('F') do
-  local char = string.char(byte)
-  Alpha[char] = true
-  Hex[char] = true
-  UpperCase[char] = true
-end
-for byte = string.byte('G'), string.byte('Z') do
-  local char = string.char(byte)
-  Alpha[char] = true
-  UpperCase[char] = true
-end
-for byte = string.byte('a'), string.byte('f') do
-  local char = string.char(byte)
-  Alpha[char] = true
-  Hex[char] = true
-end
-for byte = string.byte('g'), string.byte('z') do
-  local char = string.char(byte)
-  Alpha[char] = true
-end
-
--- -----------------------------------------------------------------------------
 -- Error Handling
 -- -----------------------------------------------------------------------------
 
 throw = {}
 
 local function getErrorToken()
-  if Alpha[bufValue] or Digit[bufValue] then
+  if ALPHA[bufValue] or DIGIT[bufValue] then
     local word = {}
 
-    while Alpha[bufValue] or Digit[bufValue] do
+    while ALPHA[bufValue] or DIGIT[bufValue] do
       consume(1, word)
     end
 
@@ -203,7 +163,7 @@ end
 
 function branchWord(word, capture)
   local trailingChar = buffer[bufIndex + #word]
-  return not (Alpha[trailingChar] or Digit[trailingChar])
+  return not (ALPHA[trailingChar] or DIGIT[trailingChar])
     and branchStr(word, false, capture)
 end
 
@@ -213,7 +173,7 @@ end
 
 parser = setmetatable({}, {
   __newindex = function(parser, key, value)
-    if UpperCase[key:sub(1, 1)] then
+    if UPPERCASE[key:sub(1, 1)] then
       rawset(parser, key, function(...)
         parser.space()
 
