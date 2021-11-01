@@ -98,8 +98,6 @@ end
 function compiler.Block(node)
   local compileParts = {}
 
-  print(require('inspect')(node))
-
   for _, statement in ipairs(node) do
     compileParts[#compileParts + 1] = compile(statement)
   end
