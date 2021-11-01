@@ -28,6 +28,14 @@ spec('fat arrow function', function()
       return a:c()
     ]])
   )
+  assert.run(
+    2,
+    unit.Block([[
+      local a = { b: 1 }
+      a.c = (x) => { return self.b + x }
+      return a:c(1)
+    ]])
+  )
 end)
 
 spec('arrow function implicit returns', function()

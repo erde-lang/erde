@@ -19,7 +19,18 @@ end
 -- -----------------------------------------------------------------------------
 
 function parser.ArrowFunction()
-  local node = { params = parser.Params(), hasImplicitReturns = false }
+  local node = {
+    params = parser.switch({
+      parser.Name,
+      parser.Params,
+    }),
+    hasImplicitParams = false,
+    hasImplicitReturns = false,
+  }
+
+  if node.params.rule == 'Name' then
+    node.hasImplicitParams = true
+  end
 
   if branchStr('->') then
     node.variant = 'skinny'

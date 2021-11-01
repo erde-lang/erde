@@ -42,3 +42,15 @@ spec('arrow function implicit return', function()
     unit.ArrowFunction('() ->')
   end)
 end)
+
+spec('arrow function implicit params', function()
+  assert.has_subtable({
+    hasImplicitParams = true,
+    params = { value = 'a' },
+  }, unit.ArrowFunction(
+    'a -> {}'
+  ))
+  assert.has_error(function()
+    unit.ArrowFunction('a.b -> {}')
+  end)
+end)
