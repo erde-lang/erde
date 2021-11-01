@@ -78,7 +78,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Assignment(node)
-  local compileParts = { node.name, '=', nil, nil, nil }
+  local compileParts = { compile(node.id), '=', nil, nil, nil }
 
   if node.op then
     compileParts[3] = node.name

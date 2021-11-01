@@ -755,7 +755,9 @@ function parser.Terminal()
       parser.ArrowFunction,
       parser.OptChain,
       function()
-        return parser.surround('(', ')', parser.Expr)
+        local node = parser.surround('(', ')', parser.Expr)
+        node.parens = true
+        return node
       end,
     })
 
@@ -763,7 +765,6 @@ function parser.Terminal()
       throw.unexpected()
     end
 
-    node.parens = true
     return node
   end
 

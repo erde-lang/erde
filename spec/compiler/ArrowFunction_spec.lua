@@ -25,7 +25,7 @@ spec('fat arrow function', function()
     unit.Block([[
       local a = { b: 1 }
       a.c = () => { return self.b + 1 }
-      return a.c()
+      return a:c()
     ]])
   )
 end)
