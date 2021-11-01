@@ -832,10 +832,16 @@ function parser.Var()
     node.variant = 'global'
   end
 
-  node.name = parser.Name().value
+  node.nameList = { parser.Name().value }
+  while branchChar(',') do
+    node.nameList[#node.nameList + 1] = parser.Name().value
+  end
 
   if branchChar('=') then
-    node.initValue = parser.Expr()
+    node.exprList = { parser.Expr() }
+    while branchChar(',') do
+      node.exprList[#node.exprList + 1] = parser.Expr()
+    end
   end
 
   return node

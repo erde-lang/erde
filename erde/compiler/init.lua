@@ -507,11 +507,16 @@ function compiler.Var(node)
     compileParts[#compileParts + 1] = 'local'
   end
 
-  compileParts[#compileParts + 1] = node.name
+  compileParts[#compileParts + 1] = table.concat(node.nameList, ',')
 
-  if node.initValue then
+  if node.exprList then
+    local exprList = {}
+    for i, expr in ipairs(node.exprList) do
+      exprList[#exprList + 1] = compile(expr)
+    end
+
     compileParts[#compileParts + 1] = '='
-    compileParts[#compileParts + 1] = compile(node.initValue)
+    compileParts[#compileParts + 1] = table.concat(exprList, ',')
   end
 
   return table.concat(compileParts, ' ')
