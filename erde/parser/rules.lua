@@ -494,7 +494,7 @@ function parser.OptChain()
   }
 
   if not node.base then
-    throw.expected('name or expression', true)
+    throw.expected('name or (parens expression)', true)
   end
 
   while true do

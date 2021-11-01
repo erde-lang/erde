@@ -12,7 +12,7 @@ end
 
 local function format(str, ...)
   for i, value in ipairs({ ... }) do
-    str = str:gsub(i .. '%', tostring(value))
+    str = str:gsub('%%' .. i, tostring(value))
   end
 
   return str
@@ -37,6 +37,7 @@ local function compile(node)
       return nodeCompiler(node)
     end
   else
+    -- TODO
     print(require('inspect')(node))
     error('No node compiler for')
   end
@@ -313,12 +314,44 @@ end
 
 -- -----------------------------------------------------------------------------
 -- Rule: OptChain
--- TODO
 -- -----------------------------------------------------------------------------
 
 function compiler.OptChain(node)
-  local compileParts = {}
-  return table.concat(compileParts, '\n')
+  local optChecks = {}
+  local subChain = compile(node.base)
+
+  for i, chainNode in ipairs(node) do
+    if chainNode.optional then
+      optChecks[#optChecks + 1] = format(
+        'if %1 == nil then return end',
+        subChain
+      )
+    end
+
+    local newSubChainFormat
+    if chainNode.variant == 'dotIndex' then
+      subChain = format('%1.%2', subChain, chainNode.value)
+    elseif chainNode.variant == 'bracketIndex' then
+      subChain = format('%1[%2]', subChain, compile(chainNode.value))
+    elseif chainNode.variant == 'params' then
+      local params = {}
+
+      for _, expr in ipairs(chainNode.value) do
+        params[#params + 1] = compile(expr)
+      end
+
+      subChain = format('%1(%2)', subChain, table.concat(params, ','))
+    elseif chainNode.variant == 'method' then
+      subChain = format('%1:%2', subChain, chainNode.value)
+    end
+  end
+
+  return #optChecks == 0 and subChain
+    or format(
+      '(function() %1 return %2 end)()',
+      table.concat(optChecks, ' '),
+      subChain
+    )
 end
 
 -- -----------------------------------------------------------------------------
@@ -366,7 +399,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Return(node)
-  return 'return ' .. node.value
+  return 'return ' .. compile(node.value)
 end
 
 -- -----------------------------------------------------------------------------
