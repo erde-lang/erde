@@ -68,7 +68,7 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
 }
 
 function parser.Assignment()
-  local node = { name = parser.Name().value }
+  local node = { id = parser.Id() }
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
@@ -502,8 +502,17 @@ function parser.OptChain()
     local chain = { optional = branchChar('?') }
 
     if branchChar('.') then
-      chain.variant = 'dotIndex'
-      chain.value = parser.Name().value
+      local name = parser.try(parser.Name)
+
+      if name then
+        chain.variant = 'dotIndex'
+        chain.value = name.value
+      else
+        -- Do not throw error here, as '.' may be from an operator! Simply
+        -- revert consumptions and break
+        parser.restoreState(backup)
+        break
+      end
     elseif bufValue == '[' then
       chain.variant = 'bracketIndex'
       chain.value = parser.surround('[', ']', parser.Expr)

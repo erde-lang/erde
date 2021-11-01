@@ -98,6 +98,8 @@ end
 function compiler.Block(node)
   local compileParts = {}
 
+  print(require('inspect')(node))
+
   for _, statement in ipairs(node) do
     compileParts[#compileParts + 1] = compile(statement)
   end
@@ -453,13 +455,13 @@ function compiler.Table(node)
         field.key,
         compile(field.value)
       )
-    elseif variant == 'nameKey' then
+    elseif field.variant == 'nameKey' then
       compileParts[#compileParts + 1] = format(
         '%1 = %2,',
         field.key,
         compile(field.value)
       )
-    elseif variant == 'stringKey' then
+    elseif field.variant == 'stringKey' then
       compileParts[#compileParts + 1] = format(
         '[%1] = %2,',
         compile(field.key),
