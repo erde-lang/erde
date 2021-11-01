@@ -1,38 +1,36 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Block
+-- Comment
 -- -----------------------------------------------------------------------------
 
-local Block = {}
+local Comment = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Block.parse(ctx)
-  local node = { rule = 'Block' }
+function Comment.parse(ctx)
+  local capture = {}
+  local node = { rule = 'Comment' }
 
-  while true do
-    local statement = ctx:Switch({
-      ctx.Assignment,
-      ctx.Comment,
-      ctx.DoBlock,
-      ctx.ForLoop,
-      ctx.IfElse,
-      ctx.Function,
-      ctx.FunctionCall,
-      ctx.RepeatUntil,
-      ctx.Return,
-      ctx.Declaration,
-    })
+  if ctx:branchStr('---', true) then
+    node.variant = 'long'
 
-    if not statement then
-      break
+    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
+      ctx:consume(1, capture)
     end
+  elseif ctx:branchStr('--', true) then
+    node.variant = 'short'
 
-    node[#node + 1] = statement
+    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
+      ctx:consume(1, capture)
+    end
+  else
+    ctx:throwExpected('comment', true)
   end
+
+  node.value = table.concat(capture)
 
   return node
 end
@@ -41,18 +39,12 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Block.compile(ctx, node)
-  local compileParts = {}
-
-  for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = ctx:compile(statement)
-  end
-
-  return table.concat(compileParts, '\n')
+function Comment.compile(ctx, node)
+  return nil
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Block
+return Comment

@@ -1,45 +1,25 @@
-local _ = require('erde.rules.helpers')
-local supertable = require('erde.supertable')
-
--- TODO: create each grammar on demand to reduce loading time
-
-return supertable(
-  require('erde.rules.Core'),
-  require('erde.rules.Primitives'),
-  require('erde.rules.Tables'),
-  require('erde.rules.Functions'),
-  require('erde.rules.Operators'),
-  require('erde.rules.Expr'),
-  require('erde.rules.Logic'),
-  require('erde.rules.Block')
-):reduce(function(rules, rule, ruleName)
-  local pattern = type(rule.pattern) == 'function'
-    and rule.pattern() or rule.pattern
-
-  rules.parser:merge({
-    [ruleName] = _.Cp() * pattern / function(position, ...)
-      local node = supertable({ ... })
-        :filter(function(value) return value ~= nil end)
-        :merge({ rule = ruleName, position = position })
-      return #node > 0 and node or nil
-    end,
-  })
-
-  rules.compiler:merge({
-    [ruleName] = rule.compiler ~= nil
-      and pattern / rule.compiler
-      or pattern,
-  })
-
-  rules.formatter:merge({
-    [ruleName] = rule.formatter ~= nil
-      and pattern / rule.formatter
-      or pattern,
-  })
-
-  return rules
-end, {
-  parser = supertable({ _.V('Block') }),
-  compiler = supertable({ _.V('Block') }),
-  formatter = supertable({ _.V('Block') }),
-})
+return {
+  ArrowFunction = require('erde.rules.ArrowFunction'),
+  Assignment = require('erde.rules.Assignment'),
+  Block = require('erde.rules.Block'),
+  Comment = require('erde.rules.Comment'),
+  Declaration = require('erde.rules.Declaration'),
+  Destructure = require('erde.rules.Destructure'),
+  DoBlock = require('erde.rules.DoBlock'),
+  Expr = require('erde.rules.Expr'),
+  ForLoop = require('erde.rules.ForLoop'),
+  Function = require('erde.rules.Function'),
+  FunctionCall = require('erde.rules.FunctionCall'),
+  Id = require('erde.rules.Id'),
+  IfElse = require('erde.rules.IfElse'),
+  Name = require('erde.rules.Name'),
+  Number = require('erde.rules.Number'),
+  OptChain = require('erde.rules.OptChain'),
+  Params = require('erde.rules.Params'),
+  RepeatUntil = require('erde.rules.RepeatUntil'),
+  Return = require('erde.rules.Return'),
+  String = require('erde.rules.String'),
+  Table = require('erde.rules.Table'),
+  Terminal = require('erde.rules.Terminal'),
+  WhileLoop = require('erde.rules.WhileLoop'),
+}

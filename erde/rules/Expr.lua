@@ -1,36 +1,111 @@
-local _ = require('erde.rules.helpers')
+local constants = require('erde.constants')
 
-return {
-  SubExpr = {
-    pattern = _.Sum({
-     _.CsV('ArrowFunction'),
-     _.CsV('DoBlock'),
-     _.CsV('IdExpr'),
-     _.CsV('Table'),
-     _.CsV('String'),
-     _.CsV('Number'),
-     _.C('...'),
-     _.C('true'),
-     _.C('false'),
-     _.C('nil'),
-     _.Parens(_.CsV('Expr')),
-    }),
-  },
-  Expr = {
-    pattern = _.Sum({
-      _.CsV('Op1'),
-      _.CsV('SubExpr'),
-    }),
-  },
-  ExprList = {
-    pattern = _.Sum({
-      -- Check list first to allow list items to consume parens
-      -- This can be potential slow when ExprList is surrounded by parens
-      -- (since List may essentially have to parsed twice), but suffices for
-      -- now, as it is not an easy problem to solve and is one that doesn't 
-      -- show up often
-      _.List(_.CsV('Expr'), { minLen = 1 }),
-      _.Parens(_.V('ExprList')),
-    }),
-  },
-}
+-- -----------------------------------------------------------------------------
+-- Expr
+-- -----------------------------------------------------------------------------
+
+local Expr = {}
+
+-- -----------------------------------------------------------------------------
+-- Parse
+-- -----------------------------------------------------------------------------
+
+function Expr.parse(ctx, minPrec)
+  minPrec = minPrec or 1
+  local node = { rule = 'Expr' }
+  local lhs
+
+  local unop = ctx:Unop()
+  if unop ~= nil then
+    ctx:consume(#unop.token)
+    node.variant = 'unop'
+    node.op = unop
+    node.operand = ctx:Expr(unop.prec + 1)
+  else
+    node = ctx:Terminal()
+  end
+
+  while true do
+    local binop = ctx:Binop()
+    if not binop or binop.prec < minPrec then
+      break
+    end
+
+    ctx:consume(#binop.token)
+
+    node = {
+      rule = 'Expr',
+      variant = 'binop',
+      op = binop,
+      node,
+    }
+
+    if binop.tag == 'ternary' then
+      node[#node + 1] = ctx:Expr()
+      if not ctx:branchChar(':') then
+        ctx:throwExpected(':')
+      end
+    end
+
+    node[#node + 1] = binop.assoc == constants.LEFT_ASSOCIATIVE
+        and ctx:Expr(binop.prec + 1)
+      or ctx:Expr(binop.prec)
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Compile
+-- -----------------------------------------------------------------------------
+
+function Expr.compile(ctx, node)
+  local op = node.op
+
+  if node.variant == 'unop' then
+    local operand = ctx:compile(node[1])
+
+    local function compileUnop(token)
+      return table.concat({ token, operand }, ' ')
+    end
+
+    if op.tag == 'bnot' then
+      return _VERSION:find('5.[34]') and compileUnop('~')
+        or ctx.format('require("bit").bnot(%1)', operand)
+    elseif op.tag == 'not' then
+      return compileUnop('not')
+    else
+      return op.token .. operand
+    end
+  elseif node.variant == 'binop' then
+    local lhs = ctx:compile(node[1])
+    local rhs = ctx:compile(node[2])
+
+    if op.tag == 'pipe' then
+      -- TODO: pipe
+    elseif op.tag == 'ternary' then
+      return ctx.format(
+        table.concat({
+          '(function()',
+          'if %1 then',
+          'return %2',
+          'else',
+          'return %3',
+          'end',
+          'end)()',
+        }, '\n'),
+        lhs,
+        rhs,
+        ctx:compile(node[3])
+      )
+    else
+      return ctx.compileBinop(op, lhs, rhs)
+    end
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
+
+return Expr

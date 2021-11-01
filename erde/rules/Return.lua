@@ -1,58 +1,33 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Block
+-- Return
 -- -----------------------------------------------------------------------------
 
-local Block = {}
+local Return = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Block.parse(ctx)
-  local node = { rule = 'Block' }
-
-  while true do
-    local statement = ctx:Switch({
-      ctx.Assignment,
-      ctx.Comment,
-      ctx.DoBlock,
-      ctx.ForLoop,
-      ctx.IfElse,
-      ctx.Function,
-      ctx.FunctionCall,
-      ctx.RepeatUntil,
-      ctx.Return,
-      ctx.Declaration,
-    })
-
-    if not statement then
-      break
-    end
-
-    node[#node + 1] = statement
+function Return.parse(ctx)
+  if not ctx:branchWord('return') then
+    ctx:throwExpected('return')
   end
 
-  return node
+  return { rule = 'Return', value = ctx:Expr() }
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Block.compile(ctx, node)
-  local compileParts = {}
-
-  for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = ctx:compile(statement)
-  end
-
-  return table.concat(compileParts, '\n')
+function Return.compile(ctx, node)
+  return 'return ' .. ctx:compile(node.value)
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Block
+return Return

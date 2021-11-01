@@ -1,58 +1,47 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Block
+-- Name
 -- -----------------------------------------------------------------------------
 
-local Block = {}
+local Name = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Block.parse(ctx)
-  local node = { rule = 'Block' }
-
-  while true do
-    local statement = ctx:Switch({
-      ctx.Assignment,
-      ctx.Comment,
-      ctx.DoBlock,
-      ctx.ForLoop,
-      ctx.IfElse,
-      ctx.Function,
-      ctx.FunctionCall,
-      ctx.RepeatUntil,
-      ctx.Return,
-      ctx.Declaration,
-    })
-
-    if not statement then
-      break
-    end
-
-    node[#node + 1] = statement
+function Name.parse(ctx)
+  if not constants.ALPHA[ctx.bufValue] then
+    error('name must start with alpha')
   end
 
-  return node
+  local capture = {}
+  ctx:consume(1, capture)
+
+  while constants.ALNUM[ctx.bufValue] or ctx.bufValue == '_' do
+    ctx:consume(1, capture)
+  end
+
+  local value = table.concat(capture)
+  for _, keyword in pairs(constants.KEYWORDS) do
+    if value == keyword then
+      ctx:throwError('name cannot be keyword')
+    end
+  end
+
+  return { rule = 'Name', value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Block.compile(ctx, node)
-  local compileParts = {}
-
-  for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = ctx:compile(statement)
-  end
-
-  return table.concat(compileParts, '\n')
+function Name.compile(ctx, node)
+  return node.value
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Block
+return Name

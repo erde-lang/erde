@@ -1,37 +1,30 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Block
+-- DoBlock
 -- -----------------------------------------------------------------------------
 
-local Block = {}
+local DoBlock = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Block.parse(ctx)
-  local node = { rule = 'Block' }
+function DoBlock.parse(ctx)
+  if not ctx:branchWord('do') then
+    ctx:throwExpected('do')
+  end
 
-  while true do
-    local statement = ctx:Switch({
-      ctx.Assignment,
-      ctx.Comment,
-      ctx.DoBlock,
-      ctx.ForLoop,
-      ctx.IfElse,
-      ctx.Function,
-      ctx.FunctionCall,
-      ctx.RepeatUntil,
-      ctx.Return,
-      ctx.Declaration,
-    })
+  local node = {
+    rule = 'DoBlock',
+    body = ctx:Surround('{', '}', ctx.Block),
+  }
 
-    if not statement then
+  for _, statement in pairs(node.body) do
+    if statement.rule == 'Return' then
+      node.hasReturn = true
       break
     end
-
-    node[#node + 1] = statement
   end
 
   return node
@@ -41,18 +34,15 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Block.compile(ctx, node)
-  local compileParts = {}
-
-  for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = ctx:compile(statement)
-  end
-
-  return table.concat(compileParts, '\n')
+function DoBlock.compile(ctx, node)
+  return ctx.format(
+    node.hasReturn and 'function()\n%1\nend' or 'do\n%1\nend',
+    ctx:compile(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Block
+return DoBlock
