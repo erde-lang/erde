@@ -20,16 +20,20 @@ end
 
 function parser.ArrowFunction()
   local node = {
-    params = parser.switch({
-      parser.Name,
-      parser.Params,
-    }),
     hasImplicitParams = false,
     hasImplicitReturns = false,
   }
 
-  if node.params.rule == 'Name' then
+  local params = parser.switch({
+    parser.Name,
+    parser.Params,
+  })
+
+  if params.rule == 'Name' then
+    node.paramName = params.value
     node.hasImplicitParams = true
+  else
+    node.params = params
   end
 
   if branchStr('->') then
@@ -789,6 +793,7 @@ function parser.Terminal()
     parser.Table,
     parser.Number,
     parser.String,
+    parser.ArrowFunction, -- Check again for hasImplicitParams!
     parser.OptChain,
   })
 
