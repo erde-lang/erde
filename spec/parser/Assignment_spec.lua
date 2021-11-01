@@ -26,15 +26,6 @@ spec('assignment', function()
   }, unit.Assignment(
     'a.b = 3'
   ))
-  assert.has_subtable({
-    id = {
-      base = { value = 'a' },
-      { value = 'c' },
-    },
-    expr = { rule = 'ArrowFunction' },
-  }, unit.Assignment(
-    'a.c = self.b + 1'
-  ))
 end)
 
 spec('binop assignment', function()

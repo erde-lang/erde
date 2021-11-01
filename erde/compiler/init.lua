@@ -48,13 +48,20 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.ArrowFunction(node)
-  local params = compile(node.params)
+  local params, paramNames
+  if node.hasImplicitParams then
+    paramNames = { node.paramName }
+  else
+    params = compile(node.params)
+    paramNames = params.names
+  end
+
   if node.variant == 'fat' then
-    table.insert(params.names, 1, 'self')
+    table.insert(paramNames, 1, 'self')
   end
 
   local body
-  if node.body then
+  if not node.hasImplicitReturns then
     body = compile(node.body)
   else
     local returns = {}
@@ -67,8 +74,8 @@ function compiler.ArrowFunction(node)
   end
 
   return ('function(%s)\n%s\n%s\nend'):format(
-    table.concat(params.names, ','),
-    params.prebody,
+    table.concat(paramNames, ','),
+    params and params.prebody or '',
     body
   )
 end
@@ -78,7 +85,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Assignment(node)
-  local compileParts = { node.name, '=', nil, nil, nil }
+  local compileParts = { compile(node.id), '=', nil, nil, nil }
 
   if node.op then
     compileParts[3] = node.name
