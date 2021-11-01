@@ -18,6 +18,45 @@ local function format(str, ...)
   return str
 end
 
+local function compileBinop(op, lhs, rhs)
+  if op.tag == 'nc' then
+    return format(
+      table.concat({
+        '(function()',
+        'local %1 = %2',
+        'if %1 ~= nil then',
+        'return %1',
+        'else',
+        'return %3',
+        'end',
+        'end)()',
+      }, '\n'),
+      newTmpName(),
+      lhs,
+      rhs
+    )
+  elseif op.tag == 'or' then
+    return table.concat({ lhs, ' or ', rhs })
+  elseif op.tag == 'and' then
+    return table.concat({ lhs, ' and ', rhs })
+  elseif op.tag == 'bor' then
+    return format('require("bit").bor(%1, %2)', lhs, rhs)
+  elseif op.tag == 'bxor' then
+    return format('require("bit").bxor(%1, %2)', lhs, rhs)
+  elseif op.tag == 'band' then
+    return format('require("bit").band(%1, %2)', lhs, rhs)
+  elseif op.tag == 'lshift' then
+    return format('require("bit").lshift(%1, %2)', lhs, rhs)
+  elseif op.tag == 'rshift' then
+    return format('require("bit").rshift(%1, %2)', lhs, rhs)
+  elseif op.tag == 'intdiv' then
+    return _VERSION:find('5.[34]') and table.concat({ lhs, ' // ', rhs })
+      or format('math.floor(%s / %s)', lhs, rhs)
+  else
+    return table.concat({ lhs, op.token, rhs }, ' ')
+  end
+end
+
 -- -----------------------------------------------------------------------------
 -- Compiler
 -- -----------------------------------------------------------------------------
@@ -85,17 +124,29 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Assignment(node)
-  local compileParts = { compile(node.id), '=', nil, nil, nil }
-
-  if node.op then
-    compileParts[3] = node.name
-    compileParts[4] = node.op
-    compileParts[5] = compile(node.expr)
-  else
-    compileParts[3] = compile(node.expr)
+  local idList = {}
+  for i, id in ipairs(node.idList) do
+    idList[#idList + 1] = compile(id)
   end
 
-  return table.concat(compileParts, ' ')
+  local exprList = {}
+  for i, expr in ipairs(node.exprList) do
+    exprList[#exprList + 1] = compile(expr)
+  end
+
+  if node.op then
+    return format(
+      '%1 = %2',
+      idList[1],
+      compileBinop(node.op, idList[1], exprList[1])
+    )
+  else
+    return format(
+      '%1 = %2',
+      table.concat(idList, ','),
+      table.concat(exprList, ',')
+    )
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -167,10 +218,6 @@ function compiler.Expr(node)
     local lhs = compile(node[1])
     local rhs = compile(node[2])
 
-    local function compileBinop(token)
-      return table.concat({ lhs, token, rhs }, ' ')
-    end
-
     if op.tag == 'pipe' then
       -- TODO: pipe
     elseif op.tag == 'ternary' then
@@ -188,41 +235,8 @@ function compiler.Expr(node)
         rhs,
         compile(node[3])
       )
-    elseif op.tag == 'nc' then
-      return format(
-        table.concat({
-          '(function()',
-          'local %1 = %2',
-          'if %1 ~= nil then',
-          'return %1',
-          'else',
-          'return %3',
-          'end',
-          'end)()',
-        }, '\n'),
-        newTmpName(),
-        lhs,
-        rhs
-      )
-    elseif op.tag == 'or' then
-      return compileBinop('or')
-    elseif op.tag == 'and' then
-      return compileBinop('and')
-    elseif op.tag == 'bor' then
-      return format('require("bit").bor(%1, %2)', lhs, rhs)
-    elseif op.tag == 'bxor' then
-      return format('require("bit").bxor(%1, %2)', lhs, rhs)
-    elseif op.tag == 'band' then
-      return format('require("bit").band(%1, %2)', lhs, rhs)
-    elseif op.tag == 'lshift' then
-      return format('require("bit").lshift(%1, %2)', lhs, rhs)
-    elseif op.tag == 'rshift' then
-      return format('require("bit").rshift(%1, %2)', lhs, rhs)
-    elseif op.tag == 'intdiv' then
-      return _VERSION:find('5.[34]') and compileBinop('//')
-        or format('math.floor(%s / %s)', lhs, rhs)
     else
-      return compileBinop(op.token)
+      return compileBinop(op, lhs, rhs)
     end
   end
 end
@@ -498,11 +512,16 @@ function compiler.Var(node)
     compileParts[#compileParts + 1] = 'local'
   end
 
-  compileParts[#compileParts + 1] = node.name
+  compileParts[#compileParts + 1] = table.concat(node.nameList, ',')
 
-  if node.initValue then
+  if node.exprList then
+    local exprList = {}
+    for i, expr in ipairs(node.exprList) do
+      exprList[#exprList + 1] = compile(expr)
+    end
+
     compileParts[#compileParts + 1] = '='
-    compileParts[#compileParts + 1] = compile(node.initValue)
+    compileParts[#compileParts + 1] = table.concat(exprList, ',')
   end
 
   return table.concat(compileParts, ' ')
