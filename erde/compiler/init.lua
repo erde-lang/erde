@@ -156,7 +156,7 @@ function compiler.Expr(node)
     else
       return op.token .. operand
     end
-  elseif op.variant == 'binop' then
+  elseif node.variant == 'binop' then
     local lhs = compile(node[1])
     local rhs = compile(node[2])
 

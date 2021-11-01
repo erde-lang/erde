@@ -52,41 +52,23 @@ assert:register(
 )
 
 -- -----------------------------------------------------------------------------
--- erde_eval
+-- eval
 -- -----------------------------------------------------------------------------
 
-local function erde_eval(state, args)
+local function eval(state, args)
   return args[1] == loadLua('return ' .. args[2])()
 end
 
-require('say'):set(
-  'assertion.erde_eval.positive',
-  'Eval error. Expected %s, got %s'
-)
-
-assert:register(
-  'assertion',
-  'erde_eval',
-  erde_eval,
-  'assertion.erde_eval.positive'
-)
+require('say'):set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
+assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 
 -- -----------------------------------------------------------------------------
--- erde_run
+-- run
 -- -----------------------------------------------------------------------------
 
-local function erde_run(state, args)
+local function run(state, args)
   return args[1] == loadLua(args[2])()
 end
 
-require('say'):set(
-  'assertion.erde_run.positive',
-  'Run error. Expected %s, got %s'
-)
-
-assert:register(
-  'assertion',
-  'erde_run',
-  erde_run,
-  'assertion.erde_run.positive'
-)
+require('say'):set('assertion.run.positive', 'Run error. Expected %s, got %s')
+assert:register('assertion', 'run', run, 'assertion.run.positive')
