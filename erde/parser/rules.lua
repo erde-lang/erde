@@ -83,16 +83,27 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
 }
 
 function parser.Assignment()
-  local node = { id = parser.Id() }
+  local node = {}
+
+  node.idList = { parser.Id() }
+  while branchChar(',') do
+    node.idList[#node.idList + 1] = parser.Id()
+  end
 
   for i = BINOP_MAX_LEN, 1, -1 do
     local opToken = peek(i)
     local op = BINOP_MAP[opToken]
 
     if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-      consume(i)
-      node.op = op
-      break
+      if #node.idList > 1 then
+        throw.error(
+          'Cannot use assignment operations w/ more than 1 assignment'
+        )
+      else
+        consume(i)
+        node.op = op
+        break
+      end
     end
   end
 
@@ -100,7 +111,10 @@ function parser.Assignment()
     throw.expected('=')
   end
 
-  node.expr = parser.Expr()
+  node.exprList = { parser.Expr() }
+  while branchChar(',') do
+    node.exprList[#node.exprList + 1] = parser.Expr()
+  end
 
   return node
 end

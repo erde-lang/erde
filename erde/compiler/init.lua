@@ -85,17 +85,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function compiler.Assignment(node)
-  local compileParts = { compile(node.id), '=', nil, nil, nil }
-
-  if node.op then
-    compileParts[3] = node.name
-    compileParts[4] = node.op
-    compileParts[5] = compile(node.expr)
-  else
-    compileParts[3] = compile(node.expr)
+  local idList = {}
+  for i, id in ipairs(node.idList) do
+    idList[#idList + 1] = compile(id)
   end
 
-  return table.concat(compileParts, ' ')
+  local exprList = {}
+  for i, expr in ipairs(node.exprList) do
+    exprList[#exprList + 1] = compile(expr)
+  end
+
+  if node.op then
+    -- TODO compile binop
+    return format('%1 = %1 %2 %3', idList[1], node.op.token, exprList[1])
+  else
+    return format(
+      '%1 = %2',
+      table.concat(idList, ','),
+      table.concat(exprList, ',')
+    )
+  end
 end
 
 -- -----------------------------------------------------------------------------

@@ -6,26 +6,35 @@ end)
 
 spec('assignment', function()
   assert.has_subtable({
-    id = { value = 'a' },
-    expr = {
-      rule = 'Number',
-      value = '3',
-    },
+    idList = { { value = 'a' } },
+    exprList = { { value = '3' } },
   }, unit.Assignment(
     'a = 3'
   ))
   assert.has_subtable({
-    id = {
-      base = { value = 'a' },
-      { value = 'b' },
-    },
-    expr = {
-      rule = 'Number',
-      value = '3',
-    },
+    idList = { { rule = 'OptChain' } },
+    exprList = { { value = '3' } },
   }, unit.Assignment(
     'a.b = 3'
   ))
+end)
+
+spec('multiple assignment', function()
+  assert.has_subtable({
+    idList = {
+      { value = 'a' },
+      { value = 'b' },
+    },
+    exprList = {
+      { value = '1' },
+      { value = '2' },
+    },
+  }, unit.Assignment(
+    'a, b = 1, 2'
+  ))
+  assert.has_error(function()
+    unit.Assignment('a, b += 1, 2')
+  end)
 end)
 
 spec('binop assignment', function()
@@ -47,9 +56,9 @@ spec('binop assignment', function()
   assert.are.equal('mod', unit.Assignment('a %= 1').op.tag)
   assert.are.equal('exp', unit.Assignment('a ^= 1').op.tag)
   assert.has_subtable({
-    id = { value = 'a' },
+    idList = { { value = 'a' } },
     op = { tag = 'add' },
-    expr = { value = '3' },
+    exprList = { { value = '3' } },
   }, unit.Assignment(
     'a += 3'
   ))
