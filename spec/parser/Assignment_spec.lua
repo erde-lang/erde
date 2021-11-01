@@ -32,6 +32,18 @@ spec('multiple assignment', function()
   }, unit.Assignment(
     'a, b = 1, 2'
   ))
+  assert.has_subtable({
+    idList = {
+      { value = 'a' },
+      { rule = 'OptChain' },
+    },
+    exprList = {
+      { value = '1' },
+      { value = '2' },
+    },
+  }, unit.Assignment(
+    'a, b.c = 1, 2'
+  ))
   assert.has_error(function()
     unit.Assignment('a, b += 1, 2')
   end)
@@ -44,7 +56,6 @@ spec('multiple assignment', function()
 end)
 
 spec('binop assignment', function()
-  assert.are.equal('pipe', unit.Assignment('a >>= 1').op.tag)
   assert.are.equal('nc', unit.Assignment('a ??= 1').op.tag)
   assert.are.equal('or', unit.Assignment('a |= 1').op.tag)
   assert.are.equal('and', unit.Assignment('a &= 1').op.tag)
@@ -71,6 +82,9 @@ spec('binop assignment', function()
 end)
 
 spec('binop assignment blacklist', function()
+  assert.has_error(function()
+    unit.Assignment('a >>= 1')
+  end)
   assert.has_error(function()
     unit.Assignment('a ?= 1')
   end)
