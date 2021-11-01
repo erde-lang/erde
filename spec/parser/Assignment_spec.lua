@@ -6,7 +6,7 @@ end)
 
 spec('assignment', function()
   assert.has_subtable({
-    name = 'a',
+    id = { value = 'a' },
     expr = {
       rule = 'Number',
       value = '3',
@@ -14,28 +14,49 @@ spec('assignment', function()
   }, unit.Assignment(
     'a = 3'
   ))
+  assert.has_subtable({
+    id = {
+      base = { value = 'a' },
+      { value = 'b' },
+    },
+    expr = {
+      rule = 'Number',
+      value = '3',
+    },
+  }, unit.Assignment(
+    'a.b = 3'
+  ))
+  assert.has_subtable({
+    id = {
+      base = { value = 'a' },
+      { value = 'c' },
+    },
+    expr = { rule = 'ArrowFunction' },
+  }, unit.Assignment(
+    'a.c = self.b + 1'
+  ))
 end)
 
 spec('binop assignment', function()
-  assert.are.equal('pipe', unit.Assignment('x >>= 1').op.tag)
-  assert.are.equal('nc', unit.Assignment('x ??= 1').op.tag)
-  assert.are.equal('or', unit.Assignment('x |= 1').op.tag)
-  assert.are.equal('and', unit.Assignment('x &= 1').op.tag)
-  assert.are.equal('bor', unit.Assignment('x .|= 1').op.tag)
-  assert.are.equal('bxor', unit.Assignment('x .~= 1').op.tag)
-  assert.are.equal('band', unit.Assignment('x .&= 1').op.tag)
-  assert.are.equal('lshift', unit.Assignment('x .<<= 1').op.tag)
-  assert.are.equal('rshift', unit.Assignment('x .>>= 1').op.tag)
-  assert.are.equal('concat', unit.Assignment('x ..= 1').op.tag)
-  assert.are.equal('add', unit.Assignment('x += 1').op.tag)
-  assert.are.equal('sub', unit.Assignment('x -= 1').op.tag)
-  assert.are.equal('mult', unit.Assignment('x *= 1').op.tag)
-  assert.are.equal('div', unit.Assignment('x /= 1').op.tag)
-  assert.are.equal('intdiv', unit.Assignment('x //= 1').op.tag)
-  assert.are.equal('mod', unit.Assignment('x %= 1').op.tag)
-  assert.are.equal('exp', unit.Assignment('x ^= 1').op.tag)
+  assert.are.equal('pipe', unit.Assignment('a >>= 1').op.tag)
+  assert.are.equal('nc', unit.Assignment('a ??= 1').op.tag)
+  assert.are.equal('or', unit.Assignment('a |= 1').op.tag)
+  assert.are.equal('and', unit.Assignment('a &= 1').op.tag)
+  assert.are.equal('bor', unit.Assignment('a .|= 1').op.tag)
+  assert.are.equal('bxor', unit.Assignment('a .~= 1').op.tag)
+  assert.are.equal('band', unit.Assignment('a .&= 1').op.tag)
+  assert.are.equal('lshift', unit.Assignment('a .<<= 1').op.tag)
+  assert.are.equal('rshift', unit.Assignment('a .>>= 1').op.tag)
+  assert.are.equal('concat', unit.Assignment('a ..= 1').op.tag)
+  assert.are.equal('add', unit.Assignment('a += 1').op.tag)
+  assert.are.equal('sub', unit.Assignment('a -= 1').op.tag)
+  assert.are.equal('mult', unit.Assignment('a *= 1').op.tag)
+  assert.are.equal('div', unit.Assignment('a /= 1').op.tag)
+  assert.are.equal('intdiv', unit.Assignment('a //= 1').op.tag)
+  assert.are.equal('mod', unit.Assignment('a %= 1').op.tag)
+  assert.are.equal('exp', unit.Assignment('a ^= 1').op.tag)
   assert.has_subtable({
-    name = 'a',
+    id = { value = 'a' },
     op = { tag = 'add' },
     expr = { value = '3' },
   }, unit.Assignment(
@@ -45,24 +66,24 @@ end)
 
 spec('binop assignment blacklist', function()
   assert.has_error(function()
-    unit.Assignment('x ?= 1')
+    unit.Assignment('a ?= 1')
   end)
   assert.has_error(function()
-    unit.Assignment('x === 1')
+    unit.Assignment('a === 1')
   end)
   assert.has_error(function()
-    unit.Assignment('x ~== 1')
+    unit.Assignment('a ~== 1')
   end)
   assert.has_error(function()
-    unit.Assignment('x <== 1')
+    unit.Assignment('a <== 1')
   end)
   assert.has_error(function()
-    unit.Assignment('x >== 1')
+    unit.Assignment('a >== 1')
   end)
   assert.has_error(function()
-    unit.Assignment('x <= 1')
+    unit.Assignment('a <= 1')
   end)
   assert.has_error(function()
-    unit.Assignment('x >= 1')
+    unit.Assignment('a >= 1')
   end)
 end)
