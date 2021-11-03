@@ -1,16 +1,17 @@
 local Environment = require('erde.Environment')
 local constants = require('erde.constants')
+local rules = require('erde.rules')
 
 -- -----------------------------------------------------------------------------
 -- ParserContext
 -- -----------------------------------------------------------------------------
 
-local ParserContext = {
-  ArrowFunction = require('erde.rules.ArrowFunction'),
-  Name = require('erde.rules.Name'),
-}
-
+local ParserContext = {}
 local ParserContextMT = { __index = ParserContext }
+
+for name, rule in pairs(rules) do
+  ParserContext[name] = rule
+end
 
 function ParserContext:load(input)
   self.buffer = {}
@@ -51,10 +52,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function ParserContext:getErrorToken()
-  if ALPHA[self.bufValue] or DIGIT[self.bufValue] then
+  if constants.ALPHA[self.bufValue] or constants.DIGIT[self.bufValue] then
     local word = {}
 
-    while ALPHA[self.bufValue] or DIGIT[self.bufValue] do
+    while constants.ALPHA[self.bufValue] or constants.DIGIT[self.bufValue] do
       consume(1, word)
     end
 
@@ -67,7 +68,7 @@ function ParserContext:getErrorToken()
 end
 
 function ParserContext:throwError(msg)
-  error(('Error (Line %d, Col %d): %s'):format(line, column, msg))
+  error(('Error (Line %d, Col %d): %s'):format(self.line, self.column, msg))
 end
 
 function ParserContext:throwExpected(expectation, noLiteral)
@@ -133,21 +134,21 @@ function ParserContext:stream(lookupTable, capture, demand)
   end
 
   while lookupTable[self.bufValue] do
-    consume(1, capture)
+    self:consume(1, capture)
   end
 end
 
 function ParserContext:branch(n, isBranch, noPad, capture)
   if not noPad then
-    parser.space()
+    self:Space()
   end
 
   if isBranch then
-    consume(n, capture)
+    self:consume(n, capture)
   end
 
   if not noPad then
-    parser.space()
+    self:Space()
   end
 
   return isBranch
@@ -173,7 +174,7 @@ function ParserContext:branchChar(char, noPad, capture)
 end
 
 function ParserContext:branchStr(str, noPad, capture)
-  return self:branch(#str, peek(#str) == str, noPad, capture)
+  return self:branch(#str, self:peek(#str) == str, noPad, capture)
 end
 
 function ParserContext:branchWord(word, capture)

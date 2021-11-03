@@ -1,51 +1,50 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Name
+-- Comment
 -- -----------------------------------------------------------------------------
 
-local Name = {}
+local Comment = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Name.parse(ctx)
-  if not constants.ALPHA[ctx.bufValue] then
-    error('name must start with alpha')
-  end
-
+function Comment.parse(ctx)
   local capture = {}
-  ctx:consume(1, capture)
+  local node = { rule = 'Comment' }
 
-  while
-    constants.ALPHA[ctx.bufValue]
-    or constants.DIGIT[ctx.bufValue]
-    or ctx.bufValue == '_'
-  do
-    ctx:consume(1, capture)
-  end
+  if ctx:branchStr('---', true) then
+    node.variant = 'long'
 
-  local value = table.concat(capture)
-  for _, keyword in pairs(constants.KEYWORDS) do
-    if value == keyword then
-      ctx:throwError('name cannot be keyword')
+    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
+      ctx:consume(1, capture)
     end
+  elseif ctx:branchStr('--', true) then
+    node.variant = 'short'
+
+    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
+      ctx:consume(1, capture)
+    end
+  else
+    ctx:throwExpected('comment', true)
   end
 
-  return { rule = 'Name', value = table.concat(capture) }
+  node.value = table.concat(capture)
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Name.compile(ctx, node)
-  return node.value
+function Comment.compile(node)
+  return nil
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Name
+return Comment

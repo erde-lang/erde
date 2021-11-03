@@ -62,7 +62,7 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function ArrowFunction.compile(node)
+function ArrowFunction.compile(ctx, node)
   local params, paramNames
   if node.hasImplicitParams then
     paramNames = { node.paramName }

@@ -1,51 +1,29 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Name
+-- _RULENAME_
 -- -----------------------------------------------------------------------------
 
-local Name = {}
+local _RULENAME_ = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Name.parse(ctx)
-  if not constants.ALPHA[ctx.bufValue] then
-    error('name must start with alpha')
-  end
-
-  local capture = {}
-  ctx:consume(1, capture)
-
-  while
-    constants.ALPHA[ctx.bufValue]
-    or constants.DIGIT[ctx.bufValue]
-    or ctx.bufValue == '_'
-  do
-    ctx:consume(1, capture)
-  end
-
-  local value = table.concat(capture)
-  for _, keyword in pairs(constants.KEYWORDS) do
-    if value == keyword then
-      ctx:throwError('name cannot be keyword')
-    end
-  end
-
-  return { rule = 'Name', value = table.concat(capture) }
+function _RULENAME_.parse(ctx)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Name.compile(ctx, node)
-  return node.value
+function _RULENAME_.compile(node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Name
+return _RULENAME_

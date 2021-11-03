@@ -1,23 +1,25 @@
-local busted = require('busted')
 local ParserContext = require('erde.ParserContext')
+local CompilerContext = require('erde.CompilerContext')
 local rules = require('erde.rules')
 
-busted.expose('setup', function()
-  ctx = ParserContext()
+-- Explicit import required for helper scripts
+require('busted').expose('setup', function()
+  parseCtx = ParserContext()
+  compileCtx = CompilerContext()
 
   parse = {}
   compile = {}
 
-  for key, value in pairs(rules) do
-    parse[key] = function(input)
-      ctx:load(input)
-      return value.parse(ctx)
+  for name, rule in pairs(rules) do
+    parse[name] = function(input)
+      parseCtx:load(input)
+      return rule.parse(parseCtx)
     end
 
-    compile[key] = function(input)
-      ctx:load(input)
-      local node = value.parse(ctx)
-      return value.compile(node)
+    compile[name] = function(input)
+      parseCtx:load(input)
+      local node = rule.parse(parseCtx)
+      return compileCtx:compile(node)
     end
   end
 end)

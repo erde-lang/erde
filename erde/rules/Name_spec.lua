@@ -5,7 +5,7 @@ local constants = require('erde.constants')
 -- -----------------------------------------------------------------------------
 
 describe('Name.parse', function()
-  spec('name rule', function()
+  spec('rule', function()
     assert.are.equal('Name', parse.Name('a').rule)
   end)
 
@@ -32,6 +32,6 @@ end)
 -- Compile
 -- -----------------------------------------------------------------------------
 
-describe('ArrowFunction.compile', function()
+describe('Name.compile', function()
   -- TODO
 end)
