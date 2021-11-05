@@ -1,36 +1,31 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- DoBlock
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local DoBlock = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
-
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
-
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
-    end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
-
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
-  else
-    ctx:throwExpected('comment', true)
+function DoBlock.parse(ctx)
+  if not ctx:branchWord('do') then
+    ctx:throwExpected('do')
   end
 
-  node.value = table.concat(capture)
+  local node = {
+    rule = 'DoBlock',
+    body = ctx:Surround('{', '}', ctx.Block),
+  }
+
+  for _, statement in pairs(node.body) do
+    if statement.rule == 'Return' then
+      node.hasReturn = true
+      break
+    end
+  end
 
   return node
 end
@@ -39,12 +34,15 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function DoBlock.compile(ctx, node)
+  return ctx.format(
+    node.hasReturn and 'function()\n%1\nend' or 'do\n%1\nend',
+    ctx:compile(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return DoBlock

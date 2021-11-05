@@ -1,50 +1,33 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- Return
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local Return = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
-
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
-
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
-    end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
-
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
-  else
-    ctx:throwExpected('comment', true)
+function Return.parse(ctx)
+  if not ctx:branchWord('return') then
+    ctx:throwExpected('return')
   end
 
-  node.value = table.concat(capture)
-
-  return node
+  return { value = ctx:Expr() }
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function Return.compile(ctx, node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return Return

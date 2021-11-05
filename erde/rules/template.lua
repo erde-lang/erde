@@ -18,7 +18,7 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function _RULENAME_.compile(node)
+function _RULENAME_.compile(ctx, node)
   -- TODO
 end
 

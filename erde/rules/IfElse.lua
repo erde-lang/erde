@@ -1,36 +1,37 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- IfElse
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local IfElse = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
+function IfElse.parse(ctx)
+  local node = { elseifNodes = {} }
 
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
-
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
-    end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
-
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
-  else
-    ctx:throwExpected('comment', true)
+  if not ctx:branchWord('if') then
+    ctx:throwExpected('if')
   end
 
-  node.value = table.concat(capture)
+  node.ifNode = {
+    cond = ctx:Expr(),
+    body = ctx:Surround('{', '}', ctx.Block),
+  }
+
+  while ctx:branchWord('elseif') do
+    node.elseifNodes[#node.elseifNodes + 1] = {
+      cond = ctx:Expr(),
+      body = ctx:Surround('{', '}', ctx.Block),
+    }
+  end
+
+  if ctx:branchWord('else') then
+    node.elseNode = { body = ctx:Surround('{', '}', ctx.Block) }
+  end
 
   return node
 end
@@ -39,12 +40,12 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function IfElse.compile(ctx, node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return IfElse

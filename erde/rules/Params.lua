@@ -1,50 +1,60 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- Params
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local Params = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
+function Params.parse(ctx)
+  return ctx:Surround('(', ')', function()
+    local node = {}
 
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
+    repeat
+      local param = {
+        value = ctx:Switch({
+          ctx.Name,
+          ctx.Destructure,
+        }),
+      }
 
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
+      if not param.value then
+        break
+      end
+
+      if ctx:branchChar('=') then
+        param.default = ctx:Expr()
+      end
+
+      node[#node + 1] = param
+    until not ctx:branchChar(',')
+
+    if ctx:branchStr('...') then
+      local name = ctx:Try(ctx.Name)
+      node[#node + 1] = {
+        varargs = true,
+        name = name and name.value or nil,
+      }
     end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
 
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
-  else
-    ctx:throwExpected('comment', true)
-  end
-
-  node.value = table.concat(capture)
-
-  return node
+    return node
+  end)
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function Params.compile(ctx, node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return Params

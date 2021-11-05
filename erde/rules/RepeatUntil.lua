@@ -1,36 +1,27 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local RepeatUntil = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
-
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
-
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
-    end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
-
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
-  else
-    ctx:throwExpected('comment', true)
+function RepeatUntil.parse(ctx)
+  if not ctx:branchWord('repeat') then
+    ctx:throwExpected('repeat')
   end
 
-  node.value = table.concat(capture)
+  local node = { body = ctx:Surround('{', '}', ctx.Block) }
+
+  if not ctx:branchWord('until') then
+    ctx:throwExpected('until')
+  end
+
+  node.cond = ctx:Surround('(', ')', ctx.Expr)
 
   return node
 end
@@ -39,12 +30,12 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function RepeatUntil.compile(ctx, node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return RepeatUntil

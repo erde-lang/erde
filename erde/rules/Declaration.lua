@@ -1,36 +1,36 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- Declaration
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local Declaration = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
+function Declaration.parse(ctx)
+  local node = {}
 
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
-
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
-    end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
-
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
+  if ctx:branchWord('local') then
+    node.variant = 'local'
   else
-    ctx:throwExpected('comment', true)
+    ctx:branchWord('global')
+    node.variant = 'global'
   end
 
-  node.value = table.concat(capture)
+  node.nameList = { ctx:Name().value }
+  while ctx:branchChar(',') do
+    node.nameList[#node.nameList + 1] = ctx:Name().value
+  end
+
+  if ctx:branchChar('=') then
+    node.exprList = { ctx:Expr() }
+    while ctx:branchChar(',') do
+      node.exprList[#node.exprList + 1] = ctx:Expr()
+    end
+  end
 
   return node
 end
@@ -39,12 +39,12 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function Declaration.compile(ctx, node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return Declaration

@@ -1,36 +1,42 @@
 local constants = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
--- Comment
+-- Function
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local Function = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Comment.parse(ctx)
-  local capture = {}
-  local node = { rule = 'Comment' }
+function Function.parse(ctx)
+  local node = {
+    variant = ctx:branchWord('local') and 'local' or 'global',
+    isMethod = false,
+  }
 
-  if ctx:branchStr('---', true) then
-    node.variant = 'long'
-
-    while ctx.bufValue ~= '-' or not ctx:branchStr('---', true) do
-      ctx:consume(1, capture)
-    end
-  elseif ctx:branchStr('--', true) then
-    node.variant = 'short'
-
-    while ctx.bufValue ~= '\n' and ctx.bufValue ~= constants.EOF do
-      ctx:consume(1, capture)
-    end
-  else
-    ctx:throwExpected('comment', true)
+  if not ctx:branchWord('function') then
+    ctx:throwExpected('function')
   end
 
-  node.value = table.concat(capture)
+  node.names = { ctx:Name().value }
+
+  while true do
+    if ctx:branchChar('.') then
+      node.names[#node.names + 1] = ctx:Name().value
+    else
+      if ctx:branchChar(':') then
+        node.isMethod = true
+        node.names[#node.names + 1] = ctx:Name().value
+      end
+
+      break
+    end
+  end
+
+  node.params = ctx:Params()
+  node.body = ctx:Surround('{', '}', ctx.Block)
 
   return node
 end
@@ -39,12 +45,12 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Comment.compile(ctx, node)
-  return nil
+function Function.compile(ctx, node)
+  -- TODO
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Comment
+return Function

@@ -60,7 +60,7 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Destructure.compile(node)
+function Destructure.compile(ctx, node)
   -- TODO
 end
 

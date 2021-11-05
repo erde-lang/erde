@@ -229,6 +229,23 @@ function ParserContext:Switch(rules)
   end
 end
 
+function ParserContext:Op(opMap, opMaxLen)
+  for i = opMaxLen, 1, -1 do
+    local op = opMap[peek(i)]
+    if op then
+      return op
+    end
+  end
+end
+
+function ParserContext:Unop()
+  return self:Op(constants.UNOP_MAP, constants.UNOP_MAX_LEN)
+end
+
+function ParserContext:Binop()
+  return self:Op(constants.BINOP_MAP, constants.BINOP_MAX_LEN)
+end
+
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
