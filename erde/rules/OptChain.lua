@@ -84,7 +84,41 @@ end
 -- -----------------------------------------------------------------------------
 
 function OptChain.compile(ctx, node)
-  -- TODO
+  local optChecks = {}
+  local subChain = ctx:compile(node.base)
+
+  for i, chainNode in ipairs(node) do
+    if chainNode.optional then
+      optChecks[#optChecks + 1] = ctx.format(
+        'if %1 == nil then return end',
+        subChain
+      )
+    end
+
+    local newSubChainFormat
+    if chainNode.variant == 'dotIndex' then
+      subChain = ctx.format('%1.%2', subChain, chainNode.value)
+    elseif chainNode.variant == 'bracketIndex' then
+      subChain = ctx.format('%1[%2]', subChain, ctx:compile(chainNode.value))
+    elseif chainNode.variant == 'params' then
+      local params = {}
+
+      for _, expr in ipairs(chainNode.value) do
+        params[#params + 1] = ctx:compile(expr)
+      end
+
+      subChain = ctx.format('%1(%2)', subChain, table.concat(params, ','))
+    elseif chainNode.variant == 'method' then
+      subChain = ctx.format('%1:%2', subChain, chainNode.value)
+    end
+  end
+
+  return #optChecks == 0 and subChain
+    or ctx.format(
+      '(function() %1 return %2 end)()',
+      table.concat(optChecks, ' '),
+      subChain
+    )
 end
 
 -- -----------------------------------------------------------------------------

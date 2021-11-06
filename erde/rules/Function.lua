@@ -47,7 +47,21 @@ end
 -- -----------------------------------------------------------------------------
 
 function Function.compile(ctx, node)
-  -- TODO
+  local params = ctx:compile(node.params)
+
+  local methodName
+  if node.isMethod then
+    methodName = table.remove(node.names)
+  end
+
+  return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
+    node.variant == 'local' and 'local' or '',
+    table.concat(node.names, '.'),
+    methodName and ':' .. methodName or '',
+    table.concat(ctx:compile(params.names), ','),
+    params.prebody,
+    ctx:compile(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------

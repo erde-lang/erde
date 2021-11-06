@@ -62,6 +62,8 @@ end
 
 function Destructure.compile(ctx, node)
   -- TODO
+  local compileParts = {}
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------

@@ -45,7 +45,7 @@ function Block.compile(ctx, node)
   local compileParts = {}
 
   for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = compile(statement)
+    compileParts[#compileParts + 1] = ctx:compile(statement)
   end
 
   return table.concat(compileParts, '\n')

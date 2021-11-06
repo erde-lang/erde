@@ -61,22 +61,22 @@ end
 function Assignment.compile(ctx, node)
   local idList = {}
   for i, id in ipairs(node.idList) do
-    idList[#idList + 1] = compile(id)
+    idList[#idList + 1] = ctx:compile(id)
   end
 
   local exprList = {}
   for i, expr in ipairs(node.exprList) do
-    exprList[#exprList + 1] = compile(expr)
+    exprList[#exprList + 1] = ctx:compile(expr)
   end
 
   if node.op then
-    return format(
+    return ctx.format(
       '%1 = %2',
       idList[1],
-      compileBinop(node.op, idList[1], exprList[1])
+      ctx.compileBinop(node.op, idList[1], exprList[1])
     )
   else
-    return format(
+    return ctx.format(
       '%1 = %2',
       table.concat(idList, ','),
       table.concat(exprList, ',')

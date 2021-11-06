@@ -42,5 +42,9 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Terminal.compile', function()
-  -- TODO
+  spec('terminals', function()
+    for _, terminal in pairs(constants.TERMINALS) do
+      assert.are.equal(terminal, compile.Terminal(terminal))
+    end
+  end)
 end)

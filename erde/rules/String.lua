@@ -75,7 +75,32 @@ end
 -- -----------------------------------------------------------------------------
 
 function String.compile(ctx, node)
-  -- TODO
+  if node.variant == 'short' then
+    return node.value
+  else
+    local eqStr = '='
+    local content = {}
+
+    for _, capture in ipairs(node) do
+      if type(capture) == 'string' and capture:find(eqStr) then
+        eqStr = ('='):rep(#eqStr + 1)
+      end
+    end
+
+    for _, capture in ipairs(node) do
+      if type(capture) == 'string' then
+        content[#content + 1] = capture
+      else
+        content[#content + 1] = (']%s]..tostring(%s)..[%s['):format(
+          eqStr,
+          ctx:compile(capture),
+          eqStr
+        )
+      end
+    end
+
+    return ('[%s[%s]%s]'):format(eqStr, table.concat(content), eqStr)
+  end
 end
 
 -- -----------------------------------------------------------------------------

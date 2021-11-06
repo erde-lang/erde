@@ -50,7 +50,27 @@ end
 -- -----------------------------------------------------------------------------
 
 function Params.compile(ctx, node)
-  -- TODO
+  local names = {}
+  local prebody = {}
+
+  for i, param in ipairs(node) do
+    local name
+    if param.value.rule == 'Name' then
+      name = param.value.value
+    else
+      -- TODO: destructure
+    end
+
+    if param.default then
+      prebody[#prebody + 1] = 'if ' .. name .. ' == nil then'
+      prebody[#prebody + 1] = ctx:compile(param.default)
+      prebody[#prebody + 1] = 'end'
+    end
+
+    names[#names + 1] = name
+  end
+
+  return { names = names, prebody = table.concat(prebody, '\n') }
 end
 
 -- -----------------------------------------------------------------------------

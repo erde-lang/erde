@@ -43,5 +43,18 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('String.compile', function()
-  -- TODO
+  spec('compile short string', function()
+    assert.are.equal('"hello"', compile.String('"hello"'))
+    assert.are.equal("'hello'", compile.String("'hello'"))
+    assert.are.equal("'hello\\nworld'", compile.String("'hello\\nworld'"))
+    assert.are.equal("'\\\\'", compile.String("'\\\\'"))
+  end)
+
+  spec('compile long string', function()
+    assert.eval('hello world', compile.String('`hello world`'))
+    assert.eval('hello\nworld', compile.String('`hello\nworld`'))
+    assert.eval('a{bc}d', compile.String('`a\\{bc}d`'))
+    assert.eval('a`b', compile.String('`a\\`b`'))
+    assert.eval('hello 3', compile.String('`hello {3}`'))
+  end)
 end)

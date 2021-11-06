@@ -51,7 +51,7 @@ end
 
 function CompilerContext.compileBinop(op, lhs, rhs)
   if op.tag == 'nc' then
-    return format(
+    return CompilerContext.format(
       table.concat({
         '(function()',
         'local %1 = %2',
@@ -62,7 +62,7 @@ function CompilerContext.compileBinop(op, lhs, rhs)
         'end',
         'end)()',
       }, '\n'),
-      newTmpName(),
+      CompilerContext.newTmpName(),
       lhs,
       rhs
     )
@@ -71,18 +71,23 @@ function CompilerContext.compileBinop(op, lhs, rhs)
   elseif op.tag == 'and' then
     return table.concat({ lhs, ' and ', rhs })
   elseif op.tag == 'bor' then
-    return format('require("bit").bor(%1, %2)', lhs, rhs)
+    return _VERSION:find('5.[34]') and table.concat({ lhs, ' | ', rhs })
+      or CompilerContext.format('require("bit").bor(%1, %2)', lhs, rhs)
   elseif op.tag == 'bxor' then
-    return format('require("bit").bxor(%1, %2)', lhs, rhs)
+    return _VERSION:find('5.[34]') and table.concat({ lhs, ' ~ ', rhs })
+      or CompilerContext.format('require("bit").bxor(%1, %2)', lhs, rhs)
   elseif op.tag == 'band' then
-    return format('require("bit").band(%1, %2)', lhs, rhs)
+    return _VERSION:find('5.[34]') and table.concat({ lhs, ' & ', rhs })
+      or CompilerContext.format('require("bit").band(%1, %2)', lhs, rhs)
   elseif op.tag == 'lshift' then
-    return format('require("bit").lshift(%1, %2)', lhs, rhs)
+    return _VERSION:find('5.[34]') and table.concat({ lhs, ' << ', rhs })
+      or CompilerContext.format('require("bit").lshift(%1, %2)', lhs, rhs)
   elseif op.tag == 'rshift' then
-    return format('require("bit").rshift(%1, %2)', lhs, rhs)
+    return _VERSION:find('5.[34]') and table.concat({ lhs, ' >> ', rhs })
+      or CompilerContext.format('require("bit").rshift(%1, %2)', lhs, rhs)
   elseif op.tag == 'intdiv' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' // ', rhs })
-      or format('math.floor(%s / %s)', lhs, rhs)
+      or CompilerContext.format('math.floor(%s / %s)', lhs, rhs)
   else
     return table.concat({ lhs, op.token, rhs }, ' ')
   end

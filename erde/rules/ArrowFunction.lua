@@ -68,7 +68,7 @@ function ArrowFunction.compile(ctx, node)
   if node.hasImplicitParams then
     paramNames = { node.paramName }
   else
-    params = compile(node.params)
+    params = ctx:compile(node.params)
     paramNames = params.names
   end
 
@@ -78,12 +78,12 @@ function ArrowFunction.compile(ctx, node)
 
   local body
   if not node.hasImplicitReturns then
-    body = compile(node.body)
+    body = ctx:compile(node.body)
   else
     local returns = {}
 
     for i, value in ipairs(node.returns) do
-      returns[i] = compile(value)
+      returns[i] = ctx:compile(value)
     end
 
     body = 'return ' .. table.concat(returns, ',')

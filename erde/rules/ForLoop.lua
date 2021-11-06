@@ -68,7 +68,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function ForLoop.compile(ctx, node)
-  -- TODO
+  if node.variant == 'numeric' then
+    return ('for %s=%s,%s,%s do\n%s\nend'):format(
+      node.name,
+      ctx:compile(node.var),
+      ctx:compile(node.limit),
+      node.step and ctx:compile(node.step) or '1',
+      ctx:compile(node.body)
+    )
+  else
+    local exprList = {}
+    for i, expr in ipairs(node.exprList) do
+      exprList[i] = ctx:compile(expr)
+    end
+
+    return ('for %s in %s do\n%s\nend'):format(
+      table.concat(node.nameList, ','),
+      table.concat(exprList, ','),
+      ctx:compile(node.body)
+    )
+  end
 end
 
 -- -----------------------------------------------------------------------------

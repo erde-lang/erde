@@ -27,7 +27,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function WhileLoop.compile(ctx, node)
-  -- TODO
+  return ('while %s do\n%s\nend'):format(
+    ctx:compile(node.cond),
+    ctx:compile(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------

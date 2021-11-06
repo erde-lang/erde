@@ -76,7 +76,39 @@ end
 -- -----------------------------------------------------------------------------
 
 function Table.compile(ctx, node)
-  -- TODO
+  local compileParts = { '{' }
+
+  for i, field in ipairs(node) do
+    if field.variant == 'arrayKey' then
+      compileParts[#compileParts + 1] = ctx.format(
+        '%1,',
+        ctx:compile(field.value)
+      )
+    elseif field.variant == 'inlineKey' then
+      compileParts[#compileParts + 1] = ctx.format('%1 = %1,', field.key)
+    elseif field.variant == 'exprKey' then
+      compileParts[#compileParts + 1] = ctx.format(
+        '[%1] = %2,',
+        field.key,
+        ctx:compile(field.value)
+      )
+    elseif field.variant == 'nameKey' then
+      compileParts[#compileParts + 1] = ctx.format(
+        '%1 = %2,',
+        field.key,
+        ctx:compile(field.value)
+      )
+    elseif field.variant == 'stringKey' then
+      compileParts[#compileParts + 1] = ctx.format(
+        '[%1] = %2,',
+        ctx:compile(field.key),
+        ctx:compile(field.value)
+      )
+    end
+  end
+
+  compileParts[#compileParts + 1] = '}'
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------

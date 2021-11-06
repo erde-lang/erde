@@ -34,7 +34,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil.compile(ctx, node)
-  -- TODO
+  return ('repeat\n%s\nuntil (%s)'):format(
+    ctx:compile(node.body),
+    ctx:compile(node.cond)
+  )
 end
 
 -- -----------------------------------------------------------------------------

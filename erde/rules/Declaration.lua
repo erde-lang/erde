@@ -40,7 +40,25 @@ end
 -- -----------------------------------------------------------------------------
 
 function Declaration.compile(ctx, node)
-  -- TODO
+  local compileParts = {}
+
+  if node.variant == 'local' then
+    compileParts[#compileParts + 1] = 'local'
+  end
+
+  compileParts[#compileParts + 1] = table.concat(node.nameList, ',')
+
+  if node.exprList then
+    local exprList = {}
+    for i, expr in ipairs(node.exprList) do
+      exprList[#exprList + 1] = ctx:compile(expr)
+    end
+
+    compileParts[#compileParts + 1] = '='
+    compileParts[#compileParts + 1] = table.concat(exprList, ',')
+  end
+
+  return table.concat(compileParts, ' ')
 end
 
 -- -----------------------------------------------------------------------------
