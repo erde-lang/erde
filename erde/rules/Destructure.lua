@@ -11,7 +11,7 @@ local Destructure = {}
 -- -----------------------------------------------------------------------------
 
 function Destructure.parse(ctx)
-  local node = {}
+  local node = { rule = 'Destructure' }
   local keyCounter = 1
 
   if ctx:branchChar('?') then

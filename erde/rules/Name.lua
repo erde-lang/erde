@@ -18,11 +18,7 @@ function Name.parse(ctx)
   local capture = {}
   ctx:consume(1, capture)
 
-  while
-    constants.ALPHA[ctx.bufValue]
-    or constants.DIGIT[ctx.bufValue]
-    or ctx.bufValue == '_'
-  do
+  while constants.ALNUM[ctx.bufValue] or ctx.bufValue == '_' do
     ctx:consume(1, capture)
   end
 

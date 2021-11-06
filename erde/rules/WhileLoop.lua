@@ -16,6 +16,7 @@ function WhileLoop.parse(ctx)
   end
 
   return {
+    rule = 'WhileLoop',
     cond = ctx:Expr(),
     body = ctx:Surround('{', '}', ctx.Block),
   }

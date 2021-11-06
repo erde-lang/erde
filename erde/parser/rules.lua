@@ -451,7 +451,7 @@ function parser.Name()
   local capture = {}
   consume(1, capture)
 
-  while ALPHA[bufValue] or DIGIT[bufValue] or bufValue == '_' do
+  while ALNUM[bufValue] or bufValue == '_' do
     consume(1, capture)
   end
 

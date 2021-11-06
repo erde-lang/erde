@@ -4,25 +4,25 @@
 
 describe('Params.parse', function()
   spec('rule', function()
-    assert.are.equal('Params', unit.Params('()').rule)
+    assert.are.equal('Params', parse.Params('()').rule)
   end)
 
   spec('params', function()
-    assert.are.equal(0, #unit.Params('()'))
+    assert.are.equal(0, #parse.Params('()'))
     assert.has_subtable({
       { value = { value = 'a' } },
-    }, unit.Params(
+    }, parse.Params(
       '(a)'
     ))
     assert.has_subtable({
       { value = { value = 'a' } },
       { value = { value = 'b' } },
-    }, unit.Params(
+    }, parse.Params(
       '(a, b)'
     ))
     assert.has_subtable({
       { value = { rule = 'Destructure' } },
-    }, unit.Params(
+    }, parse.Params(
       '({ :a })'
     ))
   end)
@@ -33,7 +33,7 @@ describe('Params.parse', function()
         default = { value = '2' },
         value = { value = 'a' },
       },
-    }, unit.Params(
+    }, parse.Params(
       '(a = 2)'
     ))
   end)
@@ -41,21 +41,21 @@ describe('Params.parse', function()
   spec('params varargs', function()
     assert.has_subtable({
       { varargs = true },
-    }, unit.Params('(...)'))
+    }, parse.Params('(...)'))
     assert.has_subtable({
       { value = { value = 'a' } },
       { varargs = true },
-    }, unit.Params(
+    }, parse.Params(
       '(a, ...)'
     ))
     assert.has_subtable({
       { value = { value = 'a' } },
       { varargs = true, name = 'b' },
-    }, unit.Params(
+    }, parse.Params(
       '(a, ...b)'
     ))
     assert.has_error(function()
-      unit.Params('(..., a)')
+      parse.Params('(..., a)')
     end)
   end)
 end)

@@ -12,6 +12,7 @@ local OptChain = {}
 
 function OptChain.parse(ctx)
   local node = {
+    rule = 'OptChain',
     base = ctx:Switch({
       ctx.Name,
       function()
@@ -27,7 +28,7 @@ function OptChain.parse(ctx)
   end
 
   while true do
-    local backup = ctx:saveState()
+    local backup = ctx:backup()
     local chain = { optional = ctx:branchChar('?') }
 
     if ctx:branchChar('.') then
@@ -39,18 +40,18 @@ function OptChain.parse(ctx)
       else
         -- Do not throw error here, as '.' may be from an operator! Simply
         -- revert consumptions and break
-        ctx:restoreState(backup)
+        ctx:restore(backup)
         break
       end
-    elseif bufValue == '[' then
+    elseif ctx.bufValue == '[' then
       chain.variant = 'bracketIndex'
       chain.value = ctx:Surround('[', ']', ctx.Expr)
-    elseif bufValue == '(' then
+    elseif ctx.bufValue == '(' then
       chain.variant = 'params'
       chain.value = ctx:Surround('(', ')', function()
         local args = {}
 
-        while bufValue ~= ')' do
+        while ctx.bufValue ~= ')' do
           args[#args + 1] = ctx:Expr()
           if not ctx:branchChar(',') then
             break
@@ -62,12 +63,12 @@ function OptChain.parse(ctx)
     elseif ctx:branchChar(':') then
       chain.variant = 'method'
       chain.value = ctx:Name().value
-      if bufValue ~= '(' then
+      if ctx.bufValue ~= '(' then
         ctx:throwError('missing args after method call')
       end
     else
       -- revert consumption from ctx:branchChar('?')
-      ctx:restoreState(backup)
+      ctx:restore(backup)
       break
     end
 

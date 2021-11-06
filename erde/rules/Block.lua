@@ -11,7 +11,7 @@ local Block = {}
 -- -----------------------------------------------------------------------------
 
 function Block.parse(ctx)
-  local node = {}
+  local node = { rule = 'Block' }
 
   while true do
     local statement = ctx:Switch({
@@ -24,7 +24,7 @@ function Block.parse(ctx)
       ctx.FunctionCall,
       ctx.RepeatUntil,
       ctx.Return,
-      ctx.Var,
+      ctx.Declaration,
     })
 
     if not statement then

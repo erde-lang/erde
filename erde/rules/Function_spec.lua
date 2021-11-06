@@ -4,18 +4,18 @@
 
 describe('Function.parse', function()
   spec('rule', function()
-    assert.are.equal('Function', unit.Function('function a() {}').rule)
+    assert.are.equal('Function', parse.Function('function a() {}').rule)
   end)
 
   spec('local function', function()
     assert.has_subtable({
       variant = 'local',
       names = { 'a' },
-    }, unit.Function(
+    }, parse.Function(
       'local function a() {}'
     ))
     assert.has_error(function()
-      unit.ArrowFunction('local function() {}')
+      parse.ArrowFunction('local function() {}')
     end)
   end)
 
@@ -23,14 +23,14 @@ describe('Function.parse', function()
     assert.has_subtable({
       variant = 'global',
       names = { 'a' },
-    }, unit.Function(
+    }, parse.Function(
       'function a() {}'
     ))
     assert.has_error(function()
-      unit.ArrowFunction('function() {}')
+      parse.ArrowFunction('function() {}')
     end)
     assert.has_error(function()
-      unit.ArrowFunction('global function a() {}')
+      parse.ArrowFunction('global function a() {}')
     end)
   end)
 
@@ -38,11 +38,11 @@ describe('Function.parse', function()
     assert.has_subtable({
       isMethod = true,
       names = { 'a', 'b' },
-    }, unit.Function(
+    }, parse.Function(
       'function a:b() {}'
     ))
     assert.has_error(function()
-      unit.FunctionCall('function a:b.c() {}')
+      parse.FunctionCall('function a:b.c() {}')
     end)
   end)
 end)

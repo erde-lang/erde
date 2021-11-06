@@ -31,7 +31,7 @@ function Terminal.parse(ctx)
 
   for _, terminal in pairs(constants.TERMINALS) do
     if ctx:branchWord(terminal) then
-      return { value = terminal }
+      return { rule = 'Terminal', value = terminal }
     end
   end
 

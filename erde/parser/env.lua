@@ -27,10 +27,10 @@ column = 1
 throw = {}
 
 local function getErrorToken()
-  if ALPHA[bufValue] or DIGIT[bufValue] then
+  if ALNUM[bufValue] then
     local word = {}
 
-    while ALPHA[bufValue] or DIGIT[bufValue] do
+    while ALNUM[bufValue] do
       consume(1, word)
     end
 
@@ -163,8 +163,7 @@ end
 
 function branchWord(word, capture)
   local trailingChar = buffer[bufIndex + #word]
-  return not (ALPHA[trailingChar] or DIGIT[trailingChar])
-    and branchStr(word, false, capture)
+  return not ALNUM[trailingChar] and branchStr(word, false, capture)
 end
 
 -- -----------------------------------------------------------------------------

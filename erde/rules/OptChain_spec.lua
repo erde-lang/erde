@@ -4,27 +4,27 @@
 
 describe('OptChain.parse', function()
   spec('rules', function()
-    assert.are.equal('OptChain', unit.OptChain('a.b').rule)
-    assert.are.equal('OptChain', unit.FunctionCall('a()').rule)
-    assert.are.equal('OptChain', unit.Id('a.b').rule)
+    assert.are.equal('OptChain', parse.OptChain('a.b').rule)
+    assert.are.equal('OptChain', parse.FunctionCall('a()').rule)
+    assert.are.equal('OptChain', parse.Id('a.b').rule)
   end)
 
   spec('optchain base', function()
     assert.has_subtable({
       value = 'a',
-    }, unit.OptChain('a'))
+    }, parse.OptChain('a'))
     assert.has_subtable({
       base = { value = 'a' },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a.b'
     ))
     assert.has_subtable({
       base = { rule = 'Expr' },
-    }, unit.OptChain(
+    }, parse.OptChain(
       '(1 + 2).a'
     ))
     assert.has_error(function()
-      unit.OptChain('1.b')
+      parse.OptChain('1.b')
     end)
   end)
 
@@ -35,7 +35,7 @@ describe('OptChain.parse', function()
         variant = 'dotIndex',
         value = 'b',
       },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a.b'
     ))
     assert.has_subtable({
@@ -43,7 +43,7 @@ describe('OptChain.parse', function()
         optional = true,
         variant = 'dotIndex',
       },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a?.b'
     ))
   end)
@@ -55,7 +55,7 @@ describe('OptChain.parse', function()
         variant = 'bracketIndex',
         value = { op = { tag = 'add' } },
       },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a[2 + 3]'
     ))
     assert.has_subtable({
@@ -63,7 +63,7 @@ describe('OptChain.parse', function()
         optional = true,
         variant = 'bracketIndex',
       },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a?[2 + 3]'
     ))
   end)
@@ -78,7 +78,7 @@ describe('OptChain.parse', function()
           { value = '2' },
         },
       },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a(1, 2)'
     ))
     assert.has_subtable({
@@ -86,10 +86,10 @@ describe('OptChain.parse', function()
         optional = true,
         variant = 'params',
       },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a?(1, 2)'
     ))
-    assert.are.equal(0, #unit.OptChain('a()')[1].value)
+    assert.are.equal(0, #parse.OptChain('a()')[1].value)
   end)
 
   spec('optchain method', function()
@@ -100,7 +100,7 @@ describe('OptChain.parse', function()
         value = 'b',
       },
       { variant = 'params' },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a:b(1, 2)'
     ))
     assert.has_subtable({
@@ -110,38 +110,38 @@ describe('OptChain.parse', function()
         value = 'b',
       },
       { variant = 'params' },
-    }, unit.OptChain(
+    }, parse.OptChain(
       'a?:b(1, 2)'
     ))
     assert.has_no.errors(function()
-      unit.OptChain('a:b().c')
+      parse.OptChain('a:b().c')
     end)
     assert.has_error(function()
-      unit.OptChain('a:b')
+      parse.OptChain('a:b')
     end)
     assert.has_error(function()
-      unit.OptChain('a:b.c()')
+      parse.OptChain('a:b.c()')
     end)
   end)
 
   spec('function call', function()
     assert.has_error(function()
-      unit.FunctionCall('a')
+      parse.FunctionCall('a')
     end)
     assert.has_error(function()
-      unit.FunctionCall('a.b')
+      parse.FunctionCall('a.b')
     end)
     assert.has_no.errors(function()
-      unit.FunctionCall('hello()')
+      parse.FunctionCall('hello()')
     end)
   end)
 
   spec('id', function()
     assert.has_error(function()
-      unit.Id('a.b()')
+      parse.Id('a.b()')
     end)
     assert.has_no.errors(function()
-      unit.Id('a.b')
+      parse.Id('a.b')
     end)
   end)
 end)

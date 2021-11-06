@@ -22,27 +22,23 @@ local Assignment = {}
 -- -----------------------------------------------------------------------------
 
 function Assignment.parse(ctx)
-  local node = {}
+  local node = { rule = 'Assignment' }
 
   node.idList = { ctx:Id() }
   while ctx:branchChar(',') do
     node.idList[#node.idList + 1] = ctx:Id()
   end
 
-  for i = BINOP_MAX_LEN, 1, -1 do
-    local opToken = peek(i)
-    local op = BINOP_MAP[opToken]
-
-    if op and not BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-      if #node.idList > 1 then
-        throw.error(
-          'Cannot use assignment operations w/ more than 1 assignment'
-        )
-      else
-        ctx:consume(i)
-        node.op = op
-        break
-      end
+  node.op = ctx:Binop()
+  if node.op then
+    if BINOP_ASSIGNMENT_BLACKLIST[node.op.token] then
+      ctx:throwError('Cannot use operator assignment w/ ' .. node.op.token)
+    elseif #node.idList > 1 then
+      ctx:throwError(
+        'Cannot use assignment operations w/ more than 1 assignment'
+      )
+    else
+      ctx:consume(#node.op.token)
     end
   end
 

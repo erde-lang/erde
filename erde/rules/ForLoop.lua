@@ -19,7 +19,12 @@ function ForLoop.parse(ctx)
   local node
 
   if ctx:branchChar('=') then
-    node = { variant = 'numeric', name = firstName, var = ctx:Expr() }
+    node = {
+      rule = 'ForLoop',
+      variant = 'numeric',
+      name = firstName,
+      var = ctx:Expr(),
+    }
 
     if not ctx:branchChar(',') then
       ctx:throwExpected(',')
@@ -31,7 +36,12 @@ function ForLoop.parse(ctx)
       node.step = ctx:Expr()
     end
   else
-    node = { variant = 'generic', nameList = {}, exprList = {} }
+    node = {
+      rule = 'ForLoop',
+      variant = 'generic',
+      nameList = {},
+      exprList = {},
+    }
 
     node.nameList[1] = firstName
     while ctx:branchChar(',') do
@@ -48,7 +58,7 @@ function ForLoop.parse(ctx)
     end
   end
 
-  node.body = ctx:Surround'{', '}', ctx.Block)
+  node.body = ctx:Surround('{', '}', ctx.Block)
 
   return node
 end

@@ -10,6 +10,7 @@ local ArrowFunction = {}
 
 function ArrowFunction.parse(ctx)
   local node = {
+    rule = 'ArrowFunction',
     hasImplicitParams = false,
     hasImplicitReturns = false,
   }

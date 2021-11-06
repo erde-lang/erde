@@ -11,7 +11,7 @@ local Table = {}
 -- -----------------------------------------------------------------------------
 
 function Table.parse(ctx)
-  local node = {}
+  local node = { rule = 'Table' }
   local keyCounter = 1
 
   if not ctx:branchChar('{') then
@@ -24,7 +24,7 @@ function Table.parse(ctx)
     if ctx:branchChar(':') then
       field.variant = 'inlineKey'
       field.key = ctx:Name().value
-    elseif bufValue == '[' then
+    elseif ctx.bufValue == '[' then
       field.variant = 'exprKey'
       field.key = ctx:Surround('[', ']', ctx.Expr)
 
@@ -63,7 +63,7 @@ function Table.parse(ctx)
 
     node[#node + 1] = field
 
-    if not ctx:branchChar(',') and bufValue ~= '}' then
+    if not ctx:branchChar(',') and ctx.bufValue ~= '}' then
       ctx:throwError('Missing comma')
     end
   end

@@ -12,6 +12,7 @@ local Function = {}
 
 function Function.parse(ctx)
   local node = {
+    rule = 'Function',
     variant = ctx:branchWord('local') and 'local' or 'global',
     isMethod = false,
   }

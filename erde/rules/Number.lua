@@ -16,30 +16,30 @@ function Number.parse(ctx)
   if
     ctx:branchStr('0x', true, capture) or ctx:branchStr('0X', true, capture)
   then
-    stream(constants.HEX, capture, true)
+    ctx:stream(constants.HEX, capture, true)
 
-    if bufValue == '.' and not ctx:Binop() then
+    if ctx.bufValue == '.' and not ctx:Binop() then
       ctx:consume(1, capture)
-      stream(constants.HEX, capture, true)
+      ctx:stream(constants.HEX, capture, true)
     end
 
     if ctx:branchChar('pP', true, capture) then
       ctx:branchChar('+-', true, capture)
-      stream(constants.DIGIT, capture, true)
+      ctx:stream(constants.DIGIT, capture, true)
     end
   else
-    while constants.DIGIT[bufValue] do
+    while constants.DIGIT[ctx.bufValue] do
       ctx:consume(1, capture)
     end
 
-    if bufValue == '.' and not ctx:Binop() then
+    if ctx.bufValue == '.' and not ctx:Binop() then
       ctx:consume(1, capture)
-      stream(constants.DIGIT, capture, true)
+      ctx:stream(constants.DIGIT, capture, true)
     end
 
     if #capture > 0 and ctx:branchChar('eE', true, capture) then
       ctx:branchChar('+-', true, capture)
-      stream(constants.DIGIT, capture, true)
+      ctx:stream(constants.DIGIT, capture, true)
     end
   end
 
@@ -47,7 +47,7 @@ function Number.parse(ctx)
     ctx:throwExpected('number', true)
   end
 
-  return { value = table.concat(capture) }
+  return { rule = 'Number', value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------

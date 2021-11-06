@@ -11,7 +11,7 @@ local Declaration = {}
 -- -----------------------------------------------------------------------------
 
 function Declaration.parse(ctx)
-  local node = {}
+  local node = { rule = 'Declaration' }
 
   if ctx:branchWord('local') then
     node.variant = 'local'

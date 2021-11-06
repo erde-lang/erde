@@ -10,7 +10,12 @@ local ParserContext = {}
 local ParserContextMT = { __index = ParserContext }
 
 for name, rule in pairs(rules) do
-  ParserContext[name] = rule
+  ParserContext[name] = function(self, ...)
+    self:Space()
+    local node = rule.parse(self, ...)
+    self:Space()
+    return node
+  end
 end
 
 function ParserContext:load(input)
@@ -52,11 +57,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function ParserContext:getErrorToken()
-  if constants.ALPHA[self.bufValue] or constants.DIGIT[self.bufValue] then
+  if constants.ALNUM[self.bufValue] then
     local word = {}
 
-    while constants.ALPHA[self.bufValue] or constants.DIGIT[self.bufValue] do
-      consume(1, word)
+    while constants.ALNUM[self.bufValue] do
+      self:consume(1, word)
     end
 
     return table.concat(word)
@@ -179,7 +184,7 @@ end
 
 function ParserContext:branchWord(word, capture)
   local trailingChar = self.buffer[self.bufIndex + #word]
-  return not (ALPHA[trailingChar] or DIGIT[trailingChar])
+  return not constants.ALNUM[trailingChar]
     and self:branchStr(word, false, capture)
 end
 
@@ -188,7 +193,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function ParserContext:Space()
-  while WHITESPACE[bufValue] do
+  while constants.WHITESPACE[self.bufValue] do
     self:consume()
   end
 end
@@ -198,10 +203,10 @@ function ParserContext:Surround(openChar, closeChar, rule)
     self:throwExpected(openChar)
   end
 
-  local capture = rule.parse(self)
+  local capture = rule(self)
 
   if not self:branchChar(closeChar) then
-    throw.expected(closeChar)
+    self:throwExpected(closeChar)
   end
 
   return capture
@@ -210,7 +215,7 @@ end
 function ParserContext:Try(rule)
   local backup = self:backup()
   local ok, node = pcall(function()
-    return rule.parse(self)
+    return rule(self)
   end)
 
   if ok then
@@ -231,7 +236,7 @@ end
 
 function ParserContext:Op(opMap, opMaxLen)
   for i = opMaxLen, 1, -1 do
-    local op = opMap[peek(i)]
+    local op = opMap[self:peek(i)]
     if op then
       return op
     end

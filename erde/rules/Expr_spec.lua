@@ -6,9 +6,9 @@ local constants = require('erde.constants')
 
 describe('Expr.parse', function()
   spec('rule', function()
-    assert.are.equal('Expr', unit.Expr('1 + 2').rule)
-    assert.are.equal('Number', unit.Expr('1').rule)
-    assert.are.equal('String', unit.Expr('"hello"').rule)
+    assert.are.equal('Expr', parse.Expr('1 + 2').rule)
+    assert.are.equal('Number', parse.Expr('1').rule)
+    assert.are.equal('String', parse.Expr('"hello"').rule)
   end)
 
   spec('unop tags', function()
@@ -16,7 +16,7 @@ describe('Expr.parse', function()
       assert.has_subtable({
         variant = 'unop',
         op = { tag = op.tag },
-      }, unit.Expr(
+      }, parse.Expr(
         op.token .. '1'
       ))
     end
@@ -29,7 +29,7 @@ describe('Expr.parse', function()
       assert.has_subtable({
         variant = 'binop',
         op = { tag = op.tag },
-      }, unit.Expr(
+      }, parse.Expr(
         testExpr
       ))
     end
@@ -44,7 +44,7 @@ describe('Expr.parse', function()
         { value = '2' },
       },
       { value = '3' },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 * 2 + 3'
     ))
     assert.has_subtable({
@@ -55,7 +55,7 @@ describe('Expr.parse', function()
         { value = '2' },
         { value = '3' },
       },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 + 2 * 3'
     ))
     assert.has_subtable({
@@ -70,7 +70,7 @@ describe('Expr.parse', function()
         },
       },
       { value = '4' },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 + 2 * 3 + 4'
     ))
   end)
@@ -84,7 +84,7 @@ describe('Expr.parse', function()
         { value = '2' },
         { value = '3' },
       },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 ^ 2 ^ 3'
     ))
     assert.has_subtable({
@@ -95,7 +95,7 @@ describe('Expr.parse', function()
         { value = '2' },
       },
       { value = '3' },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 ^ 2 + 3'
     ))
   end)
@@ -110,7 +110,7 @@ describe('Expr.parse', function()
         { value = '2' },
         { value = '3' },
       },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 * (2 + 3)'
     ))
   end)
@@ -121,29 +121,29 @@ describe('Expr.parse', function()
       { value = '1' },
       {
         op = { tag = 'neg' },
-        { value = '3' },
+        operand = { value = '3' },
       },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 * -3'
     ))
     assert.has_subtable({
       op = { tag = 'neg' },
-      {
+      operand = {
         op = { tag = 'exp' },
         { value = '2' },
         { value = '3' },
       },
-    }, unit.Expr(
+    }, parse.Expr(
       '-2 ^ 3'
     ))
     assert.has_subtable({
       op = { tag = 'mult' },
       {
         op = { tag = 'neg' },
-        { value = '2' },
+        operand = { value = '2' },
       },
       { value = '3' },
-    }, unit.Expr(
+    }, parse.Expr(
       '-2 * 3'
     ))
   end)
@@ -154,7 +154,7 @@ describe('Expr.parse', function()
       { value = '1' },
       { value = '2' },
       { value = '3' },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 ? 2 : 3'
     ))
     assert.has_subtable({
@@ -162,14 +162,14 @@ describe('Expr.parse', function()
       { value = '1' },
       {
         op = { tag = 'neg' },
-        { value = '2' },
+        operand = { value = '2' },
       },
       {
         op = { tag = 'add' },
         { value = '3' },
         { value = '4' },
       },
-    }, unit.Expr(
+    }, parse.Expr(
       '1 ? -2 : 3 + 4'
     ))
   end)

@@ -4,21 +4,21 @@
 
 describe('Declaration.parse', function()
   spec('rule', function()
-    assert.are.equal('Declaration', unit.Declaration('local a').rule)
+    assert.are.equal('Declaration', parse.Declaration('local a').rule)
   end)
 
   spec('local declaration', function()
     assert.has_subtable({
       variant = 'local',
       nameList = { 'abc' },
-    }, unit.Declaration(
+    }, parse.Declaration(
       'local abc'
     ))
     assert.has_subtable({
       variant = 'local',
       nameList = { 'abc' },
       exprList = { { value = '2' } },
-    }, unit.Declaration(
+    }, parse.Declaration(
       'local abc = 2'
     ))
   end)
@@ -27,14 +27,14 @@ describe('Declaration.parse', function()
     assert.has_subtable({
       variant = 'global',
       nameList = { 'abc' },
-    }, unit.Declaration(
+    }, parse.Declaration(
       'global abc'
     ))
     assert.has_subtable({
       variant = 'global',
       nameList = { 'abc' },
       exprList = { { value = '2' } },
-    }, unit.Declaration(
+    }, parse.Declaration(
       'global abc = 2'
     ))
   end)
@@ -42,7 +42,7 @@ describe('Declaration.parse', function()
   spec('multiple declaration', function()
     assert.has_subtable({
       nameList = { 'a', 'b' },
-    }, unit.Declaration(
+    }, parse.Declaration(
       'local a, b'
     ))
     assert.has_subtable({
@@ -50,14 +50,14 @@ describe('Declaration.parse', function()
         { value = '1' },
         { value = '2' },
       },
-    }, unit.Declaration(
+    }, parse.Declaration(
       'local a, b = 1, 2'
     ))
     assert.has_error(function()
-      unit.Declaration('local a,')
+      parse.Declaration('local a,')
     end)
     assert.has_error(function()
-      unit.Declaration('local a = 1,')
+      parse.Declaration('local a = 1,')
     end)
   end)
 end)

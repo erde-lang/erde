@@ -12,7 +12,7 @@ local Params = {}
 
 function Params.parse(ctx)
   return ctx:Surround('(', ')', function()
-    local node = {}
+    local node = { rule = 'Params' }
 
     repeat
       local param = {

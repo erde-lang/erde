@@ -11,7 +11,7 @@ local IfElse = {}
 -- -----------------------------------------------------------------------------
 
 function IfElse.parse(ctx)
-  local node = { elseifNodes = {} }
+  local node = { rule = 'IfElse', elseifNodes = {} }
 
   if not ctx:branchWord('if') then
     ctx:throwExpected('if')

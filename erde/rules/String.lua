@@ -11,24 +11,28 @@ local String = {}
 -- -----------------------------------------------------------------------------
 
 function String.parse(ctx)
-  if bufValue == "'" or bufValue == '"' then
+  if ctx.bufValue == "'" or ctx.bufValue == '"' then
     local capture = {}
     ctx:consume(1, capture)
 
     while true do
-      if bufValue == capture[1] then
+      if ctx.bufValue == capture[1] then
         ctx:consume(1, capture)
         break
-      elseif bufValue == '\n' then
+      elseif ctx.bufValue == '\n' then
         ctx:throwError('Unterminated string')
       else
         ctx:consume(1, capture)
       end
     end
 
-    return { variant = 'short', value = table.concat(capture) }
+    return {
+      rule = 'String',
+      variant = 'short',
+      value = table.concat(capture),
+    }
   elseif ctx:branchChar('`', true) then
-    local node = { variant = 'long' }
+    local node = { rule = 'String', variant = 'long' }
     local capture = {}
 
     while true do
@@ -44,8 +48,8 @@ function String.parse(ctx)
         end
       elseif ctx:branchChar('`', true) then
         break
-      elseif bufValue == '\\' then
-        if ('{}`'):find(buffer[bufIndex + 1]) then
+      elseif ctx.bufValue == '\\' then
+        if ('{}`'):find(ctx.buffer[ctx.bufIndex + 1]) then
           ctx:consume()
           ctx:consume(1, capture)
         else

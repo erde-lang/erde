@@ -4,7 +4,7 @@
 
 describe('IfElse.parse', function()
   spec('rule', function()
-    assert.are.equal('IfElse', unit.IfElse('if true {}').rule)
+    assert.are.equal('IfElse', parse.IfElse('if true {}').rule)
   end)
 
   spec('if', function()
@@ -13,7 +13,7 @@ describe('IfElse.parse', function()
         cond = { value = 'true' },
         body = {},
       },
-    }, unit.IfElse(
+    }, parse.IfElse(
       'if true {}'
     ))
   end)
@@ -24,7 +24,7 @@ describe('IfElse.parse', function()
       elseifNodes = {
         { cond = { value = 'true' } },
       },
-    }, unit.IfElse(
+    }, parse.IfElse(
       'if false {} elseif true {}'
     ))
     assert.has_subtable({
@@ -33,7 +33,7 @@ describe('IfElse.parse', function()
         { cond = { value = 'false' } },
         { cond = { value = 'true' } },
       },
-    }, unit.IfElse(
+    }, parse.IfElse(
       'if false {} elseif false {} elseif true {}'
     ))
   end)
@@ -42,17 +42,17 @@ describe('IfElse.parse', function()
     assert.has_subtable({
       ifNode = {},
       elseNode = { body = {} },
-    }, unit.IfElse(
+    }, parse.IfElse(
       'if true {} else {}'
     ))
   end)
 
   spec('if + elseif + else', function()
     assert.has_no.errors(function()
-      unit.IfElse('if false {} elseif false {} else {}')
+      parse.IfElse('if false {} elseif false {} else {}')
     end)
     assert.has_no.errors(function()
-      unit.IfElse('if false {} elseif false {} elseif true {} else {}')
+      parse.IfElse('if false {} elseif false {} elseif true {} else {}')
     end)
   end)
 end)

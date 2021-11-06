@@ -4,7 +4,7 @@
 
 describe('WhileLoop.parse', function()
   spec('rule', function()
-    assert.are.equal('WhileLoop', unit.WhileLoop('while true {}').rule)
+    assert.are.equal('WhileLoop', parse.WhileLoop('while true {}').rule)
   end)
 
   spec('while loop', function()
@@ -12,7 +12,7 @@ describe('WhileLoop.parse', function()
       rule = 'WhileLoop',
       cond = { value = 'true' },
       body = {},
-    }, unit.WhileLoop(
+    }, parse.WhileLoop(
       'while true {}'
     ))
   end)

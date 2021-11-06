@@ -1,9 +1,9 @@
+-- Explicit import required for helper scripts
+local busted = require('busted')
+local say = require('say')
 local ParserContext = require('erde.ParserContext')
 local CompilerContext = require('erde.CompilerContext')
 local rules = require('erde.rules')
-
--- Explicit import required for helper scripts
-local busted = require('busted')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -50,12 +50,9 @@ local function has_subtable(state, args)
   return true
 end
 
-require('say'):set(
-  'assertion.has_subtable.positive',
-  '%s \nis not a subtable of\n%s'
-)
+say:set('assertion.has_subtable.positive', '%s \nis not a subtable of\n%s')
 
-assert:register(
+busted.assert:register(
   'assertion',
   'has_subtable',
   has_subtable,
@@ -70,8 +67,8 @@ local function eval(state, args)
   return args[1] == loadLua('return ' .. args[2])()
 end
 
-require('say'):set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
-assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
+say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
+busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 
 --
 -- run
@@ -81,30 +78,30 @@ local function run(state, args)
   return args[1] == loadLua(args[2])()
 end
 
-require('say'):set('assertion.run.positive', 'Run error. Expected %s, got %s')
-assert:register('assertion', 'run', run, 'assertion.run.positive')
+say:set('assertion.run.positive', 'Run error. Expected %s, got %s')
+busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
 
 -- -----------------------------------------------------------------------------
 -- Setup
 -- -----------------------------------------------------------------------------
 
 busted.expose('setup', function()
-  parseCtx = ParserContext()
-  compileCtx = CompilerContext()
+  parserCtx = ParserContext()
+  compilerCtx = CompilerContext()
 
   parse = {}
   compile = {}
 
   for name, rule in pairs(rules) do
     parse[name] = function(input)
-      parseCtx:load(input)
-      return rule.parse(parseCtx)
+      parserCtx:load(input)
+      return rule.parse(parserCtx)
     end
 
     compile[name] = function(input)
-      parseCtx:load(input)
-      local node = rule.parse(parseCtx)
-      return compileCtx:compile(node)
+      parserCtx:load(input)
+      local node = rule.parse(parserCtx)
+      return compilerCtx:compile(node)
     end
   end
 end)

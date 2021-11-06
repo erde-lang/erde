@@ -4,7 +4,7 @@
 
 describe('Table.parse', function()
   spec('rule', function()
-    assert.are.equal('Table', unit.Table('{}').rule)
+    assert.are.equal('Table', parse.Table('{}').rule)
   end)
 
   spec('table arrayKey', function()
@@ -14,7 +14,7 @@ describe('Table.parse', function()
         key = 1,
         value = { value = '10' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ 10 }'
     ))
     assert.has_subtable({
@@ -28,7 +28,7 @@ describe('Table.parse', function()
         key = 2,
         value = { value = '20' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ 10, 20 }'
     ))
   end)
@@ -39,7 +39,7 @@ describe('Table.parse', function()
         variant = 'inlineKey',
         key = 'x',
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ :x }'
     ))
     assert.has_subtable({
@@ -51,7 +51,7 @@ describe('Table.parse', function()
         variant = 'inlineKey',
         key = 'h1',
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ :x, :h1 }'
     ))
   end)
@@ -63,7 +63,7 @@ describe('Table.parse', function()
         key = 'x',
         value = { value = '2' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ x: 2 }'
     ))
     assert.has_subtable({
@@ -72,7 +72,7 @@ describe('Table.parse', function()
         key = 'h1',
         value = { value = '2' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ h1: 2 }'
     ))
   end)
@@ -84,7 +84,7 @@ describe('Table.parse', function()
         key = { rule = 'String', variant = 'short' },
         value = { value = '3' },
       },
-    }, unit.Table(
+    }, parse.Table(
       "{ 'my-key': 3 }"
     ))
     assert.has_subtable({
@@ -93,7 +93,7 @@ describe('Table.parse', function()
         key = { rule = 'String', variant = 'short' },
         value = { value = '3' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ "my-key": 3 }'
     ))
     assert.has_subtable({
@@ -102,7 +102,7 @@ describe('Table.parse', function()
         key = { rule = 'String', variant = 'long' },
         value = { value = '3' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ `my-key`: 3 }'
     ))
   end)
@@ -114,11 +114,11 @@ describe('Table.parse', function()
         key = { op = { tag = 'add' } },
         value = { value = '3' },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ [1 + 2]: 3 }'
     ))
     assert.has_error(function()
-      unit.Table('{ [1 + 2] }')
+      parse.Table('{ [1 + 2] }')
     end)
   end)
 
@@ -130,7 +130,7 @@ describe('Table.parse', function()
       { key = 'd' },
       { key = { variant = 'short' } },
       { key = { variant = 'long' } },
-    }, unit.Table(
+    }, parse.Table(
       '{ a, :b, c, d: 1, "e": 3, [`f`]: 2 }'
     ))
   end)
@@ -143,7 +143,7 @@ describe('Table.parse', function()
           { key = 'y', value = { value = '1' } },
         },
       },
-    }, unit.Table(
+    }, parse.Table(
       '{ x: { y: 1 } }'
     ))
   end)
