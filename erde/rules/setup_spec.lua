@@ -24,6 +24,20 @@ local function loadLua(code)
   return runner
 end
 
+local function deepCompare(a, b)
+  if type(a) ~= 'table' or type(b) ~= 'table' then
+    return a == b
+  end
+
+  for key in pairs(a) do
+    if not deepCompare(a[key], b[key]) then
+      return false
+    end
+  end
+
+  return true
+end
+
 -- -----------------------------------------------------------------------------
 -- Asserts
 -- -----------------------------------------------------------------------------
@@ -64,7 +78,7 @@ busted.assert:register(
 --
 
 local function eval(state, args)
-  return args[1] == loadLua('return ' .. args[2])()
+  return deepCompare(args[1], loadLua('return ' .. args[2])())
 end
 
 say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
@@ -75,7 +89,7 @@ busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 --
 
 local function run(state, args)
-  return args[1] == loadLua(args[2])()
+  return deepCompare(args[1], loadLua(args[2])())
 end
 
 say:set('assertion.run.positive', 'Run error. Expected %s, got %s')
@@ -95,12 +109,11 @@ busted.expose('setup', function()
   for name, rule in pairs(rules) do
     parse[name] = function(input)
       parserCtx:load(input)
-      return rule.parse(parserCtx)
+      return parserCtx[name](parserCtx)
     end
 
     compile[name] = function(input)
-      parserCtx:load(input)
-      local node = rule.parse(parserCtx)
+      local node = parse[name](input)
       return compilerCtx:compile(node)
     end
   end

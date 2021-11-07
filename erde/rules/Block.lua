@@ -17,6 +17,7 @@ function Block.parse(ctx)
     local statement = ctx:Switch({
       ctx.Assignment,
       ctx.Comment,
+      ctx.Declaration,
       ctx.DoBlock,
       ctx.ForLoop,
       ctx.IfElse,
@@ -24,7 +25,7 @@ function Block.parse(ctx)
       ctx.FunctionCall,
       ctx.RepeatUntil,
       ctx.Return,
-      ctx.Declaration,
+      ctx.WhileLoop,
     })
 
     if not statement then

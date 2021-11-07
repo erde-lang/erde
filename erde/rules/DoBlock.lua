@@ -35,10 +35,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock.compile(ctx, node)
-  return ctx.format(
-    node.hasReturn and 'function()\n%1\nend' or 'do\n%1\nend',
-    ctx:compile(node.body)
-  )
+  return ctx.format('(function()\n%1\nend)()', ctx:compile(node.body))
 end
 
 -- -----------------------------------------------------------------------------

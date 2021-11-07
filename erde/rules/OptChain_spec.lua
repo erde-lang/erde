@@ -123,27 +123,6 @@ describe('OptChain.parse', function()
       parse.OptChain('a:b.c()')
     end)
   end)
-
-  spec('function call', function()
-    assert.has_error(function()
-      parse.FunctionCall('a')
-    end)
-    assert.has_error(function()
-      parse.FunctionCall('a.b')
-    end)
-    assert.has_no.errors(function()
-      parse.FunctionCall('hello()')
-    end)
-  end)
-
-  spec('id', function()
-    assert.has_error(function()
-      parse.Id('a.b()')
-    end)
-    assert.has_no.errors(function()
-      parse.Id('a.b')
-    end)
-  end)
 end)
 
 -- -----------------------------------------------------------------------------
@@ -151,5 +130,78 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('OptChain.compile', function()
-  -- TODO
+  spec('optchain base', function()
+    assert.eval(1, compile.OptChain('({ x: 1 }).x'))
+  end)
+
+  spec('optchain dotIndex', function()
+    assert.run(
+      1,
+      compile.Block([[
+        local a = { b: 1 }
+        return a.b
+      ]])
+    )
+    assert.run(
+      nil,
+      compile.Block([[
+        local a = {}
+        return a?.b
+      ]])
+    )
+  end)
+
+  spec('optchain bracketIndex', function()
+    assert.run(
+      1,
+      compile.Block([[
+        local a = { [5]: 1 }
+        return a[2 + 3]
+      ]])
+    )
+    assert.run(
+      nil,
+      compile.Block([[
+        local a = {}
+        return a?[2 + 3]
+      ]])
+    )
+  end)
+
+  spec('optchain params', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local a = (x, y) -> x + y
+        return a(1, 2)
+      ]])
+    )
+    assert.run(
+      nil,
+      compile.Block([[
+        local a
+        return a?(1, 2)
+      ]])
+    )
+  end)
+
+  spec('optchain method', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local a = {
+          b: (self, x) -> self.c + x,
+          c: 1,
+        }
+        return a:b(2)
+      ]])
+    )
+    assert.run(
+      nil,
+      compile.Block([[
+        local a
+        return a?:b(1, 2)
+      ]])
+    )
+  end)
 end)

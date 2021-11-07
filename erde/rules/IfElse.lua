@@ -42,8 +42,8 @@ end
 
 function IfElse.compile(ctx, node)
   local compileParts = {
-    ctx.format('if %1 then', ctx:compile(elseifNode.cond)),
-    ctx:compile(node.body),
+    ctx.format('if %1 then', ctx:compile(node.ifNode.cond)),
+    ctx:compile(node.ifNode.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
@@ -51,12 +51,12 @@ function IfElse.compile(ctx, node)
       'elseif %1 then',
       ctx:compile(elseifNode.cond)
     )
-    compileParts[#compileParts + 1] = ctx:compile(node.body)
+    compileParts[#compileParts + 1] = ctx:compile(elseifNode.body)
   end
 
   if node.elseNode then
     compileParts[#compileParts + 1] = 'else'
-    compileParts[#compileParts + 1] = ctx:compile(node.body)
+    compileParts[#compileParts + 1] = ctx:compile(node.elseNode.body)
   end
 
   compileParts[#compileParts + 1] = 'end'

@@ -23,5 +23,16 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('WhileLoop.compile', function()
-  -- TODO
+  spec('while loop', function()
+    assert.run(
+      10,
+      compile.Block([[
+        local x = 0
+        while x < 10 {
+          x += 2
+        }
+        return x
+      ]])
+    )
+  end)
 end)

@@ -3,13 +3,12 @@
 -- -----------------------------------------------------------------------------
 
 describe('Id.parse', function()
-  -- TODO
-end)
-
--- -----------------------------------------------------------------------------
--- Compile
--- -----------------------------------------------------------------------------
-
-describe('Id.compile', function()
-  -- TODO
+  spec('id', function()
+    assert.has_error(function()
+      parse.Id('a.b()')
+    end)
+    assert.has_no.errors(function()
+      parse.Id('a.b')
+    end)
+  end)
 end)

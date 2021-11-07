@@ -17,20 +17,6 @@ describe('Table.parse', function()
     }, parse.Table(
       '{ 10 }'
     ))
-    assert.has_subtable({
-      {
-        variant = 'arrayKey',
-        key = 1,
-        value = { value = '10' },
-      },
-      {
-        variant = 'arrayKey',
-        key = 2,
-        value = { value = '20' },
-      },
-    }, parse.Table(
-      '{ 10, 20 }'
-    ))
   end)
 
   spec('table inlineKey', function()
@@ -41,18 +27,6 @@ describe('Table.parse', function()
       },
     }, parse.Table(
       '{ :x }'
-    ))
-    assert.has_subtable({
-      {
-        variant = 'inlineKey',
-        key = 'x',
-      },
-      {
-        variant = 'inlineKey',
-        key = 'h1',
-      },
-    }, parse.Table(
-      '{ :x, :h1 }'
     ))
   end)
 
@@ -65,15 +39,6 @@ describe('Table.parse', function()
       },
     }, parse.Table(
       '{ x: 2 }'
-    ))
-    assert.has_subtable({
-      {
-        variant = 'nameKey',
-        key = 'h1',
-        value = { value = '2' },
-      },
-    }, parse.Table(
-      '{ h1: 2 }'
     ))
   end)
 
@@ -154,5 +119,35 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Table.compile', function()
-  -- TODO
+  spec('table arrayKey', function()
+    assert.eval({ 10 }, compile.Table('{ 10 }'))
+  end)
+
+  spec('table inlineKey', function()
+    assert.run(
+      { x = 1 },
+      compile.Block([[
+        local x = 1
+        return { :x }
+      ]])
+    )
+  end)
+
+  spec('table nameKey', function()
+    assert.eval({ x = 2 }, compile.Table('{ x: 2 }'))
+  end)
+
+  spec('table stringKey', function()
+    assert.eval({ ['my-key'] = 3 }, compile.Table("{'my-key': 3}"))
+    assert.eval({ ['my-key'] = 3 }, compile.Table('{"my-key": 3}'))
+    assert.eval({ ['my-key'] = 3 }, compile.Table('{`my-key`: 3}'))
+  end)
+
+  spec('table exprKey', function()
+    assert.eval({ [3] = 1 }, compile.Table('{ [1 + 2]: 1 }'))
+  end)
+
+  spec('nested table', function()
+    assert.eval({ x = { y = 1 } }, compile.Table('{ x: { y: 1 } }'))
+  end)
 end)

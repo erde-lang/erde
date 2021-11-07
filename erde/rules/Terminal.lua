@@ -36,6 +36,7 @@ function Terminal.parse(ctx)
   end
 
   local node = ctx:Switch({
+    ctx.DoBlock,
     ctx.Table,
     ctx.Number,
     ctx.String,

@@ -15,7 +15,7 @@ function Return.parse(ctx)
     ctx:throwExpected('return')
   end
 
-  return { rule = 'Return', value = ctx:Expr() }
+  return { rule = 'Return', value = ctx:Try(ctx.Expr) }
 end
 
 -- -----------------------------------------------------------------------------
