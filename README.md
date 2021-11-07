@@ -4,6 +4,11 @@
 
 - Source maps?
 - Declaration files?
+- Optimizations: remove excessive iife compilation
+    - DoBlock
+    - Ternary
+    - Null coalescence
+    - ...
 
 ## Long Term Proposals (need community input)
 

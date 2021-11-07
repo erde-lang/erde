@@ -121,18 +121,18 @@ describe('Assignment.compile', function()
     assert.run(
       1,
       compile.Block([[
-      local a
-      a = 1
-      return a
-    ]])
+        local a
+        a = 1
+        return a
+      ]])
     )
     assert.run(
       1,
       compile.Block([[
-      local a = {}
-      a.b = 1
-      return a.b
-    ]])
+        local a = {}
+        a.b = 1
+        return a.b
+      ]])
     )
   end)
 
@@ -140,18 +140,18 @@ describe('Assignment.compile', function()
     assert.run(
       3,
       compile.Block([[
-      local a, b
-      a, b = 1, 2
-      return a + b
-    ]])
+        local a, b
+        a, b = 1, 2
+        return a + b
+      ]])
     )
     assert.run(
       3,
       compile.Block([[
-      local a, b = {}, {}
-      a.c, b.d = 1, 2
-      return a.c + b.d
-    ]])
+        local a, b = {}, {}
+        a.c, b.d = 1, 2
+        return a.c + b.d
+      ]])
     )
   end)
 
@@ -159,18 +159,18 @@ describe('Assignment.compile', function()
     assert.run(
       3,
       compile.Block([[
-      local a = 1
-      a += 2
-      return a
-    ]])
+        local a = 1
+        a += 2
+        return a
+      ]])
     )
     assert.run(
       4,
       compile.Block([[
-      local a = 5
-      a .&= 6
-      return a
-    ]])
+        local a = 5
+        a .&= 6
+        return a
+      ]])
     )
   end)
 end)

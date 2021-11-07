@@ -67,5 +67,23 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Declaration.compile', function()
-  -- TODO
+  spec('declaration', function()
+    assert.run(
+      1,
+      compile.Block([[
+        local a = 1
+        return a
+      ]])
+    )
+  end)
+
+  spec('multiple declaration', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local a, b = 1, 2
+        return a + b
+      ]])
+    )
+  end)
 end)

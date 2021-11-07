@@ -13,5 +13,9 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Block.compile', function()
-  -- TODO
+  spec('sanity check', function()
+    assert.has.no_error(function()
+      compile.Block('')
+    end)
+  end)
 end)
