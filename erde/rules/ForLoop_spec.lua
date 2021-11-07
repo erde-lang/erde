@@ -76,5 +76,48 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('ForLoop.compile', function()
-  -- TODO
+  spec('numeric for', function()
+    assert.run(
+      10,
+      compile.Block([[
+        local x = 0
+        for i = 1, 4 {
+          x += i
+        }
+        return x
+      ]])
+    )
+    assert.run(
+      4,
+      compile.Block([[
+        local x = 0
+        for i = 1, 4, 2 {
+          x += i
+        }
+        return x
+      ]])
+    )
+  end)
+  spec('generic for', function()
+    assert.run(
+      10,
+      compile.Block([[
+        local x = 0
+        for i, value in ipairs({ 1, 2, 8, 1 }) {
+          x += i
+        }
+        return x
+      ]])
+    )
+    assert.run(
+      12,
+      compile.Block([[
+        local x = 0
+        for i, value in ipairs({ 1, 2, 8, 1 }) {
+          x += value
+        }
+        return x
+      ]])
+    )
+  end)
 end)

@@ -35,44 +35,44 @@ describe('DoBlock.compile', function()
     assert.run(
       1,
       compile.Block([[
-      local x
-      do {
-        x = 1
-      }
-      return x
-    ]])
+        local x
+        do {
+          x = 1
+        }
+        return x
+      ]])
     )
     assert.run(
       nil,
       compile.Block([[
-      do {
-        local x
-        x = 1
-      }
-      return x
-    ]])
+        do {
+          local x
+          x = 1
+        }
+        return x
+      ]])
     )
   end)
   spec('do block return', function()
     assert.run(
       2,
       compile.Block([[
-      local x = do {
-        local y = 1
-        return y + 1
-      }
-      return x
-    ]])
+        local x = do {
+          local y = 1
+          return y + 1
+        }
+        return x
+      ]])
     )
     assert.run(
       nil,
       compile.Block([[
-      local x = do {
-        local y = 1
-        return y + 1
-      }
-      return y
-    ]])
+        local x = do {
+          local y = 1
+          return y + 1
+        }
+        return y
+      ]])
     )
   end)
 end)
