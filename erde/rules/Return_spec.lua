@@ -11,5 +11,7 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Return.compile', function()
-  -- TODO
+  spec('return', function()
+    assert.run(1, compile.Return('return 1'))
+  end)
 end)

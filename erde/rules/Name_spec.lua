@@ -33,5 +33,9 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Name.compile', function()
-  -- TODO
+  spec('sanity check', function()
+    assert.has.no_error(function()
+      compile.Name('a')
+    end)
+  end)
 end)

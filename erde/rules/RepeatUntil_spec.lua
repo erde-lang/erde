@@ -30,5 +30,16 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('RepeatUntil.compile', function()
-  -- TODO
+  spec('repeat until', function()
+    assert.run(
+      12,
+      compile.Block([[
+        local x = 0
+        repeat {
+          x += 2
+        } until (x > 10)
+        return x
+      ]])
+    )
+  end)
 end)
