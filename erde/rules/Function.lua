@@ -58,7 +58,7 @@ function Function.compile(ctx, node)
     node.variant == 'local' and 'local' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
-    table.concat(ctx:compile(params.names), ','),
+    table.concat(params.names, ','),
     params.prebody,
     ctx:compile(node.body)
   )

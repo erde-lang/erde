@@ -52,5 +52,56 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Function.compile', function()
-  -- TODO
+  spec('local function', function()
+    assert.run(
+      2,
+      compile.Block([[
+        local function test() {
+          return 2
+        }
+
+        do {
+          local function test() {
+            return 1
+          }
+        }
+
+        return test()
+      ]])
+    )
+  end)
+
+  spec('global function', function()
+    assert.run(
+      1,
+      compile.Block([[
+        function test() {
+          return 2
+        }
+
+        do {
+          function test() {
+            return 1
+          }
+        }
+
+        return test()
+      ]])
+    )
+  end)
+
+  spec('method function', function()
+    assert.run(
+      1,
+      compile.Block([[
+        local a = { x: 1 }
+
+        function a:test() {
+          return self.x
+        }
+
+        return a:test()
+      ]])
+    )
+  end)
 end)
