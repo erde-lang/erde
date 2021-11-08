@@ -3,7 +3,13 @@
 -- -----------------------------------------------------------------------------
 
 describe('Return.parse', function()
-  -- TODO
+  spec('rule', function()
+    assert.are.equal('Return', parse.Return('return').rule)
+  end)
+
+  spec('return value', function()
+    assert.are.equal('1', parse.Return('return 1').value.value)
+  end)
 end)
 
 -- -----------------------------------------------------------------------------
