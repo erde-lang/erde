@@ -2,6 +2,8 @@
 
 ## TODO
 
+- revert table `:` to `=`?
+- optimistic errors (try to guess the attempted rule)
 - Source maps?
 - Declaration files?
 - Optimizations: remove excessive iife compilation

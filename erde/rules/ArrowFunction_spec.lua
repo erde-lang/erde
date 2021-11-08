@@ -53,10 +53,13 @@ describe('ArrowFunction.parse', function()
         { value = '2' },
       },
     }, parse.ArrowFunction(
-      '() => 1, 2'
+      '() => (1, 2)'
     ))
     assert.has_error(function()
       parse.ArrowFunction('() ->')
+    end)
+    assert.has_error(function()
+      parse.ArrowFunction('() -> ()')
     end)
   end)
 end)
@@ -78,9 +81,9 @@ describe('ArrowFunction.compile', function()
     assert.run(
       3,
       compile.Block([[
-      local a = (x, y) -> { return x + y }
-      return a(1, 2)
-    ]])
+        local a = (x, y) -> { return x + y }
+        return a(1, 2)
+      ]])
     )
   end)
 
@@ -89,18 +92,18 @@ describe('ArrowFunction.compile', function()
     assert.run(
       2,
       compile.Block([[
-      local a = { b: 1 }
-      a.c = () => { return self.b + 1 }
-      return a:c()
-    ]])
+        local a = { b: 1 }
+        a.c = () => { return self.b + 1 }
+        return a:c()
+      ]])
     )
     assert.run(
       2,
       compile.Block([[
-      local a = { b: 1 }
-      a.c = (x) => { return self.b + x }
-      return a:c(1)
-    ]])
+        local a = { b: 1 }
+        a.c = (x) => { return self.b + x }
+        return a:c(1)
+      ]])
     )
   end)
 
@@ -112,17 +115,17 @@ describe('ArrowFunction.compile', function()
     assert.run(
       1,
       compile.Block([[
-      local a = () -> 1
-      return a()
-    ]])
+        local a = () -> 1
+        return a()
+      ]])
     )
     assert.run(
       3,
       compile.Block([[
-      local a = () -> 1, 2
-      local b, c = a()
-      return b + c
-    ]])
+        local a = () -> (1, 2)
+        local b, c = a()
+        return b + c
+      ]])
     )
   end)
 
@@ -130,17 +133,17 @@ describe('ArrowFunction.compile', function()
     assert.run(
       2,
       compile.Block([[
-      local a = x -> { return x + 1 }
-      return a(1)
-    ]])
+        local a = x -> { return x + 1 }
+        return a(1)
+      ]])
     )
     assert.run(
       2,
       compile.Block([[
-      local a = { b: 1 }
-      a.c = x => { return self.b + x }
-      return a:c(1)
-    ]])
+        local a = { b: 1 }
+        a.c = x => { return self.b + x }
+        return a:c(1)
+      ]])
     )
   end)
 end)

@@ -37,23 +37,30 @@ function ArrowFunction.parse(ctx)
 
   if ctx.bufValue == '{' then
     node.body = ctx:Surround('{', '}', ctx.Block)
-  else
+  elseif ctx.bufValue == '(' then
     node.hasImplicitReturns = true
-    node.returns = {}
+    node.returns = ctx:Surround('(', ')', function()
+      local returns = {}
 
-    repeat
-      local expr = ctx:Try(ctx.Expr)
+      repeat
+        local expr = ctx:Try(ctx.Expr)
 
-      if not expr then
-        break
+        if not expr then
+          break
+        end
+
+        returns[#returns + 1] = expr
+      until not ctx:branchChar(',')
+
+      if #returns == 0 then
+        ctx:throwError('Returns list cannot be empty')
       end
 
-      node.returns[#node.returns + 1] = expr
-    until not ctx:branchChar(',')
-
-    if #node.returns == 0 then
-      ctx:throwExpected('expression', true)
-    end
+      return returns
+    end)
+  else
+    node.hasImplicitReturns = true
+    node.returns = { ctx:Expr() }
   end
 
   return node
