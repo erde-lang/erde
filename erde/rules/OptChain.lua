@@ -99,7 +99,9 @@ function OptChain.compile(ctx, node)
     if chainNode.variant == 'dotIndex' then
       subChain = ctx.format('%1.%2', subChain, chainNode.value)
     elseif chainNode.variant == 'bracketIndex' then
-      subChain = ctx.format('%1[%2]', subChain, ctx:compile(chainNode.value))
+      -- Space around brackets to avoid long string expressions
+      -- [ [=[some string]=] ]
+      subChain = ctx.format('%1[ %2 ]', subChain, ctx:compile(chainNode.value))
     elseif chainNode.variant == 'params' then
       local params = {}
 

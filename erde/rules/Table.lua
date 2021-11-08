@@ -88,6 +88,8 @@ function Table.compile(ctx, node)
       compileParts[#compileParts + 1] = ctx.format('%1 = %1,', field.key)
     elseif field.variant == 'exprKey' then
       compileParts[#compileParts + 1] = ctx.format(
+        -- Space around brackets to avoid long string expressions
+        -- [ [=[some string]=] ]
         '[ %1 ] = %2,',
         ctx:compile(field.key),
         ctx:compile(field.value)
@@ -100,6 +102,8 @@ function Table.compile(ctx, node)
       )
     elseif field.variant == 'stringKey' then
       compileParts[#compileParts + 1] = ctx.format(
+        -- Space around brackets to avoid long string expressions
+        -- [ [=[some string]=] ]
         '[ %1 ] = %2,',
         ctx:compile(field.key),
         ctx:compile(field.value)
