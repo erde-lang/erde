@@ -15,14 +15,13 @@ function Params.parse(ctx)
     local node = { rule = 'Params' }
 
     repeat
-      local param = {
-        value = ctx:Switch({
-          ctx.Name,
-          ctx.Destructure,
-        }),
-      }
+      local param = ctx:Switch({
+        ctx.Name,
+        ctx.Destructure,
+      })
 
-      if not param.value then
+      if not param then
+        -- No error (allow trailing commas)
         break
       end
 
@@ -34,10 +33,9 @@ function Params.parse(ctx)
     until not ctx:branchChar(',')
 
     if ctx:branchStr('...') then
-      local name = ctx:Try(ctx.Name)
       node[#node + 1] = {
         varargs = true,
-        name = name and name.value or nil,
+        name = ctx:Try(ctx.Name),
       }
     end
 
@@ -54,17 +52,22 @@ function Params.compile(ctx, node)
   local prebody = {}
 
   for i, param in ipairs(node) do
-    local name
-    if param.value.rule == 'Name' then
-      name = param.value.value
+    local name, destructure
+    if param.rule == 'Name' then
+      name = ctx:compile(param)
     else
-      -- TODO: destructure
+      destructure = ctx:compile(param)
+      name = destructure.baseName
     end
 
     if param.default then
       prebody[#prebody + 1] = 'if ' .. name .. ' == nil then'
       prebody[#prebody + 1] = ctx:compile(param.default)
       prebody[#prebody + 1] = 'end'
+    end
+
+    if destructure then
+      prebody[#prebody + 1] = destructure.compiled
     end
 
     names[#names + 1] = name
