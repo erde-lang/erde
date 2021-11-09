@@ -10,13 +10,13 @@ describe('Declaration.parse', function()
   spec('local declaration', function()
     assert.has_subtable({
       variant = 'local',
-      nameList = { 'abc' },
+      varList = { { value = 'abc' } },
     }, parse.Declaration(
       'local abc'
     ))
     assert.has_subtable({
       variant = 'local',
-      nameList = { 'abc' },
+      varList = { { value = 'abc' } },
       exprList = { { value = '2' } },
     }, parse.Declaration(
       'local abc = 2'
@@ -26,13 +26,13 @@ describe('Declaration.parse', function()
   spec('global declaration', function()
     assert.has_subtable({
       variant = 'global',
-      nameList = { 'abc' },
+      varList = { { value = 'abc' } },
     }, parse.Declaration(
       'global abc'
     ))
     assert.has_subtable({
       variant = 'global',
-      nameList = { 'abc' },
+      varList = { { value = 'abc' } },
       exprList = { { value = '2' } },
     }, parse.Declaration(
       'global abc = 2'
@@ -41,7 +41,10 @@ describe('Declaration.parse', function()
 
   spec('multiple declaration', function()
     assert.has_subtable({
-      nameList = { 'a', 'b' },
+      varList = {
+        { value = 'a' },
+        { value = 'b' },
+      },
     }, parse.Declaration(
       'local a, b'
     ))
@@ -60,6 +63,25 @@ describe('Declaration.parse', function()
       parse.Declaration('local a = 1,')
     end)
   end)
+
+  spec('destructure declaration', function()
+    assert.has_subtable({
+      variant = 'local',
+      varList = { { rule = 'Destructure' } },
+    }, parse.Declaration(
+      'local { a } = x'
+    ))
+    assert.has_subtable({
+      variant = 'local',
+      varList = {
+        { value = 'a' },
+        { rule = 'Destructure' },
+        { value = 'c' },
+      },
+    }, parse.Declaration(
+      'local a, { b }, c = x'
+    ))
+  end)
 end)
 
 -- -----------------------------------------------------------------------------
@@ -67,11 +89,21 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Declaration.compile', function()
-  spec('declaration', function()
+  spec('local declaration', function()
     assert.run(
       1,
       compile.Block([[
         local a = 1
+        return a
+      ]])
+    )
+  end)
+
+  spec('global declaration', function()
+    assert.run(
+      1,
+      compile.Block([[
+        global a = 1
         return a
       ]])
     )
@@ -83,6 +115,25 @@ describe('Declaration.compile', function()
       compile.Block([[
         local a, b = 1, 2
         return a + b
+      ]])
+    )
+  end)
+
+  spec('destructure declaration', function()
+    assert.run(
+      1,
+      compile.Block([[
+        local a = { b: 1 }
+        local { :b } = a
+        return b
+      ]])
+    )
+    assert.run(
+      3,
+      compile.Block([[
+        local a = { b: 1 }
+        local c, { :b } = 2, a
+        return c + b
       ]])
     )
   end)
