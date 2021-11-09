@@ -4,39 +4,7 @@ local say = require('say')
 local ParserContext = require('erde.ParserContext')
 local CompilerContext = require('erde.CompilerContext')
 local rules = require('erde.rules')
-
--- -----------------------------------------------------------------------------
--- Helpers
--- -----------------------------------------------------------------------------
-
-local function loadLua(code)
-  local runner
-  if _VERSION:find('5.1') then
-    runner = loadstring(code)
-  else
-    runner = load(code)
-  end
-
-  if runner == nil then
-    error('Invalid Lua code: ' .. code)
-  end
-
-  return runner
-end
-
-local function deepCompare(a, b)
-  if type(a) ~= 'table' or type(b) ~= 'table' then
-    return a == b
-  end
-
-  for key in pairs(a) do
-    if not deepCompare(a[key], b[key]) then
-      return false
-    end
-  end
-
-  return true
-end
+local utils = require('erde.utils')
 
 -- -----------------------------------------------------------------------------
 -- Asserts
@@ -78,7 +46,7 @@ busted.assert:register(
 --
 
 local function eval(state, args)
-  return deepCompare(args[1], loadLua('return ' .. args[2])())
+  return utils.deepCompare(args[1], utils.loadLua('return ' .. args[2])())
 end
 
 say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
@@ -89,7 +57,7 @@ busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 --
 
 local function run(state, args)
-  return deepCompare(args[1], loadLua(args[2])())
+  return utils.deepCompare(args[1], utils.loadLua(args[2])())
 end
 
 say:set('assertion.run.positive', 'Run error. Expected %s, got %s')

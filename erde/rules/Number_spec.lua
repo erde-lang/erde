@@ -1,3 +1,5 @@
+local utils = require('erde.utils')
+
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
@@ -88,9 +90,11 @@ describe('Number.compile', function()
     assert.eval(0xfp2, compile.Number('0xfp2'))
     assert.eval(0xfP2, compile.Number('0xfP2'))
 
-    -- TODO: compiler tests for different lua versions
-    -- assert.eval(0xfp+2, compile.Number('0xfp+2'))
-    -- assert.eval(0xfp-2, compile.Number('0xfp-2'))
+    if _VERSION:find('5.[34]') then
+      -- Need to loadLua to prevent parsing errors
+      assert.eval(utils.loadLua('0xfp+2'), compile.Number('0xfp+2'))
+      assert.eval(utils.loadLua('0xfp-2'), compile.Number('0xfp-2'))
+    end
   end)
 
   spec('floats', function()

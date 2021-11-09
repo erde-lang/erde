@@ -11,7 +11,11 @@ local Declaration = {}
 -- -----------------------------------------------------------------------------
 
 function Declaration.parse(ctx)
-  local node = { rule = 'Declaration' }
+  local node = {
+    rule = 'Declaration',
+    varList = {},
+    exprList = {},
+  }
 
   if ctx:branchWord('local') then
     node.variant = 'local'
@@ -20,16 +24,23 @@ function Declaration.parse(ctx)
     node.variant = 'global'
   end
 
-  node.nameList = { ctx:Name().value }
-  while ctx:branchChar(',') do
-    node.nameList[#node.nameList + 1] = ctx:Name().value
-  end
+  repeat
+    local var = ctx:Switch({
+      ctx.Name,
+      ctx.Destructure,
+    })
+
+    if not var then
+      ctx:throwExpected('name or destructure', true)
+    end
+
+    node.varList[#node.varList + 1] = var
+  until not ctx:branchChar(',')
 
   if ctx:branchChar('=') then
-    node.exprList = { ctx:Expr() }
-    while ctx:branchChar(',') do
+    repeat
       node.exprList[#node.exprList + 1] = ctx:Expr()
-    end
+    until not ctx:branchChar(',')
   end
 
   return node
@@ -40,25 +51,40 @@ end
 -- -----------------------------------------------------------------------------
 
 function Declaration.compile(ctx, node)
+  local declarationParts = {}
   local compileParts = {}
 
   if node.variant == 'local' then
-    compileParts[#compileParts + 1] = 'local'
+    declarationParts[#declarationParts + 1] = 'local'
   end
 
-  compileParts[#compileParts + 1] = table.concat(node.nameList, ',')
+  local nameList = {}
 
-  if node.exprList then
+  for i, var in ipairs(node.varList) do
+    if var.rule == 'Name' then
+      nameList[#nameList + 1] = ctx:compile(var)
+    elseif var.rule == 'Destructure' then
+      local destructure = ctx:compile(var)
+      nameList[#nameList + 1] = destructure.baseName
+      compileParts[#compileParts + 1] = destructure.compiled
+    end
+  end
+
+  declarationParts[#declarationParts + 1] = table.concat(nameList, ',')
+
+  if #node.exprList > 0 then
     local exprList = {}
+
     for i, expr in ipairs(node.exprList) do
       exprList[#exprList + 1] = ctx:compile(expr)
     end
 
-    compileParts[#compileParts + 1] = '='
-    compileParts[#compileParts + 1] = table.concat(exprList, ',')
+    declarationParts[#declarationParts + 1] = '='
+    declarationParts[#declarationParts + 1] = table.concat(exprList, ',')
   end
 
-  return table.concat(compileParts, ' ')
+  table.insert(compileParts, 1, table.concat(declarationParts, ' '))
+  return table.concat(compileParts, '\n')
 end
 
 -- -----------------------------------------------------------------------------

@@ -37,31 +37,6 @@ describe('Destructure.parse', function()
     ))
   end)
 
-  spec('nested destructure', function()
-    assert.has_subtable({
-      {
-        name = 'a',
-        destructure = {
-          { key = 1, name = 'b' },
-        },
-      },
-    }, parse.Destructure(
-      '{ :a { b } }'
-    ))
-    assert.has_subtable({
-      {
-        destructure = {
-          { key = 1, name = 'a' },
-        },
-      },
-    }, parse.Destructure(
-      '{ { a } }'
-    ))
-    assert.has_error(function()
-      parse.Destructure('{ a { b } }')
-    end)
-  end)
-
   spec('optional destructure', function()
     assert.has_subtable({
       optional = true,
@@ -77,5 +52,8 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Destructure.compile', function()
-  -- TODO
+  spec('sanity check', function()
+    assert.is_not_nil(compile.Destructure('{}').baseName)
+    assert.is_not_nil(compile.Destructure('{}').compiled)
+  end)
 end)

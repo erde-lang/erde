@@ -10,28 +10,21 @@ describe('Params.parse', function()
   spec('params', function()
     assert.are.equal(0, #parse.Params('()'))
     assert.has_subtable({
-      { value = { value = 'a' } },
-    }, parse.Params(
-      '(a)'
-    ))
+      { value = 'a' },
+    }, parse.Params('(a)'))
     assert.has_subtable({
-      { value = { value = 'a' } },
-      { value = { value = 'b' } },
+      { value = 'a' },
+      { value = 'b' },
     }, parse.Params(
       '(a, b)'
-    ))
-    assert.has_subtable({
-      { value = { rule = 'Destructure' } },
-    }, parse.Params(
-      '({ :a })'
     ))
   end)
 
   spec('optional params', function()
     assert.has_subtable({
       {
+        value = 'a',
         default = { value = '2' },
-        value = { value = 'a' },
       },
     }, parse.Params(
       '(a = 2)'
@@ -43,20 +36,39 @@ describe('Params.parse', function()
       { varargs = true },
     }, parse.Params('(...)'))
     assert.has_subtable({
-      { value = { value = 'a' } },
+      { value = 'a' },
       { varargs = true },
     }, parse.Params(
       '(a, ...)'
     ))
     assert.has_subtable({
-      { value = { value = 'a' } },
-      { varargs = true, name = 'b' },
+      { value = 'a' },
+      {
+        varargs = true,
+        name = { value = 'b' },
+      },
     }, parse.Params(
       '(a, ...b)'
     ))
     assert.has_error(function()
       parse.Params('(..., a)')
     end)
+  end)
+
+  spec('destructure params', function()
+    assert.has_subtable({
+      { rule = 'Destructure' },
+    }, parse.Params(
+      '({ :a })'
+    ))
+    assert.has_subtable({
+      {
+        rule = 'Destructure',
+        default = { rule = 'Table' },
+      },
+    }, parse.Params(
+      '({ a } = { 2 })'
+    ))
   end)
 end)
 
@@ -65,5 +77,29 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Params.compile', function()
-  -- TODO
+  spec('params', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local function test(a, b) {
+          return a + b
+        }
+        return test(1, 2)
+      ]])
+    )
+  end)
+
+  spec('destructure params', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local function test({ :a }, b) {
+          return a + b
+        }
+
+        local x = { a: 1 }
+        return test(x, 2)
+      ]])
+    )
+  end)
 end)
