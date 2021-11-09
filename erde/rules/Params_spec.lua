@@ -77,8 +77,29 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Params.compile', function()
-  spec('sanity check', function()
-    assert.is_not_nil(compile.Params('()').names)
-    assert.is_not_nil(compile.Params('()').prebody)
+  spec('params', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local function test(a, b) {
+          return a + b
+        }
+        return test(1, 2)
+      ]])
+    )
+  end)
+
+  spec('destructure params', function()
+    assert.run(
+      3,
+      compile.Block([[
+        local function test({ :a }, b) {
+          return a + b
+        }
+
+        local x = { a: 1 }
+        return test(x, 2)
+      ]])
+    )
   end)
 end)
