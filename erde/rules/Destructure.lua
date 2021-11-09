@@ -53,7 +53,50 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Destructure.compile(ctx, node) end
+function Destructure.compile(ctx, node)
+  local baseName = ctx.newTmpName()
+  local names = {}
+  local compileParts = {}
+
+  for i, field in ipairs(node) do
+    names[#names + 1] = field.name
+
+    if field.variant == 'mapDestruct' then
+      compileParts[#compileParts + 1] = ctx.format(
+        '%1 = %2.%1',
+        field.name,
+        baseName
+      )
+    elseif field.variant == 'arrayDestruct' then
+      compileParts[#compileParts + 1] = ctx.format(
+        '%1 = %2[%3]',
+        field.name,
+        baseName,
+        field.key
+      )
+    end
+
+    if field.default then
+      compileParts[#compileParts + 1] = ctx.format(
+        'if %1 == nil then %1 = %2 end',
+        field.name,
+        ctx:compile(field.default)
+      )
+    end
+  end
+
+  if node.optional then
+    table.insert(compileParts, 1, 'if ' .. baseName .. ' ~= nil then')
+    compileParts[#compileParts + 1] = 'end'
+  end
+
+  table.insert(compileParts, 1, 'local ' .. table.concat(names, ','))
+
+  return {
+    baseName = baseName,
+    compiled = table.concat(compileParts, '\n'),
+  }
+end
 
 -- -----------------------------------------------------------------------------
 -- Return

@@ -52,5 +52,8 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Destructure.compile', function()
-  -- TODO
+  spec('sanity check', function()
+    assert.is_not_nil(compile.Destructure('{}').baseName)
+    assert.is_not_nil(compile.Destructure('{}').compiled)
+  end)
 end)
