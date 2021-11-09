@@ -27,20 +27,13 @@ function Destructure.parse(ctx)
 
     if ctx:branchChar(':') then
       field.variant = 'mapDestruct'
-      field.name = ctx:Name().value
-      field.destructure = ctx:Try(ctx.Destructure)
     else
       field.variant = 'arrayDestruct'
       field.key = keyCounter
       keyCounter = keyCounter + 1
-
-      local name = ctx:Try(ctx.Name)
-      if name then
-        field.name = name.value
-      else
-        field.destructure = ctx:Destructure()
-      end
     end
+
+    field.name = ctx:Name().value
 
     if ctx:branchChar('=') then
       field.default = ctx:Expr()
@@ -60,11 +53,7 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function Destructure.compile(ctx, node)
-  -- TODO
-  local compileParts = {}
-  return table.concat(compileParts, '\n')
-end
+function Destructure.compile(ctx, node) end
 
 -- -----------------------------------------------------------------------------
 -- Return
