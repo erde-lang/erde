@@ -45,10 +45,10 @@ LEFT_ASSOCIATIVE = -1
 RIGHT_ASSOCIATIVE = 1
 
 UNOPS = {
-  { tag = 'neg', token = '-', prec = 14 },
-  { tag = 'len', token = '#', prec = 14 },
-  { tag = 'not', token = '~', prec = 14 },
-  { tag = 'bnot', token = '.~', prec = 14 },
+  { tag = 'neg', token = '-', prec = 13 },
+  { tag = 'len', token = '#', prec = 13 },
+  { tag = 'not', token = '~', prec = 13 },
+  { tag = 'bnot', token = '.~', prec = 13 },
 }
 
 UNOP_MAP = {}
@@ -62,30 +62,29 @@ for _, op in pairs(UNOPS) do
 end
 
 BINOPS = {
-  { tag = 'pipe', token = '>>', prec = 1, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'ternary', token = '?', prec = 2, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'nc', token = '??', prec = 3, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'or', token = '|', prec = 4, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'and', token = '&', prec = 5, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'eq', token = '==', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'neq', token = '~=', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'lte', token = '<=', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'gte', token = '>=', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'lt', token = '<', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'gt', token = '>', prec = 6, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'bor', token = '.|', prec = 7, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'bxor', token = '.~', prec = 8, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'band', token = '.&', prec = 9, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'lshift', token = '.<<', prec = 10, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'rshift', token = '.>>', prec = 10, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'concat', token = '..', prec = 11, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'add', token = '+', prec = 12, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'sub', token = '-', prec = 12, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'mult', token = '*', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'div', token = '/', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'intdiv', token = '//', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'mod', token = '%', prec = 13, assoc = LEFT_ASSOCIATIVE },
-  { tag = 'exp', token = '^', prec = 15, assoc = RIGHT_ASSOCIATIVE },
+  { tag = 'ternary', token = '?', prec = 1, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'nc', token = '??', prec = 2, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'or', token = '|', prec = 3, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'and', token = '&', prec = 4, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'eq', token = '==', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'neq', token = '~=', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'lte', token = '<=', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'gte', token = '>=', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'lt', token = '<', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'gt', token = '>', prec = 5, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'bor', token = '.|', prec = 6, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'bxor', token = '.~', prec = 7, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'band', token = '.&', prec = 8, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'lshift', token = '.<<', prec = 9, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'rshift', token = '.>>', prec = 9, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'concat', token = '..', prec = 10, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'add', token = '+', prec = 11, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'sub', token = '-', prec = 11, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'mult', token = '*', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'div', token = '/', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'intdiv', token = '//', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'mod', token = '%', prec = 12, assoc = LEFT_ASSOCIATIVE },
+  { tag = 'exp', token = '^', prec = 14, assoc = RIGHT_ASSOCIATIVE },
 }
 
 BINOP_MAP = {}
