@@ -46,7 +46,7 @@ busted.assert:register(
 --
 
 local function eval(state, args)
-  return utils.deepCompare(args[1], utils.loadLua('return ' .. args[2])())
+  return utils.deepCompare(args[1], utils.eval(args[2]))
 end
 
 say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
@@ -57,7 +57,7 @@ busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 --
 
 local function run(state, args)
-  return utils.deepCompare(args[1], utils.loadLua(args[2])())
+  return utils.deepCompare(args[1], utils.run(args[2]))
 end
 
 say:set('assertion.run.positive', 'Run error. Expected %s, got %s')

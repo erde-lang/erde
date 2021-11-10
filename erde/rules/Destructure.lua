@@ -11,41 +11,37 @@ local Destructure = {}
 -- -----------------------------------------------------------------------------
 
 function Destructure.parse(ctx)
-  local node = { rule = 'Destructure' }
   local keyCounter = 1
+  local optional = ctx:branchChar('?')
 
-  if ctx:branchChar('?') then
-    node.optional = true
-  end
+  local node = ctx:Surround('{', '}', function()
+    return ctx:List({
+      allowEmpty = true,
+      allowTrailingComma = true,
+      rule = function()
+        local field = {}
 
-  if not ctx:branchChar('{') then
-    ctx:throwExpected('{')
-  end
+        if ctx:branchChar(':') then
+          field.variant = 'mapDestruct'
+        else
+          field.variant = 'arrayDestruct'
+          field.key = keyCounter
+          keyCounter = keyCounter + 1
+        end
 
-  while not ctx:branchChar('}') do
-    local field = {}
+        field.name = ctx:Name().value
 
-    if ctx:branchChar(':') then
-      field.variant = 'mapDestruct'
-    else
-      field.variant = 'arrayDestruct'
-      field.key = keyCounter
-      keyCounter = keyCounter + 1
-    end
+        if ctx:branchChar('=') then
+          field.default = ctx:Expr()
+        end
 
-    field.name = ctx:Name().value
+        return field
+      end,
+    })
+  end)
 
-    if ctx:branchChar('=') then
-      field.default = ctx:Expr()
-    end
-
-    node[#node + 1] = field
-
-    if not ctx:branchChar(',') and ctx.bufValue ~= '}' then
-      ctx:throwError('Missing trailing comma')
-    end
-  end
-
+  node.rule = 'Destructure'
+  node.optional = optional
   return node
 end
 

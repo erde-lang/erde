@@ -251,6 +251,37 @@ function ParserContext:Binop()
   return self:Op(constants.BINOP_MAP, constants.BINOP_MAX_LEN)
 end
 
+function ParserContext:Parens(opts)
+  if opts.demand or self.bufValue == '(' then
+    opts.demand = false
+    return self:Surround('(', ')', function()
+      return opts.allowRecursion and self:Parens(opts) or opts.rule(self)
+    end)
+  else
+    return opts.rule(self)
+  end
+end
+
+function ParserContext:List(opts)
+  local list = {}
+
+  repeat
+    local node = self:Try(opts.rule)
+
+    if not node and not opts.allowTrailingComma then
+      self:throwExpected('expression', true)
+    end
+
+    list[#list + 1] = node
+  until not node or not self:branchChar(',')
+
+  if not opts.allowEmpty and #list == 0 then
+    self:throwError('list cannot be empty')
+  end
+
+  return list
+end
+
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------

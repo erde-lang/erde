@@ -11,7 +11,19 @@ local Pipe = {}
 -- -----------------------------------------------------------------------------
 
 function Pipe.parse(ctx)
-  local node = { rule = 'Pipe', base = ctx:OptChain() }
+  local node = {
+    rule = 'Pipe',
+    exprs = {},
+    {
+      -- Starting point must be function call
+      optional = false,
+      receiver = ctx:FunctionCall(),
+    },
+  }
+
+  if ctx.bufValue == '(' then
+    node.initValues = ctx:ExprList()
+  end
 
   while true do
     local backup = ctx:backup()
@@ -22,7 +34,7 @@ function Pipe.parse(ctx)
       break
     end
 
-    pipe.optChain = ctx:OptChain()
+    pipe.receiver = ctx:Expr()
     node[#node + 1] = pipe
   end
 

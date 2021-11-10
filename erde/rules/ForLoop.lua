@@ -23,27 +23,18 @@ function ForLoop.parse(ctx)
       rule = 'ForLoop',
       variant = 'numeric',
       name = firstName,
-      var = ctx:Expr(),
+      parts = ctx:List({ rule = ctx.Expr }),
     }
 
-    if not ctx:branchChar(',') then
-      ctx:throwExpected(',')
-    end
-
-    node.limit = ctx:Expr()
-
-    if ctx:branchChar(',') then
-      node.step = ctx:Expr()
+    if #node.parts < 2 then
+      ctx:throwError('numeric for too few parts')
+    elseif #node.parts > 3 then
+      ctx:throwError('numeric for too many parts')
     end
   else
-    node = {
-      rule = 'ForLoop',
-      variant = 'generic',
-      nameList = {},
-      exprList = {},
-    }
+    node = { rule = 'ForLoop', variant = 'generic' }
 
-    node.nameList[1] = firstName
+    node.nameList = { firstName }
     while ctx:branchChar(',') do
       node.nameList[#node.nameList + 1] = ctx:Name().value
     end
@@ -52,14 +43,10 @@ function ForLoop.parse(ctx)
       ctx:throwExpected('in')
     end
 
-    node.exprList[1] = ctx:Expr()
-    while ctx:branchChar(',') do
-      node.exprList[#node.exprList + 1] = ctx:Expr()
-    end
+    node.exprList = ctx:List({ rule = ctx.Expr })
   end
 
   node.body = ctx:Surround('{', '}', ctx.Block)
-
   return node
 end
 
@@ -69,11 +56,14 @@ end
 
 function ForLoop.compile(ctx, node)
   if node.variant == 'numeric' then
-    return ('for %s=%s,%s,%s do\n%s\nend'):format(
+    local parts = {}
+    for i, part in ipairs(node.parts) do
+      parts[#parts + 1] = ctx:compile(part)
+    end
+
+    return ('for %s=%s do\n%s\nend'):format(
       node.name,
-      ctx:compile(node.var),
-      ctx:compile(node.limit),
-      node.step and ctx:compile(node.step) or '1',
+      table.concat(parts, ','),
       ctx:compile(node.body)
     )
   else

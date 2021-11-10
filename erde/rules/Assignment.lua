@@ -22,14 +22,12 @@ local Assignment = {}
 -- -----------------------------------------------------------------------------
 
 function Assignment.parse(ctx)
-  local node = { rule = 'Assignment' }
+  local node = {
+    rule = 'Assignment',
+    idList = ctx:List({ rule = ctx.Id }),
+    op = ctx:Binop(),
+  }
 
-  node.idList = { ctx:Id() }
-  while ctx:branchChar(',') do
-    node.idList[#node.idList + 1] = ctx:Id()
-  end
-
-  node.op = ctx:Binop()
   if node.op then
     if BINOP_ASSIGNMENT_BLACKLIST[node.op.token] then
       ctx:throwError('Cannot use operator assignment w/ ' .. node.op.token)
@@ -46,11 +44,7 @@ function Assignment.parse(ctx)
     ctx:throwExpected('=')
   end
 
-  node.exprList = { ctx:Expr() }
-  while ctx:branchChar(',') do
-    node.exprList[#node.exprList + 1] = ctx:Expr()
-  end
-
+  node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end
 

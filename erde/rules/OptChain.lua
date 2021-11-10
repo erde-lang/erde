@@ -48,18 +48,16 @@ function OptChain.parse(ctx)
       chain.value = ctx:Surround('[', ']', ctx.Expr)
     elseif ctx.bufValue == '(' then
       chain.variant = 'params'
-      chain.value = ctx:Surround('(', ')', function()
-        local args = {}
-
-        while ctx.bufValue ~= ')' do
-          args[#args + 1] = ctx:Expr()
-          if not ctx:branchChar(',') then
-            break
-          end
-        end
-
-        return args
-      end)
+      chain.value = ctx:Parens({
+        demand = true,
+        rule = function()
+          return ctx:List({
+            allowEmpty = true,
+            allowTrailingComma = true,
+            rule = ctx.Expr,
+          })
+        end,
+      })
     elseif ctx:branchChar(':') then
       chain.variant = 'method'
       chain.value = ctx:Name().value

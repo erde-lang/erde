@@ -11,17 +11,21 @@ describe('ForLoop.parse', function()
     assert.has_subtable({
       variant = 'numeric',
       name = 'i',
-      var = { value = '1' },
-      limit = { value = '2' },
+      parts = {
+        { value = '1' },
+        { value = '2' },
+      },
     }, parse.ForLoop(
       'for i = 1, 2 {}'
     ))
     assert.has_subtable({
       variant = 'numeric',
       name = 'i',
-      var = { value = '1' },
-      limit = { value = '2' },
-      step = { value = '3' },
+      parts = {
+        { value = '1' },
+        { value = '2' },
+        { value = '3' },
+      },
     }, parse.ForLoop(
       'for i = 1, 2, 3 {}'
     ))

@@ -7,8 +7,16 @@ describe('Return.parse', function()
     assert.are.equal('Return', parse.Return('return').rule)
   end)
 
-  spec('return value', function()
-    assert.are.equal('1', parse.Return('return 1').value.value)
+  spec('return values', function()
+    assert.has_subtable({
+      { value = '1' },
+    }, parse.Return('return 1'))
+    assert.has_subtable({
+      { value = '1' },
+      { value = '2' },
+    }, parse.Return(
+      'return 1, 2'
+    ))
   end)
 end)
 
