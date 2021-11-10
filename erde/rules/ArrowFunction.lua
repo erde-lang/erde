@@ -37,16 +37,13 @@ function ArrowFunction.parse(ctx)
 
   if ctx.bufValue == '{' then
     node.body = ctx:Surround('{', '}', ctx.Block)
-  elseif ctx.bufValue == '(' then
-    node.hasImplicitReturns = true
-    node.returns = ctx:List({
-      parens = true,
-      allowEmpty = false,
-      allowTrailingComma = true,
-    })
   else
     node.hasImplicitReturns = true
-    node.returns = { ctx:Expr() }
+    node.returns = ctx.bufValue ~= '(' and { ctx:Expr() }
+      or ctx:List({
+        parens = true,
+        allowTrailingComma = true,
+      })
   end
 
   return node

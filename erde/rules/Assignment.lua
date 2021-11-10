@@ -27,8 +27,6 @@ function Assignment.parse(ctx)
   node.idList = ctx:List({
     rule = ctx.Id,
     parens = false,
-    allowEmpty = false,
-    allowTrailingComma = false,
   })
 
   node.op = ctx:Binop()
@@ -48,12 +46,7 @@ function Assignment.parse(ctx)
     ctx:throwExpected('=')
   end
 
-  node.exprList = ctx:List({
-    parens = false,
-    allowEmpty = false,
-    allowTrailingComma = false,
-  })
-
+  node.exprList = ctx:List({ parens = false })
   return node
 end
 

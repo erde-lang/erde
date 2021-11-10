@@ -36,14 +36,9 @@ function ForLoop.parse(ctx)
       node.step = ctx:Expr()
     end
   else
-    node = {
-      rule = 'ForLoop',
-      variant = 'generic',
-      nameList = {},
-      exprList = {},
-    }
+    node = { rule = 'ForLoop', variant = 'generic' }
 
-    node.nameList[1] = firstName
+    node.nameList = { firstName }
     while ctx:branchChar(',') do
       node.nameList[#node.nameList + 1] = ctx:Name().value
     end
@@ -56,7 +51,6 @@ function ForLoop.parse(ctx)
   end
 
   node.body = ctx:Surround('{', '}', ctx.Block)
-
   return node
 end
 

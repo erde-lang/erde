@@ -24,23 +24,18 @@ function Declaration.parse(ctx)
     node.variant = 'global'
   end
 
-  repeat
-    local var = ctx:Switch({
-      ctx.Name,
-      ctx.Destructure,
-    })
-
-    if not var then
-      ctx:throwExpected('name or destructure', true)
-    end
-
-    node.varList[#node.varList + 1] = var
-  until not ctx:branchChar(',')
+  node.varList = ctx:List({
+    parens = false,
+    rule = function()
+      return ctx:Switch({
+        ctx.Name,
+        ctx.Destructure,
+      })
+    end,
+  })
 
   if ctx:branchChar('=') then
-    repeat
-      node.exprList[#node.exprList + 1] = ctx:Expr()
-    until not ctx:branchChar(',')
+    node.exprList = ctx:List({ parens = false })
   end
 
   return node
