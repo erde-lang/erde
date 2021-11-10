@@ -52,10 +52,7 @@ function ForLoop.parse(ctx)
       ctx:throwExpected('in')
     end
 
-    node.exprList[1] = ctx:Expr()
-    while ctx:branchChar(',') do
-      node.exprList[#node.exprList + 1] = ctx:Expr()
-    end
+    node.exprList = ctx:List({ parens = false })
   end
 
   node.body = ctx:Surround('{', '}', ctx.Block)

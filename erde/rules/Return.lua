@@ -15,7 +15,13 @@ function Return.parse(ctx)
     ctx:throwExpected('return')
   end
 
-  return { rule = 'Return', value = ctx:Try(ctx.Expr) }
+  local node = ctx:List({
+    allowEmpty = true,
+    allowTrailingComma = true,
+  })
+
+  node.rule = 'Return'
+  return node
 end
 
 -- -----------------------------------------------------------------------------
@@ -23,7 +29,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return.compile(ctx, node)
-  return 'return ' .. ctx:compile(node.value)
+  local returnValues = {}
+
+  for i, returnValue in ipairs(node) do
+    returnValues[#returnValues + 1] = ctx:compile(returnValue)
+  end
+
+  return 'return ' .. table.concat(returnValues, ',')
 end
 
 -- -----------------------------------------------------------------------------

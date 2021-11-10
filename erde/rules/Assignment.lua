@@ -24,10 +24,12 @@ local Assignment = {}
 function Assignment.parse(ctx)
   local node = { rule = 'Assignment' }
 
-  node.idList = { ctx:Id() }
-  while ctx:branchChar(',') do
-    node.idList[#node.idList + 1] = ctx:Id()
-  end
+  node.idList = ctx:List({
+    rule = ctx.Id,
+    parens = false,
+    allowEmpty = false,
+    allowTrailingComma = false,
+  })
 
   node.op = ctx:Binop()
   if node.op then
@@ -46,10 +48,11 @@ function Assignment.parse(ctx)
     ctx:throwExpected('=')
   end
 
-  node.exprList = { ctx:Expr() }
-  while ctx:branchChar(',') do
-    node.exprList[#node.exprList + 1] = ctx:Expr()
-  end
+  node.exprList = ctx:List({
+    parens = false,
+    allowEmpty = false,
+    allowTrailingComma = false,
+  })
 
   return node
 end
