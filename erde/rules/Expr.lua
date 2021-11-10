@@ -81,9 +81,7 @@ function Expr.compile(ctx, node)
     local lhs = ctx:compile(node[1])
     local rhs = ctx:compile(node[2])
 
-    if op.tag == 'pipe' then
-      -- TODO: pipe
-    elseif op.tag == 'ternary' then
+    if op.tag == 'ternary' then
       return ctx.format(
         table.concat({
           '(function()',

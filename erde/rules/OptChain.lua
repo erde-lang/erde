@@ -67,8 +67,7 @@ function OptChain.parse(ctx)
         ctx:throwError('missing args after method call')
       end
     else
-      -- revert consumption from ctx:branchChar('?')
-      ctx:restore(backup)
+      ctx:restore(backup) -- revert consumption from ctx:branchChar('?')
       break
     end
 
