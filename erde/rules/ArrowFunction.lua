@@ -39,25 +39,11 @@ function ArrowFunction.parse(ctx)
     node.body = ctx:Surround('{', '}', ctx.Block)
   elseif ctx.bufValue == '(' then
     node.hasImplicitReturns = true
-    node.returns = ctx:Surround('(', ')', function()
-      local returns = {}
-
-      repeat
-        local expr = ctx:Try(ctx.Expr)
-
-        if not expr then
-          break
-        end
-
-        returns[#returns + 1] = expr
-      until not ctx:branchChar(',')
-
-      if #returns == 0 then
-        ctx:throwError('Returns list cannot be empty')
-      end
-
-      return returns
-    end)
+    node.returns = ctx:List({
+      parens = true,
+      allowEmpty = false,
+      allowTrailingComma = true,
+    })
   else
     node.hasImplicitReturns = true
     node.returns = { ctx:Expr() }

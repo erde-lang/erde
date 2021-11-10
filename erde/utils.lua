@@ -8,7 +8,7 @@ local utils = {}
 -- Functions
 -- -----------------------------------------------------------------------------
 
-function utils.loadLua(code)
+function utils.load(code)
   local runner
   if _VERSION:find('5.1') then
     runner = loadstring(code)
@@ -21,6 +21,14 @@ function utils.loadLua(code)
   end
 
   return runner
+end
+
+function utils.eval(expr)
+  return utils.load('return ' .. expr)()
+end
+
+function utils.run(code)
+  return utils.load(code)()
 end
 
 function utils.deepCompare(a, b)

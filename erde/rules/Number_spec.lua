@@ -91,9 +91,9 @@ describe('Number.compile', function()
     assert.eval(0xfP2, compile.Number('0xfP2'))
 
     if _VERSION:find('5.[34]') then
-      -- Need to loadLua to prevent parsing errors
-      assert.eval(utils.loadLua('0xfp+2'), compile.Number('0xfp+2'))
-      assert.eval(utils.loadLua('0xfp-2'), compile.Number('0xfp-2'))
+      -- Need to eval to prevent parsing errors
+      assert.eval(utils.eval('0xfp+2'), compile.Number('0xfp+2'))
+      assert.eval(utils.eval('0xfp-2'), compile.Number('0xfp-2'))
     end
   end)
 
