@@ -16,6 +16,7 @@ return {
   Number = require('erde.rules.Number'),
   OptChain = require('erde.rules.OptChain'),
   Params = require('erde.rules.Params'),
+  Pipe = require('erde.rules.Pipe'),
   RepeatUntil = require('erde.rules.RepeatUntil'),
   Return = require('erde.rules.Return'),
   String = require('erde.rules.String'),
