@@ -44,6 +44,10 @@ TERMINALS = {
 LEFT_ASSOCIATIVE = -1
 RIGHT_ASSOCIATIVE = 1
 
+OP_BLACKLIST = {
+  '>>',
+}
+
 UNOPS = {
   { tag = 'neg', token = '-', prec = 13 },
   { tag = 'len', token = '#', prec = 13 },
