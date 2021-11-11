@@ -13,16 +13,12 @@ local Pipe = {}
 function Pipe.parse(ctx)
   local node = {
     rule = 'Pipe',
-    initValues = ctx.bufValue ~= '(' and { ctx:Expr() } or ctx:Parens({
-      demand = true,
-      allowRecursion = true,
-      rule = function()
-        return ctx:List({
-          allowTrailingComma = true,
-          rule = ctx.Expr,
-        })
-      end,
-    }),
+    initValues = ctx:Surround('{', '}', function()
+      return ctx:List({
+        allowTrailingComma = true,
+        rule = ctx.Expr,
+      })
+    end),
   }
 
   while true do

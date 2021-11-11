@@ -260,6 +260,15 @@ end
 function ParserContext:Parens(opts)
   if opts.demand or self.bufValue == '(' then
     opts.demand = false
+
+    if opts.prioritizeRule then
+      local node = self:Try(opts.rule)
+      print(require('inspect')(node))
+      if node then
+        return node
+      end
+    end
+
     return self:Surround('(', ')', function()
       return opts.allowRecursion and self:Parens(opts) or opts.rule(self)
     end)
@@ -274,7 +283,7 @@ function ParserContext:List(opts)
   repeat
     local node = self:Try(opts.rule)
 
-    if not node and not opts.allowTrailingComma then
+    if not node and #list > 0 and not opts.allowTrailingComma then
       self:throwExpected('expression', true)
     end
 
