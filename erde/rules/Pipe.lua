@@ -38,6 +38,10 @@ function Pipe.parse(ctx)
     node[#node + 1] = pipe
   end
 
+  if #node == 0 then
+    ctx:throwExpected('>>')
+  end
+
   return node
 end
 
