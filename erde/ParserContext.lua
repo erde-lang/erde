@@ -263,11 +263,10 @@ function ParserContext:Parens(opts)
 end
 
 function ParserContext:List(opts)
-  opts = opts or {}
   local list = {}
 
   repeat
-    local node = self:Try(opts.rule or self.Expr)
+    local node = self:Try(opts.rule)
 
     if not node and not opts.allowTrailingComma then
       self:throwExpected('expression', true)

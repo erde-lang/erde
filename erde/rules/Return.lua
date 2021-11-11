@@ -21,6 +21,7 @@ function Return.parse(ctx)
       return ctx:List({
         allowEmpty = true,
         allowTrailingComma = true,
+        rule = ctx.Expr,
       })
     end,
   })
