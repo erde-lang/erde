@@ -2,7 +2,6 @@
 
 ## TODO
 
-- revert table `:` to `=`?
 - optimistic errors (try to guess the attempted rule)
 - Source maps?
 - Declaration files?
@@ -12,14 +11,20 @@
     - Null coalescence
     - ...
 
-## Long Term Proposals (need community input)
+## Intended Proposals
 
+- try catch
+- spread operator `local x = { ...y }`
+- new keywords
+  - kpairs
+  - continue
+
+## Uncertain Proposals (need community input)
+
+- decorators?
 - import / export
 - case statement?
 - shorthand self? need to support optional op?
 - boolean flag shorthands
   - local x = { myflag+ }
   - local x = { myotherflag- }
-- new keywords
-  - kpairs
-  - continue

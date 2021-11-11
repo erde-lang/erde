@@ -25,7 +25,6 @@ function Declaration.parse(ctx)
   end
 
   node.varList = ctx:List({
-    parens = false,
     rule = function()
       return ctx:Switch({
         ctx.Name,
@@ -35,7 +34,7 @@ function Declaration.parse(ctx)
   })
 
   if ctx:branchChar('=') then
-    node.exprList = ctx:List({ parens = false })
+    node.exprList = ctx:List({ rule = ctx.Expr })
   end
 
   return node

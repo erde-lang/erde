@@ -16,7 +16,6 @@ function Destructure.parse(ctx)
 
   local node = ctx:Surround('{', '}', function()
     return ctx:List({
-      parens = false,
       allowEmpty = true,
       allowTrailingComma = true,
       rule = function()

@@ -11,36 +11,37 @@ local Params = {}
 -- -----------------------------------------------------------------------------
 
 function Params.parse(ctx)
-  return ctx:Surround('(', ')', function()
-    local node = { rule = 'Params' }
+  return ctx:Parens({
+    demand = true,
+    rule = function()
+      local node = ctx:List({
+        allowEmpty = true,
+        allowTrailingComma = true,
+        rule = function()
+          local param = ctx:Switch({
+            ctx.Name,
+            ctx.Destructure,
+          })
 
-    repeat
-      local param = ctx:Switch({
-        ctx.Name,
-        ctx.Destructure,
+          if param and ctx:branchChar('=') then
+            param.default = ctx:Expr()
+          end
+
+          return param
+        end,
       })
 
-      if not param then
-        -- No error (allow trailing commas)
-        break
+      if ctx:branchStr('...') then
+        node[#node + 1] = {
+          varargs = true,
+          name = ctx:Try(ctx.Name),
+        }
       end
 
-      if ctx:branchChar('=') then
-        param.default = ctx:Expr()
-      end
-
-      node[#node + 1] = param
-    until not ctx:branchChar(',')
-
-    if ctx:branchStr('...') then
-      node[#node + 1] = {
-        varargs = true,
-        name = ctx:Try(ctx.Name),
-      }
-    end
-
-    return node
-  end)
+      node.rule = 'Params'
+      return node
+    end,
+  })
 end
 
 -- -----------------------------------------------------------------------------

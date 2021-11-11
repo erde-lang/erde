@@ -15,9 +15,14 @@ function Return.parse(ctx)
     ctx:throwExpected('return')
   end
 
-  local node = ctx:List({
-    allowEmpty = true,
-    allowTrailingComma = true,
+  local node = ctx:Parens({
+    allowRecursion = true,
+    rule = function()
+      return ctx:List({
+        allowEmpty = true,
+        allowTrailingComma = true,
+      })
+    end,
   })
 
   node.rule = 'Return'

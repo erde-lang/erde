@@ -251,7 +251,19 @@ function ParserContext:Binop()
   return self:Op(constants.BINOP_MAP, constants.BINOP_MAX_LEN)
 end
 
-function ParserContext:ListCore(opts)
+function ParserContext:Parens(opts)
+  if opts.demand or self.bufValue == '(' then
+    opts.demand = false
+    return self:Surround('(', ')', function()
+      return opts.allowRecursion and self:Parens(opts) or opts.rule(self)
+    end)
+  else
+    return opts.rule(self)
+  end
+end
+
+function ParserContext:List(opts)
+  opts = opts or {}
   local list = {}
 
   repeat
@@ -269,26 +281,6 @@ function ParserContext:ListCore(opts)
   end
 
   return list
-end
-
-function ParserContext:List(opts)
-  if opts.parens == false then
-    return self:ListCore(opts)
-  elseif opts.parens == true then
-    return self:Surround('(', ')', function()
-      return self:ListCore(opts)
-    end)
-  elseif not self:branchChar('(') then
-    return self:ListCore(opts)
-  else
-    local list = self:List(opts)
-
-    if not self:branchChar(')') then
-      self:throwExpected(')')
-    end
-
-    return list
-  end
 end
 
 -- -----------------------------------------------------------------------------

@@ -48,10 +48,14 @@ function OptChain.parse(ctx)
       chain.value = ctx:Surround('[', ']', ctx.Expr)
     elseif ctx.bufValue == '(' then
       chain.variant = 'params'
-      chain.value = ctx:List({
-        parens = true,
-        allowEmpty = true,
-        allowTrailingComma = true,
+      chain.value = ctx:Parens({
+        demand = true,
+        rule = function()
+          return ctx:List({
+            allowEmpty = true,
+            allowTrailingComma = true,
+          })
+        end,
       })
     elseif ctx:branchChar(':') then
       chain.variant = 'method'

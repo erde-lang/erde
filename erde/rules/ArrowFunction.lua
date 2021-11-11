@@ -40,9 +40,16 @@ function ArrowFunction.parse(ctx)
   else
     node.hasImplicitReturns = true
     node.returns = ctx.bufValue ~= '(' and { ctx:Expr() }
-      or ctx:List({
-        parens = true,
-        allowTrailingComma = true,
+      or ctx:Parens({
+        demand = true,
+        allowRecursion = true,
+        rule = function()
+          return ctx:List({
+            parens = true,
+            allowTrailingComma = true,
+            rule = ctx.Expr,
+          })
+        end,
       })
   end
 
