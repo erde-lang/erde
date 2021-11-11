@@ -15,13 +15,20 @@ function Return.parse(ctx)
     ctx:throwExpected('return')
   end
 
-  local node = ctx:Parens({
-    allowRecursion = true,
-    rule = function()
-      return ctx:List({
-        allowEmpty = true,
-        allowTrailingComma = true,
-        rule = ctx.Expr,
+  local node = ctx:Switch({
+    function()
+      return { ctx:Pipe() }
+    end,
+    function()
+      return ctx:Parens({
+        allowRecursion = true,
+        rule = function()
+          return ctx:List({
+            allowEmpty = true,
+            allowTrailingComma = true,
+            rule = ctx.Expr,
+          })
+        end,
       })
     end,
   })

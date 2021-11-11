@@ -11,9 +11,11 @@ local Terminal = {}
 -- -----------------------------------------------------------------------------
 
 function Terminal.parse(ctx)
+  -- TODO: Parens
   if bufValue == '(' then
     local node = ctx:Switch({
       ctx.ArrowFunction,
+      ctx.Pipe,
       ctx.OptChain,
       function()
         local node = ctx:Surround('(', ')', ctx.Expr)
@@ -41,6 +43,7 @@ function Terminal.parse(ctx)
     ctx.Number,
     ctx.String,
     ctx.ArrowFunction, -- Check again for hasImplicitParams!
+    -- ctx.Pipe, -- Check again for single pipe!
     ctx.OptChain,
   })
 
