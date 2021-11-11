@@ -17,6 +17,7 @@ function Return.parse(ctx)
 
   local node = ctx:Parens({
     allowRecursion = true,
+    prioritizeRule = true,
     rule = function()
       return ctx:List({
         allowEmpty = true,

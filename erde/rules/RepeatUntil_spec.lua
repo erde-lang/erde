@@ -6,7 +6,7 @@ describe('RepeatUntil.parse', function()
   spec('rule', function()
     assert.are.equal(
       'RepeatUntil',
-      parse.RepeatUntil('repeat {} until (true)').rule
+      parse.RepeatUntil('repeat {} until true').rule
     )
   end)
 
@@ -14,11 +14,8 @@ describe('RepeatUntil.parse', function()
     assert.has_subtable({
       cond = { value = 'true' },
     }, parse.RepeatUntil(
-      'repeat {} until (true)'
+      'repeat {} until true'
     ))
-    assert.has_error(function()
-      parse.RepeatUntil('repeat {} until true')
-    end)
     assert.has_error(function()
       parse.RepeatUntil('repeat {} until ()')
     end)
@@ -37,7 +34,7 @@ describe('RepeatUntil.compile', function()
         local x = 0
         repeat {
           x += 2
-        } until (x > 10)
+        } until x > 10
         return x
       ]])
     )
