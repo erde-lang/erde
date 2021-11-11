@@ -4,7 +4,8 @@
 
 describe('Pipe.parse', function()
   spec('rule', function()
-    assert.are.equal('Pipe', parse.Pipe('x() >> y').rule)
+    assert.are.equal('Pipe', parse.Pipe('2 >> y').rule)
+    assert.are.equal('Pipe', parse.Pipe('(1, 2) >> y').rule)
   end)
 end)
 

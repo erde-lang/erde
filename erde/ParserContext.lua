@@ -235,6 +235,12 @@ function ParserContext:Switch(rules)
 end
 
 function ParserContext:Op(opMap, opMaxLen)
+  for i, opToken in ipairs(constants.OP_BLACKLIST) do
+    if self:peek(#opToken) == opToken then
+      return nil
+    end
+  end
+
   for i = opMaxLen, 1, -1 do
     local op = opMap[self:peek(i)]
     if op then

@@ -13,17 +13,17 @@ local Pipe = {}
 function Pipe.parse(ctx)
   local node = {
     rule = 'Pipe',
-    exprs = {},
-    {
-      -- Starting point must be function call
-      optional = false,
-      receiver = ctx:FunctionCall(),
-    },
+    initValues = ctx.bufValue ~= '(' and { ctx:Expr() } or ctx:Parens({
+      demand = true,
+      allowRecursion = true,
+      rule = function()
+        return ctx:List({
+          allowTrailingComma = true,
+          rule = ctx.Expr,
+        })
+      end,
+    }),
   }
-
-  if ctx.bufValue == '(' then
-    node.initValues = ctx:ExprList()
-  end
 
   while true do
     local backup = ctx:backup()
