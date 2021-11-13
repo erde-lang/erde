@@ -29,11 +29,11 @@ function Terminal.parse(ctx)
       })
     or ctx:Switch({
       ctx.DoBlock,
-      ctx.Pipe, -- must be before Table!
       ctx.Table,
       ctx.Number,
       ctx.String,
       ctx.ArrowFunction, -- Check again for hasImplicitParams!
+      ctx.Pipe,
       ctx.OptChain,
     })
 

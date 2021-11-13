@@ -31,6 +31,20 @@ function utils.run(code)
   return utils.load(code)()
 end
 
+function utils.shallowCopy(t)
+  if type(t) ~= 'table' then
+    return t
+  end
+
+  local copy = {}
+
+  for key, value in pairs(t) do
+    copy[key] = value
+  end
+
+  return copy
+end
+
 function utils.deepCompare(a, b)
   if type(a) ~= 'table' or type(b) ~= 'table' then
     return a == b

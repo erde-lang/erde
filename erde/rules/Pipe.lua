@@ -1,4 +1,5 @@
 local constants = require('erde.constants')
+local utils = require('erde.utils')
 
 -- -----------------------------------------------------------------------------
 -- Pipe
@@ -13,7 +14,7 @@ local Pipe = {}
 function Pipe.parse(ctx)
   local node = {
     rule = 'Pipe',
-    initValues = ctx:Surround('{', '}', function()
+    initValues = ctx:Surround('[', ']', function()
       return ctx:List({
         allowTrailingComma = true,
         rule = ctx.Expr,
@@ -74,15 +75,39 @@ function Pipe.compile(ctx, node)
     pipeArgs = pipeResult
     pipeResult = ctx.newTmpName()
 
-    -- TODO: check for optchain
-    -- insert into pipeArgs var
-    -- compile optchain
-    local pipe = ctx:compile(pipe.receiver)
+    local receiver
+    if pipe.receiver.rule == 'OptChain' then
+      local lastChain = pipe.receiver[#pipe.receiver]
+      if lastChain and lastChain.variant == 'params' then
+        local pipeArgsLen = ctx.newTmpName()
+        compiled[#compiled + 1] = ctx.format(
+          'local %1 = #%2',
+          pipeArgsLen,
+          pipeArgs
+        )
+
+        for i, expr in ipairs(lastChain.value) do
+          compiled[#compiled + 1] = ctx.format(
+            '%1[%2 + %3] = %4',
+            pipeArgs,
+            pipeArgsLen,
+            i,
+            ctx:compile(expr)
+          )
+        end
+
+        local receiverCopy = utils.shallowCopy(pipe.receiver) -- Do not mutate AST
+        table.remove(receiverCopy)
+        receiver = ctx:compile(receiverCopy)
+      end
+    else
+      receiver = ctx:compile(pipe.receiver)
+    end
 
     compiled[#compiled + 1] = ctx.format(
       'local %1 = { %2(%3(%4)) }',
       pipeResult,
-      pipe,
+      receiver,
       unpackCompiled,
       pipeArgs
     )
