@@ -15,9 +15,10 @@
 
 - try catch
 - spread operator `local x = { ...y }`
-- new keywords
+- keywords
+  - break
   - kpairs
-  - continue
+  - continue?
 
 ## Uncertain Proposals (need community input)
 

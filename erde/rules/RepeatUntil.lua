@@ -24,7 +24,7 @@ function RepeatUntil.parse(ctx)
     ctx:throwExpected('until')
   end
 
-  node.cond = ctx:Surround('(', ')', ctx.Expr)
+  node.cond = ctx:Expr()
 
   return node
 end
@@ -34,7 +34,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil.compile(ctx, node)
-  return ('repeat\n%s\nuntil (%s)'):format(
+  return ('repeat\n%s\nuntil %s'):format(
     ctx:compile(node.body),
     ctx:compile(node.cond)
   )

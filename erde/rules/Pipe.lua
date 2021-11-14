@@ -16,6 +16,7 @@ function Pipe.parse(ctx)
     rule = 'Pipe',
     initValues = ctx:Surround('[', ']', function()
       return ctx:List({
+        allowEmpty = true,
         allowTrailingComma = true,
         rule = ctx.Expr,
       })
