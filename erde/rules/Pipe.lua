@@ -1,4 +1,3 @@
-local constants = require('erde.constants')
 local utils = require('erde.utils')
 
 -- -----------------------------------------------------------------------------

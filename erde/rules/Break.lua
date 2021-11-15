@@ -1,43 +1,28 @@
 -- -----------------------------------------------------------------------------
--- DoBlock
+-- Break
 -- -----------------------------------------------------------------------------
 
-local DoBlock = {}
+local Break = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function DoBlock.parse(ctx)
-  if not ctx:branchWord('do') then
-    ctx:throwExpected('do')
-  end
-
-  local node = {
-    rule = 'DoBlock',
-    body = ctx:Surround('{', '}', ctx.Block),
-  }
-
-  for _, statement in pairs(node.body) do
-    if statement.rule == 'Return' then
-      node.hasReturn = true
-      break
-    end
-  end
-
-  return node
+function Break.parse(ctx)
+  return ctx:branchWord('break') and { rule = 'Break' }
+    or ctx:throwExpected('break')
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function DoBlock.compile(ctx, node)
-  return ctx.format('(function()\n%1\nend)()', ctx:compile(node.body))
+function Break.compile(ctx, node)
+  return 'break'
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return DoBlock
+return Break

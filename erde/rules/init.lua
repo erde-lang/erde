@@ -2,6 +2,7 @@ return {
   ArrowFunction = require('erde.rules.ArrowFunction'),
   Assignment = require('erde.rules.Assignment'),
   Block = require('erde.rules.Block'),
+  Break = require('erde.rules.Break'),
   Comment = require('erde.rules.Comment'),
   Declaration = require('erde.rules.Declaration'),
   Destructure = require('erde.rules.Destructure'),

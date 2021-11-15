@@ -1,10 +1,10 @@
-local constants = require('erde.constants')
-
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
 
+local Statement = {}
 local Block = {}
+local LoopBlock = {}
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -13,9 +13,10 @@ local Block = {}
 function Block.parse(ctx)
   local node = { rule = 'Block' }
 
-  while true do
+  repeat
     local statement = ctx:Switch({
       ctx.Assignment,
+      ctx.Break,
       ctx.Comment,
       ctx.FunctionCall, -- must be before declaration!
       ctx.Declaration,
@@ -29,12 +30,8 @@ function Block.parse(ctx)
       ctx.WhileLoop,
     })
 
-    if not statement then
-      break
-    end
-
     node[#node + 1] = statement
-  end
+  until not statement
 
   return node
 end
