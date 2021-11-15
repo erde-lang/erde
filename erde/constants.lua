@@ -29,6 +29,8 @@ KEYWORDS = {
   'true',
   'nil',
   'return',
+  'try',
+  'catch',
 }
 
 TERMINALS = {

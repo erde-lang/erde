@@ -22,5 +22,6 @@ return {
   String = require('erde.rules.String'),
   Table = require('erde.rules.Table'),
   Terminal = require('erde.rules.Terminal'),
+  TryCatch = require('erde.rules.TryCatch'),
   WhileLoop = require('erde.rules.WhileLoop'),
 }

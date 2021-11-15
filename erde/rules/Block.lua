@@ -17,14 +17,15 @@ function Block.parse(ctx)
     local statement = ctx:Switch({
       ctx.Assignment,
       ctx.Comment,
+      ctx.FunctionCall, -- must be before declaration!
       ctx.Declaration,
       ctx.DoBlock,
       ctx.ForLoop,
       ctx.IfElse,
       ctx.Function,
-      ctx.FunctionCall,
       ctx.RepeatUntil,
       ctx.Return,
+      ctx.TryCatch,
       ctx.WhileLoop,
     })
 
