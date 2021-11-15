@@ -3,14 +3,14 @@
 -- -----------------------------------------------------------------------------
 
 describe('DoBlock.parse', function()
-  spec('rule', function()
-    assert.are.equal('DoBlock', parse.DoBlock('do {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('DoBlock', parse.DoBlock('do {}').ruleName)
   end)
 
   spec('do block', function()
     assert.has_subtable({
       body = {
-        { rule = 'Assignment' },
+        { ruleName = 'Assignment' },
       },
     }, parse.DoBlock(
       'do { a = 3 }'

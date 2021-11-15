@@ -2,7 +2,7 @@
 -- String
 -- -----------------------------------------------------------------------------
 
-local String = {}
+local String = { ruleName = 'String' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -25,12 +25,11 @@ function String.parse(ctx)
     end
 
     return {
-      rule = 'String',
       variant = 'short',
       value = table.concat(capture),
     }
   elseif ctx:branchChar('`', true) then
-    local node = { rule = 'String', variant = 'long' }
+    local node = { variant = 'long' }
     local capture = {}
 
     while true do

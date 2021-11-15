@@ -5,14 +5,14 @@ local ParserContext = require('erde.ParserContext')
 -- -----------------------------------------------------------------------------
 
 describe('ArrowFunction.parse', function()
-  spec('rule', function()
-    assert.are.equal('ArrowFunction', parse.ArrowFunction('() -> {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('ArrowFunction', parse.ArrowFunction('() -> {}').ruleName)
   end)
 
   spec('skinny arrow function', function()
     assert.has_subtable({
       variant = 'skinny',
-      body = { { rule = 'Return' } },
+      body = { { ruleName = 'Return' } },
     }, parse.ArrowFunction(
       '() -> { return 1 }'
     ))
@@ -21,7 +21,7 @@ describe('ArrowFunction.parse', function()
   spec('fat arrow function', function()
     assert.has_subtable({
       variant = 'fat',
-      body = { { rule = 'Return' } },
+      body = { { ruleName = 'Return' } },
     }, parse.ArrowFunction(
       '() => { return 1 }'
     ))

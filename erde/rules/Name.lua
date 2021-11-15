@@ -4,7 +4,7 @@ local constants = require('erde.constants')
 -- Name
 -- -----------------------------------------------------------------------------
 
-local Name = {}
+local Name = { ruleName = 'Name' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -29,7 +29,7 @@ function Name.parse(ctx)
     end
   end
 
-  return { rule = 'Name', value = table.concat(capture) }
+  return { value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------

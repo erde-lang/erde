@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Function.parse', function()
-  spec('rule', function()
-    assert.are.equal('Function', parse.Function('function a() {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('Function', parse.Function('function a() {}').ruleName)
   end)
 
   spec('local function', function()

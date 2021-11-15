@@ -4,7 +4,7 @@ local constants = require('erde.constants')
 -- Number
 -- -----------------------------------------------------------------------------
 
-local Number = {}
+local Number = { ruleName = 'Number' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -47,7 +47,7 @@ function Number.parse(ctx)
     ctx:throwExpected('number', true)
   end
 
-  return { rule = 'Number', value = table.concat(capture) }
+  return { value = table.concat(capture) }
 end
 
 -- -----------------------------------------------------------------------------

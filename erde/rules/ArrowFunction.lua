@@ -2,7 +2,7 @@
 -- ArrowFunction
 -- -----------------------------------------------------------------------------
 
-local ArrowFunction = {}
+local ArrowFunction = { ruleName = 'ArrowFunction' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -10,7 +10,6 @@ local ArrowFunction = {}
 
 function ArrowFunction.parse(ctx)
   local node = {
-    rule = 'ArrowFunction',
     hasImplicitParams = false,
     hasImplicitReturns = false,
   }
@@ -20,7 +19,7 @@ function ArrowFunction.parse(ctx)
     ctx.Params,
   })
 
-  if params.rule == 'Name' then
+  if params.ruleName == 'Name' then
     node.paramName = params.value
     node.hasImplicitParams = true
   else

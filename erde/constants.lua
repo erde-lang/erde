@@ -31,6 +31,8 @@ KEYWORDS = {
   'return',
   'try',
   'catch',
+  'break',
+  'continue',
 }
 
 TERMINALS = {

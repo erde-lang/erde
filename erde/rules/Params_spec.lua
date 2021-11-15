@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Params.parse', function()
-  spec('rule', function()
-    assert.are.equal('Params', parse.Params('()').rule)
+  spec('ruleName', function()
+    assert.are.equal('Params', parse.Params('()').ruleName)
   end)
 
   spec('params', function()
@@ -57,14 +57,14 @@ describe('Params.parse', function()
 
   spec('destructure params', function()
     assert.has_subtable({
-      { rule = 'Destructure' },
+      { ruleName = 'Destructure' },
     }, parse.Params(
       '({ :a })'
     ))
     assert.has_subtable({
       {
-        rule = 'Destructure',
-        default = { rule = 'Table' },
+        ruleName = 'Destructure',
+        default = { ruleName = 'Table' },
       },
     }, parse.Params(
       '({ a } = { 2 })'

@@ -3,10 +3,10 @@
 -- -----------------------------------------------------------------------------
 
 describe('RepeatUntil.parse', function()
-  spec('rule', function()
+  spec('ruleName', function()
     assert.are.equal(
       'RepeatUntil',
-      parse.RepeatUntil('repeat {} until true').rule
+      parse.RepeatUntil('repeat {} until true').ruleName
     )
   end)
 

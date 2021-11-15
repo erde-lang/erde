@@ -2,7 +2,7 @@
 -- Params
 -- -----------------------------------------------------------------------------
 
-local Params = {}
+local Params = { ruleName = 'Params' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -36,7 +36,6 @@ function Params.parse(ctx)
         }
       end
 
-      node.rule = 'Params'
       return node
     end,
   })
@@ -52,7 +51,7 @@ function Params.compile(ctx, node)
 
   for i, param in ipairs(node) do
     local name, destructure
-    if param.rule == 'Name' then
+    if param.ruleName == 'Name' then
       name = ctx:compile(param)
     else
       destructure = ctx:compile(param)

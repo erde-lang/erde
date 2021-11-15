@@ -3,21 +3,21 @@
 -- -----------------------------------------------------------------------------
 
 describe('TryCatch.parse', function()
-  spec('rule', function()
-    assert.are.equal('TryCatch', parse.TryCatch('try {} catch(e) {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('TryCatch', parse.TryCatch('try {} catch(e) {}').ruleName)
   end)
 
   spec('try catch', function()
     assert.has_subtable({
-      try = { rule = 'Block' },
-      catch = { rule = 'Block' },
+      try = { ruleName = 'Block' },
+      catch = { ruleName = 'Block' },
     }, parse.TryCatch(
       'try {} catch() {}'
     ))
     assert.has_subtable({
-      try = { rule = 'Block' },
+      try = { ruleName = 'Block' },
       errorName = { value = 'err' },
-      catch = { rule = 'Block' },
+      catch = { ruleName = 'Block' },
     }, parse.TryCatch(
       'try {} catch(err) {}'
     ))
@@ -52,18 +52,5 @@ describe('TryCatch.compile', function()
         return 2
       ]])
     )
-
-    if _VERSION:find('5.[34]') then
-      assert.run(
-        'my error',
-        compile.TryCatch([[
-          try {
-            error(5)
-          } catch(err) {
-            return err
-          }
-        ]])
-      )
-    end
   end)
 end)

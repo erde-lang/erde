@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Declaration.parse', function()
-  spec('rule', function()
-    assert.are.equal('Declaration', parse.Declaration('local a').rule)
+  spec('ruleName', function()
+    assert.are.equal('Declaration', parse.Declaration('local a').ruleName)
   end)
 
   spec('local declaration', function()
@@ -67,7 +67,7 @@ describe('Declaration.parse', function()
   spec('destructure declaration', function()
     assert.has_subtable({
       variant = 'local',
-      varList = { { rule = 'Destructure' } },
+      varList = { { ruleName = 'Destructure' } },
     }, parse.Declaration(
       'local { a } = x'
     ))
@@ -75,7 +75,7 @@ describe('Declaration.parse', function()
       variant = 'local',
       varList = {
         { value = 'a' },
-        { rule = 'Destructure' },
+        { ruleName = 'Destructure' },
         { value = 'c' },
       },
     }, parse.Declaration(

@@ -2,7 +2,7 @@
 -- OptChain
 -- -----------------------------------------------------------------------------
 
-local OptChain = {}
+local OptChain = { ruleName = 'OptChain' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -10,7 +10,6 @@ local OptChain = {}
 
 function OptChain.parse(ctx)
   local node = {
-    rule = 'OptChain',
     base = ctx:Switch({
       ctx.Name,
       function()

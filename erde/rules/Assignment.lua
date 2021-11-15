@@ -12,7 +12,7 @@ local BINOP_ASSIGNMENT_BLACKLIST = {
 -- Assignment
 -- -----------------------------------------------------------------------------
 
-local Assignment = {}
+local Assignment = { ruleName = 'Assignment' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -20,7 +20,6 @@ local Assignment = {}
 
 function Assignment.parse(ctx)
   local node = {
-    rule = 'Assignment',
     idList = ctx:List({ rule = ctx.Id }),
     op = ctx:Binop(),
   }

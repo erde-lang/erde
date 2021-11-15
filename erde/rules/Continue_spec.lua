@@ -2,9 +2,9 @@
 -- Parse
 -- -----------------------------------------------------------------------------
 
-describe('Break.parse', function()
+describe('Continue.parse', function()
   spec('ruleName', function()
-    assert.are.equal('Break', parse.Break('break').ruleName)
+    assert.are.equal('Continue', parse.Continue('continue').ruleName)
   end)
 end)
 
@@ -12,8 +12,8 @@ end)
 -- Compile
 -- -----------------------------------------------------------------------------
 
-describe('Break.compile', function()
-  spec('break', function()
+describe('Continue.compile', function()
+  spec('continue', function()
     assert.run(
       6,
       compile.Block([[

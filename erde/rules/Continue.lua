@@ -1,42 +1,30 @@
 -- -----------------------------------------------------------------------------
--- RepeatUntil
+-- Continue
 -- -----------------------------------------------------------------------------
 
-local RepeatUntil = { ruleName = 'RepeatUntil' }
+local Continue = { ruleName = 'Continue' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function RepeatUntil.parse(ctx)
-  if not ctx:branchWord('repeat') then
-    ctx:throwExpected('repeat')
-  end
-
-  local node = { body = ctx:Surround('{', '}', ctx.Block) }
-
-  if not ctx:branchWord('until') then
-    ctx:throwExpected('until')
-  end
-
-  node.cond = ctx:Expr()
-
-  return node
+function Continue.parse(ctx)
+  return ctx:branchWord('continue') and {} or ctx:throwExpected('continue')
 end
 
 -- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
-function RepeatUntil.compile(ctx, node)
-  return ('repeat\n%s\nuntil %s'):format(
-    ctx:compile(node.body),
-    ctx:compile(node.cond)
-  )
+function Continue.compile(ctx, node)
+  return table.concat({
+    node.continueName .. ' = true',
+    'break',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return RepeatUntil
+return Continue

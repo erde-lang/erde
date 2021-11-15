@@ -2,7 +2,7 @@
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-local ForLoop = {}
+local ForLoop = { ruleName = 'ForLoop' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -18,7 +18,6 @@ function ForLoop.parse(ctx)
 
   if ctx:branchChar('=') then
     node = {
-      rule = 'ForLoop',
       variant = 'numeric',
       name = firstName,
       parts = ctx:List({ rule = ctx.Expr }),
@@ -30,7 +29,7 @@ function ForLoop.parse(ctx)
       ctx:throwError('numeric for too many parts')
     end
   else
-    node = { rule = 'ForLoop', variant = 'generic' }
+    node = { variant = 'generic' }
 
     node.nameList = { firstName }
     while ctx:branchChar(',') do

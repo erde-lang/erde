@@ -5,10 +5,10 @@ local constants = require('erde.constants')
 -- -----------------------------------------------------------------------------
 
 describe('Terminal.parse', function()
-  spec('rule', function()
-    assert.are.equal('Terminal', parse.Terminal('true').rule)
-    assert.are.equal('Expr', parse.Terminal('(1 + 2)').rule)
-    assert.are.equal('Number', parse.Terminal('1').rule)
+  spec('ruleName', function()
+    assert.are.equal('Terminal', parse.Terminal('true').ruleName)
+    assert.are.equal('Expr', parse.Terminal('(1 + 2)').ruleName)
+    assert.are.equal('Number', parse.Terminal('1').ruleName)
   end)
 
   spec('terminals', function()
@@ -19,14 +19,14 @@ describe('Terminal.parse', function()
 
   spec('terminal parens', function()
     assert.has_subtable({
-      rule = 'Number',
+      ruleName = 'Number',
       value = '1',
       parens = true,
     }, parse.Terminal(
       '(1)'
     ))
     assert.has_subtable({
-      rule = 'ArrowFunction',
+      ruleName = 'ArrowFunction',
       parens = true,
     }, parse.Terminal(
       '(() -> {})'

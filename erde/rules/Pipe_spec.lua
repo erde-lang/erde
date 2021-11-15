@@ -3,10 +3,10 @@
 -- -----------------------------------------------------------------------------
 
 describe('Pipe.parse', function()
-  spec('rule', function()
-    assert.are.equal('Pipe', parse.Pipe('[] >> y').rule)
-    assert.are.equal('Pipe', parse.Pipe('[ 2 ] >> y').rule)
-    assert.are.equal('Pipe', parse.Pipe('[ 1, 2 ] >> y').rule)
+  spec('ruleName', function()
+    assert.are.equal('Pipe', parse.Pipe('[] >> y').ruleName)
+    assert.are.equal('Pipe', parse.Pipe('[ 2 ] >> y').ruleName)
+    assert.are.equal('Pipe', parse.Pipe('[ 1, 2 ] >> y').ruleName)
   end)
 end)
 

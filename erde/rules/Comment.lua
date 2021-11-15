@@ -4,7 +4,7 @@ local constants = require('erde.constants')
 -- Comment
 -- -----------------------------------------------------------------------------
 
-local Comment = {}
+local Comment = { ruleName = 'Comment' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -12,7 +12,7 @@ local Comment = {}
 
 function Comment.parse(ctx)
   local capture = {}
-  local node = { rule = 'Comment' }
+  local node = {}
 
   if ctx:branchStr('---', true) then
     node.variant = 'long'

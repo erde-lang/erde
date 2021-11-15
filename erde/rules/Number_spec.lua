@@ -5,8 +5,8 @@ local utils = require('erde.utils')
 -- -----------------------------------------------------------------------------
 
 describe('Number.parse', function()
-  spec('rule', function()
-    assert.are.equal('Number', parse.Number('0').rule)
+  spec('ruleName', function()
+    assert.are.equal('Number', parse.Number('0').ruleName)
   end)
 
   spec('integer', function()

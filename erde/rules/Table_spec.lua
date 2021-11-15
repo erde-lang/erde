@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Table.parse', function()
-  spec('rule', function()
-    assert.are.equal('Table', parse.Table('{}').rule)
+  spec('ruleName', function()
+    assert.are.equal('Table', parse.Table('{}').ruleName)
   end)
 
   spec('table arrayKey', function()
@@ -46,7 +46,7 @@ describe('Table.parse', function()
     assert.has_subtable({
       {
         variant = 'stringKey',
-        key = { rule = 'String', variant = 'short' },
+        key = { ruleName = 'String', variant = 'short' },
         value = { value = '3' },
       },
     }, parse.Table(
@@ -55,7 +55,7 @@ describe('Table.parse', function()
     assert.has_subtable({
       {
         variant = 'stringKey',
-        key = { rule = 'String', variant = 'short' },
+        key = { ruleName = 'String', variant = 'short' },
         value = { value = '3' },
       },
     }, parse.Table(
@@ -64,7 +64,7 @@ describe('Table.parse', function()
     assert.has_subtable({
       {
         variant = 'stringKey',
-        key = { rule = 'String', variant = 'long' },
+        key = { ruleName = 'String', variant = 'long' },
         value = { value = '3' },
       },
     }, parse.Table(

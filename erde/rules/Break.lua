@@ -2,15 +2,14 @@
 -- Break
 -- -----------------------------------------------------------------------------
 
-local Break = {}
+local Break = { ruleName = 'Break' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
 function Break.parse(ctx)
-  return ctx:branchWord('break') and { rule = 'Break' }
-    or ctx:throwExpected('break')
+  return ctx:branchWord('break') and {} or ctx:throwExpected('break')
 end
 
 -- -----------------------------------------------------------------------------
