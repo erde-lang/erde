@@ -1,5 +1,3 @@
-local constants = require('erde.constants')
-
 local BINOP_ASSIGNMENT_BLACKLIST = {
   ['?'] = true,
   ['=='] = true,
