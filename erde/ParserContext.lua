@@ -263,7 +263,6 @@ function ParserContext:Parens(opts)
 
     if opts.prioritizeRule then
       local node = self:Try(opts.rule)
-      print(require('inspect')(node))
       if node then
         return node
       end
