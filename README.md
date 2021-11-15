@@ -12,9 +12,7 @@
 
 - spread operator `local x = { ...y }`
 - keywords
-  - break
   - kpairs
-  - continue?
 
 ## Uncertain Proposals (need community input)
 

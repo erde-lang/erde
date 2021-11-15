@@ -4,6 +4,7 @@ return {
   Block = require('erde.rules.Block'),
   Break = require('erde.rules.Break'),
   Comment = require('erde.rules.Comment'),
+  Continue = require('erde.rules.Continue'),
   Declaration = require('erde.rules.Declaration'),
   Destructure = require('erde.rules.Destructure'),
   DoBlock = require('erde.rules.DoBlock'),
