@@ -17,8 +17,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue.compile(ctx, node)
-  local tmpName = ctx.newTmpName()
-  return 'continue'
+  return table.concat({
+    node.continueName .. ' = true',
+    'break',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------

@@ -13,6 +13,7 @@
 - spread operator `local x = { ...y }`
 - keywords
   - kpairs
+- Processors
 
 ## Uncertain Proposals (need community input)
 

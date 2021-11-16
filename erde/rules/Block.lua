@@ -39,6 +39,19 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
+local CONTINUE_TEMPLATE = [[
+  local %1 = false
+
+  repeat
+    %2
+    %1 = true
+  until true
+
+  if not %1 then
+    break
+  end
+]]
+
 function Block.compile(ctx, node)
   local compileParts = {}
 
@@ -46,7 +59,11 @@ function Block.compile(ctx, node)
     compileParts[#compileParts + 1] = ctx:compile(statement)
   end
 
-  return table.concat(compileParts, '\n')
+  local compiled = table.concat(compileParts, '\n')
+
+  return node.continueName
+      and ctx.format(CONTINUE_TEMPLATE, node.continueName, compiled)
+    or compiled
 end
 
 -- -----------------------------------------------------------------------------
