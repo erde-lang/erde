@@ -2,14 +2,14 @@
 -- TryCatch
 -- -----------------------------------------------------------------------------
 
-local TryCatch = {}
+local TryCatch = { ruleName = 'TryCatch' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
 function TryCatch.parse(ctx)
-  local node = { rule = 'TryCatch' }
+  local node = {}
 
   if not ctx:branchWord('try') then
     ctx:throwExpected('try')

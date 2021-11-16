@@ -4,7 +4,7 @@ local constants = require('erde.constants')
 -- Expr
 -- -----------------------------------------------------------------------------
 
-local Expr = {}
+local Expr = { ruleName = 'Expr' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -12,7 +12,7 @@ local Expr = {}
 
 function Expr.parse(ctx, minPrec)
   minPrec = minPrec or 1
-  local node = { rule = 'Expr' }
+  local node = { ruleName = Expr.ruleName }
   local lhs
 
   local unop = ctx:Unop()
@@ -34,7 +34,7 @@ function Expr.parse(ctx, minPrec)
     ctx:consume(#binop.token)
 
     node = {
-      rule = 'Expr',
+      ruleName = Expr.ruleName,
       variant = 'binop',
       op = binop,
       node,

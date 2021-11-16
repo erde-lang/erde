@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Destructure.parse', function()
-  spec('rule', function()
-    assert.are.equal('Destructure', parse.Destructure('{}').rule)
+  spec('ruleName', function()
+    assert.are.equal('Destructure', parse.Destructure('{}').ruleName)
   end)
 
   spec('destructure mapDestruct', function()

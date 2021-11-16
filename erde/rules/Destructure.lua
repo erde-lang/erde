@@ -2,7 +2,7 @@
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-local Destructure = {}
+local Destructure = { ruleName = 'Destructure' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -38,7 +38,6 @@ function Destructure.parse(ctx)
     })
   end)
 
-  node.rule = 'Destructure'
   node.optional = optional
   return node
 end

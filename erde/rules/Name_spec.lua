@@ -5,8 +5,8 @@ local constants = require('erde.constants')
 -- -----------------------------------------------------------------------------
 
 describe('Name.parse', function()
-  spec('rule', function()
-    assert.are.equal('Name', parse.Name('a').rule)
+  spec('ruleName', function()
+    assert.are.equal('Name', parse.Name('a').ruleName)
   end)
 
   spec('name', function()

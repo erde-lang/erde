@@ -2,7 +2,7 @@
 -- DoBlock
 -- -----------------------------------------------------------------------------
 
-local DoBlock = {}
+local DoBlock = { ruleName = 'DoBlock' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -13,13 +13,10 @@ function DoBlock.parse(ctx)
     ctx:throwExpected('do')
   end
 
-  local node = {
-    rule = 'DoBlock',
-    body = ctx:Surround('{', '}', ctx.Block),
-  }
+  local node = { body = ctx:Surround('{', '}', ctx.Block) }
 
   for _, statement in pairs(node.body) do
-    if statement.rule == 'Return' then
+    if statement.ruleName == 'Return' then
       node.hasReturn = true
       break
     end

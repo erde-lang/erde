@@ -9,13 +9,8 @@ local rules = require('erde.rules')
 local ParserContext = {}
 local ParserContextMT = { __index = ParserContext }
 
-for name, rule in pairs(rules) do
-  ParserContext[name] = function(self, ...)
-    self:Space()
-    local node = rule.parse(self, ...)
-    self:Space()
-    return node
-  end
+for ruleName, parser in pairs(rules.parse) do
+  ParserContext[ruleName] = parser
 end
 
 function ParserContext:load(input)

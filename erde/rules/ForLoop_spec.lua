@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('ForLoop.parse', function()
-  spec('rule', function()
-    assert.are.equal('ForLoop', parse.ForLoop('for i = 1, 2 {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('ForLoop', parse.ForLoop('for i = 1, 2 {}').ruleName)
   end)
 
   spec('numeric for loop', function()

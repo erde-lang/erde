@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Block.parse', function()
-  spec('rule', function()
-    assert.are.equal('Block', parse.Block('').rule)
+  spec('ruleName', function()
+    assert.are.equal('Block', parse.Block('').ruleName)
   end)
 end)
 

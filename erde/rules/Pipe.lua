@@ -4,7 +4,7 @@ local utils = require('erde.utils')
 -- Pipe
 -- -----------------------------------------------------------------------------
 
-local Pipe = {}
+local Pipe = { ruleName = 'Pipe' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -12,7 +12,6 @@ local Pipe = {}
 
 function Pipe.parse(ctx)
   local node = {
-    rule = 'Pipe',
     initValues = ctx:Surround('[', ']', function()
       return ctx:List({
         allowEmpty = true,
@@ -76,7 +75,7 @@ function Pipe.compile(ctx, node)
     pipeResult = ctx.newTmpName()
 
     local receiver
-    if pipe.receiver.rule == 'OptChain' then
+    if pipe.receiver.ruleName == 'OptChain' then
       local lastChain = pipe.receiver[#pipe.receiver]
       if lastChain and lastChain.variant == 'params' then
         local pipeArgsLen = ctx.newTmpName()

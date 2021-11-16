@@ -2,7 +2,7 @@
 -- Return
 -- -----------------------------------------------------------------------------
 
-local Return = {}
+local Return = { ruleName = 'Return' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -25,7 +25,6 @@ function Return.parse(ctx)
     end,
   })
 
-  node.rule = 'Return'
   return node
 end
 

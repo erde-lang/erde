@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Assignment.parse', function()
-  spec('rule', function()
-    assert.are.equal('Assignment', parse.Assignment('a = 1').rule)
+  spec('ruleName', function()
+    assert.are.equal('Assignment', parse.Assignment('a = 1').ruleName)
   end)
 
   spec('single assignment', function()
@@ -15,7 +15,7 @@ describe('Assignment.parse', function()
       'a = 3'
     ))
     assert.has_subtable({
-      idList = { { rule = 'OptChain' } },
+      idList = { { ruleName = 'OptChain' } },
       exprList = { { value = '3' } },
     }, parse.Assignment(
       'a.b = 3'
@@ -38,7 +38,7 @@ describe('Assignment.parse', function()
     assert.has_subtable({
       idList = {
         { value = 'a' },
-        { rule = 'OptChain' },
+        { ruleName = 'OptChain' },
       },
       exprList = {
         { value = '1' },

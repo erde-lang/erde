@@ -1,29 +1,70 @@
-return {
-  ArrowFunction = require('erde.rules.ArrowFunction'),
-  Assignment = require('erde.rules.Assignment'),
-  Block = require('erde.rules.Block'),
-  Break = require('erde.rules.Break'),
-  Comment = require('erde.rules.Comment'),
-  Continue = require('erde.rules.Continue'),
-  Declaration = require('erde.rules.Declaration'),
-  Destructure = require('erde.rules.Destructure'),
-  DoBlock = require('erde.rules.DoBlock'),
-  Expr = require('erde.rules.Expr'),
-  ForLoop = require('erde.rules.ForLoop'),
-  Function = require('erde.rules.Function'),
-  FunctionCall = require('erde.rules.FunctionCall'),
-  Id = require('erde.rules.Id'),
-  IfElse = require('erde.rules.IfElse'),
-  Name = require('erde.rules.Name'),
-  Number = require('erde.rules.Number'),
-  OptChain = require('erde.rules.OptChain'),
-  Params = require('erde.rules.Params'),
-  Pipe = require('erde.rules.Pipe'),
-  RepeatUntil = require('erde.rules.RepeatUntil'),
-  Return = require('erde.rules.Return'),
-  String = require('erde.rules.String'),
-  Table = require('erde.rules.Table'),
-  Terminal = require('erde.rules.Terminal'),
-  TryCatch = require('erde.rules.TryCatch'),
-  WhileLoop = require('erde.rules.WhileLoop'),
+-- -----------------------------------------------------------------------------
+-- Rules
+-- -----------------------------------------------------------------------------
+
+local rules = {
+  parse = {},
+  process = {},
+  compile = {},
 }
+
+function rules:register(rule)
+  local ruleName = rule.ruleName
+
+  self.parse[ruleName] = function(ctx, ...)
+    ctx:Space()
+    local node = rule.parse(ctx, ...)
+    ctx:Space()
+
+    if node.ruleName == nil then
+      node.ruleName = ruleName
+    end
+
+    return node
+  end
+
+  self.process[ruleName] = rule.process
+
+  self.compile[ruleName] = function(ctx, node, ...)
+    local compiled = rule.compile(ctx, node, ...)
+    return node.parens and '(' .. compiled .. ')' or compiled
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Rule Modules
+-- -----------------------------------------------------------------------------
+
+rules:register(require('erde.rules.ArrowFunction'))
+rules:register(require('erde.rules.Assignment'))
+rules:register(require('erde.rules.Block'))
+rules:register(require('erde.rules.Break'))
+rules:register(require('erde.rules.Comment'))
+rules:register(require('erde.rules.Continue'))
+rules:register(require('erde.rules.Declaration'))
+rules:register(require('erde.rules.Destructure'))
+rules:register(require('erde.rules.DoBlock'))
+rules:register(require('erde.rules.Expr'))
+rules:register(require('erde.rules.ForLoop'))
+rules:register(require('erde.rules.Function'))
+rules:register(require('erde.rules.FunctionCall'))
+rules:register(require('erde.rules.Id'))
+rules:register(require('erde.rules.IfElse'))
+rules:register(require('erde.rules.Name'))
+rules:register(require('erde.rules.Number'))
+rules:register(require('erde.rules.OptChain'))
+rules:register(require('erde.rules.Params'))
+rules:register(require('erde.rules.Pipe'))
+rules:register(require('erde.rules.RepeatUntil'))
+rules:register(require('erde.rules.Return'))
+rules:register(require('erde.rules.String'))
+rules:register(require('erde.rules.Table'))
+rules:register(require('erde.rules.Terminal'))
+rules:register(require('erde.rules.TryCatch'))
+rules:register(require('erde.rules.WhileLoop'))
+
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
+
+return rules

@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Continue.parse', function()
-  spec('rule', function()
-    assert.are.equal('Continue', parse.Continue('continue').rule)
+  spec('ruleName', function()
+    assert.are.equal('Continue', parse.Continue('continue').ruleName)
   end)
 end)
 

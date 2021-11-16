@@ -3,10 +3,10 @@
 -- -----------------------------------------------------------------------------
 
 describe('OptChain.parse', function()
-  spec('rules', function()
-    assert.are.equal('OptChain', parse.OptChain('a.b').rule)
-    assert.are.equal('OptChain', parse.FunctionCall('a()').rule)
-    assert.are.equal('OptChain', parse.Id('a.b').rule)
+  spec('ruleNames', function()
+    assert.are.equal('OptChain', parse.OptChain('a.b').ruleName)
+    assert.are.equal('OptChain', parse.FunctionCall('a()').ruleName)
+    assert.are.equal('OptChain', parse.Id('a.b').ruleName)
   end)
 
   spec('optchain base', function()
@@ -19,7 +19,7 @@ describe('OptChain.parse', function()
       'a.b'
     ))
     assert.has_subtable({
-      base = { rule = 'Expr' },
+      base = { ruleName = 'Expr' },
     }, parse.OptChain(
       '(1 + 2).a'
     ))

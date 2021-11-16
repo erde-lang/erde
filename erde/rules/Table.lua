@@ -2,7 +2,7 @@
 -- Table
 -- -----------------------------------------------------------------------------
 
-local Table = {}
+local Table = { ruleName = 'Table' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -45,11 +45,11 @@ function Table.parse(ctx)
             field.key = keyCounter
             field.value = expr
             keyCounter = keyCounter + 1
-          elseif expr.rule == 'Name' then
+          elseif expr.ruleName == 'Name' then
             field.variant = 'nameKey'
             field.key = expr.value
             field.value = ctx:Expr()
-          elseif expr.rule == 'String' then
+          elseif expr.ruleName == 'String' then
             field.variant = 'stringKey'
             field.key = expr
             field.value = ctx:Expr()
@@ -63,7 +63,6 @@ function Table.parse(ctx)
     })
   end)
 
-  node.rule = 'Table'
   return node
 end
 

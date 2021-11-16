@@ -72,16 +72,17 @@ busted.expose('setup', function()
   compilerCtx = CompilerContext()
 
   parse = {}
-  compile = {}
-
-  for name, rule in pairs(rules) do
-    parse[name] = function(input)
+  for ruleName, parser in pairs(rules.parse) do
+    parse[ruleName] = function(input)
       parserCtx:load(input)
-      return parserCtx[name](parserCtx)
+      return parser(parserCtx)
     end
+  end
 
-    compile[name] = function(input)
-      local node = parse[name](input)
+  compile = {}
+  for ruleName, compiler in pairs(rules.compile) do
+    compile[ruleName] = function(input)
+      local node = parse[ruleName](input)
       return compilerCtx:compile(node)
     end
   end

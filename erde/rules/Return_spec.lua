@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Return.parse', function()
-  spec('rule', function()
-    assert.are.equal('Return', parse.Return('return').rule)
+  spec('ruleName', function()
+    assert.are.equal('Return', parse.Return('return').ruleName)
   end)
 
   spec('return values', function()

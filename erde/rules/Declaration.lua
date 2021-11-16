@@ -2,7 +2,7 @@
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-local Declaration = {}
+local Declaration = { ruleName = 'Declaration' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -10,7 +10,6 @@ local Declaration = {}
 
 function Declaration.parse(ctx)
   local node = {
-    rule = 'Declaration',
     varList = {},
     exprList = {},
   }
@@ -53,9 +52,9 @@ function Declaration.compile(ctx, node)
   local nameList = {}
 
   for i, var in ipairs(node.varList) do
-    if var.rule == 'Name' then
+    if var.ruleName == 'Name' then
       nameList[#nameList + 1] = ctx:compile(var)
-    elseif var.rule == 'Destructure' then
+    elseif var.ruleName == 'Destructure' then
       local destructure = ctx:compile(var)
       nameList[#nameList + 1] = destructure.baseName
       compileParts[#compileParts + 1] = destructure.compiled

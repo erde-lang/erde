@@ -5,10 +5,10 @@ local constants = require('erde.constants')
 -- -----------------------------------------------------------------------------
 
 describe('Expr.parse', function()
-  spec('rule', function()
-    assert.are.equal('Expr', parse.Expr('1 + 2').rule)
-    assert.are.equal('Number', parse.Expr('1').rule)
-    assert.are.equal('String', parse.Expr('"hello"').rule)
+  spec('ruleName', function()
+    assert.are.equal('Expr', parse.Expr('1 + 2').ruleName)
+    assert.are.equal('Number', parse.Expr('1').ruleName)
+    assert.are.equal('String', parse.Expr('"hello"').ruleName)
   end)
 
   spec('unop tags', function()

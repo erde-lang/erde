@@ -2,16 +2,14 @@
 -- Block
 -- -----------------------------------------------------------------------------
 
-local Statement = {}
-local Block = {}
-local LoopBlock = {}
+local Block = { ruleName = 'Block' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
 function Block.parse(ctx)
-  local node = { rule = 'Block' }
+  local node = {}
 
   repeat
     local statement = ctx:Switch({

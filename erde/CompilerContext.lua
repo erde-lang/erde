@@ -16,19 +16,12 @@ function CompilerContext:compile(node)
     node = parserCtx:parse(node)
   end
 
-  if type(node) ~= 'table' or not rules[node.rule] then
+  if type(node) ~= 'table' or not rules.compile[node.ruleName] then
     -- TODO
-    print(require('inspect')(node))
-    error('No node compiler for')
+    error('No node compiler for ' .. require('inspect')(node))
   end
 
-  local compiled = rules[node.rule].compile(self, node)
-
-  if node.parens then
-    compiled = '(' .. compiled .. ')'
-  end
-
-  return compiled
+  return rules.compile[node.ruleName](self, node)
 end
 
 -- -----------------------------------------------------------------------------

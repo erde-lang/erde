@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('WhileLoop.parse', function()
-  spec('rule', function()
-    assert.are.equal('WhileLoop', parse.WhileLoop('while true {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('WhileLoop', parse.WhileLoop('while true {}').ruleName)
   end)
 
   spec('while loop', function()

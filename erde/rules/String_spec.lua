@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('String.parse', function()
-  spec('rule', function()
-    assert.are.equal('String', parse.String('""').rule)
+  spec('ruleName', function()
+    assert.are.equal('String', parse.String('""').ruleName)
   end)
 
   spec('short string', function()

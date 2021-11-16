@@ -2,15 +2,14 @@
 -- Continue
 -- -----------------------------------------------------------------------------
 
-local Continue = {}
+local Continue = { ruleName = 'Continue' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
 function Continue.parse(ctx)
-  return ctx:branchWord('continue') and { rule = 'Continue' }
-    or ctx:throwExpected('continue')
+  return ctx:branchWord('continue') and {} or ctx:throwExpected('continue')
 end
 
 -- -----------------------------------------------------------------------------

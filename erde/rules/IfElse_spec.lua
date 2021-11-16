@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('IfElse.parse', function()
-  spec('rule', function()
-    assert.are.equal('IfElse', parse.IfElse('if true {}').rule)
+  spec('ruleName', function()
+    assert.are.equal('IfElse', parse.IfElse('if true {}').ruleName)
   end)
 
   spec('if', function()

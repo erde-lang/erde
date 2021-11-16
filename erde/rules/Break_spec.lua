@@ -3,8 +3,8 @@
 -- -----------------------------------------------------------------------------
 
 describe('Break.parse', function()
-  spec('rule', function()
-    assert.are.equal('Break', parse.Break('break').rule)
+  spec('ruleName', function()
+    assert.are.equal('Break', parse.Break('break').ruleName)
   end)
 end)
 
