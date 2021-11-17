@@ -128,11 +128,11 @@ end
 local spreadField = {}
 
 function spreadField.parse(ctx)
-  return { variant = 'spread', value = ctx:Spread() }
-end
+  if not ctx:branchStr('...') then
+    ctx:throwExpected('...')
+  end
 
-function spreadField.compile(ctx, field)
-  return ctx:compile(field.value)
+  return { variant = 'spread', value = ctx:Id() }
 end
 
 -- -----------------------------------------------------------------------------
@@ -169,8 +169,14 @@ end
 -- Compile
 --
 
+local function compileTable(fields)
+  return '{\n' .. table.concat(fields, ',\n') .. '\n}'
+end
+
 function Table.compile(ctx, node)
-  local compileParts = { '{' }
+  local fieldParts = {}
+  local numberKeyCount = 1
+  local spreadNumberKeys = {}
 
   for i, field in ipairs(node) do
     local fieldCompiler
@@ -185,13 +191,71 @@ function Table.compile(ctx, node)
       fieldCompiler = stringKeyField.compile
     elseif field.variant == 'numberKey' then
       fieldCompiler = numberKeyField.compile
+      numberKeyCount = numberKeyCount + 1
+    elseif field.variant == 'spread' then
+      spreadNumberKeys[#spreadNumberKeys + 1] = numberKeyCount
+      numberKeyCount = numberKeyCount + 1
     end
 
-    compileParts[#compileParts + 1] = fieldCompiler(ctx, field) .. ','
+    if fieldCompiler then
+      fieldParts[#fieldParts + 1] = fieldCompiler(ctx, field)
+    end
   end
 
-  compileParts[#compileParts + 1] = '}'
-  return table.concat(compileParts, '\n')
+  if #spreadNumberKeys == 0 then
+    return compileTable(fieldParts)
+  end
+
+  local partitionedFields = {}
+  local lastPartitionEnd = 0
+
+  for i, spreadNumberKey in ipairs(spreadNumberKeys) do
+    local partition = {}
+
+    for j = lastPartitionEnd + 1, spreadNumberKey - i do
+      partition[#partition + 1] = fieldParts[j]
+    end
+
+    lastPartitionEnd = spreadNumberKey - i
+    partitionedFields[i] = partition
+  end
+
+  local finalPartition = {}
+  for i = lastPartitionEnd + 1, #fieldParts do
+    finalPartition[#finalPartition + 1] = fieldParts[i]
+  end
+  partitionedFields[#partitionedFields + 1] = finalPartition
+
+  local tableTmpName = ctx.newTmpName()
+  local initTable = ('local %s = %s'):format(
+    tableTmpName,
+    compileTable(partitionedFields[1])
+  )
+
+  local body = {}
+  for i, spreadNumberKey in ipairs(spreadNumberKeys) do
+    local partition = partitionedFields[i + 1]
+  end
+
+  -- We need to fill the spreads in REVERSE order. Otherwise, subsequent spreads
+  -- may no longer have the correct spreadNumberKey due to table shifting.
+  return ctx.format(
+    [[
+      (function()
+        local %1 = %2
+        for i, spreadNumberKey in ipairs({}) do
+          for key, value in pairs(src) do
+            if type(key) == 'number' then
+              table.insert(%1, spreadNumberKey, 
+            else
+            end
+          end
+        end
+      end)()
+    ]],
+    tableTmpName,
+    compiledTable
+  )
 end
 
 -- -----------------------------------------------------------------------------
