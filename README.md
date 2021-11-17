@@ -10,14 +10,18 @@
 
 ## Intended Proposals
 
-- spread operator `local x = { ...y }`
+- spread operator
+  - `local x = { ...y }`
+  - `myfunc(1, 4, ...x, 3, ...y, 6)`
+- Processors
+  - validate continue / break
+  - validate variable scopes?
+- module (export!)
+  - must happen at top level
+  - use processor to register module parts
 - keywords
   - kpairs
-- Processors
 
 ## Uncertain Proposals (need community input)
 
 - decorators
-- import / export
-- case statement
-- shorthand self
