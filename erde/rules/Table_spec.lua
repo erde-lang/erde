@@ -7,11 +7,10 @@ describe('Table.parse', function()
     assert.are.equal('Table', parse.Table('{}').ruleName)
   end)
 
-  spec('table arrayKey', function()
+  spec('table numberKey', function()
     assert.has_subtable({
       {
-        variant = 'arrayKey',
-        key = 1,
+        variant = 'numberKey',
         value = { value = '10' },
       },
     }, parse.Table(
@@ -89,9 +88,9 @@ describe('Table.parse', function()
 
   spec('table mixed variants', function()
     assert.has_subtable({
-      { key = 1 },
+      { value = { value = 'a' } },
       { key = 'b' },
-      { key = 2 },
+      { value = { value = 'c' } },
       { key = 'd' },
       { key = { variant = 'short' } },
       { key = { variant = 'long' } },
@@ -119,7 +118,7 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Table.compile', function()
-  spec('table arrayKey', function()
+  spec('table numberKey', function()
     assert.eval({ 10 }, compile.Table('{ 10 }'))
   end)
 

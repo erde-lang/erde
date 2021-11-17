@@ -10,6 +10,10 @@ local rules = require('erde.rules')
 local CompilerContext = {}
 local CompilerContextMT = { __index = CompilerContext }
 
+for ruleName, compiler in pairs(rules.compile) do
+  CompilerContext[ruleName] = compiler
+end
+
 function CompilerContext:compile(node)
   if type(node) == 'string' then
     local parserCtx = ParserContext()

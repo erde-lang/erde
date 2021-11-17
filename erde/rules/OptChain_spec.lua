@@ -68,11 +68,11 @@ describe('OptChain.parse', function()
     ))
   end)
 
-  spec('optchain params', function()
+  spec('optchain functionCall', function()
     assert.has_subtable({
       {
         optional = false,
-        variant = 'params',
+        variant = 'functionCall',
         value = {
           { value = '1' },
           { value = '2' },
@@ -84,7 +84,7 @@ describe('OptChain.parse', function()
     assert.has_subtable({
       {
         optional = true,
-        variant = 'params',
+        variant = 'functionCall',
       },
     }, parse.OptChain(
       'a?(1, 2)'
@@ -99,7 +99,7 @@ describe('OptChain.parse', function()
         variant = 'method',
         value = 'b',
       },
-      { variant = 'params' },
+      { variant = 'functionCall' },
     }, parse.OptChain(
       'a:b(1, 2)'
     ))
@@ -109,7 +109,7 @@ describe('OptChain.parse', function()
         variant = 'method',
         value = 'b',
       },
-      { variant = 'params' },
+      { variant = 'functionCall' },
     }, parse.OptChain(
       'a?:b(1, 2)'
     ))
@@ -168,7 +168,7 @@ describe('OptChain.compile', function()
     )
   end)
 
-  spec('optchain params', function()
+  spec('optchain functionCall', function()
     assert.run(
       3,
       compile.Block([[

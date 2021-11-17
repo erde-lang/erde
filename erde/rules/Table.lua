@@ -8,62 +8,86 @@ local Table = { ruleName = 'Table' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Table.parse(ctx)
-  local keyCounter = 1
+local function parseInlineKeyField(ctx)
+  if not ctx:branchChar(':') then
+    ctx:throwExpected(':')
+  end
 
-  local node = ctx:Surround('{', '}', function()
+  return {
+    variant = 'inlineKey',
+    key = ctx:Name().value,
+  }
+end
+
+local function parseExprKeyField(ctx)
+  local field = {
+    variant = 'exprKey',
+    key = ctx:Surround('[', ']', ctx.Expr),
+  }
+
+  if not ctx:branchChar(':') then
+    ctx:throwExpected(':')
+  end
+
+  field.value = ctx:Expr()
+  return field
+end
+
+local function parseNameKeyField(ctx)
+  local field = {
+    variant = 'nameKey',
+    key = ctx:Name().value,
+  }
+
+  if not ctx:branchChar(':') then
+    ctx:throwExpected(':')
+  end
+
+  field.value = ctx:Expr()
+  return field
+end
+
+local function parseStringKeyField(ctx)
+  local field = {
+    variant = 'stringKey',
+    key = ctx:String(),
+  }
+
+  if not ctx:branchChar(':') then
+    ctx:throwExpected(':')
+  end
+
+  field.value = ctx:Expr()
+  return field
+end
+
+local function parseNumberKeyField(ctx)
+  return { variant = 'numberKey', value = ctx:Expr() }
+end
+
+local function parseSpreadField(ctx)
+  return { variant = 'spread', value = ctx:Spread() }
+end
+
+function Table.parse(ctx)
+  return ctx:Surround('{', '}', function()
     return ctx:List({
       allowEmpty = true,
       allowTrailingComma = true,
       rule = function()
-        local field = {}
-
-        if ctx:branchChar(':') then
-          field.variant = 'inlineKey'
-          field.key = ctx:Name().value
-        elseif ctx.bufValue == '[' then
-          field.variant = 'exprKey'
-          field.key = ctx:Surround('[', ']', ctx.Expr)
-
-          if not ctx:branchChar(':') then
-            ctx:throwExpected(':')
-          end
-
-          field.value = ctx:Expr()
-        else
-          local expr = ctx:Switch({
-            ctx.Name,
-            ctx.Expr,
-          })
-
-          if not expr then
-            ctx:throwUnexpected()
-          end
-
-          if not ctx:branchChar(':') then
-            field.variant = 'arrayKey'
-            field.key = keyCounter
-            field.value = expr
-            keyCounter = keyCounter + 1
-          elseif expr.ruleName == 'Name' then
-            field.variant = 'nameKey'
-            field.key = expr.value
-            field.value = ctx:Expr()
-          elseif expr.ruleName == 'String' then
-            field.variant = 'stringKey'
-            field.key = expr
-            field.value = ctx:Expr()
-          else
-            ctx:throwUnexpected('expression')
-          end
-        end
-
-        return field
+        return ctx:Switch({
+          parseInlineKeyField,
+          parseExprKeyField,
+          parseNameKeyField,
+          parseStringKeyField,
+          -- numberKey must be after stringKey! Otherwise we will parse the
+          -- key of stringKey as the value of numberKey
+          parseNumberKeyField,
+          parseSpreadField,
+        })
       end,
     })
   end)
-
-  return node
 end
 
 -- -----------------------------------------------------------------------------
@@ -71,43 +95,64 @@ end
 -- -----------------------------------------------------------------------------
 
 function Table.compile(ctx, node)
-  local compileParts = { '{' }
-
+  local hasSpread = false
   for i, field in ipairs(node) do
-    if field.variant == 'arrayKey' then
-      compileParts[#compileParts + 1] = ctx.format(
-        '%1,',
-        ctx:compile(field.value)
-      )
-    elseif field.variant == 'inlineKey' then
-      compileParts[#compileParts + 1] = ctx.format('%1 = %1,', field.key)
-    elseif field.variant == 'exprKey' then
-      compileParts[#compileParts + 1] = ctx.format(
-        -- Space around brackets to avoid long string expressions
-        -- [ [=[some string]=] ]
-        '[ %1 ] = %2,',
-        ctx:compile(field.key),
-        ctx:compile(field.value)
-      )
-    elseif field.variant == 'nameKey' then
-      compileParts[#compileParts + 1] = ctx.format(
-        '%1 = %2,',
-        field.key,
-        ctx:compile(field.value)
-      )
-    elseif field.variant == 'stringKey' then
-      compileParts[#compileParts + 1] = ctx.format(
-        -- Space around brackets to avoid long string expressions
-        -- [ [=[some string]=] ]
-        '[ %1 ] = %2,',
-        ctx:compile(field.key),
-        ctx:compile(field.value)
-      )
+    if field.variant == 'spread' then
+      hasSpread = true
+      break
     end
   end
 
-  compileParts[#compileParts + 1] = '}'
-  return table.concat(compileParts, '\n')
+  if hasSpread then
+    local spreadFields = {}
+
+    for i, field in ipairs(node) do
+      if field.variant == 'spread' then
+        spreadFields[i] = field.value
+      else
+        local spreadField = {}
+
+        if field.variant == 'inlineKey' or field.variant == 'nameKey' then
+          spreadField.key = '"' .. field.key .. '"'
+        elseif field.variant ~= 'numberKey' then
+          spreadField.key = ctx:compile(field.key)
+        end
+
+        spreadField.value = field.variant == 'inlineKey' and field.key
+          or ctx:compile(field.value)
+
+        spreadFields[i] = spreadField
+      end
+    end
+
+    return ctx:Spread(spreadFields)
+  else
+    local fieldParts = {}
+
+    for i, field in ipairs(node) do
+      local fieldPart
+
+      if field.variant == 'inlineKey' then
+        fieldPart = field.key .. ' = ' .. field.key
+      elseif field.variant == 'nameKey' then
+        fieldPart = field.key .. ' = ' .. ctx:compile(field.value)
+      elseif field.variant == 'numberKey' then
+        fieldPart = ctx:compile(field.value)
+      elseif field.variant == 'exprKey' or field.variant == 'stringKey' then
+        fieldPart = ctx.format(
+          -- Note: Space around brackets are necessary to avoid long string
+          -- expressions: [ [=[some string]=] ]
+          '[ %1 ] = %2',
+          ctx:compile(field.key),
+          ctx:compile(field.value)
+        )
+      end
+
+      fieldParts[i] = fieldPart
+    end
+
+    return '{\n' .. table.concat(fieldParts, ',\n') .. '\n}'
+  end
 end
 
 -- -----------------------------------------------------------------------------

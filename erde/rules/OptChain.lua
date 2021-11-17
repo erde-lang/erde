@@ -44,14 +44,19 @@ function OptChain.parse(ctx)
       chain.variant = 'bracketIndex'
       chain.value = ctx:Surround('[', ']', ctx.Expr)
     elseif ctx.bufValue == '(' then
-      chain.variant = 'params'
+      chain.variant = 'functionCall'
       chain.value = ctx:Parens({
         demand = true,
         rule = function()
           return ctx:List({
             allowEmpty = true,
             allowTrailingComma = true,
-            rule = ctx.Expr,
+            rule = function()
+              return ctx:Switch({
+                ctx.Expr,
+                ctx.Spread,
+              })
+            end,
           })
         end,
       })
@@ -96,14 +101,37 @@ function OptChain.compile(ctx, node)
       -- Space around brackets to avoid long string expressions
       -- [ [=[some string]=] ]
       subChain = ctx.format('%1[ %2 ]', subChain, ctx:compile(chainNode.value))
-    elseif chainNode.variant == 'params' then
-      local params = {}
-
-      for _, expr in ipairs(chainNode.value) do
-        params[#params + 1] = ctx:compile(expr)
+    elseif chainNode.variant == 'functionCall' then
+      local hasSpread = false
+      for i, arg in ipairs(chainNode.value) do
+        if arg.ruleName == 'Spread' then
+          hasSpread = true
+          break
+        end
       end
 
-      subChain = ctx.format('%1(%2)', subChain, table.concat(params, ','))
+      if hasSpread then
+        local spreadFields = {}
+
+        for i, arg in ipairs(chainNode.value) do
+          spreadFields[i] = arg.ruleName == 'Spread' and arg
+            or { value = ctx:compile(expr) }
+        end
+
+        subChain = ('%s(%s(%s))'):format(
+          subChain,
+          _VERSION:find('5.1') and 'unpack' or 'table.unpack',
+          ctx:Spread(spreadFields)
+        )
+      else
+        local args = {}
+
+        for i, arg in ipairs(chainNode.value) do
+          args[#args + 1] = ctx:compile(arg)
+        end
+
+        subChain = ctx.format('%1(%2)', subChain, table.concat(args, ','))
+      end
     elseif chainNode.variant == 'method' then
       subChain = ctx.format('%1:%2', subChain, chainNode.value)
     end

@@ -14,7 +14,7 @@ function FunctionCall.parse(ctx)
 
   if not last then
     ctx:throwExpected('function call', true)
-  elseif last.variant ~= 'params' then
+  elseif last.variant ~= 'functionCall' then
     ctx:throwError('Id cannot be function call')
   end
 
