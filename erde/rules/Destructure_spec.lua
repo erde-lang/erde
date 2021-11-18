@@ -4,36 +4,48 @@
 
 describe('Destructure.parse', function()
   spec('ruleName', function()
-    assert.are.equal('Destructure', parse.Destructure('{}').ruleName)
+    assert.are.equal('Destructure', parse.Destructure('{ a }').ruleName)
   end)
 
-  spec('destructure mapDestruct', function()
+  spec('destructure keyDestruct', function()
     assert.has_subtable({
-      { name = 'a' },
+      { name = 'a', variant = 'keyDestruct' },
     }, parse.Destructure(
-      '{ :a }'
+      '{ a }'
     ))
     assert.has_error(function()
-      parse.Destructure('{ : }')
+      parse.Destructure('{}')
     end)
   end)
 
-  spec('destructure arrayDestruct', function()
+  spec('destructure numberDestruct', function()
     assert.has_subtable({
-      { key = 1, name = 'a' },
-      { key = 2, name = 'b' },
+      { name = 'a', variant = 'numberDestruct' },
+      { name = 'b', variant = 'numberDestruct' },
     }, parse.Destructure(
-      '{ a, b }'
+      '[ a, b ]'
+    ))
+    assert.has_subtable({
+      { name = 'a', variant = 'numberDestruct' },
+      { name = 'b', variant = 'numberDestruct' },
+    }, parse.Destructure(
+      '{[ a, b ]}'
+    ))
+    assert.has_subtable({
+      { name = 'a', variant = 'numberDestruct' },
+      { name = 'b', variant = 'numberDestruct' },
+    }, parse.Destructure(
+      '{[a], [b]}'
     ))
   end)
 
   spec('destructure mixed', function()
     assert.has_subtable({
-      { key = 1, name = 'a' },
-      { name = 'b' },
-      { key = 2, name = 'c' },
+      { name = 'a', variant = 'keyDestruct' },
+      { name = 'b', variant = 'numberDestruct' },
+      { name = 'c', variant = 'numberDestruct' },
     }, parse.Destructure(
-      '{ a, :b, c }'
+      '{ a, [b, c]}'
     ))
   end)
 
@@ -42,7 +54,7 @@ describe('Destructure.parse', function()
       optional = true,
       { name = 'a' },
     }, parse.Destructure(
-      '?{ :a }'
+      '?{ a }'
     ))
   end)
 end)
@@ -53,7 +65,7 @@ end)
 
 describe('Destructure.compile', function()
   spec('sanity check', function()
-    assert.is_not_nil(compile.Destructure('{}').baseName)
-    assert.is_not_nil(compile.Destructure('{}').compiled)
+    assert.is_not_nil(compile.Destructure('{ a }').baseName)
+    assert.is_not_nil(compile.Destructure('{ a }').compiled)
   end)
 end)

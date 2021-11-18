@@ -124,7 +124,7 @@ describe('Declaration.compile', function()
       1,
       compile.Block([[
         local a = { b: 1 }
-        local { :b } = a
+        local { b } = a
         return b
       ]])
     )
@@ -132,7 +132,7 @@ describe('Declaration.compile', function()
       3,
       compile.Block([[
         local a = { b: 1 }
-        local c, { :b } = 2, a
+        local c, { b } = 2, a
         return c + b
       ]])
     )
