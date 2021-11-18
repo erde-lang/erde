@@ -20,14 +20,11 @@
     - `local { a } = { a = 1 }`
     - revert syntax `:` -> `=` (no longer need `:`)
     - need new number index destructure syntax
-- pipe improvements
-  - new syntax
-  - `[ fields ] >> !map(x -> 2 * x)`
-  - `
-    local a = { 1, 2 }
-    const { x, [test, test2] } = a
-    const [test, test2] = a
-  `
+    - `local { x, [test, test2] } = a`
+    - `local [test, test2] = a`
+- new pipe syntax
+  - `fields >> !map(x -> 2 * x)`
+  - `('hello', 'world') >> !map(x -> 2 * x)`
 - Processors
   - validate continue / break
   - validate variable scopes?

@@ -12,7 +12,7 @@ function Id.parse(ctx)
   local node = ctx:OptChain()
   local last = node[#node]
 
-  if last and last.variant == 'params' then
+  if last and last.variant == 'functionCall' then
     ctx:throwError('Id cannot be function call')
   end
 

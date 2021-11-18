@@ -77,7 +77,7 @@ function Pipe.compile(ctx, node)
     local receiver
     if pipe.receiver.ruleName == 'OptChain' then
       local lastChain = pipe.receiver[#pipe.receiver]
-      if lastChain and lastChain.variant == 'params' then
+      if lastChain and lastChain.variant == 'functionCall' then
         local pipeArgsLen = ctx.newTmpName()
         compiled[#compiled + 1] = ctx.format(
           'local %1 = #%2',

@@ -44,7 +44,7 @@ function OptChain.parse(ctx)
       chain.variant = 'bracketIndex'
       chain.value = ctx:Surround('[', ']', ctx.Expr)
     elseif ctx.bufValue == '(' then
-      chain.variant = 'params'
+      chain.variant = 'functionCall'
       chain.value = ctx:Parens({
         demand = true,
         rule = function()
@@ -96,14 +96,14 @@ function OptChain.compile(ctx, node)
       -- Space around brackets to avoid long string expressions
       -- [ [=[some string]=] ]
       subChain = ctx.format('%1[ %2 ]', subChain, ctx:compile(chainNode.value))
-    elseif chainNode.variant == 'params' then
-      local params = {}
+    elseif chainNode.variant == 'functionCall' then
+      local args = {}
 
       for _, expr in ipairs(chainNode.value) do
-        params[#params + 1] = ctx:compile(expr)
+        args[#args + 1] = ctx:compile(expr)
       end
 
-      subChain = ctx.format('%1(%2)', subChain, table.concat(params, ','))
+      subChain = ctx.format('%1(%2)', subChain, table.concat(args, ','))
     elseif chainNode.variant == 'method' then
       subChain = ctx.format('%1:%2', subChain, chainNode.value)
     end
