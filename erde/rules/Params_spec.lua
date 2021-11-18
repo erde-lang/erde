@@ -59,7 +59,7 @@ describe('Params.parse', function()
     assert.has_subtable({
       { ruleName = 'Destructure' },
     }, parse.Params(
-      '({ :a })'
+      '({ a })'
     ))
     assert.has_subtable({
       {
@@ -93,11 +93,11 @@ describe('Params.compile', function()
     assert.run(
       3,
       compile.Block([[
-        local function test({ :a }, b) {
+        local function test({ a }, b) {
           return a + b
         }
 
-        local x = { a: 1 }
+        local x = { a = 1 }
         return test(x, 2)
       ]])
     )

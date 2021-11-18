@@ -118,23 +118,4 @@ describe('Declaration.compile', function()
       ]])
     )
   end)
-
-  spec('destructure declaration', function()
-    assert.run(
-      1,
-      compile.Block([[
-        local a = { b: 1 }
-        local { :b } = a
-        return b
-      ]])
-    )
-    assert.run(
-      3,
-      compile.Block([[
-        local a = { b: 1 }
-        local c, { :b } = 2, a
-        return c + b
-      ]])
-    )
-  end)
 end)

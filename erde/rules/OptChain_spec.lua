@@ -131,14 +131,14 @@ end)
 
 describe('OptChain.compile', function()
   spec('optchain base', function()
-    assert.eval(1, compile.OptChain('({ x: 1 }).x'))
+    assert.eval(1, compile.OptChain('({ x = 1 }).x'))
   end)
 
   spec('optchain dotIndex', function()
     assert.run(
       1,
       compile.Block([[
-        local a = { b: 1 }
+        local a = { b = 1 }
         return a.b
       ]])
     )
@@ -155,7 +155,7 @@ describe('OptChain.compile', function()
     assert.run(
       1,
       compile.Block([[
-        local a = { [5]: 1 }
+        local a = { [5] = 1 }
         return a[2 + 3]
       ]])
     )
@@ -190,8 +190,8 @@ describe('OptChain.compile', function()
       3,
       compile.Block([[
         local a = {
-          b: (self, x) -> self.c + x,
-          c: 1,
+          b = (self, x) -> self.c + x,
+          c = 1,
         }
         return a:b(2)
       ]])

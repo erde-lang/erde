@@ -8,37 +8,71 @@ local Destructure = { ruleName = 'Destructure' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Destructure.parse(ctx)
-  local keyCounter = 1
-  local optional = ctx:branchChar('?')
+local function parseDestruct(ctx)
+  local destruct = { name = ctx:Name().value }
 
-  local node = ctx:Surround('{', '}', function()
+  if ctx:branchChar(':') then
+    destruct.alias = ctx:Name().value
+  end
+
+  if ctx:branchChar('=') then
+    destruct.default = ctx:Expr()
+  end
+
+  return destruct
+end
+
+local function parseNumberKeyDestructs(ctx)
+  return ctx:Surround('[', ']', function()
     return ctx:List({
-      allowEmpty = true,
       allowTrailingComma = true,
       rule = function()
-        local field = {}
-
-        if ctx:branchChar(':') then
-          field.variant = 'mapDestruct'
-        else
-          field.variant = 'arrayDestruct'
-          field.key = keyCounter
-          keyCounter = keyCounter + 1
-        end
-
-        field.name = ctx:Name().value
-
-        if ctx:branchChar('=') then
-          field.default = ctx:Expr()
-        end
-
-        return field
+        local destruct = parseDestruct(ctx)
+        destruct.variant = 'numberDestruct'
+        return destruct
       end,
     })
   end)
+end
 
-  node.optional = optional
+function Destructure.parse(ctx)
+  local node = { optional = ctx:branchChar('?') }
+
+  local destructs = ctx:Switch({
+    parseNumberKeyDestructs,
+    function()
+      return ctx:Surround('{', '}', function()
+        return ctx:List({
+          allowTrailingComma = true,
+          rule = function()
+            return ctx:Switch({
+              parseNumberKeyDestructs,
+              function()
+                local destruct = parseDestruct(ctx)
+                destruct.variant = 'keyDestruct'
+                return destruct
+              end,
+            })
+          end,
+        })
+      end)
+    end,
+  })
+
+  if not destructs then
+    ctx:throwUnexpected()
+  end
+
+  for i, destruct in ipairs(destructs) do
+    if destruct.variant ~= nil then
+      node[#node + 1] = destruct
+    else
+      for i, numberDestruct in ipairs(destruct) do
+        node[#node + 1] = numberDestruct
+      end
+    end
+  end
+
   return node
 end
 
@@ -48,31 +82,35 @@ end
 
 function Destructure.compile(ctx, node)
   local baseName = ctx.newTmpName()
-  local names = {}
+  local varNames = {}
+  local numberKeyCounter = 1
   local compileParts = {}
 
   for i, field in ipairs(node) do
-    names[#names + 1] = field.name
+    local varName = field.alias or field.name
+    varNames[i] = varName
 
-    if field.variant == 'mapDestruct' then
+    if field.variant == 'keyDestruct' then
       compileParts[#compileParts + 1] = ctx.format(
         '%1 = %2.%1',
-        field.name,
-        baseName
+        varName,
+        baseName,
+        field.name
       )
-    elseif field.variant == 'arrayDestruct' then
+    elseif field.variant == 'numberDestruct' then
       compileParts[#compileParts + 1] = ctx.format(
         '%1 = %2[%3]',
-        field.name,
+        varName,
         baseName,
-        field.key
+        numberKeyCounter
       )
+      numberKeyCounter = numberKeyCounter + 1
     end
 
     if field.default then
       compileParts[#compileParts + 1] = ctx.format(
         'if %1 == nil then %1 = %2 end',
-        field.name,
+        varName,
         ctx:compile(field.default)
       )
     end
@@ -83,7 +121,7 @@ function Destructure.compile(ctx, node)
     compileParts[#compileParts + 1] = 'end'
   end
 
-  table.insert(compileParts, 1, 'local ' .. table.concat(names, ','))
+  table.insert(compileParts, 1, 'local ' .. table.concat(varNames, ','))
 
   return {
     baseName = baseName,

@@ -37,7 +37,7 @@ describe('Table.parse', function()
         value = { value = '2' },
       },
     }, parse.Table(
-      '{ x: 2 }'
+      '{ x = 2 }'
     ))
   end)
 
@@ -49,7 +49,7 @@ describe('Table.parse', function()
         value = { value = '3' },
       },
     }, parse.Table(
-      "{ 'my-key': 3 }"
+      "{ 'my-key' = 3 }"
     ))
     assert.has_subtable({
       {
@@ -58,7 +58,7 @@ describe('Table.parse', function()
         value = { value = '3' },
       },
     }, parse.Table(
-      '{ "my-key": 3 }'
+      '{ "my-key" = 3 }'
     ))
     assert.has_subtable({
       {
@@ -67,7 +67,7 @@ describe('Table.parse', function()
         value = { value = '3' },
       },
     }, parse.Table(
-      '{ `my-key`: 3 }'
+      '{ `my-key` = 3 }'
     ))
   end)
 
@@ -79,7 +79,7 @@ describe('Table.parse', function()
         value = { value = '3' },
       },
     }, parse.Table(
-      '{ [1 + 2]: 3 }'
+      '{ [1 + 2] = 3 }'
     ))
     assert.has_error(function()
       parse.Table('{ [1 + 2] }')
@@ -95,7 +95,7 @@ describe('Table.parse', function()
       { key = { variant = 'short' } },
       { key = { variant = 'long' } },
     }, parse.Table(
-      '{ a, :b, c, d: 1, "e": 3, [`f`]: 2 }'
+      '{ a, :b, c, d = 1, "e" = 3, [`f`] = 2 }'
     ))
   end)
 
@@ -108,7 +108,7 @@ describe('Table.parse', function()
         },
       },
     }, parse.Table(
-      '{ x: { y: 1 } }'
+      '{ x = { y = 1 } }'
     ))
   end)
 end)
@@ -133,20 +133,20 @@ describe('Table.compile', function()
   end)
 
   spec('table nameKey', function()
-    assert.eval({ x = 2 }, compile.Table('{ x: 2 }'))
+    assert.eval({ x = 2 }, compile.Table('{ x = 2 }'))
   end)
 
   spec('table stringKey', function()
-    assert.eval({ ['my-key'] = 3 }, compile.Table("{'my-key': 3}"))
-    assert.eval({ ['my-key'] = 3 }, compile.Table('{"my-key": 3}'))
-    assert.eval({ ['my-key'] = 3 }, compile.Table('{`my-key`: 3}'))
+    assert.eval({ ['my-key'] = 3 }, compile.Table("{'my-key' = 3}"))
+    assert.eval({ ['my-key'] = 3 }, compile.Table('{"my-key" = 3}'))
+    assert.eval({ ['my-key'] = 3 }, compile.Table('{`my-key` = 3}'))
   end)
 
   spec('table exprKey', function()
-    assert.eval({ [3] = 1 }, compile.Table('{ [1 + 2]: 1 }'))
+    assert.eval({ [3] = 1 }, compile.Table('{ [1 + 2] = 1 }'))
   end)
 
   spec('nested table', function()
-    assert.eval({ x = { y = 1 } }, compile.Table('{ x: { y: 1 } }'))
+    assert.eval({ x = { y = 1 } }, compile.Table('{ x = { y = 1 } }'))
   end)
 end)

@@ -94,7 +94,7 @@ describe('Function.compile', function()
     assert.run(
       1,
       compile.Block([[
-        local a = { x: 1 }
+        local a = { x = 1 }
 
         function a:test() {
           return self.x

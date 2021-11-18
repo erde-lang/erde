@@ -17,25 +17,35 @@ function Terminal.parse(ctx)
     end
   end
 
-  local node = ctx.bufValue == '('
-      and ctx:Switch({
-        ctx.ArrowFunction,
-        ctx.OptChain,
-        function()
-          local node = ctx:Surround('(', ')', ctx.Expr)
-          node.parens = true
-          return node
-        end,
-      })
-    or ctx:Switch({
+  local node
+  if ctx.bufValue == '(' then
+    node = ctx:Switch({
+      ctx.ArrowFunction,
+      ctx.OptChain,
+      function()
+        return ctx:Pipe(ctx:Surround('(', ')', function()
+          return ctx:List({
+            allowTrailingComma = true,
+            rule = ctx.Expr,
+          })
+        end))
+      end,
+      function()
+        local node = ctx:Surround('(', ')', ctx.Expr)
+        node.parens = true
+        return node
+      end,
+    })
+  else
+    node = ctx:Switch({
       ctx.DoBlock,
       ctx.Table,
       ctx.Number,
       ctx.String,
       ctx.ArrowFunction, -- Check again for hasImplicitParams!
-      ctx.Pipe,
       ctx.OptChain,
     })
+  end
 
   if not node then
     ctx:throwExpected('terminal', true)

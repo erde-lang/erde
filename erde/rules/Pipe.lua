@@ -10,28 +10,11 @@ local Pipe = { ruleName = 'Pipe' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Pipe.parse(ctx)
-  local node = {
-    initValues = ctx:Surround('[', ']', function()
-      return ctx:List({
-        allowEmpty = true,
-        allowTrailingComma = true,
-        rule = ctx.Expr,
-      })
-    end),
-  }
+function Pipe.parse(ctx, initValues)
+  local node = { initValues = initValues }
 
-  while true do
-    local backup = ctx:backup()
-    local pipe = { optional = ctx:branchChar('?') }
-
-    if not ctx:branchStr('>>') then
-      ctx:restore(backup) -- revert consumption from ctx:branchChar('?')
-      break
-    end
-
-    pipe.receiver = ctx:Expr()
-    node[#node + 1] = pipe
+  while ctx:branchStr('>>') do
+    node[#node + 1] = ctx:Expr()
   end
 
   if #node == 0 then
@@ -64,19 +47,12 @@ function Pipe.compile(ctx, node)
   )
 
   for i, pipe in ipairs(node) do
-    if pipe.optional then
-      compiled[#compiled + 1] = ctx.format(
-        'if #%1 == 0 then return end',
-        pipeResult
-      )
-    end
-
     pipeArgs = pipeResult
     pipeResult = ctx.newTmpName()
 
     local receiver
-    if pipe.receiver.ruleName == 'OptChain' then
-      local lastChain = pipe.receiver[#pipe.receiver]
+    if pipe.ruleName == 'OptChain' then
+      local lastChain = pipe[#pipe]
       if lastChain and lastChain.variant == 'functionCall' then
         local pipeArgsLen = ctx.newTmpName()
         compiled[#compiled + 1] = ctx.format(
@@ -95,18 +71,16 @@ function Pipe.compile(ctx, node)
           )
         end
 
-        local receiverCopy = utils.shallowCopy(pipe.receiver) -- Do not mutate AST
-        table.remove(receiverCopy)
-        receiver = ctx:compile(receiverCopy)
+        local pipeCopy = utils.shallowCopy(pipe) -- Do not mutate AST
+        table.remove(pipeCopy)
+        receiver = ctx:compile(pipeCopy)
       end
-    else
-      receiver = ctx:compile(pipe.receiver)
     end
 
     compiled[#compiled + 1] = ctx.format(
       'local %1 = { %2(%3(%4)) }',
       pipeResult,
-      receiver,
+      receiver or ctx:compile(pipe),
       unpackCompiled,
       pipeArgs
     )
