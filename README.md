@@ -10,9 +10,6 @@
 
 ## Intended Proposals
 
-- spread operator
-  - `local x = { ...y }`
-  - `myfunc(1, 4, ...x, 3, ...y, 6)`
 - destructure improvements
   - allow aliases:
     - 'local { a: customname } = { a: 2 } 

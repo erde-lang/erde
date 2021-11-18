@@ -29,4 +29,16 @@ describe('Spread.compile', function()
       ]])
     )
   end)
+  spec('function spread', function()
+    assert.run(
+      12,
+      compile.Block([[
+        local a = { 3, 4, 5 }
+        local function sum(x, y, z) {
+          return x + y + z
+        }
+        return sum(...a)
+      ]])
+    )
+  end)
 end)
