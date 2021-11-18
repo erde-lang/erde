@@ -13,20 +13,9 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Spread.compile', function()
-  print(compile.Block([[
-    local a = { 3, 4, 5 }
-    local function sum(t) {
-      local answer = 0
-      for i, value in ipairs(t) {
-        answer += value
-      }
-      return answer
-    }
-    return sum({ 1, 2, ...a, 6 })
-  ]]))
   spec('table spread', function()
     assert.run(
-      6,
+      21,
       compile.Block([[
         local a = { 3, 4, 5 }
         local function sum(t) {

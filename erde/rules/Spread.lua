@@ -68,7 +68,12 @@ function Spread.compile(ctx, fields)
     end
   end
 
-  return '(function()\n' .. table.concat(compileParts, '\n') .. '\nend)()'
+  return table.concat({
+    '(function()',
+    table.concat(compileParts, '\n'),
+    'return ' .. tableVar,
+    'end)()',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------

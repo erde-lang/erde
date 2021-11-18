@@ -16,11 +16,19 @@
 - Processors
   - validate continue / break
   - validate variable scopes?
+    - probably cannot, many things use environments...
+      - nvim
+      - love
+      - etc.
 - module (export!)
   - must happen at top level
   - use processor to register module parts
-- keywords
+- keywords / stdlib?
   - kpairs
+  - stdlib?
+    - special stdlib call syntax?
+    - `[ t ] >> !map(x -> 2 * x)`
+    - `[ t ] >> !join(x -> 2 * x)`
 
 ## Uncertain Proposals (need community input)
 

@@ -107,14 +107,22 @@ function Table.compile(ctx, node)
     local spreadFields = {}
 
     for i, field in ipairs(node) do
-      spreadFields[i] = {
-        key = (field.variant == 'inlineKey' or field.variant == 'nameKey')
-            and '"' .. field.key .. '"'
-          or ctx:compile(field.key),
-        value = field.variant == 'inlineKey' and field.key or ctx:compile(
-          field.value
-        ),
-      }
+      if field.variant == 'spread' then
+        spreadFields[i] = field.value
+      else
+        local spreadField = {}
+
+        if field.variant == 'inlineKey' or field.variant == 'nameKey' then
+          spreadField.key = '"' .. field.key .. '"'
+        elseif field.variant ~= 'numberKey' then
+          spreadField.key = ctx:compile(field.key)
+        end
+
+        spreadField.value = field.variant == 'inlineKey' and field.key
+          or ctx:compile(field.value)
+
+        spreadFields[i] = spreadField
+      end
     end
 
     return ctx:Spread(spreadFields)
