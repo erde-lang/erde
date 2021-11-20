@@ -9,6 +9,7 @@ local Table = { ruleName = 'Table' }
 -- -----------------------------------------------------------------------------
 
 local function parseInlineKeyField(ctx)
+  -- TODO: better syntax?
   if not ctx:branchChar(':') then
     ctx:throwExpected(':')
   end
@@ -25,8 +26,8 @@ local function parseExprKeyField(ctx)
     key = ctx:Surround('[', ']', ctx.Expr),
   }
 
-  if not ctx:branchChar(':') then
-    ctx:throwExpected(':')
+  if not ctx:branchChar('=') then
+    ctx:throwExpected('=')
   end
 
   field.value = ctx:Expr()
@@ -39,8 +40,8 @@ local function parseNameKeyField(ctx)
     key = ctx:Name().value,
   }
 
-  if not ctx:branchChar(':') then
-    ctx:throwExpected(':')
+  if not ctx:branchChar('=') then
+    ctx:throwExpected('=')
   end
 
   field.value = ctx:Expr()
@@ -53,8 +54,8 @@ local function parseStringKeyField(ctx)
     key = ctx:String(),
   }
 
-  if not ctx:branchChar(':') then
-    ctx:throwExpected(':')
+  if not ctx:branchChar('=') then
+    ctx:throwExpected('=')
   end
 
   field.value = ctx:Expr()

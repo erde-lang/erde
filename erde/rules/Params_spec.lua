@@ -97,7 +97,7 @@ describe('Params.compile', function()
           return a + b
         }
 
-        local x = { a: 1 }
+        local x = { a = 1 }
         return test(x, 2)
       ]])
     )

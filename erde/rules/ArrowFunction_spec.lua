@@ -92,7 +92,7 @@ describe('ArrowFunction.compile', function()
     assert.run(
       2,
       compile.Block([[
-        local a = { b: 1 }
+        local a = { b = 1 }
         a.c = () => { return self.b + 1 }
         return a:c()
       ]])
@@ -100,7 +100,7 @@ describe('ArrowFunction.compile', function()
     assert.run(
       2,
       compile.Block([[
-        local a = { b: 1 }
+        local a = { b = 1 }
         a.c = (x) => { return self.b + x }
         return a:c(1)
       ]])
@@ -140,7 +140,7 @@ describe('ArrowFunction.compile', function()
     assert.run(
       2,
       compile.Block([[
-        local a = { b: 1 }
+        local a = { b = 1 }
         a.c = x => { return self.b + x }
         return a:c(1)
       ]])

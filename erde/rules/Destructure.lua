@@ -11,7 +11,9 @@ local Destructure = { ruleName = 'Destructure' }
 local function parseDestruct(ctx)
   local destruct = { name = ctx:Name().value }
 
-  -- TODO: parse alias here
+  if ctx:branchChar(':') then
+    destruct.alias = ctx:Name().value
+  end
 
   if ctx:branchChar('=') then
     destruct.default = ctx:Expr()
@@ -80,31 +82,35 @@ end
 
 function Destructure.compile(ctx, node)
   local baseName = ctx.newTmpName()
-  local names = {}
+  local varNames = {}
+  local numberKeyCounter = 1
   local compileParts = {}
 
   for i, field in ipairs(node) do
-    names[#names + 1] = field.name
+    local varName = field.alias or field.name
+    varNames[i] = varName
 
     if field.variant == 'keyDestruct' then
       compileParts[#compileParts + 1] = ctx.format(
         '%1 = %2.%1',
-        field.name,
-        baseName
+        varName,
+        baseName,
+        field.name
       )
     elseif field.variant == 'numberDestruct' then
       compileParts[#compileParts + 1] = ctx.format(
         '%1 = %2[%3]',
-        field.name,
+        varName,
         baseName,
-        field.key
+        numberKeyCounter
       )
+      numberKeyCounter = numberKeyCounter + 1
     end
 
     if field.default then
       compileParts[#compileParts + 1] = ctx.format(
         'if %1 == nil then %1 = %2 end',
-        field.name,
+        varName,
         ctx:compile(field.default)
       )
     end
@@ -115,7 +121,7 @@ function Destructure.compile(ctx, node)
     compileParts[#compileParts + 1] = 'end'
   end
 
-  table.insert(compileParts, 1, 'local ' .. table.concat(names, ','))
+  table.insert(compileParts, 1, 'local ' .. table.concat(varNames, ','))
 
   return {
     baseName = baseName,

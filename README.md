@@ -11,8 +11,6 @@
 ## Intended Proposals
 
 - destructure improvements
-  - revert syntax `:` -> `=` (no longer need `:`)
-    - `local { a } = { a = 1 }`
   - allow aliases:
     - `local { a: customname } = { a = 2 }`
     - `local [test: mytest, test2] = a`
