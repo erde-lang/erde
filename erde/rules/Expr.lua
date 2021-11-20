@@ -52,7 +52,7 @@ function Expr.parse(ctx, minPrec)
       or ctx:Expr(binop.prec)
   end
 
-  return node
+  return ctx:peek(2) == '>>' and ctx:Pipe({ node }) or node
 end
 
 -- -----------------------------------------------------------------------------

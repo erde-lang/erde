@@ -10,13 +10,6 @@
 
 ## Intended Proposals
 
-- destructure improvements
-  - allow aliases:
-    - `local { a: customname } = { a = 2 }`
-    - `local [test: mytest, test2] = a`
-- new pipe syntax
-  - `fields >> !map(x -> 2 * x)`
-  - `('hello', 'world') >> !map(x -> 2 * x)`
 - Processors
   - validate continue / break
   - validate variable scopes?
