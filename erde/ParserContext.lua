@@ -1,4 +1,3 @@
-local Environment = require('erde.Environment')
 local constants = require('erde.constants')
 local rules = require('erde.rules')
 
@@ -24,11 +23,12 @@ function ParserContext:load(input)
   self.bufValue = self.buffer[self.bufIndex]
   self.line = 1
   self.column = 1
+  self.parentLoopBlock = nil
 end
 
 function ParserContext:parse(input)
   self:load(input)
-  return self.Block.parse(self)
+  return self:Block()
 end
 
 function ParserContext:backup()
@@ -37,6 +37,7 @@ function ParserContext:backup()
     bufValue = self.bufValue,
     line = self.line,
     column = self.column,
+    parentLoopBlock = self.parentLoopBlock,
   }
 end
 
@@ -45,6 +46,7 @@ function ParserContext:restore(backup)
   self.bufValue = backup.bufValue
   self.line = backup.line
   self.column = backup.column
+  self.parentLoopBlock = backup.parentLoopBlock
 end
 
 -- -----------------------------------------------------------------------------
@@ -302,5 +304,10 @@ return function()
     bufValue = 0,
     line = 1,
     column = 1,
+
+    -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
+    -- RepeatUntil, WhileLoop). This is used to validate and link Break and
+    -- Continue statements.
+    parentLoopBlock = nil,
   }, ParserContextMT)
 end

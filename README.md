@@ -10,22 +10,16 @@
 
 ## Intended Proposals
 
-- Processors
-  - validate continue / break
-  - validate variable scopes?
-    - probably cannot, many things use environments...
-      - nvim
-      - love
-      - etc.
 - module (export!)
-  - must happen at top level
-  - use processor to register module parts
+  - must happen at top level!
 - keywords / stdlib?
   - kpairs
   - stdlib?
     - special stdlib call syntax?
     - `compileParts >> !join`
+- compiling modulo operator (conflicts w/ replacement)
 
 ## Uncertain Proposals (need community input)
 
 - decorators
+- nested break

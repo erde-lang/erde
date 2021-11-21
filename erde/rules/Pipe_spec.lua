@@ -3,6 +3,7 @@
 -- -----------------------------------------------------------------------------
 
 describe('Pipe.parse', function()
+  -- TODO
   spec('ruleName', function()
     assert.are.equal('Pipe', parse.Expr('(1, 2) >> y').ruleName)
     assert.are.equal('Pipe', parse.Expr('2 >> y').ruleName)

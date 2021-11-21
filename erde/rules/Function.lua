@@ -34,7 +34,9 @@ function Function.parse(ctx)
   end
 
   node.params = ctx:Params()
-  node.body = ctx:Surround('{', '}', ctx.Block)
+  node.body = ctx:Surround('{', '}', function()
+    return ctx:Block({ isFunctionBlock = true })
+  end)
 
   return node
 end

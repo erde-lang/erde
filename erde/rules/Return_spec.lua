@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Return.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Return', parse.Return('return').ruleName)
-  end)
-
   spec('return values', function()
     assert.has_subtable({
       { value = '1' },

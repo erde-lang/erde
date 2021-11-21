@@ -35,7 +35,9 @@ function ArrowFunction.parse(ctx)
   end
 
   if ctx.bufValue == '{' then
-    node.body = ctx:Surround('{', '}', ctx.Block)
+    node.body = ctx:Surround('{', '}', function()
+      return ctx:Block({ isFunctionBlock = true })
+    end)
   else
     node.hasImplicitReturns = true
     node.returns = ctx.bufValue ~= '(' and { ctx:Expr() }

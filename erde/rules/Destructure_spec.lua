@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Destructure.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Destructure', parse.Destructure('{ a }').ruleName)
-  end)
-
   spec('destructure keyDestruct', function()
     assert.has_subtable({
       { name = 'a', variant = 'keyDestruct' },

@@ -1,28 +1,18 @@
 -- -----------------------------------------------------------------------------
--- Parse
--- -----------------------------------------------------------------------------
-
-describe('Continue.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Continue', parse.Continue('continue').ruleName)
-  end)
-end)
-
--- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
 describe('Continue.compile', function()
   spec('continue', function()
     assert.run(
-      6,
+      30,
       compile.Block([[
         local x = 0
-        while x < 10 {
-          x += 2
-          if x > 4 {
-            break
+        for i = 1, 10 {
+          if math.ceil(i / 2) ~= math.floor(i / 2) {
+            continue
           }
+          x += i
         }
         return x
       ]])

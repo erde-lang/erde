@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Declaration.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Declaration', parse.Declaration('local a').ruleName)
-  end)
-
   spec('local declaration', function()
     assert.has_subtable({
       variant = 'local',

@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('DoBlock.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('DoBlock', parse.DoBlock('do {}').ruleName)
-  end)
-
   spec('do block', function()
     assert.has_subtable({
       body = {

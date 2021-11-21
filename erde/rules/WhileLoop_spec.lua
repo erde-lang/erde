@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('WhileLoop.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('WhileLoop', parse.WhileLoop('while true {}').ruleName)
-  end)
-
   spec('while loop', function()
     assert.has_subtable({
       cond = { value = 'true' },

@@ -43,7 +43,10 @@ function ForLoop.parse(ctx)
     node.exprList = ctx:List({ rule = ctx.Expr })
   end
 
-  node.body = ctx:Surround('{', '}', ctx.Block)
+  node.body = ctx:Surround('{', '}', function()
+    return ctx:Block({ isLoopBlock = true })
+  end)
+
   return node
 end
 

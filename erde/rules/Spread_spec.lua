@@ -3,6 +3,7 @@
 -- -----------------------------------------------------------------------------
 
 describe('Spread.parse', function()
+  -- TODO
   spec('ruleName', function()
     assert.are.equal('Spread', parse.Spread('...x').ruleName)
   end)

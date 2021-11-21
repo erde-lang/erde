@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Params.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Params', parse.Params('()').ruleName)
-  end)
-
   spec('params', function()
     assert.are.equal(0, #parse.Params('()'))
     assert.has_subtable({
