@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('IfElse.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('IfElse', parse.IfElse('if true {}').ruleName)
-  end)
-
   spec('if', function()
     assert.has_subtable({
       ifNode = {

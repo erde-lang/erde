@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Assignment.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Assignment', parse.Assignment('a = 1').ruleName)
-  end)
-
   spec('single assignment', function()
     assert.has_subtable({
       idList = { { value = 'a' } },

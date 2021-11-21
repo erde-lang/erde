@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Comment.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Comment', parse.Comment('-- hello world').ruleName)
-  end)
-
   spec('short comments', function()
     assert.are.equal(' hello world', parse.Comment('-- hello world').value)
     assert.are.equal(

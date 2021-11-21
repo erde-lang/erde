@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('String.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('String', parse.String('""').ruleName)
-  end)
-
   spec('short string', function()
     assert.are.equal('"hello"', parse.String('"hello"').value)
     assert.are.equal("'hello'", parse.String("'hello'").value)

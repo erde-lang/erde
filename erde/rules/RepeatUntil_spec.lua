@@ -3,13 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('RepeatUntil.parse', function()
-  spec('ruleName', function()
-    assert.are.equal(
-      'RepeatUntil',
-      parse.RepeatUntil('repeat {} until true').ruleName
-    )
-  end)
-
   spec('repeat until', function()
     assert.has_subtable({
       cond = { value = 'true' },

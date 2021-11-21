@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('ForLoop.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('ForLoop', parse.ForLoop('for i = 1, 2 {}').ruleName)
-  end)
-
   spec('numeric for loop', function()
     assert.has_subtable({
       variant = 'numeric',

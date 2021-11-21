@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('Table.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('Table', parse.Table('{}').ruleName)
-  end)
-
   spec('table numberKey', function()
     assert.has_subtable({
       {

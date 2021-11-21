@@ -3,10 +3,6 @@
 -- -----------------------------------------------------------------------------
 
 describe('TryCatch.parse', function()
-  spec('ruleName', function()
-    assert.are.equal('TryCatch', parse.TryCatch('try {} catch(e) {}').ruleName)
-  end)
-
   spec('try catch', function()
     assert.has_subtable({
       try = { ruleName = 'Block' },
