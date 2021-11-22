@@ -4,7 +4,6 @@
 
 local rules = {
   parse = {},
-  process = {},
   compile = {},
 }
 
@@ -22,8 +21,6 @@ function rules:register(rule)
 
     return node
   end
-
-  self.process[ruleName] = rule.process
 
   self.compile[ruleName] = function(ctx, node, ...)
     local compiled = rule.compile(ctx, node, ...)

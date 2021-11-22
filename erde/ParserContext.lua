@@ -1,5 +1,5 @@
-local Environment = require('erde.Environment')
 local constants = require('erde.constants')
+local postParse = require('erde.postParse')
 local rules = require('erde.rules')
 
 -- -----------------------------------------------------------------------------
@@ -28,7 +28,9 @@ end
 
 function ParserContext:parse(input)
   self:load(input)
-  return self.Block.parse(self)
+  local ast = self.Block.parse(self)
+  postParse(ast)
+  return ast
 end
 
 function ParserContext:backup()

@@ -12,11 +12,7 @@
 
 - Processors
   - validate continue / break
-  - validate variable scopes?
-    - probably cannot, many things use environments...
-      - nvim
-      - love
-      - etc.
+  - validate module
 - module (export!)
   - must happen at top level
   - use processor to register module parts
@@ -29,3 +25,4 @@
 ## Uncertain Proposals (need community input)
 
 - decorators
+- nested break
