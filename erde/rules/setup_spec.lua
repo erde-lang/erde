@@ -3,6 +3,7 @@ local busted = require('busted')
 local say = require('say')
 local ParserContext = require('erde.ParserContext')
 local CompilerContext = require('erde.CompilerContext')
+local postParse = require('erde.postParse')
 local rules = require('erde.rules')
 local utils = require('erde.utils')
 
@@ -75,7 +76,9 @@ busted.expose('setup', function()
   for ruleName, parser in pairs(rules.parse) do
     parse[ruleName] = function(input)
       parserCtx:load(input)
-      return parser(parserCtx)
+      local ast = parser(parserCtx)
+      postParse(ast)
+      return ast
     end
   end
 

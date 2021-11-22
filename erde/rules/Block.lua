@@ -8,7 +8,7 @@ local Block = { ruleName = 'Block' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Block.parse(ctx)
+function Block.parse(ctx, opts)
   local node = {}
 
   repeat
@@ -39,31 +39,43 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-local CONTINUE_TEMPLATE = [[
-  local %1 = false
-
-  repeat
-    %2
-    %1 = true
-  until true
-
-  if not %1 then
-    break
-  end
-]]
-
 function Block.compile(ctx, node)
   local compileParts = {}
 
-  for _, statement in ipairs(node) do
-    compileParts[#compileParts + 1] = ctx:compile(statement)
+  if not node.continueNodes then
+    for _, statement in ipairs(node) do
+      compileParts[#compileParts + 1] = ctx:compile(statement)
+    end
+
+    return table.concat(compileParts, '\n')
+  else
+    local continueName = ctx.newTmpName()
+
+    for i, continueNode in ipairs(node.continueNodes) do
+      continueNode.continueName = continueName
+    end
+
+    for _, statement in ipairs(node) do
+      compileParts[#compileParts + 1] = ctx:compile(statement)
+    end
+
+    return ctx.format(
+      [[
+        local %1 = false
+
+        repeat
+          %2
+          %1 = true
+        until true
+
+        if not %1 then
+          break
+        end
+      ]],
+      continueName,
+      compiled
+    )
   end
-
-  local compiled = table.concat(compileParts, '\n')
-
-  return node.continueName
-      and ctx.format(CONTINUE_TEMPLATE, node.continueName, compiled)
-    or compiled
 end
 
 -- -----------------------------------------------------------------------------

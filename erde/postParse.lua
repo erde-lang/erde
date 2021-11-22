@@ -3,7 +3,7 @@
 -- -----------------------------------------------------------------------------
 
 function linkRules(node, parentRule)
-  for i, child in ipairs(node) do
+  for key, child in pairs(node) do
     if type(child) == 'table' then
       if child.ruleName == nil then
         linkRules(child, parentRule)
@@ -21,17 +21,17 @@ end
 -- Resolve Continue Statements
 -- -----------------------------------------------------------------------------
 
-function resolveLoopStatements(node, loopNode)
+function resolveLoopStatements(node, loopBodyNode)
   for i, rule in ipairs(node.childRules) do
     if rule.ruleName == 'Continue' then
-      if loopNode == nil then
+      if loopBodyNode == nil then
         error('missing loop for continue')
       else
-        loopNode.continueNodes = loopNode.continueNodes or {}
-        loopNode.continueNodes[#loopNode.continueNodes + 1] = rule
+        loopBodyNode.continueNodes = loopBodyNode.continueNodes or {}
+        loopBodyNode.continueNodes[#loopBodyNode.continueNodes + 1] = rule
       end
     elseif rule.ruleName == 'Break' then
-      if loopNode == nil then
+      if loopBodyNode == nil then
         error('missing loop for break')
       end
     elseif rule.ruleName == 'Function' then
@@ -41,9 +41,9 @@ function resolveLoopStatements(node, loopNode)
       or rule.ruleName == 'RepeatUntil'
       or rule.ruleName == 'WhileLoop'
     then
-      resolveLoopStatements(rule, rule)
+      resolveLoopStatements(rule.body, rule.body)
     else
-      resolveLoopStatements(rule, forLoopNode)
+      resolveLoopStatements(rule, loopBodyNode)
     end
   end
 end
@@ -53,6 +53,7 @@ end
 -- -----------------------------------------------------------------------------
 
 return function(root)
+  root.childRules = {}
   linkRules(root, root)
   resolveLoopStatements(root)
 end

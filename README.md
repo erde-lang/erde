@@ -13,6 +13,7 @@
 - Processors
   - validate continue / break
   - validate module
+- compiling modulo operator (conflicts w/ replacement)
 - module (export!)
   - must happen at top level
   - use processor to register module parts
