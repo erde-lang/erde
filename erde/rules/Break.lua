@@ -9,7 +9,15 @@ local Break = { ruleName = 'Break' }
 -- -----------------------------------------------------------------------------
 
 function Break.parse(ctx)
-  return ctx:branchWord('break') and {} or ctx:throwExpected('break')
+  local node = {}
+
+  if ctx.parentLoopBlock == nil then
+    ctx:throwError('No loop for `break`')
+  elseif not ctx:branchWord('break') then
+    ctx:throwExpected('break')
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------

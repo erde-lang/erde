@@ -1,5 +1,4 @@
 local constants = require('erde.constants')
-local postParse = require('erde.postParse')
 local rules = require('erde.rules')
 
 -- -----------------------------------------------------------------------------

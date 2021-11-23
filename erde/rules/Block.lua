@@ -11,6 +11,17 @@ local Block = { ruleName = 'Block' }
 function Block.parse(ctx, opts)
   local node = {}
 
+  if opts then
+    if opts.isLoopBlock then
+      node.continueNodes = {}
+      ctx.parentLoopBlock = node
+    elseif opts.isFunctionBlock then
+      -- Reset parentLoopBlock for function blocks. Break / Continue cannot
+      -- traverse these.
+      ctx.parentLoopBlock = nil
+    end
+  end
+
   repeat
     local statement = ctx:Switch({
       ctx.Assignment,
@@ -42,7 +53,7 @@ end
 function Block.compile(ctx, node)
   local compileParts = {}
 
-  if not node.continueNodes then
+  if not node.continueNodes or #node.continueNodes == 0 then
     for _, statement in ipairs(node) do
       compileParts[#compileParts + 1] = ctx:compile(statement)
     end
@@ -73,7 +84,7 @@ function Block.compile(ctx, node)
         end
       ]],
       continueName,
-      compiled
+      table.concat(compileParts, '\n')
     )
   end
 end

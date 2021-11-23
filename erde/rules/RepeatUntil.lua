@@ -13,7 +13,11 @@ function RepeatUntil.parse(ctx)
     ctx:throwExpected('repeat')
   end
 
-  local node = { body = ctx:Surround('{', '}', ctx.Block) }
+  local node = {
+    body = ctx:Surround('{', '}', function()
+      return ctx:Block({ isLoopBlock = true })
+    end),
+  }
 
   if not ctx:branchWord('until') then
     ctx:throwExpected('until')
