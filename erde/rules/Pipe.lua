@@ -10,8 +10,8 @@ local Pipe = { ruleName = 'Pipe' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Pipe.parse(ctx, initValues)
-  local node = { initValues = initValues }
+function Pipe.parse(ctx, opts)
+  local node = { initValues = opts.initValues }
 
   while ctx:branchStr('>>') do
     node[#node + 1] = ctx:Expr()

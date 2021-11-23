@@ -10,18 +10,14 @@
 
 ## Intended Proposals
 
-- Processors
-  - validate continue / break
-  - validate module
-- compiling modulo operator (conflicts w/ replacement)
 - module (export!)
-  - must happen at top level
-  - use processor to register module parts
+  - must happen at top level!
 - keywords / stdlib?
   - kpairs
   - stdlib?
     - special stdlib call syntax?
     - `compileParts >> !join`
+- compiling modulo operator (conflicts w/ replacement)
 
 ## Uncertain Proposals (need community input)
 

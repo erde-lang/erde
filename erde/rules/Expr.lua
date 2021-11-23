@@ -10,8 +10,8 @@ local Expr = { ruleName = 'Expr' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Expr.parse(ctx, minPrec)
-  minPrec = minPrec or 1
+function Expr.parse(ctx, opts)
+  local minPrec = opts and opts.minPrec or 1
   local node = { ruleName = Expr.ruleName }
   local lhs
 
@@ -20,7 +20,7 @@ function Expr.parse(ctx, minPrec)
     ctx:consume(#unop.token)
     node.variant = 'unop'
     node.op = unop
-    node.operand = ctx:Expr(unop.prec + 1)
+    node.operand = ctx:Expr({ minPrec = unop.prec + 1 })
   else
     node = ctx:Terminal()
   end
@@ -48,11 +48,17 @@ function Expr.parse(ctx, minPrec)
     end
 
     node[#node + 1] = binop.assoc == constants.LEFT_ASSOCIATIVE
-        and ctx:Expr(binop.prec + 1)
-      or ctx:Expr(binop.prec)
+        and ctx:Expr({ minPrec = binop.prec + 1 })
+      or ctx:Expr({ minPrec = binop.prec })
   end
 
-  return ctx:peek(2) == '>>' and ctx:Pipe({ node }) or node
+  if ctx:peek(2) == '>>' then
+    return ctx:Pipe({
+      initValues = { node },
+    })
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
