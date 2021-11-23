@@ -16,6 +16,14 @@ function Declaration.parse(ctx)
 
   if ctx:branchWord('local') then
     node.variant = 'local'
+  elseif ctx:branchWord('module') then
+    if not ctx.moduleBlock then
+      ctx:throwError('Module declarations only allowed at the top level')
+    end
+
+    local moduleNodes = ctx.moduleBlock.moduleNodes
+    moduleNodes[#moduleNodes + 1] = node
+    node.variant = 'module'
   else
     ctx:branchWord('global')
     node.variant = 'global'
@@ -58,6 +66,12 @@ function Declaration.compile(ctx, node)
       local destructure = ctx:compile(var)
       nameList[#nameList + 1] = destructure.baseName
       compileParts[#compileParts + 1] = destructure.compiled
+    end
+  end
+
+  if node.variant == 'module' then
+    for i, name in ipairs(nameList) do
+      nameList[i] = node.moduleName .. '.' .. name
     end
   end
 

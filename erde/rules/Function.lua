@@ -9,10 +9,22 @@ local Function = { ruleName = 'Function' }
 -- -----------------------------------------------------------------------------
 
 function Function.parse(ctx)
-  local node = {
-    variant = ctx:branchWord('local') and 'local' or 'global',
-    isMethod = false,
-  }
+  local node = { isMethod = false }
+
+  if ctx:branchWord('local') then
+    node.variant = 'local'
+  elseif ctx:branchWord('module') then
+    if not ctx.moduleBlock then
+      ctx:throwError('Module declarations only allowed at the top level')
+    end
+
+    local moduleNodes = ctx.moduleBlock.moduleNodes
+    moduleNodes[#moduleNodes + 1] = node
+    node.variant = 'module'
+  else
+    ctx:branchWord('global')
+    node.variant = 'global'
+  end
 
   if not ctx:branchWord('function') then
     ctx:throwExpected('function')
@@ -53,8 +65,9 @@ function Function.compile(ctx, node)
     methodName = table.remove(node.names)
   end
 
-  return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
+  return ('%s function %s%s%s(%s)\n%s\n%s\nend'):format(
     node.variant == 'local' and 'local' or '',
+    node.variant == 'module' and node.moduleName .. '.' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
     table.concat(params.names, ','),

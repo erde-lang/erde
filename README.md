@@ -2,18 +2,19 @@
 
 ## TODO
 
+- refactor + improved tests
 - optimistic errors (try to guess the attempted rule)
 - Source maps?
 - Formatter
-- Declaration files?
 - Optimizations?
+- Declaration files?
 
 ## Intended Proposals
 
-- module (export!)
-  - must happen at top level!
+- new comment / string syntax
+  - keep lua multiline comment / string syntax
+  - allow interpolation in all strings
 - keywords / stdlib?
-  - kpairs
   - stdlib?
     - special stdlib call syntax?
     - `compileParts >> !join`

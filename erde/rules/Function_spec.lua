@@ -1,3 +1,5 @@
+local utils = require('erde.utils')
+
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
@@ -10,9 +12,18 @@ describe('Function.parse', function()
     }, parse.Function(
       'local function a() {}'
     ))
-    assert.has_error(function()
-      parse.ArrowFunction('local function() {}')
-    end)
+  end)
+
+  spec('module function', function()
+    assert.has_subtable({
+      {
+        variant = 'module',
+        names = { 'a' },
+      },
+    }, parse.Block(
+      'module function a() {}',
+      { isModuleBlock = true }
+    ))
   end)
 
   spec('global function', function()
@@ -22,12 +33,6 @@ describe('Function.parse', function()
     }, parse.Function(
       'function a() {}'
     ))
-    assert.has_error(function()
-      parse.ArrowFunction('function() {}')
-    end)
-    assert.has_error(function()
-      parse.ArrowFunction('global function a() {}')
-    end)
   end)
 
   spec('method function', function()
@@ -38,7 +43,7 @@ describe('Function.parse', function()
       'function a:b() {}'
     ))
     assert.has_error(function()
-      parse.FunctionCall('function a:b.c() {}')
+      parse.Function('function a:b.c() {}')
     end)
   end)
 end)
@@ -65,6 +70,18 @@ describe('Function.compile', function()
         return test()
       ]])
     )
+  end)
+
+  spec('module function', function()
+    local testModule = utils.run(compile.Block(
+      [[
+        module function test() {
+          return 1
+        }
+      ]],
+      { isModuleBlock = true }
+    ))
+    assert.are.equal(1, testModule.test())
   end)
 
   spec('global function', function()

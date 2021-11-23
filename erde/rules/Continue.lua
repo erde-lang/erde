@@ -11,13 +11,13 @@ local Continue = { ruleName = 'Continue' }
 function Continue.parse(ctx)
   local node = {}
 
-  if ctx.parentLoopBlock == nil then
+  if ctx.loopBlock == nil then
     ctx:throwError('No loop for `continue`')
   elseif not ctx:branchWord('continue') then
     ctx:throwExpected('continue')
   end
 
-  local continueNodes = ctx.parentLoopBlock.continueNodes
+  local continueNodes = ctx.loopBlock.continueNodes
   continueNodes[#continueNodes + 1] = node
   return node
 end

@@ -23,12 +23,14 @@ function ParserContext:load(input)
   self.bufValue = self.buffer[self.bufIndex]
   self.line = 1
   self.column = 1
-  self.parentLoopBlock = nil
+
+  self.loopBlock = nil
+  self.moduleBlock = nil
 end
 
 function ParserContext:parse(input)
   self:load(input)
-  return self:Block()
+  return self:Block({ isModuleBlock = true })
 end
 
 function ParserContext:backup()
@@ -37,7 +39,8 @@ function ParserContext:backup()
     bufValue = self.bufValue,
     line = self.line,
     column = self.column,
-    parentLoopBlock = self.parentLoopBlock,
+    loopBlock = self.loopBlock,
+    moduleBlock = self.moduleBlock,
   }
 end
 
@@ -46,7 +49,8 @@ function ParserContext:restore(backup)
   self.bufValue = backup.bufValue
   self.line = backup.line
   self.column = backup.column
-  self.parentLoopBlock = backup.parentLoopBlock
+  self.loopBlock = backup.loopBlock
+  self.moduleBlock = backup.moduleBlock
 end
 
 -- -----------------------------------------------------------------------------
@@ -308,6 +312,10 @@ return function()
     -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
     -- RepeatUntil, WhileLoop). This is used to validate and link Break and
     -- Continue statements.
-    parentLoopBlock = nil,
+    loopBlock = nil,
+
+    -- Keeps track of the top level Block. This is used to register module
+    -- nodes when using the 'module' scope.
+    moduleBlock = nil,
   }, ParserContextMT)
 end
