@@ -9,10 +9,16 @@ local Function = { ruleName = 'Function' }
 -- -----------------------------------------------------------------------------
 
 function Function.parse(ctx)
-  local node = {
-    variant = ctx:branchWord('local') and 'local' or 'global',
-    isMethod = false,
-  }
+  local node = { isMethod = false }
+
+  if ctx:branchWord('local') then
+    node.variant = 'local'
+  elseif ctx:branchWord('module') then
+    node.variant = 'module'
+  else
+    ctx:branchWord('global')
+    node.variant = 'global'
+  end
 
   if not ctx:branchWord('function') then
     ctx:throwExpected('function')
