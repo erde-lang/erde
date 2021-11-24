@@ -21,17 +21,23 @@ describe('Declaration.parse', function()
 
   spec('module declaration', function()
     assert.has_subtable({
-      variant = 'module',
-      varList = { { value = 'abc' } },
-    }, parse.Declaration(
-      'module abc'
+      {
+        variant = 'module',
+        varList = { { value = 'abc' } },
+      },
+    }, parse.Block(
+      'module abc',
+      { isModuleBlock = true }
     ))
     assert.has_subtable({
-      variant = 'module',
-      varList = { { value = 'abc' } },
-      exprList = { { value = '2' } },
-    }, parse.Declaration(
-      'module abc = 2'
+      {
+        variant = 'module',
+        varList = { { value = 'abc' } },
+        exprList = { { value = '2' } },
+      },
+    }, parse.Block(
+      'module abc = 2',
+      { isModuleBlock = true }
     ))
   end)
 
