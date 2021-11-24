@@ -2,25 +2,23 @@
 
 ## TODO
 
+- refactor + improved tests
 - optimistic errors (try to guess the attempted rule)
 - Source maps?
 - Formatter
-- Declaration files?
 - Optimizations?
+- Declaration files?
 
 ## Intended Proposals
 
-- module (export!)
-  - fix declaration compilation
-  - compile function modules
+- new comment / string syntax
+  - keep lua multiline comment / string syntax
+  - allow interpolation in all strings
 - keywords / stdlib?
-  - kpairs
   - stdlib?
     - special stdlib call syntax?
     - `compileParts >> !join`
 - compiling modulo operator (conflicts w/ replacement)
-- new multiline comment syntax
-  - keep old comments and string syntax, allow interpolation in all strings?
 
 ## Uncertain Proposals (need community input)
 
