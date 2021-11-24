@@ -9,25 +9,22 @@ local Block = { ruleName = 'Block' }
 -- -----------------------------------------------------------------------------
 
 function Block.parse(ctx, opts)
+  opts = opts or {}
   local node = {}
 
-  if opts then
-    if opts.isLoopBlock then
-      node.isLoopBlock = true
-      node.continueNodes = {}
-      ctx.loopBlock = node
-    elseif opts.isFunctionBlock then
-      -- Reset loopBlock for function blocks. Break / Continue cannot
-      -- traverse these.
-      ctx.loopBlock = nil
-    elseif opts.isModuleBlock then
-      node.isModuleBlock = true
-      node.moduleNodes = {}
-      ctx.moduleBlock = node
-    end
-  end
-
-  if not opts or not opts.isModuleBlock then
+  if opts.isLoopBlock then
+    node.isLoopBlock = true
+    node.continueNodes = {}
+    ctx.loopBlock = node
+  elseif opts.isFunctionBlock then
+    -- Reset loopBlock for function blocks. Break / Continue cannot
+    -- traverse these.
+    ctx.loopBlock = nil
+  elseif opts.isModuleBlock then
+    node.isModuleBlock = true
+    node.moduleNodes = {}
+    ctx.moduleBlock = node
+  else
     ctx.moduleBlock = nil
   end
 
@@ -51,6 +48,14 @@ function Block.parse(ctx, opts)
 
     node[#node + 1] = statement
   until not statement
+
+  if opts.isModuleBlock and #node.moduleNodes > 0 then
+    for i, statement in ipairs(node) do
+      if statement.ruleName == 'Return' then
+        ctx:throwError('Block cannot use both `return` and `module`')
+      end
+    end
+  end
 
   return node
 end
@@ -93,7 +98,7 @@ function Block.compile(ctx, node)
       continueName,
       compileBlockStatements(ctx, node)
     )
-  elseif node.isModuleBlock then
+  elseif node.isModuleBlock and #node.moduleNodes > 0 then
     local moduleName = ctx.newTmpName()
 
     for i, moduleNode in ipairs(node.moduleNodes) do
