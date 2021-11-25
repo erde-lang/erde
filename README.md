@@ -11,8 +11,6 @@
 
 ## Intended Proposals
 
-- new comment syntax
-  - keep lua multiline comment
 - keywords / stdlib?
   - stdlib?
     - special stdlib call syntax?
