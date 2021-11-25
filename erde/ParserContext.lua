@@ -136,7 +136,7 @@ end
 
 function ParserContext:stream(lookupTable, capture, demand)
   if demand and not lookupTable[self.bufValue] then
-    error('unexpected value')
+    self:throwUnexpected()
   end
 
   while lookupTable[self.bufValue] do
@@ -161,6 +161,7 @@ function ParserContext:branch(n, isBranch, noPad, capture)
 end
 
 function ParserContext:branchChar(char, noPad, capture)
+  -- TODO: only accept single char?
   if #char == 1 then
     -- Slight optimization for most common case
     return self:branch(1, self.bufValue == char, noPad, capture)

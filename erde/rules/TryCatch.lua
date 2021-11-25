@@ -38,15 +38,16 @@ function TryCatch.compile(ctx, node)
   local errorName = ctx.newTmpName()
 
   return table.concat({
-    ctx.format('local %1,%2 = pcall(function()', okName, errorName),
-    ctx:compile(node.try),
-    'end)',
-    ctx.format('if %1 == false then', okName),
-    node.errorName and ctx.format(
-      'local %1 = %2',
+    ('local %s, %s = pcall(function() %s end)'):format(
+      okName,
+      errorName,
+      ctx:compile(node.try)
+    ),
+    'if ' .. okName .. ' == false then',
+    not node.errorName and '' or ('local %s = %s'):format(
       ctx:compile(node.errorName),
       errorName
-    ) or '',
+    ),
     ctx:compile(node.catch),
     'end',
   }, '\n')

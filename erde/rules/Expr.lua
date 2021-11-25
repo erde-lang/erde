@@ -77,7 +77,7 @@ function Expr.compile(ctx, node)
 
     if op.tag == 'bnot' then
       return _VERSION:find('5.[34]') and compileUnop('~')
-        or ctx.format('require("bit").bnot(%1)', operand)
+        or ('require("bit").bnot(%1)'):format(operand)
     elseif op.tag == 'not' then
       return compileUnop('not')
     else
@@ -88,20 +88,15 @@ function Expr.compile(ctx, node)
     local rhs = ctx:compile(node[2])
 
     if op.tag == 'ternary' then
-      return ctx.format(
-        table.concat({
-          '(function()',
-          'if %1 then',
-          'return %2',
-          'else',
-          'return %3',
-          'end',
-          'end)()',
-        }, '\n'),
-        lhs,
-        rhs,
-        ctx:compile(node[3])
-      )
+      return table.concat({
+        '(function()',
+        'if %s then',
+        'return %s',
+        'else',
+        'return %s',
+        'end',
+        'end)()',
+      }, '\n'):format(lhs, rhs, ctx:compile(node[3]))
     else
       return ctx.compileBinop(op, lhs, rhs)
     end

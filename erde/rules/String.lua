@@ -9,62 +9,60 @@ local String = { ruleName = 'String' }
 -- -----------------------------------------------------------------------------
 
 function String.parse(ctx)
-  if ctx.bufValue == "'" or ctx.bufValue == '"' then
-    local capture = {}
-    ctx:consume(1, capture)
+  local node = {}
+  local capture = {}
+  local terminatingStr
 
-    while true do
-      if ctx.bufValue == capture[1] then
-        ctx:consume(1, capture)
-        break
-      elseif ctx.bufValue == '\n' then
-        ctx:throwError('Unterminated string')
-      else
-        ctx:consume(1, capture)
-      end
+  if ctx:branchChar("'", true) then
+    node.variant = 'single'
+    terminatingStr = "'"
+  elseif ctx:branchChar('"', true) then
+    node.variant = 'double'
+    terminatingStr = '"'
+  elseif ctx:branchChar('[', true) then
+    local equals = {}
+    ctx:stream({ ['='] = true }, equals)
+    node.equals = table.concat(equals)
+
+    if not ctx:branchChar('[', true) then
+      ctx:throwExpected('[')
     end
 
-    return {
-      variant = 'short',
-      value = table.concat(capture),
-    }
-  elseif ctx:branchChar('`', true) then
-    local node = { variant = 'long' }
-    local capture = {}
-
-    while true do
-      if ctx:branchChar('{', true) then
-        if #capture > 0 then
-          node[#node + 1] = table.concat(capture)
-          capture = {}
-        end
-
-        node[#node + 1] = ctx:Expr()
-        if not ctx:branchChar('}', true) then
-          ctx:throwExpected('}')
-        end
-      elseif ctx:branchChar('`', true) then
-        break
-      elseif ctx.bufValue == '\\' then
-        if ('{}`'):find(ctx.buffer[ctx.bufIndex + 1]) then
-          ctx:consume()
-          ctx:consume(1, capture)
-        else
-          ctx:consume(2, capture)
-        end
-      else
-        ctx:consume(1, capture)
-      end
-    end
-
-    if #capture > 0 then
-      node[#node + 1] = table.concat(capture)
-    end
-
-    return node
+    node.variant = 'long'
+    terminatingStr = ']' .. node.equals .. ']'
   else
-    ctx:throwExpected('quote (",\',`)', true)
+    ctx:throwUnexpected()
   end
+
+  while not ctx:branchStr(terminatingStr, true) do
+    if ctx.bufValue == '\\' then
+      if ('{}'):find(ctx.buffer[ctx.bufIndex + 1]) then
+        ctx:consume()
+        ctx:consume(1, capture)
+      else
+        ctx:consume(2, capture)
+      end
+    elseif ctx.bufValue == '{' then
+      if #capture > 0 then
+        node[#node + 1] = table.concat(capture)
+        capture = {}
+      end
+
+      node[#node + 1] = ctx:Surround('{', '}', ctx.Expr)
+    elseif ctx:branchChar('\n', true, capture) then
+      if node.variant ~= 'long' then
+        ctx:throwError('Newlines only allowed in block strings')
+      end
+    else
+      ctx:consume(1, capture)
+    end
+  end
+
+  if #capture > 0 then
+    node[#node + 1] = table.concat(capture)
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
@@ -72,32 +70,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function String.compile(ctx, node)
-  if node.variant == 'short' then
-    return node.value
-  else
-    local eqStr = '='
-    local content = {}
+  local openingChar, closingChar
 
-    for _, capture in ipairs(node) do
-      if type(capture) == 'string' and capture:find(eqStr) then
-        eqStr = ('='):rep(#eqStr + 1)
-      end
-    end
-
-    for _, capture in ipairs(node) do
-      if type(capture) == 'string' then
-        content[#content + 1] = capture
-      else
-        content[#content + 1] = (']%s]..tostring(%s)..[%s['):format(
-          eqStr,
-          ctx:compile(capture),
-          eqStr
-        )
-      end
-    end
-
-    return ('[%s[%s]%s]'):format(eqStr, table.concat(content), eqStr)
+  if node.variant == 'single' then
+    openingChar, closingChar = "'", "'"
+  elseif node.variant == 'double' then
+    openingChar, closingChar = '"', '"'
+  elseif node.variant == 'long' then
+    openingChar = '[' .. node.equals .. '['
+    closingChar = ']' .. node.equals .. ']'
   end
+
+  local compileParts = {}
+
+  for i, capture in ipairs(node) do
+    compileParts[#compileParts + 1] = type(capture) == 'string'
+        and openingChar .. capture .. closingChar
+      or 'tostring(' .. ctx:compile(capture) .. ')'
+  end
+
+  return table.concat(compileParts, '..')
 end
 
 -- -----------------------------------------------------------------------------

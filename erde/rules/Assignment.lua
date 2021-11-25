@@ -60,17 +60,11 @@ function Assignment.compile(ctx, node)
   end
 
   if node.op then
-    return ctx.format(
-      '%1 = %2',
-      idList[1],
-      ctx.compileBinop(node.op, idList[1], exprList[1])
-    )
+    return idList[1]
+      .. ' = '
+      .. ctx.compileBinop(node.op, idList[1], exprList[1])
   else
-    return ctx.format(
-      '%1 = %2',
-      table.concat(idList, ','),
-      table.concat(exprList, ',')
-    )
+    return table.concat(idList, ',') .. ' = ' .. table.concat(exprList, ',')
   end
 end
 

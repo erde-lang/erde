@@ -91,15 +91,13 @@ function Destructure.compile(ctx, node)
     varNames[i] = varName
 
     if field.variant == 'keyDestruct' then
-      compileParts[#compileParts + 1] = ctx.format(
-        '%1 = %2.%1',
+      compileParts[#compileParts + 1] = ('%s = %s.%s'):format(
         varName,
         baseName,
         field.name
       )
     elseif field.variant == 'numberDestruct' then
-      compileParts[#compileParts + 1] = ctx.format(
-        '%1 = %2[%3]',
+      compileParts[#compileParts + 1] = ('%s = %s[%s]'):format(
         varName,
         baseName,
         numberKeyCounter
@@ -108,11 +106,12 @@ function Destructure.compile(ctx, node)
     end
 
     if field.default then
-      compileParts[#compileParts + 1] = ctx.format(
-        'if %1 == nil then %1 = %2 end',
-        varName,
-        ctx:compile(field.default)
-      )
+      compileParts[#compileParts + 1] =
+        ('if %s == nil then %s = %s end'):format(
+          varName,
+          varName,
+          ctx:compile(field.default)
+        )
     end
   end
 

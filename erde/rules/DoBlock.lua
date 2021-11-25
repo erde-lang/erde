@@ -13,17 +13,7 @@ function DoBlock.parse(ctx)
     ctx:throwExpected('do')
   end
 
-  local node = { body = ctx:Surround('{', '}', ctx.Block) }
-
-  for _, statement in pairs(node.body) do
-    -- TODO: not good enough! what about return in if block?
-    if statement.ruleName == 'Return' then
-      node.hasReturn = true
-      break
-    end
-  end
-
-  return node
+  return { body = ctx:Surround('{', '}', ctx.Block) }
 end
 
 -- -----------------------------------------------------------------------------
@@ -31,7 +21,9 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock.compile(ctx, node)
-  return ctx.format('(function()\n%1\nend)()', ctx:compile(node.body))
+  -- TODO: Better compilation based on usage (statement vs expr)
+  -- moonscript does a very good job at this.
+  return '(function()\n' .. ctx:compile(node.body) .. '\nend)()'
 end
 
 -- -----------------------------------------------------------------------------

@@ -37,36 +37,6 @@ describe('Table.parse', function()
     ))
   end)
 
-  spec('table stringKey', function()
-    assert.has_subtable({
-      {
-        variant = 'stringKey',
-        key = { ruleName = 'String', variant = 'short' },
-        value = { value = '3' },
-      },
-    }, parse.Table(
-      "{ 'my-key' = 3 }"
-    ))
-    assert.has_subtable({
-      {
-        variant = 'stringKey',
-        key = { ruleName = 'String', variant = 'short' },
-        value = { value = '3' },
-      },
-    }, parse.Table(
-      '{ "my-key" = 3 }'
-    ))
-    assert.has_subtable({
-      {
-        variant = 'stringKey',
-        key = { ruleName = 'String', variant = 'long' },
-        value = { value = '3' },
-      },
-    }, parse.Table(
-      '{ `my-key` = 3 }'
-    ))
-  end)
-
   spec('table exprKey', function()
     assert.has_subtable({
       {
@@ -88,10 +58,9 @@ describe('Table.parse', function()
       { key = 'b' },
       { value = { value = 'c' } },
       { key = 'd' },
-      { key = { variant = 'short' } },
       { key = { variant = 'long' } },
     }, parse.Table(
-      '{ a, :b, c, d = 1, "e" = 3, [`f`] = 2 }'
+      '{ a, :b, c, d = 1, [[[e]]] = 2 }'
     ))
   end)
 
@@ -130,12 +99,6 @@ describe('Table.compile', function()
 
   spec('table nameKey', function()
     assert.eval({ x = 2 }, compile.Table('{ x = 2 }'))
-  end)
-
-  spec('table stringKey', function()
-    assert.eval({ ['my-key'] = 3 }, compile.Table("{'my-key' = 3}"))
-    assert.eval({ ['my-key'] = 3 }, compile.Table('{"my-key" = 3}'))
-    assert.eval({ ['my-key'] = 3 }, compile.Table('{`my-key` = 3}'))
   end)
 
   spec('table exprKey', function()

@@ -12,13 +12,14 @@ describe('Comment.parse', function()
   end)
 
   spec('long comments', function()
-    assert.are.equal(' hello world', parse.Comment('--- hello world---').value)
+    assert.are.equal(' hello world', parse.Comment('--[[ hello world]]').value)
+    assert.are.equal('a[[b', parse.Comment('--[=[a[[b]=]').value)
     assert.are.equal(
       ' hello world\nblah ',
-      parse.Comment('--- hello world\nblah ---').value
+      parse.Comment('--[[ hello world\nblah ]]').value
     )
     assert.has_error(function()
-      parse.Comment('--- hello')
+      parse.Comment('--[[ hello')
     end)
   end)
 end)
@@ -34,7 +35,7 @@ describe('Comment.compile', function()
   end)
 
   spec('long comment', function()
-    assert.is_nil(compile.Comment('--- hello world---'))
-    assert.is_nil(compile.Comment('--- hello world\nblah ---'))
+    assert.is_nil(compile.Comment('--[[ hello world]]'))
+    assert.is_nil(compile.Comment('--[[ hello world\nblah ]]'))
   end)
 end)
