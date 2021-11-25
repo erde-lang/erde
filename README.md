@@ -11,9 +11,8 @@
 
 ## Intended Proposals
 
-- new comment / string syntax
-  - keep lua multiline comment / string syntax
-  - allow interpolation in all strings
+- new comment syntax
+  - keep lua multiline comment
 - keywords / stdlib?
   - stdlib?
     - special stdlib call syntax?

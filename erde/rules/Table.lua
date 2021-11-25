@@ -48,20 +48,6 @@ local function parseNameKeyField(ctx)
   return field
 end
 
-local function parseStringKeyField(ctx)
-  local field = {
-    variant = 'stringKey',
-    key = ctx:String(),
-  }
-
-  if not ctx:branchChar('=') then
-    ctx:throwExpected('=')
-  end
-
-  field.value = ctx:Expr()
-  return field
-end
-
 local function parseNumberKeyField(ctx)
   return { variant = 'numberKey', value = ctx:Expr() }
 end
@@ -80,9 +66,6 @@ function Table.parse(ctx)
           parseInlineKeyField,
           parseExprKeyField,
           parseNameKeyField,
-          parseStringKeyField,
-          -- numberKey must be after stringKey! Otherwise we will parse the
-          -- key of stringKey as the value of numberKey
           parseNumberKeyField,
           parseSpreadField,
         })
@@ -139,11 +122,9 @@ function Table.compile(ctx, node)
         fieldPart = field.key .. ' = ' .. ctx:compile(field.value)
       elseif field.variant == 'numberKey' then
         fieldPart = ctx:compile(field.value)
-      elseif field.variant == 'exprKey' or field.variant == 'stringKey' then
+      elseif field.variant == 'exprKey' then
         fieldPart = ctx.format(
-          -- Note: Space around brackets are necessary to avoid long string
-          -- expressions: [ [=[some string]=] ]
-          '[ %1 ] = %2',
+          '[%1] = %2',
           ctx:compile(field.key),
           ctx:compile(field.value)
         )
