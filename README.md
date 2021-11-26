@@ -2,19 +2,17 @@
 
 ## TODO
 
-- optimistic errors (try to guess the attempted rule)
-- Source maps?
 - Formatter
+- Source maps?
 - Declaration files?
 
 ## Intended Proposals
 
-- address TODO comments (ex. DoBlock)
-- refactor + improved tests
 - keywords / stdlib?
   - stdlib?
     - special stdlib call syntax?
     - `compileParts >> !join`
+- refactor + improved tests + improved error msgs
 
 ## Uncertain Proposals (need community input)
 
