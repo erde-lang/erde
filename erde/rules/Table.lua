@@ -123,8 +123,7 @@ function Table.compile(ctx, node)
       elseif field.variant == 'numberKey' then
         fieldPart = ctx:compile(field.value)
       elseif field.variant == 'exprKey' then
-        fieldPart = ctx.format(
-          '[%1] = %2',
+        fieldPart = ('[%s] = %s'):format(
           ctx:compile(field.key),
           ctx:compile(field.value)
         )

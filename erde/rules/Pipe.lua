@@ -40,11 +40,7 @@ function Pipe.compile(ctx, node)
 
   local pipeArgs = table.concat(initValues, ',')
   local pipeResult = ctx.newTmpName()
-  compiled[#compiled + 1] = ctx.format(
-    'local %1 = { %2 }',
-    pipeResult,
-    pipeArgs
-  )
+  compiled[#compiled + 1] = ('local %s = { %s }'):format(pipeResult, pipeArgs)
 
   for i, pipe in ipairs(node) do
     pipeArgs = pipeResult
@@ -55,15 +51,13 @@ function Pipe.compile(ctx, node)
       local lastChain = pipe[#pipe]
       if lastChain and lastChain.variant == 'functionCall' then
         local pipeArgsLen = ctx.newTmpName()
-        compiled[#compiled + 1] = ctx.format(
-          'local %1 = #%2',
+        compiled[#compiled + 1] = ('local %s = #%s'):format(
           pipeArgsLen,
           pipeArgs
         )
 
         for i, expr in ipairs(lastChain.value) do
-          compiled[#compiled + 1] = ctx.format(
-            '%1[%2 + %3] = %4',
+          compiled[#compiled + 1] = ('%s[%s + %s] = %s'):format(
             pipeArgs,
             pipeArgsLen,
             i,
@@ -77,8 +71,7 @@ function Pipe.compile(ctx, node)
       end
     end
 
-    compiled[#compiled + 1] = ctx.format(
-      'local %1 = { %2(%3(%4)) }',
+    compiled[#compiled + 1] = ('local %s = { %s(%s(%s)) }'):format(
       pipeResult,
       receiver or ctx:compile(pipe),
       unpackCompiled,
@@ -89,7 +82,7 @@ function Pipe.compile(ctx, node)
   return table.concat({
     '(function()',
     table.concat(compiled, '\n'),
-    ctx.format('return %1(%2)', unpackCompiled, pipeResult),
+    ('return %s(%s)'):format(unpackCompiled, pipeResult),
     'end)()',
   }, '\n')
 end

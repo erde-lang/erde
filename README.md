@@ -2,20 +2,19 @@
 
 ## TODO
 
-- refactor + improved tests
 - optimistic errors (try to guess the attempted rule)
 - Source maps?
 - Formatter
-- Optimizations?
 - Declaration files?
 
 ## Intended Proposals
 
+- address TODO comments (ex. DoBlock)
+- refactor + improved tests
 - keywords / stdlib?
   - stdlib?
     - special stdlib call syntax?
     - `compileParts >> !join`
-- compiling modulo operator (conflicts w/ replacement)
 
 ## Uncertain Proposals (need community input)
 

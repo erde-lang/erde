@@ -31,7 +31,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock.compile(ctx, node)
-  return ctx.format('(function()\n%1\nend)()', ctx:compile(node.body))
+  -- TODO: conditional
+  return '(function()\n' .. ctx:compile(node.body) .. '\nend)()'
 end
 
 -- -----------------------------------------------------------------------------

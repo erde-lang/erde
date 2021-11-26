@@ -82,21 +82,22 @@ function Block.compile(ctx, node)
       continueNode.continueName = continueName
     end
 
-    return ctx.format(
-      [[
-        local %1 = false
+    return ([[
+      local %s = false
 
-        repeat
-          %2
-          %1 = true
-        until true
+      repeat
+        %s
+        %s = true
+      until true
 
-        if not %1 then
-          break
-        end
-      ]],
+      if not %s then
+        break
+      end
+    ]]):format(
       continueName,
-      compileBlockStatements(ctx, node)
+      compileBlockStatements(ctx, node),
+      continueName,
+      continueName
     )
   elseif node.isModuleBlock and #node.moduleNodes > 0 then
     local moduleName = ctx.newTmpName()
@@ -105,15 +106,11 @@ function Block.compile(ctx, node)
       moduleNode.moduleName = moduleName
     end
 
-    return ctx.format(
-      [[
-        local %1 = {}
-        %2
-        return %1
-      ]],
-      moduleName,
-      compileBlockStatements(ctx, node)
-    )
+    return ([[
+      local %s = {}
+      %s
+      return %s
+    ]]):format(moduleName, compileBlockStatements(ctx, node), moduleName)
   else
     return compileBlockStatements(ctx, node)
   end

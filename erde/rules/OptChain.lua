@@ -88,19 +88,16 @@ function OptChain.compile(ctx, node)
 
   for i, chainNode in ipairs(node) do
     if chainNode.optional then
-      optChecks[#optChecks + 1] = ctx.format(
-        'if %1 == nil then return end',
-        subChain
-      )
+      optChecks[#optChecks + 1] = 'if ' .. subChain .. ' == nil then return end'
     end
 
     local newSubChainFormat
     if chainNode.variant == 'dotIndex' then
-      subChain = ctx.format('%1.%2', subChain, chainNode.value)
+      subChain = ('%s.%s'):format(subChain, chainNode.value)
     elseif chainNode.variant == 'bracketIndex' then
       -- Space around brackets to avoid long string expressions
       -- [ [=[some string]=] ]
-      subChain = ctx.format('%1[ %2 ]', subChain, ctx:compile(chainNode.value))
+      subChain = ('%s[ %s ]'):format(subChain, ctx:compile(chainNode.value))
     elseif chainNode.variant == 'functionCall' then
       local hasSpread = false
       for i, arg in ipairs(chainNode.value) do
@@ -130,19 +127,21 @@ function OptChain.compile(ctx, node)
           args[#args + 1] = ctx:compile(arg)
         end
 
-        subChain = ctx.format('%1(%2)', subChain, table.concat(args, ','))
+        subChain = subChain .. '(' .. table.concat(args, ',') .. ')'
       end
     elseif chainNode.variant == 'method' then
-      subChain = ctx.format('%1:%2', subChain, chainNode.value)
+      subChain = subChain .. ':' .. chainNode.value
     end
   end
 
-  return #optChecks == 0 and subChain
-    or ctx.format(
-      '(function() %1 return %2 end)()',
-      table.concat(optChecks, ' '),
-      subChain
-    )
+  if #optChecks == 0 then
+    return subChain
+  end
+
+  return ('(function() %s return %s end)()'):format(
+    table.concat(optChecks, ' '),
+    subChain
+  )
 end
 
 -- -----------------------------------------------------------------------------

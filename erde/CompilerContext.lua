@@ -38,53 +38,41 @@ function CompilerContext.newTmpName()
   return ('__ERDE_TMP_%d__'):format(tmpNameCounter)
 end
 
-function CompilerContext.format(str, ...)
-  for i, value in ipairs({ ... }) do
-    str = str:gsub('%%' .. i, tostring(value))
-  end
-
-  return str
-end
-
 function CompilerContext.compileBinop(op, lhs, rhs)
   if op.tag == 'nc' then
-    return CompilerContext.format(
-      table.concat({
-        '(function()',
-        'local %1 = %2',
-        'if %1 ~= nil then',
-        'return %1',
-        'else',
-        'return %3',
-        'end',
-        'end)()',
-      }, '\n'),
-      CompilerContext.newTmpName(),
-      lhs,
-      rhs
-    )
+    local ncTmpName = CompilerContext.newTmpName()
+    return table.concat({
+      '(function()',
+      ('local %s = %s'):format(ncTmpName, lhs),
+      'if ' .. ncTmpName .. ' ~= nil then',
+      'return ' .. ncTmpName,
+      'else',
+      'return ' .. rhs,
+      'end',
+      'end)()',
+    }, '\n')
   elseif op.tag == 'or' then
     return table.concat({ lhs, ' or ', rhs })
   elseif op.tag == 'and' then
     return table.concat({ lhs, ' and ', rhs })
   elseif op.tag == 'bor' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' | ', rhs })
-      or CompilerContext.format('require("bit").bor(%1, %2)', lhs, rhs)
+      or ('require("bit").bor(%s, %s)'):format(lhs, rhs)
   elseif op.tag == 'bxor' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' ~ ', rhs })
-      or CompilerContext.format('require("bit").bxor(%1, %2)', lhs, rhs)
+      or ('require("bit").bxor(%s, %s)'):format(lhs, rhs)
   elseif op.tag == 'band' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' & ', rhs })
-      or CompilerContext.format('require("bit").band(%1, %2)', lhs, rhs)
+      or ('require("bit").band(%s, %s)'):format(lhs, rhs)
   elseif op.tag == 'lshift' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' << ', rhs })
-      or CompilerContext.format('require("bit").lshift(%1, %2)', lhs, rhs)
+      or ('require("bit").lshift(%s, %s)'):format(lhs, rhs)
   elseif op.tag == 'rshift' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' >> ', rhs })
-      or CompilerContext.format('require("bit").rshift(%1, %2)', lhs, rhs)
+      or ('require("bit").rshift(%s, %s)'):format(lhs, rhs)
   elseif op.tag == 'intdiv' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' // ', rhs })
-      or CompilerContext.format('math.floor(%s / %s)', lhs, rhs)
+      or ('math.floor(%s / %s)'):format(lhs, rhs)
   else
     return table.concat({ lhs, op.token, rhs }, ' ')
   end

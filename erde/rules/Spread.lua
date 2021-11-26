@@ -32,39 +32,28 @@ function Spread.compile(ctx, fields)
   for i, field in ipairs(fields) do
     if field.ruleName == Spread.ruleName then
       local spreadTmpName = ctx.newTmpName()
-      compileParts[#compileParts + 1] = ctx.format(
-        [[
-          local %1 = %2
-          for key, value in pairs(%1) do
-            if type(key) == 'number' then
-              %3[%4 + key] = value
-            else
-              %3[key] = value
-            end
-          end
-          %4 = %4 + #%1
-        ]],
-        spreadTmpName,
-        ctx:compile(field.value),
-        tableVar,
-        lenVar
-      )
+      compileParts[#compileParts + 1] = table.concat({
+        'local ' .. spreadTmpName .. ' = ' .. ctx:compile(field.value),
+        'for key, value in pairs(' .. spreadTmpName .. ') do',
+        'if type(key) == "number" then',
+        ('%s[%s + key] = value'):format(tableVar, lenVar),
+        'else',
+        tableVar .. '[key] = value',
+        'end',
+        'end',
+        ('%s = %s + #%s'):format(lenVar, lenVar, spreadTmpName),
+      }, '\n')
     elseif field.key then
-      compileParts[#compileParts + 1] = ('%1[%2] = %3'):format(
+      compileParts[#compileParts + 1] = ('%s[%s] = %s'):format(
         tableVar,
         field.key,
         field.value
       )
     else
-      compileParts[#compileParts + 1] = ctx.format(
-        [[
-          %1[%2 + 1] = %3
-          %2 = %2 + 1
-        ]],
-        tableVar,
-        lenVar,
-        field.value
-      )
+      compileParts[#compileParts + 1] = table.concat({
+        ('%s[%s + 1] = %s'):format(tableVar, lenVar, field.value),
+        ('%s = %s + 1'):format(lenVar, lenVar),
+      }, '\n')
     end
   end
 

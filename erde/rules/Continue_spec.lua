@@ -9,7 +9,7 @@ describe('Continue.compile', function()
       compile.Block([[
         local x = 0
         for i = 1, 10 {
-          if math.ceil(i / 2) ~= math.floor(i / 2) {
+          if i % 2 == 1 {
             continue
           }
           x += i
