@@ -21,9 +21,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock.compile(ctx, node)
-  -- TODO: Better compilation based on usage (statement vs expr)
-  -- moonscript does a very good job at this.
-  return '(function()\n' .. ctx:compile(node.body) .. '\nend)()'
+  return 'do ' .. ctx:compile(node.body) .. ' end'
 end
 
 -- -----------------------------------------------------------------------------
