@@ -12,14 +12,6 @@ describe('DoBlock.parse', function()
       'do { a = 3 }'
     ))
   end)
-
-  spec('do block return ', function()
-    assert.has_subtable({
-      hasReturn = true,
-    }, parse.DoBlock(
-      'do { return 1 }'
-    ))
-  end)
 end)
 
 -- -----------------------------------------------------------------------------
@@ -46,28 +38,6 @@ describe('DoBlock.compile', function()
           x = 1
         }
         return x
-      ]])
-    )
-  end)
-  spec('do block return', function()
-    assert.run(
-      2,
-      compile.Block([[
-        local x = do {
-          local y = 1
-          return y + 1
-        }
-        return x
-      ]])
-    )
-    assert.run(
-      nil,
-      compile.Block([[
-        local x = do {
-          local y = 1
-          return y + 1
-        }
-        return y
       ]])
     )
   end)
