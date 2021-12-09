@@ -14,6 +14,7 @@
     - `compileParts >> !join`
 - refactor + improved tests + improved error msgs
   - remove inline keys
+  - only accept function calls in pipes
   - throw number error based on version
   - require global at top level
   - throw error on `return` w/ `module`
