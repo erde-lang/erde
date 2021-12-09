@@ -11,8 +11,8 @@ local Name = { ruleName = 'Name' }
 -- -----------------------------------------------------------------------------
 
 function Name.parse(ctx)
-  if not constants.ALPHA[ctx.bufValue] then
-    error('name must start with alpha')
+  if not constants.ALPHA[ctx.bufValue] and ctx.bufValue ~= '_' then
+    error('name must start with alpha or underscore')
   end
 
   local capture = {}
