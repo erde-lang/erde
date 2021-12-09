@@ -8,18 +8,6 @@ local Table = { ruleName = 'Table' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-local function parseInlineKeyField(ctx)
-  -- TODO: better syntax?
-  if not ctx:branchChar(':') then
-    ctx:throwExpected(':')
-  end
-
-  return {
-    variant = 'inlineKey',
-    key = ctx:Name().value,
-  }
-end
-
 local function parseExprKeyField(ctx)
   local field = {
     variant = 'exprKey',
@@ -63,7 +51,6 @@ function Table.parse(ctx)
       allowTrailingComma = true,
       rule = function()
         return ctx:Switch({
-          parseInlineKeyField,
           parseExprKeyField,
           parseNameKeyField,
           parseNumberKeyField,
@@ -96,15 +83,13 @@ function Table.compile(ctx, node)
       else
         local spreadField = {}
 
-        if field.variant == 'inlineKey' or field.variant == 'nameKey' then
+        if field.variant == 'nameKey' then
           spreadField.key = '"' .. field.key .. '"'
         elseif field.variant ~= 'numberKey' then
           spreadField.key = ctx:compile(field.key)
         end
 
-        spreadField.value = field.variant == 'inlineKey' and field.key
-          or ctx:compile(field.value)
-
+        spreadField.value = ctx:compile(field.value)
         spreadFields[i] = spreadField
       end
     end
@@ -116,9 +101,7 @@ function Table.compile(ctx, node)
     for i, field in ipairs(node) do
       local fieldPart
 
-      if field.variant == 'inlineKey' then
-        fieldPart = field.key .. ' = ' .. field.key
-      elseif field.variant == 'nameKey' then
+      if field.variant == 'nameKey' then
         fieldPart = field.key .. ' = ' .. ctx:compile(field.value)
       elseif field.variant == 'numberKey' then
         fieldPart = ctx:compile(field.value)
