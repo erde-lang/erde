@@ -16,7 +16,6 @@
   - throw number parse error based on version
   - require global at top level
   - throw error on `return` w/ `module`
-  - allow names to start with `_`
   - allow optional chaining in declarations
 
 ## Uncertain Proposals (need community input)
