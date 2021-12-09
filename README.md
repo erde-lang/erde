@@ -13,8 +13,7 @@
     - special stdlib call syntax?
     - `compileParts >> !join`
 - refactor + improved tests + improved error msgs
-  - only accept function calls in pipes
-  - throw number error based on version
+  - throw number parse error based on version
   - require global at top level
   - throw error on `return` w/ `module`
   - allow names to start with `_`

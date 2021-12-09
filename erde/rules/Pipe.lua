@@ -14,7 +14,7 @@ function Pipe.parse(ctx, opts)
   local node = { initValues = opts.initValues }
 
   while ctx:branchStr('>>') do
-    node[#node + 1] = ctx:Expr()
+    node[#node + 1] = ctx:FunctionCall()
   end
 
   if #node == 0 then
@@ -46,34 +46,24 @@ function Pipe.compile(ctx, node)
     pipeArgs = pipeResult
     pipeResult = ctx.newTmpName()
 
-    local receiver
-    if pipe.ruleName == 'OptChain' then
-      local lastChain = pipe[#pipe]
-      if lastChain and lastChain.variant == 'functionCall' then
-        local pipeArgsLen = ctx.newTmpName()
-        compiled[#compiled + 1] = ('local %s = #%s'):format(
-          pipeArgsLen,
-          pipeArgs
-        )
+    local pipeArgsLen = ctx.newTmpName()
+    compiled[#compiled + 1] = ('local %s = #%s'):format(pipeArgsLen, pipeArgs)
 
-        for i, expr in ipairs(lastChain.value) do
-          compiled[#compiled + 1] = ('%s[%s + %s] = %s'):format(
-            pipeArgs,
-            pipeArgsLen,
-            i,
-            ctx:compile(expr)
-          )
-        end
-
-        local pipeCopy = utils.shallowCopy(pipe) -- Do not mutate AST
-        table.remove(pipeCopy)
-        receiver = ctx:compile(pipeCopy)
-      end
+    for i, expr in ipairs(pipe[#pipe].value) do
+      compiled[#compiled + 1] = ('%s[%s + %s] = %s'):format(
+        pipeArgs,
+        pipeArgsLen,
+        i,
+        ctx:compile(expr)
+      )
     end
+
+    local pipeCopy = utils.shallowCopy(pipe) -- Do not mutate AST
+    table.remove(pipeCopy)
 
     compiled[#compiled + 1] = ('local %s = { %s(%s(%s)) }'):format(
       pipeResult,
-      receiver or ctx:compile(pipe),
+      ctx:compile(pipeCopy),
       unpackCompiled,
       pipeArgs
     )
