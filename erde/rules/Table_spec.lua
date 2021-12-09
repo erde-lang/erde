@@ -14,17 +14,6 @@ describe('Table.parse', function()
     ))
   end)
 
-  spec('table inlineKey', function()
-    assert.has_subtable({
-      {
-        variant = 'inlineKey',
-        key = 'x',
-      },
-    }, parse.Table(
-      '{ :x }'
-    ))
-  end)
-
   spec('table nameKey', function()
     assert.has_subtable({
       {
@@ -55,12 +44,11 @@ describe('Table.parse', function()
   spec('table mixed variants', function()
     assert.has_subtable({
       { value = { value = 'a' } },
-      { key = 'b' },
-      { value = { value = 'c' } },
-      { key = 'd' },
+      { value = { value = 'b' } },
+      { key = 'c' },
       { key = { variant = 'long' } },
     }, parse.Table(
-      '{ a, :b, c, d = 1, [[[e]]] = 2 }'
+      '{ a, b, c = 1, [[[d]]] = 2 }'
     ))
   end)
 
@@ -85,16 +73,6 @@ end)
 describe('Table.compile', function()
   spec('table numberKey', function()
     assert.eval({ 10 }, compile.Table('{ 10 }'))
-  end)
-
-  spec('table inlineKey', function()
-    assert.run(
-      { x = 1 },
-      compile.Block([[
-        local x = 1
-        return { :x }
-      ]])
-    )
   end)
 
   spec('table nameKey', function()
