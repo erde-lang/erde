@@ -13,9 +13,10 @@ function FunctionCall.parse(ctx)
   local last = node[#node]
 
   if not last then
-    ctx:throwExpected('function call', true)
+    error()
   elseif last.variant ~= 'functionCall' then
-    ctx:throwError('Id cannot be function call')
+    -- Id cannot be function call
+    error()
   end
 
   return node

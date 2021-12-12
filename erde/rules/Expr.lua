@@ -42,9 +42,7 @@ function Expr.parse(ctx, opts)
 
     if binop.tag == 'ternary' then
       node[#node + 1] = ctx:Expr()
-      if not ctx:branchChar(':') then
-        ctx:throwExpected(':')
-      end
+      ctx:assertChar(':')
     end
 
     node[#node + 1] = binop.assoc == constants.LEFT_ASSOCIATIVE

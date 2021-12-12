@@ -9,10 +9,7 @@ local WhileLoop = { ruleName = 'WhileLoop' }
 -- -----------------------------------------------------------------------------
 
 function WhileLoop.parse(ctx)
-  if not ctx:branchWord('while') then
-    ctx:throwExpected('while')
-  end
-
+  ctx:assertWord('while')
   return {
     cond = ctx:Expr(),
     body = ctx:Surround('{', '}', function()

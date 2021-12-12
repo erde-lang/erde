@@ -26,20 +26,17 @@ function Assignment.parse(ctx)
 
   if node.op then
     if BINOP_ASSIGNMENT_BLACKLIST[node.op.token] then
-      ctx:throwError('Cannot use operator assignment w/ ' .. node.op.token)
+      -- These operators cannot be used w/ operator assignment
+      error()
     elseif #node.idList > 1 then
-      ctx:throwError(
-        'Cannot use assignment operations w/ more than 1 assignment'
-      )
+      -- Cannot use assignment operations w/ more than 1 assignment
+      error()
     else
       ctx:consume(#node.op.token)
     end
   end
 
-  if not ctx:branchChar('=') then
-    ctx:throwExpected('=')
-  end
-
+  ctx:assertChar('=')
   node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end

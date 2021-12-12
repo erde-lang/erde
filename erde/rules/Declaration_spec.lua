@@ -97,7 +97,7 @@ describe('Declaration.parse', function()
         { value = 'c' },
       },
     }, parse.Declaration(
-      'local a, { b }, c = x'
+      'local a, { b }, c = x, y'
     ))
   end)
 end)

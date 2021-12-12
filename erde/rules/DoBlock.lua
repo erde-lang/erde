@@ -9,10 +9,7 @@ local DoBlock = { ruleName = 'DoBlock' }
 -- -----------------------------------------------------------------------------
 
 function DoBlock.parse(ctx)
-  if not ctx:branchWord('do') then
-    ctx:throwExpected('do')
-  end
-
+  ctx:assertWord('do')
   return { body = ctx:Surround('{', '}', ctx.Block) }
 end
 

@@ -18,7 +18,7 @@ function Pipe.parse(ctx, opts)
   end
 
   if #node == 0 then
-    ctx:throwExpected('>>')
+    error()
   end
 
   return node

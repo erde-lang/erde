@@ -53,39 +53,10 @@ function ParserContext:restore(backup)
   self.moduleBlock = backup.moduleBlock
 end
 
--- -----------------------------------------------------------------------------
--- Error Handling
--- -----------------------------------------------------------------------------
-
-function ParserContext:getErrorToken()
-  if constants.ALNUM[self.bufValue] then
-    local word = {}
-
-    while constants.ALNUM[self.bufValue] do
-      self:consume(1, word)
-    end
-
-    return table.concat(word)
-  elseif self.bufValue == constants.EOF then
-    return 'EOF'
-  else
-    return self.bufValue
-  end
-end
-
-function ParserContext:throwError(msg)
-  error(('Error (Line %d, Col %d): %s'):format(self.line, self.column, msg))
-end
-
-function ParserContext:throwExpected(expectation, noLiteral)
-  local msgFormat = 'Expected '
-    .. (noLiteral and '%s' or '`%s`')
-    .. ', got `%s`'
-  self:throwError(msgFormat:format(expectation, self:getErrorToken()))
-end
-
-function ParserContext:throwUnexpected()
-  self:throwError(('Unexpected token %s'):format(self:getErrorToken()))
+function ParserContext:throw(err)
+  local line = err.line or self.line
+  local column = err.column or self.column
+  error(('Error (Line %d, Col %d): %s'):format(line, column, err.msg))
 end
 
 -- -----------------------------------------------------------------------------
@@ -103,7 +74,7 @@ function ParserContext:consume(n, capture)
 
   for i = 1, n do
     if self.bufValue == constants.EOF then
-      self:throwUnexpected()
+      error()
     end
 
     self.bufIndex = self.bufIndex + 1
@@ -136,7 +107,7 @@ end
 
 function ParserContext:stream(lookupTable, capture, demand)
   if demand and not lookupTable[self.bufValue] then
-    self:throwUnexpected()
+    error()
   end
 
   while lookupTable[self.bufValue] do
@@ -144,50 +115,67 @@ function ParserContext:stream(lookupTable, capture, demand)
   end
 end
 
-function ParserContext:branch(n, isBranch, noPad, capture)
-  if not noPad then
+function ParserContext:branchChar(char, opts)
+  opts = opts or {}
+
+  if opts.pad ~= false then
     self:Space()
   end
 
-  if isBranch then
-    self:consume(n, capture)
+  if self.bufValue ~= char then
+    return false
   end
 
-  if not noPad then
+  self:consume(1, opts.capture)
+
+  if opts.pad ~= false then
     self:Space()
   end
 
-  return isBranch
+  return true
 end
 
-function ParserContext:branchChar(char, noPad, capture)
-  -- TODO: only accept single char?
-  if #char == 1 then
-    -- Slight optimization for most common case
-    return self:branch(1, self.bufValue == char, noPad, capture)
-  else
-    -- DO NOT USE FIND. It takes regex and will cause errors if we pass tokens
-    -- such as '.'
-    local found = false
-    for i = 1, #char do
-      if char:sub(i, i) == self.bufValue then
-        found = true
-        break
-      end
-    end
+function ParserContext:branchStr(str, opts)
+  opts = opts or {}
 
-    return self:branch(1, found, noPad, capture)
+  if opts.pad ~= false then
+    self:Space()
   end
+
+  if self:peek(#str) ~= str then
+    return false
+  end
+
+  self:consume(#str, opts.capture)
+
+  if opts.pad ~= false then
+    self:Space()
+  end
+
+  return true
 end
 
-function ParserContext:branchStr(str, noPad, capture)
-  return self:branch(#str, self:peek(#str) == str, noPad, capture)
-end
-
-function ParserContext:branchWord(word, capture)
+function ParserContext:branchWord(word, opts)
   local trailingChar = self.buffer[self.bufIndex + #word]
-  return not constants.ALNUM[trailingChar]
-    and self:branchStr(word, false, capture)
+  return not constants.ALNUM[trailingChar] and self:branchStr(word, opts)
+end
+
+function ParserContext:assertChar(char, opts)
+  if not self:branchChar(char, opts) then
+    error()
+  end
+end
+
+function ParserContext:assertStr(str, opts)
+  if not self:branchStr(str, opts) then
+    error()
+  end
+end
+
+function ParserContext:assertWord(word, opts)
+  if not self:branchWord(word, opts) then
+    error()
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -202,13 +190,13 @@ end
 
 function ParserContext:Surround(openChar, closeChar, rule)
   if not self:branchChar(openChar) then
-    self:throwExpected(openChar)
+    error()
   end
 
   local capture = rule(self)
 
   if not self:branchChar(closeChar) then
-    self:throwExpected(closeChar)
+    error()
   end
 
   return capture
@@ -285,14 +273,14 @@ function ParserContext:List(opts)
     local node = self:Try(opts.rule)
 
     if not node and #list > 0 and not opts.allowTrailingComma then
-      self:throwExpected('expression', true)
+      error()
     end
 
     list[#list + 1] = node
   until not node or not self:branchChar(',')
 
   if not opts.allowEmpty and #list == 0 then
-    self:throwError('list cannot be empty')
+    error()
   end
 
   return list

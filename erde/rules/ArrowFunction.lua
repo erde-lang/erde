@@ -11,19 +11,14 @@ local ArrowFunction = { ruleName = 'ArrowFunction' }
 function ArrowFunction.parse(ctx)
   local node = {
     hasImplicitParams = false,
-    hasImplicitReturns = false,
+    hasImplicitReturns = true,
   }
 
-  local params = ctx:Switch({
-    ctx.Name,
-    ctx.Params,
-  })
-
-  if params.ruleName == 'Name' then
-    node.paramName = params.value
-    node.hasImplicitParams = true
+  if ctx.bufValue == '(' then
+    node.params = ctx:Params()
   else
-    node.params = params
+    node.paramName = ctx:Name().value
+    node.hasImplicitParams = true
   end
 
   if ctx:branchStr('->') then
@@ -31,27 +26,27 @@ function ArrowFunction.parse(ctx)
   elseif ctx:branchStr('=>') then
     node.variant = 'fat'
   else
-    ctx:throwUnexpected()
+    error()
   end
 
   if ctx.bufValue == '{' then
+    node.hasImplicitReturns = false
     node.body = ctx:Surround('{', '}', function()
       return ctx:Block({ isFunctionBlock = true })
     end)
+  elseif ctx.bufValue == '(' then
+    -- Only allow multiple implicit returns w/ parentheses
+    node.returns = ctx:Parens({
+      allowRecursion = true,
+      rule = function()
+        return ctx:List({
+          allowTrailingComma = true,
+          rule = ctx.Expr,
+        })
+      end,
+    })
   else
-    node.hasImplicitReturns = true
-    node.returns = ctx.bufValue ~= '(' and { ctx:Expr() }
-      or ctx:Parens({
-        demand = true,
-        allowRecursion = true,
-        rule = function()
-          return ctx:List({
-            parens = true,
-            allowTrailingComma = true,
-            rule = ctx.Expr,
-          })
-        end,
-      })
+    node.returns = { ctx:Expr() }
   end
 
   return node

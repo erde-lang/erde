@@ -12,11 +12,11 @@ function Continue.parse(ctx)
   local node = {}
 
   if ctx.loopBlock == nil then
-    ctx:throwError('No loop for `continue`')
-  elseif not ctx:branchWord('continue') then
-    ctx:throwExpected('continue')
+    -- No loop for `continue`
+    error()
   end
 
+  ctx:assertWord('continue')
   local continueNodes = ctx.loopBlock.continueNodes
   continueNodes[#continueNodes + 1] = node
   return node

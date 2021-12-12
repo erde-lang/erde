@@ -15,10 +15,15 @@ describe('Number.parse', function()
     assert.are.equal('0xd', parse.Number('0xd').value)
     assert.are.equal('0Xf', parse.Number('0Xf').value)
     assert.are.equal('0xa8F', parse.Number('0xa8F').value)
-    assert.are.equal('0xfp2', parse.Number('0xfp2').value)
-    assert.are.equal('0xfP2', parse.Number('0xfP2').value)
-    assert.are.equal('0xfp+2', parse.Number('0xfp+2').value)
-    assert.are.equal('0xfp-2', parse.Number('0xfp-2').value)
+
+    if not _VERSION:find('5%.1') then
+      assert.are.equal('0xfp2', parse.Number('0xfp2').value)
+      assert.are.equal('0xfP2', parse.Number('0xfP2').value)
+      assert.are.equal('0xf.1', parse.Number('0xf.1').value)
+      assert.are.equal('0xfp+2', parse.Number('0xfp+2').value)
+      assert.are.equal('0xfp-2', parse.Number('0xfp-2').value)
+    end
+
     assert.has_error(function()
       parse.Number('x3')
     end)
@@ -83,13 +88,20 @@ describe('Number.compile', function()
     assert.eval(0xd, compile.Number('0xd'))
     assert.eval(0Xf, compile.Number('0Xf'))
     assert.eval(0xa8F, compile.Number('0xa8F'))
-    assert.eval(0xfp2, compile.Number('0xfp2'))
-    assert.eval(0xfP2, compile.Number('0xfP2'))
 
-    if _VERSION:find('5.[34]') then
-      -- Need to eval to prevent parsing errors
+    if not _VERSION:find('5%.1') then
+      -- No eval necessary here. Technically Lua5.1 supports hex exponents,
+      -- although it is undocumented
+      assert.eval(0xfp2, compile.Number('0xfp2'))
+      assert.eval(0xfp2, compile.Number('0xfp2'))
+
+      -- Need to eval to prevent parsing errors for lower lua versions.
+      assert.eval(utils.eval('0xf.1'), compile.Number('0xf.1'))
       assert.eval(utils.eval('0xfp+2'), compile.Number('0xfp+2'))
       assert.eval(utils.eval('0xfp-2'), compile.Number('0xfp-2'))
+    end
+
+    if _VERSION:find('5%.[34]') then
     end
   end)
 

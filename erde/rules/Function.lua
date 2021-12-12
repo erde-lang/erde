@@ -15,21 +15,17 @@ function Function.parse(ctx)
     node.variant = 'local'
   elseif ctx:branchWord('module') then
     if not ctx.moduleBlock then
-      ctx:throwError('Module declarations only allowed at the top level')
+      -- Module declarations only allowed at the top level
+      error()
     end
 
-    local moduleNodes = ctx.moduleBlock.moduleNodes
-    moduleNodes[#moduleNodes + 1] = node
     node.variant = 'module'
   else
     ctx:branchWord('global')
     node.variant = 'global'
   end
 
-  if not ctx:branchWord('function') then
-    ctx:throwExpected('function')
-  end
-
+  ctx:assertWord('function')
   node.names = { ctx:Name().value }
 
   while true do
@@ -43,6 +39,15 @@ function Function.parse(ctx)
 
       break
     end
+  end
+
+  if node.variant == 'module' then
+    if #node.names > 1 then
+      -- Cannot combine `module` w/ method
+      error()
+    end
+
+    table.insert(ctx.moduleBlock.moduleNames, node.names[1])
   end
 
   node.params = ctx:Params()
@@ -65,9 +70,8 @@ function Function.compile(ctx, node)
     methodName = table.remove(node.names)
   end
 
-  return ('%s function %s%s%s(%s)\n%s\n%s\nend'):format(
-    node.variant == 'local' and 'local' or '',
-    node.variant == 'module' and node.moduleName .. '.' or '',
+  return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
+    (node.variant == 'local' or node.variant == 'module') and 'local' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
     table.concat(params.names, ','),
