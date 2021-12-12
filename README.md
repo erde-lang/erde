@@ -8,15 +8,14 @@
 
 ## Intended Proposals
 
-- keywords / stdlib?
-  - stdlib?
-    - special stdlib call syntax?
-    - `compileParts >> !join`
+- stdlib?
+  - special stdlib call syntax: `compileParts >> !join`
 - refactor + improved tests + improved error msgs
   - throw number parse error based on version
-  - require global at top level
   - throw error on `return` w/ `module`
   - allow optional chaining in declarations
+  - optimize Space calls (too many)
+  - flatten AST (ex. compile Numbers directly)
 
 ## Uncertain Proposals (need community input)
 

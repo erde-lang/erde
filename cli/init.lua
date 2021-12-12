@@ -2,13 +2,21 @@
 
 local argparse = require('argparse')
 
-local parser = argparse('erde')
-parser:add_complete()
-parser:argument('input', 'Input file.')
-parser:option('-o --output', 'Output file.', 'a.out')
+-- -----------------------------------------------------------------------------
+-- Setup
+-- -----------------------------------------------------------------------------
 
-parser:command('compile')
-parser:command('run')
-parser:command('format')
+local cli = argparse('erde')
+cli:add_complete()
 
-local args = parser:parse()
+local compile = cli:command('compile')
+compile:argument('input', 'Input file.')
+
+local run = cli:command('run')
+local format = cli:command('format')
+
+-- -----------------------------------------------------------------------------
+-- Process
+-- -----------------------------------------------------------------------------
+
+local args = cli:parse()
