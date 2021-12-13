@@ -19,11 +19,19 @@ function Number.parse(ctx)
     ctx:stream(constants.HEX, capture, true)
 
     if ctx.bufValue == '.' and not ctx:Binop() then
+      if _VERSION:find('5%.1') then
+        ctx:throwError('Decimal hex values only supported in Lua 5.2+')
+      end
+
       ctx:consume(1, capture)
       ctx:stream(constants.HEX, capture, true)
     end
 
     if ctx:branchChar('pP', true, capture) then
+      if _VERSION:find('5%.1') then
+        ctx:throwError('Hex exponents only supported in Lua 5.2+')
+      end
+
       ctx:branchChar('+-', true, capture)
       ctx:stream(constants.DIGIT, capture, true)
     end

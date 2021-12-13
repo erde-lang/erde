@@ -8,10 +8,10 @@
 
 ## Intended Proposals
 
-- stdlib?
+- stdlib
   - special stdlib call syntax: `compileParts >> !join`
+  - detect when single file and don't create separate file.
 - refactor + improved tests + improved error msgs
-  - throw number parse error based on version
   - throw error on `return` w/ `module`
   - allow optional chaining in declarations
   - optimize Space calls (too many)
