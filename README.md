@@ -8,14 +8,13 @@
 
 ## Intended Proposals
 
-- stdlib
-  - special stdlib call syntax: `compileParts >> !join`
-  - detect when single file and don't create separate file.
 - refactor + improved tests + improved error msgs
-  - throw error on `return` w/ `module`
   - allow optional chaining in declarations
   - optimize Space calls (too many)
   - flatten AST (ex. compile Numbers directly)
+- stdlib
+  - special stdlib call syntax: `compileParts >> !join`
+  - inline definitions
 
 ## Uncertain Proposals (need community input)
 
