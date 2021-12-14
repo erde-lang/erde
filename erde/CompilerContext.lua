@@ -1,4 +1,3 @@
-local Environment = require('erde.Environment')
 local ParserContext = require('erde.ParserContext')
 local constants = require('erde.constants')
 local rules = require('erde.rules')

@@ -1,6 +1,9 @@
 # TODO
 
 - refactor + improved tests + improved error msgs
+  - refactor module compilation. Need to handle local refs:
+    - `module myvar = 3`
+    - `print(myvar)`
   - allow optional chaining in declarations
   - flatten AST (ex. compile Numbers directly)
   - better Switch handing
