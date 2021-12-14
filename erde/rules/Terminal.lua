@@ -50,7 +50,7 @@ function Terminal.parse(ctx)
   end
 
   if not node then
-    ctx:throwExpected('terminal', true)
+    error()
   end
 
   return node

@@ -53,39 +53,10 @@ function ParserContext:restore(backup)
   self.moduleBlock = backup.moduleBlock
 end
 
--- -----------------------------------------------------------------------------
--- Error Handling
--- -----------------------------------------------------------------------------
-
-function ParserContext:getErrorToken()
-  if constants.ALNUM[self.bufValue] then
-    local word = {}
-
-    while constants.ALNUM[self.bufValue] do
-      self:consume(1, word)
-    end
-
-    return table.concat(word)
-  elseif self.bufValue == constants.EOF then
-    return 'EOF'
-  else
-    return self.bufValue
-  end
-end
-
-function ParserContext:throwError(msg)
-  error(('Error (Line %d, Col %d): %s'):format(self.line, self.column, msg))
-end
-
-function ParserContext:throwExpected(expectation, noLiteral)
-  local msgFormat = 'Expected '
-    .. (noLiteral and '%s' or '`%s`')
-    .. ', got `%s`'
-  self:throwError(msgFormat:format(expectation, self:getErrorToken()))
-end
-
-function ParserContext:throwUnexpected()
-  self:throwError(('Unexpected token %s'):format(self:getErrorToken()))
+function ParserContext:throw(err)
+  local line = err.line or self.line
+  local column = err.column or self.column
+  error(('Error (Line %d, Col %d): %s'):format(line, column, err.msg))
 end
 
 -- -----------------------------------------------------------------------------

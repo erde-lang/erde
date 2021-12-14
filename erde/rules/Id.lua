@@ -13,7 +13,7 @@ function Id.parse(ctx)
   local last = node[#node]
 
   if last and last.variant == 'functionCall' then
-    ctx:throwError('Id cannot be function call')
+    error()
   end
 
   return node

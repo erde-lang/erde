@@ -25,13 +25,13 @@ function String.parse(ctx)
     node.equals = table.concat(equals)
 
     if not ctx:branchChar('[', true) then
-      ctx:throwExpected('[')
+      error()
     end
 
     node.variant = 'long'
     terminatingStr = ']' .. node.equals .. ']'
   else
-    ctx:throwUnexpected()
+    error()
   end
 
   while not ctx:branchStr(terminatingStr, true) do
@@ -51,7 +51,8 @@ function String.parse(ctx)
       node[#node + 1] = ctx:Surround('{', '}', ctx.Expr)
     elseif ctx:branchChar('\n', true, capture) then
       if node.variant ~= 'long' then
-        ctx:throwError('Newlines only allowed in block strings')
+        -- Newlines only allowed in block strings
+        error()
       end
     else
       ctx:consume(1, capture)

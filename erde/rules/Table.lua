@@ -15,7 +15,7 @@ local function parseExprKeyField(ctx)
   }
 
   if not ctx:branchChar('=') then
-    ctx:throwExpected('=')
+    error()
   end
 
   field.value = ctx:Expr()
@@ -29,7 +29,7 @@ local function parseNameKeyField(ctx)
   }
 
   if not ctx:branchChar('=') then
-    ctx:throwExpected('=')
+    error()
   end
 
   field.value = ctx:Expr()

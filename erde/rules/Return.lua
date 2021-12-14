@@ -10,7 +10,7 @@ local Return = { ruleName = 'Return' }
 
 function Return.parse(ctx)
   if not ctx:branchWord('return') then
-    ctx:throwExpected('return')
+    error()
   end
 
   local node = ctx:Parens({

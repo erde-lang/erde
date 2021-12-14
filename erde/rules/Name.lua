@@ -12,7 +12,8 @@ local Name = { ruleName = 'Name' }
 
 function Name.parse(ctx)
   if not constants.ALPHA[ctx.bufValue] and ctx.bufValue ~= '_' then
-    error('name must start with alpha or underscore')
+    -- name must start with alpha or underscore
+    error()
   end
 
   local capture = {}
@@ -25,7 +26,8 @@ function Name.parse(ctx)
   local value = table.concat(capture)
   for _, keyword in pairs(constants.KEYWORDS) do
     if value == keyword then
-      ctx:throwError('name cannot be keyword')
+      -- name cannot be keyword
+      error()
     end
   end
 

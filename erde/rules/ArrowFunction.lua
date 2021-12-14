@@ -26,7 +26,7 @@ function ArrowFunction.parse(ctx)
   elseif ctx:branchStr('=>') then
     node.variant = 'fat'
   else
-    ctx:throwUnexpected()
+    error()
   end
 
   if ctx.bufValue == '{' then

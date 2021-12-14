@@ -60,7 +60,7 @@ function Destructure.parse(ctx)
   })
 
   if not destructs then
-    ctx:throwUnexpected()
+    error()
   end
 
   for i, destruct in ipairs(destructs) do

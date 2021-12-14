@@ -10,7 +10,7 @@ local ForLoop = { ruleName = 'ForLoop' }
 
 function ForLoop.parse(ctx)
   if not ctx:branchWord('for') then
-    ctx:throwExpected('for')
+    error()
   end
 
   local firstName = ctx:Name().value
@@ -24,9 +24,11 @@ function ForLoop.parse(ctx)
     }
 
     if #node.parts < 2 then
-      ctx:throwError('numeric for too few parts')
+      -- numeric for too few parts
+      error()
     elseif #node.parts > 3 then
-      ctx:throwError('numeric for too many parts')
+      -- numeric for too many parts
+      error()
     end
   else
     node = { variant = 'generic' }
@@ -37,7 +39,7 @@ function ForLoop.parse(ctx)
     end
 
     if not ctx:branchWord('in') then
-      ctx:throwExpected('in')
+      error()
     end
 
     node.exprList = ctx:List({ rule = ctx.Expr })

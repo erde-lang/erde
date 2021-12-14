@@ -12,9 +12,10 @@ function Break.parse(ctx)
   local node = {}
 
   if ctx.loopBlock == nil then
-    ctx:throwError('No loop for `break`')
+    -- No loop for `break`
+    error()
   elseif not ctx:branchWord('break') then
-    ctx:throwExpected('break')
+    error()
   end
 
   return node

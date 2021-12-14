@@ -14,7 +14,7 @@ function Comment.parse(ctx)
   local node = { variant = 'short' }
 
   if not ctx:branchStr('--', true) then
-    ctx:throwExpected('--')
+    error()
   end
 
   local backup = ctx:backup()

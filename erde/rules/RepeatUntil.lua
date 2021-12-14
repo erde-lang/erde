@@ -10,7 +10,7 @@ local RepeatUntil = { ruleName = 'RepeatUntil' }
 
 function RepeatUntil.parse(ctx)
   if not ctx:branchWord('repeat') then
-    ctx:throwExpected('repeat')
+    error()
   end
 
   local node = {
@@ -20,7 +20,7 @@ function RepeatUntil.parse(ctx)
   }
 
   if not ctx:branchWord('until') then
-    ctx:throwExpected('until')
+    error()
   end
 
   node.cond = ctx:Expr()

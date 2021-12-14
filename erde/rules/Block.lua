@@ -52,7 +52,8 @@ function Block.parse(ctx, opts)
   if opts.isModuleBlock and #node.moduleNodes > 0 then
     for i, statement in ipairs(node) do
       if statement.ruleName == 'Return' then
-        ctx:throwError('Block cannot use both `return` and `module`')
+        -- Block cannot use both `return` and `module`
+        error()
       end
     end
   end

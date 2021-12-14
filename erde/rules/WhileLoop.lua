@@ -10,7 +10,7 @@ local WhileLoop = { ruleName = 'WhileLoop' }
 
 function WhileLoop.parse(ctx)
   if not ctx:branchWord('while') then
-    ctx:throwExpected('while')
+    error()
   end
 
   return {

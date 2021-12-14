@@ -21,7 +21,7 @@ function OptChain.parse(ctx)
   }
 
   if not node.base then
-    ctx:throwExpected('name or (parens expression)', true)
+    error()
   end
 
   while true do
@@ -64,7 +64,8 @@ function OptChain.parse(ctx)
       chain.variant = 'method'
       chain.value = ctx:Name().value
       if ctx.bufValue ~= '(' then
-        ctx:throwError('missing args after method call')
+        -- missing args after method call
+        error()
       end
     else
       ctx:restore(backup) -- revert consumption from ctx:branchChar('?')

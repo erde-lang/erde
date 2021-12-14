@@ -20,7 +20,8 @@ function Number.parse(ctx)
 
     if ctx.bufValue == '.' and not ctx:Binop() then
       if _VERSION:find('5%.1') then
-        ctx:throwError('Decimal hex values only supported in Lua 5.2+')
+        -- Decimal hex values only supported in Lua 5.2+
+        error()
       end
 
       ctx:consume(1, capture)
@@ -29,7 +30,8 @@ function Number.parse(ctx)
 
     if ctx:branchChar('pP', true, capture) then
       if _VERSION:find('5%.1') then
-        ctx:throwError('Hex exponents only supported in Lua 5.2+')
+        -- Hex exponents only supported in Lua 5.2+
+        error()
       end
 
       ctx:branchChar('+-', true, capture)
@@ -52,7 +54,7 @@ function Number.parse(ctx)
   end
 
   if #capture == 0 then
-    ctx:throwExpected('number', true)
+    error()
   end
 
   return { value = table.concat(capture) }

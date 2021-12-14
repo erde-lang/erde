@@ -12,7 +12,7 @@ function IfElse.parse(ctx)
   local node = { elseifNodes = {} }
 
   if not ctx:branchWord('if') then
-    ctx:throwExpected('if')
+    error()
   end
 
   node.ifNode = {

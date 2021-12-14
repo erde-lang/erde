@@ -12,13 +12,13 @@ function TryCatch.parse(ctx)
   local node = {}
 
   if not ctx:branchWord('try') then
-    ctx:throwExpected('try')
+    error()
   end
 
   node.try = ctx:Surround('{', '}', ctx.Block)
 
   if not ctx:branchWord('catch') then
-    ctx:throwExpected('catch')
+    error()
   end
 
   node.errorName = ctx:Surround('(', ')', function()

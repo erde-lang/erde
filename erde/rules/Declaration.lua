@@ -18,7 +18,8 @@ function Declaration.parse(ctx)
     node.variant = 'local'
   elseif ctx:branchWord('module') then
     if not ctx.moduleBlock then
-      ctx:throwError('Module declarations only allowed at the top level')
+      -- Module declarations only allowed at the top level
+      error()
     end
 
     local moduleNodes = ctx.moduleBlock.moduleNodes

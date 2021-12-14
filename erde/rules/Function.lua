@@ -15,7 +15,8 @@ function Function.parse(ctx)
     node.variant = 'local'
   elseif ctx:branchWord('module') then
     if not ctx.moduleBlock then
-      ctx:throwError('Module declarations only allowed at the top level')
+      -- Module declarations only allowed at the top level
+      error()
     end
 
     local moduleNodes = ctx.moduleBlock.moduleNodes
@@ -27,7 +28,7 @@ function Function.parse(ctx)
   end
 
   if not ctx:branchWord('function') then
-    ctx:throwExpected('function')
+    error()
   end
 
   node.names = { ctx:Name().value }

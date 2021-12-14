@@ -10,7 +10,7 @@ local Spread = { ruleName = 'Spread' }
 
 function Spread.parse(ctx)
   if not ctx:branchStr('...') then
-    ctx:throwExpected('...')
+    error()
   end
 
   return { value = ctx:Expr() }
