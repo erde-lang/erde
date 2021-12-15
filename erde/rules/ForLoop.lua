@@ -9,9 +9,7 @@ local ForLoop = { ruleName = 'ForLoop' }
 -- -----------------------------------------------------------------------------
 
 function ForLoop.parse(ctx)
-  if not ctx:branchWord('for') then
-    error()
-  end
+  ctx:assertWord('for')
 
   local firstName = ctx:Name().value
   local node
@@ -38,10 +36,7 @@ function ForLoop.parse(ctx)
       node.nameList[#node.nameList + 1] = ctx:Name().value
     end
 
-    if not ctx:branchWord('in') then
-      error()
-    end
-
+    ctx:assertWord('in')
     node.exprList = ctx:List({ rule = ctx.Expr })
   end
 

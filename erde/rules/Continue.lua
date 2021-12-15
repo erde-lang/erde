@@ -14,10 +14,9 @@ function Continue.parse(ctx)
   if ctx.loopBlock == nil then
     -- No loop for `continue`
     error()
-  elseif not ctx:branchWord('continue') then
-    error()
   end
 
+  ctx:assertWord('continue')
   local continueNodes = ctx.loopBlock.continueNodes
   continueNodes[#continueNodes + 1] = node
   return node

@@ -14,10 +14,9 @@ function Break.parse(ctx)
   if ctx.loopBlock == nil then
     -- No loop for `break`
     error()
-  elseif not ctx:branchWord('break') then
-    error()
   end
 
+  ctx:assertWord('break')
   return node
 end
 

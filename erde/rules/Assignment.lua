@@ -36,10 +36,7 @@ function Assignment.parse(ctx)
     end
   end
 
-  if not ctx:branchChar('=') then
-    error()
-  end
-
+  ctx:assertChar('=')
   node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end

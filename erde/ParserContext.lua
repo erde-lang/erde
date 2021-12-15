@@ -160,6 +160,24 @@ function ParserContext:branchWord(word, opts)
   return not constants.ALNUM[trailingChar] and self:branchStr(word, opts)
 end
 
+function ParserContext:assertChar(char, opts)
+  if not self:branchChar(char, opts) then
+    error()
+  end
+end
+
+function ParserContext:assertStr(str, opts)
+  if not self:branchStr(str, opts) then
+    error()
+  end
+end
+
+function ParserContext:assertWord(word, opts)
+  if not self:branchWord(word, opts) then
+    error()
+  end
+end
+
 -- -----------------------------------------------------------------------------
 -- Parsing Macros
 -- -----------------------------------------------------------------------------

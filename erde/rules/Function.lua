@@ -27,10 +27,7 @@ function Function.parse(ctx)
     node.variant = 'global'
   end
 
-  if not ctx:branchWord('function') then
-    error()
-  end
-
+  ctx:assertWord('function')
   node.names = { ctx:Name().value }
 
   while true do

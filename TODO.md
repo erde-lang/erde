@@ -1,7 +1,6 @@
 # TODO
 
 - refactor + improved tests
-  - shorthand for `if not ctx:branchChar('=') then ctx:throwExpected('=') end`
   - flatten AST (ex. compile Name, Numbers, Break, Continue directly)
   - refactor module compilation. Need to handle local refs:
     - `module myvar = 3`
@@ -15,6 +14,7 @@
 # Long Term TODO
 
 - Formatter
+- add real README
 - release v0.1.0
 - rewrite erde in erde
 - Source maps

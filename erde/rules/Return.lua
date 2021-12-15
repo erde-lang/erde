@@ -9,11 +9,8 @@ local Return = { ruleName = 'Return' }
 -- -----------------------------------------------------------------------------
 
 function Return.parse(ctx)
-  if not ctx:branchWord('return') then
-    error()
-  end
-
-  local node = ctx:Parens({
+  ctx:assertWord('return')
+  return ctx:Parens({
     allowRecursion = true,
     prioritizeRule = true,
     rule = function()
@@ -24,8 +21,6 @@ function Return.parse(ctx)
       })
     end,
   })
-
-  return node
 end
 
 -- -----------------------------------------------------------------------------

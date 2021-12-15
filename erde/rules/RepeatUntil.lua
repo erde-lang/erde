@@ -9,9 +9,7 @@ local RepeatUntil = { ruleName = 'RepeatUntil' }
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil.parse(ctx)
-  if not ctx:branchWord('repeat') then
-    error()
-  end
+  ctx:assertWord('repeat')
 
   local node = {
     body = ctx:Surround('{', '}', function()
@@ -19,10 +17,7 @@ function RepeatUntil.parse(ctx)
     end),
   }
 
-  if not ctx:branchWord('until') then
-    error()
-  end
-
+  ctx:assertWord('until')
   node.cond = ctx:Expr()
 
   return node

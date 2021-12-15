@@ -13,10 +13,7 @@ local Comment = { ruleName = 'Comment' }
 function Comment.parse(ctx)
   local node = { variant = 'short' }
   local branchOpts = { pad = false }
-
-  if not ctx:branchStr('--', branchOpts) then
-    error()
-  end
+  ctx:assertStr('--', branchOpts)
 
   local backup = ctx:backup()
   if ctx:branchChar('[', branchOpts) then

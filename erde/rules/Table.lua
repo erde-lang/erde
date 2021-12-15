@@ -14,10 +14,7 @@ local function parseExprKeyField(ctx)
     key = ctx:Surround('[', ']', ctx.Expr),
   }
 
-  if not ctx:branchChar('=') then
-    error()
-  end
-
+  ctx:assertChar('=')
   field.value = ctx:Expr()
   return field
 end
@@ -28,10 +25,7 @@ local function parseNameKeyField(ctx)
     key = ctx:Name().value,
   }
 
-  if not ctx:branchChar('=') then
-    error()
-  end
-
+  ctx:assertChar('=')
   field.value = ctx:Expr()
   return field
 end
