@@ -1,8 +1,5 @@
 # TODO
 
-- refactor module compilation. Need to handle local refs:
-  - `module myvar = 3`
-  - `print(myvar)`
 - allow optional chaining in declarations
 - refactor tests
 - stdlib

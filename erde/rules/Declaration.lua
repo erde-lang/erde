@@ -22,8 +22,6 @@ function Declaration.parse(ctx)
       error()
     end
 
-    local moduleNodes = ctx.moduleBlock.moduleNodes
-    moduleNodes[#moduleNodes + 1] = node
     node.variant = 'module'
   else
     ctx:branchWord('global')
@@ -38,6 +36,23 @@ function Declaration.parse(ctx)
       })
     end,
   })
+
+  if node.variant == 'module' then
+    for i, var in ipairs(node.varList) do
+      if var.ruleName == 'Name' then
+        table.insert(ctx.moduleBlock.moduleNames, var.value)
+      else
+        for i, destruct in ipairs(var) do
+          table.insert(
+            ctx.moduleBlock.moduleNames,
+            destruct.alias or destruct.name
+          )
+        end
+      end
+    end
+  end
+
+  -- TODO: do not allow destructure without assignment
 
   if ctx:branchChar('=') then
     node.exprList = ctx:List({ rule = ctx.Expr })
@@ -54,7 +69,7 @@ function Declaration.compile(ctx, node)
   local declarationParts = {}
   local compileParts = {}
 
-  if node.variant == 'local' then
+  if node.variant == 'local' or node.variant == 'module' then
     declarationParts[#declarationParts + 1] = 'local'
   end
 
@@ -67,12 +82,6 @@ function Declaration.compile(ctx, node)
       local destructure = ctx:compile(var)
       nameList[#nameList + 1] = destructure.baseName
       compileParts[#compileParts + 1] = destructure.compiled
-    end
-  end
-
-  if node.variant == 'module' then
-    for i, name in ipairs(nameList) do
-      nameList[i] = node.moduleName .. '.' .. name
     end
   end
 

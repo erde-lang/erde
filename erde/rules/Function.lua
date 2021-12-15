@@ -19,8 +19,6 @@ function Function.parse(ctx)
       error()
     end
 
-    local moduleNodes = ctx.moduleBlock.moduleNodes
-    moduleNodes[#moduleNodes + 1] = node
     node.variant = 'module'
   else
     ctx:branchWord('global')
@@ -43,6 +41,15 @@ function Function.parse(ctx)
     end
   end
 
+  if node.variant == 'module' then
+    if #node.names > 1 then
+      -- Cannot combine `module` w/ method
+      error()
+    end
+
+    table.insert(ctx.moduleBlock.moduleNames, node.names[1])
+  end
+
   node.params = ctx:Params()
   node.body = ctx:Surround('{', '}', function()
     return ctx:Block({ isFunctionBlock = true })
@@ -63,9 +70,8 @@ function Function.compile(ctx, node)
     methodName = table.remove(node.names)
   end
 
-  return ('%s function %s%s%s(%s)\n%s\n%s\nend'):format(
-    node.variant == 'local' and 'local' or '',
-    node.variant == 'module' and node.moduleName .. '.' or '',
+  return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
+    (node.variant == 'local' or node.variant == 'module') and 'local' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
     table.concat(params.names, ','),

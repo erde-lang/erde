@@ -22,7 +22,7 @@ function Block.parse(ctx, opts)
     ctx.loopBlock = nil
   elseif opts.isModuleBlock then
     node.isModuleBlock = true
-    node.moduleNodes = {}
+    node.moduleNames = {}
     ctx.moduleBlock = node
   else
     ctx.moduleBlock = nil
@@ -49,7 +49,7 @@ function Block.parse(ctx, opts)
     node[#node + 1] = statement
   until not statement
 
-  if opts.isModuleBlock and #node.moduleNodes > 0 then
+  if opts.isModuleBlock and #node.moduleNames > 0 then
     for i, statement in ipairs(node) do
       if statement.ruleName == 'Return' then
         -- Block cannot use both `return` and `module`
@@ -100,18 +100,17 @@ function Block.compile(ctx, node)
       continueName,
       continueName
     )
-  elseif node.isModuleBlock and #node.moduleNodes > 0 then
-    local moduleName = ctx.newTmpName()
+  elseif node.isModuleBlock and #node.moduleNames > 0 then
+    local moduleTableElements = {}
 
-    for i, moduleNode in ipairs(node.moduleNodes) do
-      moduleNode.moduleName = moduleName
+    for i, moduleName in ipairs(node.moduleNames) do
+      moduleTableElements[i] = moduleName .. '=' .. moduleName
     end
 
-    return ([[
-      local %s = {}
-      %s
-      return %s
-    ]]):format(moduleName, compileBlockStatements(ctx, node), moduleName)
+    return ('%s\nreturn { %s }'):format(
+      compileBlockStatements(ctx, node),
+      table.concat(moduleTableElements, ',')
+    )
   else
     return compileBlockStatements(ctx, node)
   end
