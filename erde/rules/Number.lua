@@ -28,13 +28,16 @@ function Number.parse(ctx)
       ctx:stream(constants.HEX, capture, true)
     end
 
-    if ctx:branchChar('pP', true, capture) then
+    if
+      ctx:branchChar('p', true, capture) or ctx:branchChar('P', true, capture)
+    then
       if _VERSION:find('5%.1') then
         -- Hex exponents only supported in Lua 5.2+
         error()
       end
 
-      ctx:branchChar('+-', true, capture)
+      ctx:branchChar('+', true, capture)
+      ctx:branchChar('-', true, capture)
       ctx:stream(constants.DIGIT, capture, true)
     end
   else
@@ -47,8 +50,12 @@ function Number.parse(ctx)
       ctx:stream(constants.DIGIT, capture, true)
     end
 
-    if #capture > 0 and ctx:branchChar('eE', true, capture) then
-      ctx:branchChar('+-', true, capture)
+    if
+      #capture > 0 and ctx:branchChar('e', true, capture)
+      or ctx:branchChar('E', true, capture)
+    then
+      ctx:branchChar('+', true, capture)
+      ctx:branchChar('-', true, capture)
       ctx:stream(constants.DIGIT, capture, true)
     end
   end
