@@ -1,19 +1,22 @@
 # TODO
 
-- refactor + improved tests
-  - flatten AST (ex. compile Name, Numbers, Break, Continue directly)
-  - refactor module compilation. Need to handle local refs:
-    - `module myvar = 3`
-    - `print(myvar)`
-  - allow optional chaining in declarations
+- refactor module compilation. Need to handle local refs:
+  - `module myvar = 3`
+  - `print(myvar)`
+- allow optional chaining in declarations
+- refactor tests
 - stdlib
   - special stdlib call syntax: `compileParts >> !join`
   - inline definitions
+- CLI
+  - expose parse / compile api
+  - implement cli
+  - `package.erde`
 - improved error messages (add pcalls, Rule.diagnose)
+- formatter (Rule.format)
 
 # Long Term TODO
 
-- Formatter
 - add real README
 - release v0.1.0
 - rewrite erde in erde
