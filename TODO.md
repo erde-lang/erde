@@ -2,7 +2,7 @@
 
 - refactor + improved tests
   - shorthand for `if not ctx:branchChar('=') then ctx:throwExpected('=') end`
-  - flatten AST (ex. compile Numbers directly)
+  - flatten AST (ex. compile Name, Numbers, Break, Continue directly)
   - refactor module compilation. Need to handle local refs:
     - `module myvar = 3`
     - `print(myvar)`

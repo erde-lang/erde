@@ -115,44 +115,49 @@ function ParserContext:stream(lookupTable, capture, demand)
   end
 end
 
-function ParserContext:branchChar(char, noPad, capture)
-  if not noPad then
+function ParserContext:branchChar(char, opts)
+  opts = opts or {}
+
+  if opts.pad ~= false then
     self:Space()
   end
 
-  local result = self.bufValue == char
-  if result then
-    self:consume(1, capture)
+  if self.bufValue ~= char then
+    return false
   end
 
-  if not noPad then
+  self:consume(1, opts.capture)
+
+  if opts.pad ~= false then
     self:Space()
   end
 
-  return result
+  return true
 end
 
-function ParserContext:branchStr(str, noPad, capture)
-  if not noPad then
+function ParserContext:branchStr(str, opts)
+  opts = opts or {}
+
+  if opts.pad ~= false then
     self:Space()
   end
 
-  local result = self:peek(#str) == str
-  if result then
-    self:consume(#str, capture)
+  if self:peek(#str) ~= str then
+    return false
   end
 
-  if not noPad then
+  self:consume(#str, opts.capture)
+
+  if opts.pad ~= false then
     self:Space()
   end
 
-  return result
+  return true
 end
 
-function ParserContext:branchWord(word, capture)
+function ParserContext:branchWord(word, opts)
   local trailingChar = self.buffer[self.bufIndex + #word]
-  return not constants.ALNUM[trailingChar]
-    and self:branchStr(word, false, capture)
+  return not constants.ALNUM[trailingChar] and self:branchStr(word, opts)
 end
 
 -- -----------------------------------------------------------------------------

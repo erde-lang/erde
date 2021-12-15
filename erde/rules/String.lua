@@ -12,19 +12,20 @@ function String.parse(ctx)
   local node = {}
   local capture = {}
   local terminatingStr
+  local terminalBranchOpts = { pad = false }
 
-  if ctx:branchChar("'", true) then
+  if ctx:branchChar("'", terminalBranchOpts) then
     node.variant = 'single'
     terminatingStr = "'"
-  elseif ctx:branchChar('"', true) then
+  elseif ctx:branchChar('"', terminalBranchOpts) then
     node.variant = 'double'
     terminatingStr = '"'
-  elseif ctx:branchChar('[', true) then
+  elseif ctx:branchChar('[', terminalBranchOpts) then
     local equals = {}
     ctx:stream({ ['='] = true }, equals)
     node.equals = table.concat(equals)
 
-    if not ctx:branchChar('[', true) then
+    if not ctx:branchChar('[', terminalBranchOpts) then
       error()
     end
 
@@ -34,7 +35,7 @@ function String.parse(ctx)
     error()
   end
 
-  while not ctx:branchStr(terminatingStr, true) do
+  while not ctx:branchStr(terminatingStr, terminalBranchOpts) do
     if ctx.bufValue == '\\' then
       if ('{}'):find(ctx.buffer[ctx.bufIndex + 1]) then
         ctx:consume()
@@ -49,7 +50,7 @@ function String.parse(ctx)
       end
 
       node[#node + 1] = ctx:Surround('{', '}', ctx.Expr)
-    elseif ctx:branchChar('\n', true, capture) then
+    elseif ctx:branchChar('\n', { pad = false, capture = capture }) then
       if node.variant ~= 'long' then
         -- Newlines only allowed in block strings
         error()

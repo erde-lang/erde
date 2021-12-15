@@ -12,10 +12,9 @@ local Number = { ruleName = 'Number' }
 
 function Number.parse(ctx)
   local capture = {}
+  local branchOpts = { pad = false, capture = capture }
 
-  if
-    ctx:branchStr('0x', true, capture) or ctx:branchStr('0X', true, capture)
-  then
+  if ctx:branchStr('0x', branchOpts) or ctx:branchStr('0X', branchOpts) then
     ctx:stream(constants.HEX, capture, true)
 
     if ctx.bufValue == '.' and not ctx:Binop() then
@@ -28,16 +27,14 @@ function Number.parse(ctx)
       ctx:stream(constants.HEX, capture, true)
     end
 
-    if
-      ctx:branchChar('p', true, capture) or ctx:branchChar('P', true, capture)
-    then
+    if ctx:branchChar('p', branchOpts) or ctx:branchChar('P', branchOpts) then
       if _VERSION:find('5%.1') then
         -- Hex exponents only supported in Lua 5.2+
         error()
       end
 
-      ctx:branchChar('+', true, capture)
-      ctx:branchChar('-', true, capture)
+      ctx:branchChar('+', branchOpts)
+      ctx:branchChar('-', branchOpts)
       ctx:stream(constants.DIGIT, capture, true)
     end
   else
@@ -50,13 +47,12 @@ function Number.parse(ctx)
       ctx:stream(constants.DIGIT, capture, true)
     end
 
-    if
-      #capture > 0 and ctx:branchChar('e', true, capture)
-      or ctx:branchChar('E', true, capture)
-    then
-      ctx:branchChar('+', true, capture)
-      ctx:branchChar('-', true, capture)
-      ctx:stream(constants.DIGIT, capture, true)
+    if #capture > 0 then
+      if ctx:branchChar('e', branchOpts) or ctx:branchChar('E', branchOpts) then
+        ctx:branchChar('+', branchOpts)
+        ctx:branchChar('-', branchOpts)
+        ctx:stream(constants.DIGIT, capture, true)
+      end
     end
   end
 

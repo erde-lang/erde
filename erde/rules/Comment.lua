@@ -12,17 +12,18 @@ local Comment = { ruleName = 'Comment' }
 
 function Comment.parse(ctx)
   local node = { variant = 'short' }
+  local branchOpts = { pad = false }
 
-  if not ctx:branchStr('--', true) then
+  if not ctx:branchStr('--', branchOpts) then
     error()
   end
 
   local backup = ctx:backup()
-  if ctx:branchChar('[', true) then
+  if ctx:branchChar('[', branchOpts) then
     local equals = {}
     ctx:stream({ ['='] = true }, equals)
 
-    if ctx:branchChar('[', true) then
+    if ctx:branchChar('[', branchOpts) then
       node.variant = 'long'
       node.equals = table.concat(equals)
     else
@@ -33,7 +34,7 @@ function Comment.parse(ctx)
   local capture = {}
 
   if node.variant == 'long' then
-    while not ctx:branchStr(']' .. node.equals .. ']', true) do
+    while not ctx:branchStr(']' .. node.equals .. ']', branchOpts) do
       ctx:consume(1, capture)
     end
   elseif node.variant == 'short' then
