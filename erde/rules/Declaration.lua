@@ -52,10 +52,17 @@ function Declaration.parse(ctx)
     end
   end
 
-  -- TODO: do not allow destructure without assignment
-
   if ctx:branchChar('=') then
     node.exprList = ctx:List({ rule = ctx.Expr })
+  end
+
+  for i, var in ipairs(node.varList) do
+    if var.ruleName == 'Destructure' then
+      if not node.exprList[i] then
+        -- do not allow destructure without assignment
+        error()
+      end
+    end
   end
 
   return node
