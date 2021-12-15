@@ -92,8 +92,8 @@ describe('Number.compile', function()
     if not _VERSION:find('5%.1') then
       -- No eval necessary here. Technically Lua5.1 supports hex exponents,
       -- although it is undocumented
-      assert.eval(0xfp2, compile.number('0xfp2'))
-      assert.eval(0xfp2, compile.number('0xfp2'))
+      assert.eval(0xfp2, compile.Number('0xfp2'))
+      assert.eval(0xfp2, compile.Number('0xfp2'))
 
       -- Need to eval to prevent parsing errors for lower lua versions.
       assert.eval(utils.eval('0xf.1'), compile.Number('0xf.1'))
