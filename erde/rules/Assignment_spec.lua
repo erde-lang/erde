@@ -169,4 +169,14 @@ describe('Assignment.compile', function()
       ]])
     )
   end)
+
+  spec('optchain assignment', function()
+    assert.run(
+      1,
+      compile.Block([[
+        a?.b = 1
+        return 1
+      ]])
+    )
+  end)
 end)

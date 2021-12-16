@@ -45,24 +45,42 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
+local function compileAssignment(ctx, id, expr, op)
+  return op and id .. ' = ' .. ctx.compileBinop(op, id, expr)
+    or id .. ' = ' .. expr
+end
+
 function Assignment.compile(ctx, node)
-  local idList = {}
+  local compiledAssignments = {}
+
   for i, id in ipairs(node.idList) do
-    idList[#idList + 1] = ctx:compile(id)
+    local optChain = id.ruleName == 'OptChain' and ctx:compileOptChain(id)
+    local compiledAssignment = compileAssignment(
+      ctx,
+      optChain and optChain.chain or ctx:compile(id),
+      node.exprList[i] and ctx:compile(node.exprList[i]) or 'nil',
+      node.op
+    )
+
+    if optChain and #optChain.optSubChains > 0 then
+      local optChecks = {}
+      for i, optSubChain in ipairs(optChain.optSubChains) do
+        optChecks[#optChecks + 1] = optSubChain .. ' ~= nil'
+      end
+
+      compiledAssignments[#compiledAssignments + 1] = table.concat({
+        'if',
+        table.concat(optChecks, ' and '),
+        'then',
+        compiledAssignment,
+        'end',
+      }, '\n')
+    else
+      compiledAssignments[#compiledAssignments + 1] = compiledAssignment
+    end
   end
 
-  local exprList = {}
-  for i, expr in ipairs(node.exprList) do
-    exprList[#exprList + 1] = ctx:compile(expr)
-  end
-
-  if node.op then
-    return idList[1]
-      .. ' = '
-      .. ctx.compileBinop(node.op, idList[1], exprList[1])
-  else
-    return table.concat(idList, ',') .. ' = ' .. table.concat(exprList, ',')
-  end
+  return table.concat(compiledAssignments, '\n')
 end
 
 -- -----------------------------------------------------------------------------

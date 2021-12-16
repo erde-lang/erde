@@ -84,65 +84,25 @@ end
 -- -----------------------------------------------------------------------------
 
 function OptChain.compile(ctx, node)
+  local optChain = ctx:compileOptChain(node)
+
+  if #optChain.optSubChains == 0 then
+    return optChain.chain
+  end
+
   local optChecks = {}
-  local subChain = ctx:compile(node.base)
-
-  for i, chainNode in ipairs(node) do
-    if chainNode.optional then
-      optChecks[#optChecks + 1] = 'if ' .. subChain .. ' == nil then return end'
-    end
-
-    local newSubChainFormat
-    if chainNode.variant == 'dotIndex' then
-      subChain = ('%s.%s'):format(subChain, chainNode.value)
-    elseif chainNode.variant == 'bracketIndex' then
-      -- Space around brackets to avoid long string expressions
-      -- [ [=[some string]=] ]
-      subChain = ('%s[ %s ]'):format(subChain, ctx:compile(chainNode.value))
-    elseif chainNode.variant == 'functionCall' then
-      local hasSpread = false
-      for i, arg in ipairs(chainNode.value) do
-        if arg.ruleName == 'Spread' then
-          hasSpread = true
-          break
-        end
-      end
-
-      if hasSpread then
-        local spreadFields = {}
-
-        for i, arg in ipairs(chainNode.value) do
-          spreadFields[i] = arg.ruleName == 'Spread' and arg
-            or { value = ctx:compile(expr) }
-        end
-
-        subChain = ('%s(%s(%s))'):format(
-          subChain,
-          _VERSION:find('5.1') and 'unpack' or 'table.unpack',
-          ctx:Spread(spreadFields)
-        )
-      else
-        local args = {}
-
-        for i, arg in ipairs(chainNode.value) do
-          args[#args + 1] = ctx:compile(arg)
-        end
-
-        subChain = subChain .. '(' .. table.concat(args, ',') .. ')'
-      end
-    elseif chainNode.variant == 'method' then
-      subChain = subChain .. ':' .. chainNode.value
-    end
+  for i, optSubChain in ipairs(optChain.optSubChains) do
+    optChecks[#optChecks + 1] = 'if '
+      .. optSubChain
+      .. ' == nil then return end'
   end
 
-  if #optChecks == 0 then
-    return subChain
-  end
-
-  return ('(function() %s return %s end)()'):format(
-    table.concat(optChecks, ' '),
-    subChain
-  )
+  return table.concat({
+    '(function()',
+    table.concat(optChecks, '\n'),
+    'return ' .. optChain.chain,
+    'end)()',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
