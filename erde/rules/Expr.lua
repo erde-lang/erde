@@ -96,7 +96,7 @@ function Expr.compile(ctx, node)
         'end)()',
       }, '\n'):format(lhs, rhs, ctx:compile(node[3]))
     else
-      return ctx.compileBinop(op, lhs, rhs)
+      return ctx:compileBinop(op, lhs, rhs)
     end
   end
 end

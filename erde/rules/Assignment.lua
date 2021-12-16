@@ -46,7 +46,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function compileAssignment(ctx, id, expr, op)
-  return op and id .. ' = ' .. ctx.compileBinop(op, id, expr)
+  return op and id .. ' = ' .. ctx:compileBinop(op, id, expr)
     or id .. ' = ' .. expr
 end
 

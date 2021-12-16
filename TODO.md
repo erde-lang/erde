@@ -1,6 +1,5 @@
 # TODO
 
-- use `:` methods for CompilerContext
 - stdlib
   - special stdlib call syntax: `compileParts >> !join`
   - inline definitions
