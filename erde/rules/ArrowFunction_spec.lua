@@ -8,7 +8,6 @@ describe('ArrowFunction.parse', function()
   spec('skinny arrow function', function()
     assert.has_subtable({
       variant = 'skinny',
-      body = { { ruleName = 'Return' } },
     }, parse.ArrowFunction(
       '() -> { return 1 }'
     ))
@@ -17,7 +16,6 @@ describe('ArrowFunction.parse', function()
   spec('fat arrow function', function()
     assert.has_subtable({
       variant = 'fat',
-      body = { { ruleName = 'Return' } },
     }, parse.ArrowFunction(
       '() => { return 1 }'
     ))
@@ -25,11 +23,26 @@ describe('ArrowFunction.parse', function()
 
   spec('arrow function implicit params', function()
     assert.has_subtable({
-      hasImplicitParams = true,
-      paramName = 'a',
+      params = { { value = 'a' } },
     }, parse.ArrowFunction(
       'a -> {}'
     ))
+    assert.has_subtable({
+      params = { { { name = 'a', variant = 'keyDestruct' } } },
+    }, parse.ArrowFunction(
+      '{ a } -> {}'
+    ))
+    assert.has_subtable({
+      params = { { { name = 'a', variant = 'numberDestruct' } } },
+    }, parse.ArrowFunction(
+      '[ a ] -> {}'
+    ))
+    assert.has_error(function()
+      parse.ArrowFunction('a = 1 -> {}')
+    end)
+    assert.has_error(function()
+      parse.ArrowFunction('...a -> {}')
+    end)
     assert.has_error(function()
       parse.ArrowFunction('a.b -> {}')
     end)
@@ -49,11 +62,8 @@ describe('ArrowFunction.parse', function()
         { value = '2' },
       },
     }, parse.ArrowFunction(
-      '() => (1, 2)'
+      '() -> (1, 2)'
     ))
-    assert.has_error(function()
-      parse.ArrowFunction('() ->')
-    end)
     assert.has_error(function()
       parse.ArrowFunction('() -> ()')
     end)
@@ -67,13 +77,6 @@ end)
 describe('ArrowFunction.compile', function()
   spec('skinny arrow function', function()
     assert.eval('function', compile.OptChain('type(() -> {})'))
-    assert.run(
-      2,
-      compile.Block([[
-      local a = (x) -> { return x + 1 }
-      return a(1)
-    ]])
-    )
     assert.run(
       3,
       compile.Block([[
@@ -91,14 +94,6 @@ describe('ArrowFunction.compile', function()
         local a = { b = 1 }
         a.c = () => { return self.b + 1 }
         return a:c()
-      ]])
-    )
-    assert.run(
-      2,
-      compile.Block([[
-        local a = { b = 1 }
-        a.c = (x) => { return self.b + x }
-        return a:c(1)
       ]])
     )
   end)
@@ -131,6 +126,20 @@ describe('ArrowFunction.compile', function()
       compile.Block([[
         local a = x -> { return x + 1 }
         return a(1)
+      ]])
+    )
+    assert.run(
+      2,
+      compile.Block([[
+        local a = [ x ] -> { return x + 1 }
+        return a({ 1 })
+      ]])
+    )
+    assert.run(
+      2,
+      compile.Block([[
+        local a = { x } -> { return x + 1 }
+        return a({ x = 1 })
       ]])
     )
     assert.run(

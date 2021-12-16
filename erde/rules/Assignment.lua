@@ -28,9 +28,6 @@ function Assignment.parse(ctx)
     if BINOP_ASSIGNMENT_BLACKLIST[node.op.token] then
       -- These operators cannot be used w/ operator assignment
       error()
-    elseif #node.idList > 1 then
-      -- Cannot use assignment operations w/ more than 1 assignment
-      error()
     else
       ctx:consume(#node.op.token)
     end
@@ -46,7 +43,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function compileAssignment(ctx, id, expr, op)
-  return op and id .. ' = ' .. ctx.compileBinop(op, id, expr)
+  return op and id .. ' = ' .. ctx:compileBinop(op, id, expr)
     or id .. ' = ' .. expr
 end
 

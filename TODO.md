@@ -1,16 +1,14 @@
 # TODO
 
-- use `:` methods for CompilerContext
-- stdlib
-  - special stdlib call syntax: `compileParts >> !join`
-  - inline definitions
 - refactor tests
 - CLI
   - expose parse / compile api
   - implement cli
   - `package.erde`
-- improved error messages (add pcalls, Rule.diagnose)
+- replace moduleBlock w/ block depth
 - formatter (Rule.format)
+- improved error messages (add pcalls, Rule.diagnose)
+- lua love (kaos)
 
 # Long Term TODO
 
@@ -19,8 +17,7 @@
 - rewrite erde in erde
 - Source maps
 - remove closure compilations (ternary, null coalescence, optchain, etc).
-  - analyze usage and inject code (in particular, transform logical operations
-    into if constructs (ex. `local a = b or c ?? d`
+  - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
   - NOTE: cannot simply use functions w/ params (need conditional execution)
 
 # Uncertain Proposals (need community input)

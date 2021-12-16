@@ -37,9 +37,9 @@ function CompilerContext.newTmpName()
   return ('__ERDE_TMP_%d__'):format(tmpNameCounter)
 end
 
-function CompilerContext.compileBinop(op, lhs, rhs)
+function CompilerContext:compileBinop(op, lhs, rhs)
   if op.tag == 'nc' then
-    local ncTmpName = CompilerContext.newTmpName()
+    local ncTmpName = self.newTmpName()
     return table.concat({
       '(function()',
       ('local %s = %s'):format(ncTmpName, lhs),

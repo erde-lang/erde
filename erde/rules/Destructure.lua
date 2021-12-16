@@ -36,7 +36,7 @@ local function parseNumberKeyDestructs(ctx)
 end
 
 function Destructure.parse(ctx)
-  local node = { optional = ctx:branchChar('?') }
+  local node = {}
 
   local destructs = ctx:Switch({
     parseNumberKeyDestructs,
@@ -113,11 +113,6 @@ function Destructure.compile(ctx, node)
           ctx:compile(field.default)
         )
     end
-  end
-
-  if node.optional then
-    table.insert(compileParts, 1, 'if ' .. baseName .. ' ~= nil then')
-    compileParts[#compileParts + 1] = 'end'
   end
 
   table.insert(compileParts, 1, 'local ' .. table.concat(varNames, ','))

@@ -10,15 +10,19 @@ local ArrowFunction = { ruleName = 'ArrowFunction' }
 
 function ArrowFunction.parse(ctx)
   local node = {
-    hasImplicitParams = false,
     hasImplicitReturns = true,
   }
 
   if ctx.bufValue == '(' then
     node.params = ctx:Params()
   else
-    node.paramName = ctx:Name().value
-    node.hasImplicitParams = true
+    node.params = {
+      ruleName = 'Params',
+      ctx:Switch({
+        ctx.Name,
+        ctx.Destructure,
+      }),
+    }
   end
 
   if ctx:branchStr('->') then
@@ -57,13 +61,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function ArrowFunction.compile(ctx, node)
-  local params, paramNames
-  if node.hasImplicitParams then
-    paramNames = { node.paramName }
-  else
-    params = ctx:compile(node.params)
-    paramNames = params.names
-  end
+  local params = ctx:compile(node.params)
+  local paramNames = params.names
 
   if node.variant == 'fat' then
     table.insert(paramNames, 1, 'self')
@@ -82,11 +81,12 @@ function ArrowFunction.compile(ctx, node)
     body = 'return ' .. table.concat(returns, ',')
   end
 
-  return ('function(%s)\n%s\n%s\nend'):format(
-    table.concat(paramNames, ','),
+  return table.concat({
+    'function(' .. table.concat(paramNames, ',') .. ')',
     params and params.prebody or '',
-    body
-  )
+    body,
+    'end',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
