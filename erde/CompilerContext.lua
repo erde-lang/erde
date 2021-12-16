@@ -77,6 +77,61 @@ function CompilerContext.compileBinop(op, lhs, rhs)
   end
 end
 
+function CompilerContext:compileOptChain(node)
+  local chain = self:compile(node.base)
+  local optSubChains = {}
+
+  for i, chainNode in ipairs(node) do
+    if chainNode.optional then
+      optSubChains[#optSubChains + 1] = chain
+    end
+
+    local newSubChainFormat
+    if chainNode.variant == 'dotIndex' then
+      chain = ('%s.%s'):format(chain, chainNode.value)
+    elseif chainNode.variant == 'bracketIndex' then
+      -- Space around brackets to avoid long string expressions
+      -- [ [=[some string]=] ]
+      chain = ('%s[ %s ]'):format(chain, self:compile(chainNode.value))
+    elseif chainNode.variant == 'functionCall' then
+      local hasSpread = false
+      for i, arg in ipairs(chainNode.value) do
+        if arg.ruleName == 'Spread' then
+          hasSpread = true
+          break
+        end
+      end
+
+      if hasSpread then
+        local spreadFields = {}
+
+        for i, arg in ipairs(chainNode.value) do
+          spreadFields[i] = arg.ruleName == 'Spread' and arg
+            or { value = self:compile(expr) }
+        end
+
+        chain = ('%s(%s(%s))'):format(
+          chain,
+          _VERSION:find('5.1') and 'unpack' or 'table.unpack',
+          self:Spread(spreadFields)
+        )
+      else
+        local args = {}
+
+        for i, arg in ipairs(chainNode.value) do
+          args[#args + 1] = self:compile(arg)
+        end
+
+        chain = chain .. '(' .. table.concat(args, ',') .. ')'
+      end
+    elseif chainNode.variant == 'method' then
+      chain = chain .. ':' .. chainNode.value
+    end
+  end
+
+  return { optSubChains = optSubChains, chain = chain }
+end
+
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------

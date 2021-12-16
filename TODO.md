@@ -1,10 +1,10 @@
 # TODO
 
-- allow optional chaining in declarations
-- refactor tests
+- use `:` methods for CompilerContext
 - stdlib
   - special stdlib call syntax: `compileParts >> !join`
   - inline definitions
+- refactor tests
 - CLI
   - expose parse / compile api
   - implement cli
