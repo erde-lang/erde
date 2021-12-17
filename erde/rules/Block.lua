@@ -1,3 +1,5 @@
+local erdestd = require('erde.std')
+
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
@@ -23,6 +25,7 @@ function Block.parse(ctx, opts)
   elseif opts.isModuleBlock then
     node.isModuleBlock = true
     node.moduleNames = {}
+    node.stdNames = ctx.stdNames
     ctx.moduleBlock = node
   else
     ctx.moduleBlock = nil
@@ -42,6 +45,7 @@ function Block.parse(ctx, opts)
       ctx.Function,
       ctx.RepeatUntil,
       ctx.Return,
+      ctx.Std,
       ctx.TryCatch,
       ctx.WhileLoop,
     })
@@ -100,17 +104,29 @@ function Block.compile(ctx, node)
       continueName,
       continueName
     )
-  elseif node.isModuleBlock and #node.moduleNames > 0 then
-    local moduleTableElements = {}
-
-    for i, moduleName in ipairs(node.moduleNames) do
-      moduleTableElements[i] = moduleName .. '=' .. moduleName
+  elseif node.isModuleBlock then
+    local stdDefs = {}
+    for stdName, _ in pairs(node.stdNames) do
+      stdDefs[#stdDefs + 1] = erdestd[stdName].def
     end
 
-    return ('%s\nreturn { %s }'):format(
-      compileBlockStatements(ctx, node),
-      table.concat(moduleTableElements, ',')
-    )
+    if #node.moduleNames == 0 then
+      return table.concat({
+        table.concat(stdDefs, '\n'),
+        compileBlockStatements(ctx, node),
+      }, '\n')
+    else
+      local moduleTableElements = {}
+      for i, moduleName in ipairs(node.moduleNames) do
+        moduleTableElements[i] = moduleName .. '=' .. moduleName
+      end
+
+      return table.concat({
+        table.concat(stdDefs, '\n'),
+        compileBlockStatements(ctx, node),
+        'return { ' .. table.concat(moduleTableElements, ',') .. ' }',
+      }, '\n')
+    end
   else
     return compileBlockStatements(ctx, node)
   end

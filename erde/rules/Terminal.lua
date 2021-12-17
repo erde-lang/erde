@@ -21,6 +21,7 @@ function Terminal.parse(ctx)
   if ctx.bufValue == '(' then
     node = ctx:Switch({
       ctx.ArrowFunction,
+      ctx.Std,
       ctx.OptChain,
       function()
         return ctx:Pipe({
@@ -45,6 +46,7 @@ function Terminal.parse(ctx)
       ctx.Number,
       ctx.String,
       ctx.ArrowFunction, -- Check again for hasImplicitParams!
+      ctx.Std,
       ctx.OptChain,
     })
   end

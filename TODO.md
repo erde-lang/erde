@@ -1,15 +1,13 @@
 # TODO
 
-- stdlib
-  - special stdlib call syntax: `compileParts >> !join`
-  - inline definitions
 - refactor tests
 - CLI
   - expose parse / compile api
   - implement cli
   - `package.erde`
-- improved error messages (add pcalls, Rule.diagnose)
 - formatter (Rule.format)
+- improved error messages (add pcalls, Rule.diagnose)
+- replace moduleBlock w/ block depth
 
 # Long Term TODO
 
