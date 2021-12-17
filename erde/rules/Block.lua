@@ -45,7 +45,6 @@ function Block.parse(ctx, opts)
       ctx.Function,
       ctx.RepeatUntil,
       ctx.Return,
-      ctx.Std,
       ctx.TryCatch,
       ctx.WhileLoop,
     })

@@ -5,9 +5,9 @@
   - expose parse / compile api
   - implement cli
   - `package.erde`
+- replace moduleBlock w/ block depth
 - formatter (Rule.format)
 - improved error messages (add pcalls, Rule.diagnose)
-- replace moduleBlock w/ block depth
 
 # Long Term TODO
 
