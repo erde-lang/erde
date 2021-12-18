@@ -41,10 +41,12 @@ function Terminal.parse(ctx)
   else
     node = ctx:Switch({
       ctx.DoBlock,
+      -- Check ArrowFunction again for implicit params! This must be checked
+      -- before Table for implicit params + destructure
+      ctx.ArrowFunction,
       ctx.Table,
       ctx.Number,
       ctx.String,
-      ctx.ArrowFunction, -- Check again for hasImplicitParams!
       ctx.OptChain,
     })
   end

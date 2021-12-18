@@ -5,6 +5,7 @@
   - expose parse / compile api
   - implement cli
   - `package.erde`
+- nvim plugins!
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
 - improved error messages (add pcalls, Rule.diagnose)
