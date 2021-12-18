@@ -67,7 +67,7 @@ function Expr.compile(ctx, node)
   local op = node.op
 
   if node.variant == 'unop' then
-    local operand = ctx:compile(node[1])
+    local operand = ctx:compile(node.operand)
 
     local function compileUnop(token)
       return table.concat({ token, operand }, ' ')

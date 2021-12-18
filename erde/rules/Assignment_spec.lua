@@ -3,22 +3,31 @@
 -- -----------------------------------------------------------------------------
 
 describe('Assignment.parse', function()
-  spec('single assignment', function()
+  spec('name assignment', function()
     assert.has_subtable({
       idList = { { value = 'a' } },
       exprList = { { value = '3' } },
     }, parse.Assignment(
       'a = 3'
     ))
+  end)
+
+  spec('optchain assignment', function()
     assert.has_subtable({
       idList = { { ruleName = 'OptChain' } },
       exprList = { { value = '3' } },
     }, parse.Assignment(
       'a.b = 3'
     ))
+    assert.has_subtable({
+      idList = { { ruleName = 'OptChain' } },
+      exprList = { { value = '3' } },
+    }, parse.Assignment(
+      'a?.b = 3'
+    ))
   end)
 
-  spec('multiple assignment', function()
+  spec('multiple name assignment', function()
     assert.has_subtable({
       idList = {
         { value = 'a' },
@@ -31,9 +40,12 @@ describe('Assignment.parse', function()
     }, parse.Assignment(
       'a, b = 1, 2'
     ))
+  end)
+
+  spec('multiple optchain assignment', function()
     assert.has_subtable({
       idList = {
-        { value = 'a' },
+        { ruleName = 'OptChain' },
         { ruleName = 'OptChain' },
       },
       exprList = {
@@ -41,20 +53,29 @@ describe('Assignment.parse', function()
         { value = '2' },
       },
     }, parse.Assignment(
-      'a, b.c = 1, 2'
+      'a?.b, x?.y = 1, 2'
     ))
-    assert.has_error(function()
-      parse.Assignment('a, b += 1, 2')
-    end)
-    assert.has_error(function()
-      parse.Declaration('a, = 1')
-    end)
-    assert.has_error(function()
-      parse.Declaration('a, b = 1,')
-    end)
   end)
 
-  spec('binop assignment', function()
+  spec('binop assignments', function()
+    assert.has_subtable({
+      op = { token = '+' },
+      idList = { { value = 'a' } },
+      exprList = { { value = '1' } },
+    }, parse.Assignment(
+      'a += 1'
+    ))
+    assert.has_subtable({
+      op = { token = '+' },
+    }, parse.Assignment(
+      'a, b += 1, 2'
+    ))
+    assert.has_subtable({
+      op = { token = '+' },
+    }, parse.Assignment(
+      'a?.b, x?.y += 1, 2'
+    ))
+
     assert.are.equal('nc', parse.Assignment('a ??= 1').op.tag)
     assert.are.equal('or', parse.Assignment('a |= 1').op.tag)
     assert.are.equal('and', parse.Assignment('a &= 1').op.tag)
@@ -71,13 +92,6 @@ describe('Assignment.parse', function()
     assert.are.equal('intdiv', parse.Assignment('a //= 1').op.tag)
     assert.are.equal('mod', parse.Assignment('a %= 1').op.tag)
     assert.are.equal('exp', parse.Assignment('a ^= 1').op.tag)
-    assert.has_subtable({
-      idList = { { value = 'a' } },
-      op = { tag = 'add' },
-      exprList = { { value = '3' } },
-    }, parse.Assignment(
-      'a += 3'
-    ))
   end)
 
   spec('binop blacklist', function()
@@ -113,7 +127,7 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Assignment.compile', function()
-  spec('assignment', function()
+  spec('name assignment', function()
     assert.run(
       1,
       compile.Block([[
@@ -122,6 +136,9 @@ describe('Assignment.compile', function()
         return a
       ]])
     )
+  end)
+
+  spec('optchain assignment', function()
     assert.run(
       1,
       compile.Block([[
@@ -130,9 +147,17 @@ describe('Assignment.compile', function()
         return a.b
       ]])
     )
+    assert.run(
+      nil,
+      compile.Block([[
+        local a
+        a?.b = 1
+        return a?.b
+      ]])
+    )
   end)
 
-  spec('multiple assignment', function()
+  spec('multiple name assignment', function()
     assert.run(
       3,
       compile.Block([[
@@ -141,12 +166,23 @@ describe('Assignment.compile', function()
         return a + b
       ]])
     )
+  end)
+
+  spec('multiple optchain assignment', function()
     assert.run(
       3,
       compile.Block([[
         local a, b = {}, {}
         a.c, b.d = 1, 2
         return a.c + b.d
+      ]])
+    )
+    assert.run(
+      -1,
+      compile.Block([[
+        local a, b
+        a?.c, b?.d = 1, 2
+        return a?.c ?? b?.d ?? -1
       ]])
     )
   end)
@@ -168,14 +204,12 @@ describe('Assignment.compile', function()
         return a
       ]])
     )
-  end)
-
-  spec('optchain assignment', function()
     assert.run(
-      1,
+      8,
       compile.Block([[
-        a?.b = 1
-        return 1
+        local a, b = 1, 2
+        a, b += 2, 3
+        return a + b
       ]])
     )
   end)
