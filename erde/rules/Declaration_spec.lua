@@ -143,4 +143,15 @@ describe('Declaration.compile', function()
       ]])
     )
   end)
+
+  spec('destructure declaration', function()
+    assert.run(
+      1,
+      compile.Block([[
+        local a = { x = 1 }
+        local { x } = a
+        return x
+      ]])
+    )
+  end)
 end)
