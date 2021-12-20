@@ -29,11 +29,6 @@ function ParserContext:load(input)
   self.moduleBlock = nil
 end
 
-function ParserContext:parse(input)
-  self:load(input)
-  return self:Block({ isModuleBlock = true })
-end
-
 function ParserContext:backup()
   return {
     bufIndex = self.bufIndex,

@@ -18,8 +18,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Spread.compile(ctx, fields)
-  local tableVar = ctx.newTmpName()
-  local lenVar = ctx.newTmpName()
+  local tableVar = ctx:newTmpName()
+  local lenVar = ctx:newTmpName()
 
   local compileParts = {
     'local ' .. tableVar .. ' = {}',
@@ -28,7 +28,7 @@ function Spread.compile(ctx, fields)
 
   for i, field in ipairs(fields) do
     if field.ruleName == Spread.ruleName then
-      local spreadTmpName = ctx.newTmpName()
+      local spreadTmpName = ctx:newTmpName()
       compileParts[#compileParts + 1] = table.concat({
         'local ' .. spreadTmpName .. ' = ' .. ctx:compile(field.value),
         'for key, value in pairs(' .. spreadTmpName .. ') do',

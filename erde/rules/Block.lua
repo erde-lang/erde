@@ -80,7 +80,7 @@ end
 
 function Block.compile(ctx, node)
   if node.isLoopBlock then
-    local continueName = ctx.newTmpName()
+    local continueName = ctx:newTmpName()
 
     for i, continueNode in ipairs(node.continueNodes) do
       continueNode.continueName = continueName

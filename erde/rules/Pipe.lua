@@ -39,14 +39,14 @@ function Pipe.compile(ctx, node)
   end
 
   local pipeArgs = table.concat(initValues, ',')
-  local pipeResult = ctx.newTmpName()
+  local pipeResult = ctx:newTmpName()
   compiled[#compiled + 1] = ('local %s = { %s }'):format(pipeResult, pipeArgs)
 
   for i, pipe in ipairs(node) do
     pipeArgs = pipeResult
-    pipeResult = ctx.newTmpName()
+    pipeResult = ctx:newTmpName()
 
-    local pipeArgsLen = ctx.newTmpName()
+    local pipeArgsLen = ctx:newTmpName()
     compiled[#compiled + 1] = ('local %s = #%s'):format(pipeArgsLen, pipeArgs)
 
     for i, expr in ipairs(pipe[#pipe].value) do
