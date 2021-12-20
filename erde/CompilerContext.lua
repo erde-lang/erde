@@ -13,12 +13,11 @@ for ruleName, compiler in pairs(rules.compile) do
   CompilerContext[ruleName] = compiler
 end
 
-function CompilerContext:compile(node)
-  if type(node) == 'string' then
-    local parserCtx = ParserContext()
-    node = parserCtx:parse(node)
-  end
+function CompilerContext:reset()
+  self.tmpNameCounter = 1
+end
 
+function CompilerContext:compile(node)
   if type(node) ~= 'table' or not rules.compile[node.ruleName] then
     -- TODO
     error('No node compiler for ' .. require('inspect')(node))
@@ -31,10 +30,9 @@ end
 -- Compile Helpers
 -- -----------------------------------------------------------------------------
 
-local tmpNameCounter = 1
-function CompilerContext.newTmpName()
-  tmpNameCounter = tmpNameCounter + 1
-  return ('__ERDE_TMP_%d__'):format(tmpNameCounter)
+function CompilerContext:newTmpName()
+  self.tmpNameCounter = self.tmpNameCounter + 1
+  return ('__ERDE_TMP_%d__'):format(self.tmpNameCounter)
 end
 
 function CompilerContext:compileBinop(op, lhs, rhs)
@@ -137,5 +135,7 @@ end
 -- -----------------------------------------------------------------------------
 
 return function()
-  return setmetatable({}, CompilerContextMT)
+  return setmetatable({
+    tmpNameCounter = 1,
+  }, CompilerContextMT)
 end

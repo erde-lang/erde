@@ -81,7 +81,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Destructure.compile(ctx, node)
-  local baseName = ctx.newTmpName()
+  local baseName = ctx:newTmpName()
   local varNames = {}
   local numberKeyCounter = 1
   local compileParts = {}

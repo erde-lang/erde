@@ -28,8 +28,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function TryCatch.compile(ctx, node)
-  local okName = ctx.newTmpName()
-  local errorName = ctx.newTmpName()
+  local okName = ctx:newTmpName()
+  local errorName = ctx:newTmpName()
 
   return table.concat({
     ('local %s, %s = pcall(function() %s end)'):format(
