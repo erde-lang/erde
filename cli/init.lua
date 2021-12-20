@@ -8,10 +8,20 @@ local erde = require('erde')
 -- Helpers
 -- -----------------------------------------------------------------------------
 
+local function contains(t, element)
+  for i, value in ipairs(t) do
+    if value == element then
+      return true
+    end
+  end
+
+  return false
+end
+
 -- TODO: make this cross platform + error handling?
 -- 1) path separator
 -- 2) Stopping point (dont use $HOME?)
-function getPackage()
+local function getPackage()
   local home = os.getenv('HOME')
   local restoreDir = lfs.currentdir()
 
@@ -34,17 +44,25 @@ function getPackage()
   local parsedPackage = erde.parse(packageContents)
   local compiledPackage = erde.compile(parsedPackage)
 
-  return (loadstring or load)(compiledPackage), packageRoot
+  local loadedPackage = (loadstring or load)(compiledPackage)
+  if not loadedPackage then
+    return nil, nil
+  end
+
+  return loadedPackage(), packageRoot
 end
 
-function traverseDir(root, callback)
+local function traverseDir(root, excludeDirs, callback)
   for fileName in lfs.dir(root) do
     if fileName ~= '.' and fileName ~= '..' and fileName ~= 'package.erde' then
       local filePath = root .. '/' .. fileName
       local attributes = lfs.attributes(filePath)
+
       if attributes ~= nil then
         if attributes.mode == 'directory' then
-          traverseDir(filePath, callback)
+          if not contains(excludeDirs, filePath) then
+            traverseDir(filePath, excludeDirs, callback)
+          end
         elseif attributes.mode == 'file' and filePath:match('%.erde$') then
           callback(filePath)
         end
@@ -59,6 +77,7 @@ end
 
 local cli = argparse('erde')
 cli:add_complete()
+cli:option('-v --version')
 cli:option('-l --luaVersion')
 
 local compile = cli:command('compile')
@@ -75,18 +94,38 @@ local args = cli:parse()
 local package, packageRoot = getPackage()
 local root = args.root or packageRoot or lfs.currentdir()
 
-if args.compile then
-  traverseDir(root, function(srcFilePath)
-    local srcFile = io.open(srcFilePath, 'r')
-    local moduleContents = srcFile:read('*a')
-    srcFile:close()
-    local parsedModule = erde.parse(moduleContents)
-    local compiledModule = erde.compile(parsedModule)
+if args.run then
+elseif args.compile then
+  local includeDirs = { root }
+  local excludeDirs = {}
 
-    local destFilePath = srcFilePath:gsub('.erde$', '.lua')
-    local destFile = io.open(destFilePath, 'w')
-    destFile:write(compiledModule)
+  if package and package.compile then
+    if type(package.compile.include) == 'table' then
+      for i, includeDir in ipairs(package.compile.include) do
+        includeDirs[i] = root .. '/' .. includeDir
+      end
+    end
 
-    print(srcFilePath .. ' -> ' .. destFilePath)
-  end)
+    if type(package.compile.exclude) == 'table' then
+      for i, excludeDir in ipairs(package.compile.exclude) do
+        excludeDirs[i] = root .. '/' .. excludeDir
+      end
+    end
+  end
+
+  for i, includeDir in ipairs(includeDirs) do
+    traverseDir(includeDir, excludeDirs, function(srcFilePath)
+      local srcFile = io.open(srcFilePath, 'r')
+      local moduleContents = srcFile:read('*a')
+      srcFile:close()
+      local parsedModule = erde.parse(moduleContents)
+      local compiledModule = erde.compile(parsedModule)
+
+      local destFilePath = srcFilePath:gsub('.erde$', '.lua')
+      local destFile = io.open(destFilePath, 'w')
+      destFile:write(compiledModule)
+
+      print(srcFilePath .. ' -> ' .. destFilePath)
+    end)
+  end
 end
