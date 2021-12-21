@@ -8,12 +8,11 @@ source = {
 }
 
 description = {
-  summary = 'summary', -- TODO
+  summary = 'A language that compile to Lua.',
   detailed = [[
-      This is an example for the LuaRocks tutorial.
-      Here we would put a detailed, typically
-      paragraph-long description.
-   ]], -- TODO
+    Erde is a language that compiles to Lua. It favors symbols over keywords and
+    adds support to many features commonly found in other programming languages.
+   ]],
   homepage = 'https://erde-lang.github.io/',
   license = 'MIT',
 }

@@ -76,12 +76,16 @@ end
 -- -----------------------------------------------------------------------------
 
 local cli = argparse('erde')
+cli:require_command(false)
 cli:add_complete()
-cli:option('-v --version')
+cli:flag('-v --version')
 cli:option('-l --luaVersion')
+cli:option('--root')
 
 local compile = cli:command('compile')
-compile:option('--root')
+compile:option('--include')
+compile:option('--exclude')
+compile:option('--outDir')
 
 local run = cli:command('run')
 local format = cli:command('format')
@@ -94,20 +98,23 @@ local args = cli:parse()
 local package, packageRoot = getPackage()
 local root = args.root or packageRoot or lfs.currentdir()
 
-if args.run then
+if args.version then
+  print('v0.1.0')
+elseif args.run then
 elseif args.compile then
   local includeDirs = { root }
   local excludeDirs = {}
+  local outDir = args.outDir or package.outDir
 
-  if package and package.compile then
-    if type(package.compile.include) == 'table' then
-      for i, includeDir in ipairs(package.compile.include) do
+  if package then
+    if type(package.include) == 'table' then
+      for i, includeDir in ipairs(package.include) do
         includeDirs[i] = root .. '/' .. includeDir
       end
     end
 
-    if type(package.compile.exclude) == 'table' then
-      for i, excludeDir in ipairs(package.compile.exclude) do
+    if type(package.exclude) == 'table' then
+      for i, excludeDir in ipairs(package.exclude) do
         excludeDirs[i] = root .. '/' .. excludeDir
       end
     end
@@ -122,10 +129,23 @@ elseif args.compile then
       local compiledModule = erde.compile(parsedModule)
 
       local destFilePath = srcFilePath:gsub('.erde$', '.lua')
+      if outDir ~= nil then
+        destFilePath = #includeDirs == 1
+            and destFilePath:gsub(
+              includeDirs[1],
+              root .. '/' .. outDir
+            )
+          or destFilePath:gsub(root, root .. '/' .. outDir)
+      end
+
       local destFile = io.open(destFilePath, 'w')
       destFile:write(compiledModule)
 
-      print(srcFilePath .. ' -> ' .. destFilePath)
+      print(
+        srcFilePath:gsub(root .. '/', '')
+          .. ' -> '
+          .. destFilePath:gsub(root .. '/', '')
+      )
     end)
   end
 end

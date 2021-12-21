@@ -1,9 +1,0 @@
-return {
-  luaVersion = '5.1',
-  run = {},
-  compile = {
-    input = { '' },
-    output = '',
-  },
-  format = {},
-}
