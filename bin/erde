@@ -3,6 +3,7 @@
 local argparse = require('argparse')
 local lfs = require('lfs')
 local erde = require('erde')
+require('erde.loader')
 
 local COMPILE_HEADER_TAG = 'ERDE_META'
 local COMPILE_HEADER = '-- ' .. COMPILE_HEADER_TAG .. '\n'
@@ -136,8 +137,18 @@ cli:option('--include')
 -- Directories to exclude when searching for .erde files.
 cli:option('--exclude')
 
-local run = cli:command('run')
 local format = cli:command('format')
+
+-- -----------------------------------------------------------------------------
+-- Run
+-- -----------------------------------------------------------------------------
+
+local runCmd = cli:command('run')
+runCmd:argument('main', 'Main file to run.')
+
+local function processRunCmd()
+  require(args.main:gsub('%.erde$', ''))
+end
 
 -- -----------------------------------------------------------------------------
 -- Compile
@@ -270,14 +281,14 @@ end
 
 if args.version then
   print('v0.1.0')
+elseif args.run then
+  processRunCmd()
 elseif args.compile then
   processCompileCmd()
-elseif args.run then
-  print('TODO')
-elseif args.format then
-  print('TODO')
 elseif args.clean then
   processCleanCmd()
+elseif args.format then
+  print('TODO')
 else
   -- repl
   print('TODO')
