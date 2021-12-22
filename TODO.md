@@ -2,13 +2,13 @@
 
 - refactor tests
 - CLI
-  - expose parse / compile api
-  - implement cli
-  - `package.erde`
+  - erde loader
+  - `erde run` command
+- lua love (kaos)
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
+- repl
 - improved error messages (add pcalls, Rule.diagnose)
-- lua love (kaos)
 
 # Long Term TODO
 

@@ -19,10 +19,14 @@ description = {
 
 dependencies = {
   'lua >= 5.1, <= 5.4',
+  'argparse >= 0.5',
+	'luafilesystem >= 1.5',
 }
 
-install = {
-  bin = {
-    ['erde'] = 'bin/erde'
+build = {
+  install = {
+    bin = {
+      ['erde'] = 'bin/erde'
+    }
   }
 }
