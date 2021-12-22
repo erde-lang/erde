@@ -4,6 +4,32 @@ local argparse = require('argparse')
 local lfs = require('lfs')
 local erde = require('erde')
 
+local COMPILE_HEADER_TAG = 'ERDE_META'
+local COMPILE_HEADER = '-- ' .. COMPILE_HEADER_TAG .. '\n'
+
+-- -----------------------------------------------------------------------------
+-- Path Helpers
+-- -----------------------------------------------------------------------------
+
+local path = { sep = _G.package.config:sub(1, 1) }
+
+function path.join(...)
+  return table.concat({ ... }, path.sep):gsub(path.sep .. '+', path.sep)
+end
+
+local fs = {}
+
+function fs.exists(filePath)
+  local file = io.open(filePath, 'r')
+
+  if file ~= nil then
+    file:close()
+    return true
+  end
+
+  return false
+end
+
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
@@ -19,24 +45,23 @@ local function contains(t, element)
 end
 
 -- TODO: make this cross platform + error handling?
--- 1) path separator
 -- 2) Stopping point (dont use $HOME?)
 local function getPackage()
   local home = os.getenv('HOME')
   local restoreDir = lfs.currentdir()
 
   local packageRoot = restoreDir
-  local packageFile = io.open(packageRoot .. '/package.erde')
+  local packageFile = io.open(path.join(packageRoot, 'package.erde'), 'r')
   while packageFile == nil and packageRoot:find(home) do
     lfs.chdir('..')
     packageRoot = lfs.currentdir()
-    packageFile = io.open(packageRoot .. '/package.erde')
+    packageFile = io.open(path.join(packageRoot, 'package.erde'), 'r')
   end
 
   lfs.chdir(restoreDir)
 
   if packageFile == nil then
-    return nil, nil
+    return {}, nil
   end
 
   local packageContents = packageFile:read('*a')
@@ -46,7 +71,7 @@ local function getPackage()
 
   local loadedPackage = (loadstring or load)(compiledPackage)
   if not loadedPackage then
-    return nil, nil
+    return {}, nil
   end
 
   return loadedPackage(), packageRoot
@@ -55,7 +80,7 @@ end
 local function traverseDir(root, excludeDirs, callback)
   for fileName in lfs.dir(root) do
     if fileName ~= '.' and fileName ~= '..' and fileName ~= 'package.erde' then
-      local filePath = root .. '/' .. fileName
+      local filePath = path.join(root, fileName)
       local attributes = lfs.attributes(filePath)
 
       if attributes ~= nil then
@@ -63,12 +88,28 @@ local function traverseDir(root, excludeDirs, callback)
           if not contains(excludeDirs, filePath) then
             traverseDir(filePath, excludeDirs, callback)
           end
-        elseif attributes.mode == 'file' and filePath:match('%.erde$') then
+        elseif attributes.mode == 'file' then
           callback(filePath)
         end
       end
     end
   end
+end
+
+local function traverseErdeFiles(root, excludeDirs, callback)
+  traverseDir(root, excludeDirs, function(filePath)
+    if filePath:match('%.erde$') then
+      callback(filePath)
+    end
+  end)
+end
+
+local function traverseLuaFiles(root, excludeDirs, callback)
+  traverseDir(root, excludeDirs, function(filePath)
+    if filePath:match('%.lua$') then
+      callback(filePath)
+    end
+  end)
 end
 
 -- -----------------------------------------------------------------------------
@@ -78,74 +119,166 @@ end
 local cli = argparse('erde')
 cli:require_command(false)
 cli:add_complete()
-cli:flag('-v --version')
+
+-- The current Erde version.
+cli:flag('-v --version', 'Print version and exit.')
+
+-- The Lua version to use.
 cli:option('-l --luaVersion')
+
+-- The root directory. All paths (such as those given in --include / --exclude)
+-- are assumed to be relative to the root.
 cli:option('--root')
 
-local compile = cli:command('compile')
-compile:option('--include')
-compile:option('--exclude')
-compile:option('--outDir')
+-- Directories to traverse when searching for .erde files.
+cli:option('--include')
+
+-- Directories to exclude when searching for .erde files.
+cli:option('--exclude')
 
 local run = cli:command('run')
 local format = cli:command('format')
 
 -- -----------------------------------------------------------------------------
--- Main
+-- Compile
 -- -----------------------------------------------------------------------------
 
-local args = cli:parse()
-local package, packageRoot = getPackage()
-local root = args.root or packageRoot or lfs.currentdir()
+local compileCmd = cli:command('compile')
 
-if args.version then
-  print('v0.1.0')
-elseif args.run then
-elseif args.compile then
-  local includeDirs = { root }
-  local excludeDirs = {}
-  local outDir = args.outDir or package.outDir
+-- Allow specifying files on command line. If this is present, includeDirs will
+-- NOT default to root.
+compileCmd:argument('files', 'Files to compile.'):args('*')
 
-  if package then
-    if type(package.include) == 'table' then
-      for i, includeDir in ipairs(package.include) do
-        includeDirs[i] = root .. '/' .. includeDir
-      end
+-- The directory to write compiled files to.
+compileCmd:option('--outDir')
+
+local function compileFile(srcFilePath)
+  local srcFile = io.open(srcFilePath, 'r')
+  local moduleContents = srcFile:read('*a')
+  srcFile:close()
+
+  local parsedModule = erde.parse(moduleContents)
+  local compiledModule = COMPILE_HEADER .. erde.compile(parsedModule)
+
+  local destFilePath = srcFilePath:gsub('.erde$', '.lua')
+  if outDir ~= nil then
+    -- Collapse file structure if there is only 1 include dir
+    if #includeDirs == 1 then
+      destFilePath = destFilePath:gsub(
+        includeDirs[1],
+        outDir
+      )
+    else
+      destFilePath = destFilePath:gsub(root, outDir)
     end
+  end
 
-    if type(package.exclude) == 'table' then
-      for i, excludeDir in ipairs(package.exclude) do
-        excludeDirs[i] = root .. '/' .. excludeDir
-      end
+  local destFile = io.open(destFilePath, 'w')
+  destFile:write(compiledModule)
+
+  print(
+    srcFilePath:gsub(root .. path.sep, '')
+    .. ' -> '
+    .. destFilePath:gsub(root .. path.sep, '')
+  )
+end
+
+local function processCompileCmd()
+  for i, fileName in ipairs(args.files) do
+    if fileName:match('%.erde$') then
+      compileFile(path.join(root, fileName))
     end
   end
 
   for i, includeDir in ipairs(includeDirs) do
-    traverseDir(includeDir, excludeDirs, function(srcFilePath)
-      local srcFile = io.open(srcFilePath, 'r')
-      local moduleContents = srcFile:read('*a')
-      srcFile:close()
-      local parsedModule = erde.parse(moduleContents)
-      local compiledModule = erde.compile(parsedModule)
-
-      local destFilePath = srcFilePath:gsub('.erde$', '.lua')
-      if outDir ~= nil then
-        destFilePath = #includeDirs == 1
-            and destFilePath:gsub(
-              includeDirs[1],
-              root .. '/' .. outDir
-            )
-          or destFilePath:gsub(root, root .. '/' .. outDir)
-      end
-
-      local destFile = io.open(destFilePath, 'w')
-      destFile:write(compiledModule)
-
-      print(
-        srcFilePath:gsub(root .. '/', '')
-          .. ' -> '
-          .. destFilePath:gsub(root .. '/', '')
-      )
-    end)
+    traverseErdeFiles(includeDir, excludeDirs, compileFile)
   end
+end
+
+-- -----------------------------------------------------------------------------
+-- Clean
+-- -----------------------------------------------------------------------------
+
+local cleanCmd = cli:command('clean')
+
+-- Allow specifying files on command line. If this is present, includeDirs will
+-- NOT default to root.
+cleanCmd:argument('dirs', 'Directories to clean.'):args('*')
+
+-- Clean all Erde generated files from the root. By default only files that are
+-- generated by the current configuration are cleaned.
+cleanCmd:flag('--hard')
+
+local function cleanFile(filePath)
+  local file = io.open(filePath, 'r')
+  local fileHeader = file:read('*l')
+  file:close()
+  
+  if fileHeader and fileHeader:find(COMPILE_HEADER_TAG) then
+    os.remove(filePath)
+  end
+end
+
+local function processCleanCmd()
+  if args.hard then
+    traverseLuaFiles(root, excludeDirs, cleanFile)
+  end
+
+  if #args.dirs > 0 then
+    for i, cleanDir in ipairs(args.dirs) do
+      traverseLuaFiles(cleanDir, excludeDirs, cleanFile)
+    end
+  else
+    for i, includeDir in ipairs(includeDirs) do
+      traverseLuaFiles(includeDir, excludeDirs, cleanFile)
+    end
+
+    if outDir ~= nil and fs.exists(outDir) then
+      traverseLuaFiles(outDir, {}, cleanFile)
+      os.remove(outDir)
+    end
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Main
+-- -----------------------------------------------------------------------------
+
+args = cli:parse()
+cwd = lfs.currentdir()
+package, packageRoot = getPackage()
+root = args.root or packageRoot or cwd
+
+outDir = args.outDir or package.outDir
+outDir = outDir and path.join(root, outDir) or nil
+
+includeDirs = {}
+excludeDirs = {}
+if package then
+  if type(package.include) == 'table' then
+    for i, includeDir in ipairs(package.include) do
+      includeDirs[i] = path.join(root, includeDir)
+    end
+  end
+
+  if type(package.exclude) == 'table' then
+    for i, excludeDir in ipairs(package.exclude) do
+      excludeDirs[i] = path.join(root, excludeDir)
+    end
+  end
+end
+
+if args.version then
+  print('v0.1.0')
+elseif args.compile then
+  processCompileCmd()
+elseif args.run then
+  print('TODO')
+elseif args.format then
+  print('TODO')
+elseif args.clean then
+  processCleanCmd()
+else
+  -- repl
+  print('TODO')
 end
