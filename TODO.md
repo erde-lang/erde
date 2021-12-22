@@ -1,14 +1,14 @@
 # TODO
 
 - refactor tests
-- CLI
-  - erde loader
-  - `erde run` command
 - lua love (kaos)
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
 - repl
 - improved error messages (add pcalls, Rule.diagnose)
+- CLI
+  - `erde format`
+  - `erde` REPL
 
 # Long Term TODO
 
