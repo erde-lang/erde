@@ -1,13 +1,14 @@
 # TODO
 
-- refactor tests
-- repl
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
 - improved error messages (add pcalls, Rule.diagnose)
+  - pcalls + Rule.diagnose
+  - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)
 
 # Long Term TODO
 
+- erde REPL
 - add real README
 - release v0.1.0
 - rewrite erde in erde
