@@ -85,6 +85,39 @@ describe('Params.compile', function()
     )
   end)
 
+  spec('optional params', function()
+    assert.run(
+      2,
+      compile.Block([[
+        local function test(a = 2) {
+          return a
+        }
+        return test()
+      ]])
+    )
+  end)
+
+  spec('params varargs', function()
+    assert.run(
+      'hello.world',
+      compile.Block([[
+        local function test(...) {
+          return table.concat({ ... }, '.')
+        }
+        return test('hello', 'world')
+      ]])
+    )
+    assert.run(
+      'hello.world',
+      compile.Block([[
+        local function test(...args) {
+          return table.concat(args, '.')
+        }
+        return test('hello', 'world')
+      ]])
+    )
+  end)
+
   spec('destructure params', function()
     assert.run(
       3,

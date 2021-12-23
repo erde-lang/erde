@@ -264,22 +264,27 @@ end
 
 function ParserContext:List(opts)
   local list = {}
+  local hasTrailingComma = false
 
   repeat
     local node = self:Try(opts.rule)
-
-    if not node and #list > 0 and not opts.allowTrailingComma then
-      error()
+    if not node then
+      break
     end
 
+    hasTrailingComma = self:branchChar(',')
     list[#list + 1] = node
-  until not node or not self:branchChar(',')
+  until not hasTrailingComma
 
-  if not opts.allowEmpty and #list == 0 then
+  if #list > 0 and hasTrailingComma and not opts.allowTrailingComma then
     error()
   end
 
-  return list
+  if #list == 0 and not opts.allowEmpty then
+    error()
+  end
+
+  return list, hasTrailingComma
 end
 
 -- -----------------------------------------------------------------------------

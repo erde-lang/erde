@@ -1,14 +1,10 @@
 # TODO
 
 - refactor tests
-- lua love (kaos)
+- repl
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
-- repl
 - improved error messages (add pcalls, Rule.diagnose)
-- CLI
-  - `erde format`
-  - `erde` REPL
 
 # Long Term TODO
 

@@ -35,7 +35,7 @@ describe('Expr.parse', function()
     end
   end)
 
-  spec('left associative op precedence', function()
+  spec('left associative binop precedence', function()
     assert.has_subtable({
       op = { tag = 'add' },
       {
@@ -180,5 +180,30 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('Expr.compile', function()
-  -- TODO
+  spec('left associative binop precedence', function()
+    assert.eval(5, compile.Expr('1 * 2 + 3'))
+    assert.eval(7, compile.Expr('1 + 2 * 3'))
+    assert.eval(11, compile.Expr('1 + 2 * 3 + 4'))
+  end)
+
+  spec('right associative binop precedence', function()
+    assert.eval(512, compile.Expr('2 ^ 3 ^ 2'))
+    assert.eval(7, compile.Expr('2 ^ 2 + 3'))
+  end)
+
+  spec('binop parens', function()
+    assert.eval(25, compile.Expr('5 * (2 + 3)'))
+  end)
+
+  spec('unops', function()
+    assert.eval(-6, compile.Expr('2 * -3'))
+    assert.eval(-6, compile.Expr('-2 * 3'))
+    assert.eval(-8, compile.Expr('-2 ^ 3'))
+  end)
+
+  spec('ternary operator', function()
+    assert.eval(3, compile.Expr('false ? 2 : 3'))
+    assert.eval(2, compile.Expr('true ? 2 : 3'))
+    assert.eval(7, compile.Expr('false ? -2 : 3 + 4'))
+  end)
 end)
