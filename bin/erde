@@ -290,6 +290,5 @@ elseif args.clean then
 elseif args.format then
   print('TODO')
 else
-  -- repl
-  print('TODO')
+  print('REPL not yet supported.')
 end
