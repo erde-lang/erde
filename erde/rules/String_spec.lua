@@ -4,6 +4,7 @@
 
 describe('String.parse', function()
   spec('short string', function()
+    assert.has_subtable({ '' }, parse.String('""'))
     assert.has_subtable({ 'hello' }, parse.String('"hello"'))
     assert.has_subtable({ 'hello' }, parse.String("'hello'"))
     assert.has_subtable({ 'hello\\nworld' }, parse.String("'hello\\nworld'"))

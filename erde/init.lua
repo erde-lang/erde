@@ -21,11 +21,15 @@ function erde.run(input)
   local ast = erde.parse(input)
   local source = erde.compile(ast)
 
-  local loader = (load or loadstring)(source)
+  local loader, err = (loadstring or load)(source)
   if type(loader) == 'function' then
     return loader()
   else
-    error('Failed to load compiled Lua.')
+    error(table.concat({
+      'Failed to load compiled Lua.',
+      'Error: ' .. err,
+      'Compiled Code: ' .. source,
+    }, '\n'))
   end
 end
 
