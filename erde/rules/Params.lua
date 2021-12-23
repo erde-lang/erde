@@ -60,7 +60,7 @@ function Params.compile(ctx, node)
 
     if param.default then
       prebody[#prebody + 1] = 'if ' .. name .. ' == nil then'
-      prebody[#prebody + 1] = ctx:compile(param.default)
+      prebody[#prebody + 1] = name .. ' = ' .. ctx:compile(param.default)
       prebody[#prebody + 1] = 'end'
     end
 

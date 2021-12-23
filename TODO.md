@@ -26,5 +26,7 @@
 - decorators
 - nested break
 - `scope` keyword (allow scoped blocks)
-    - ex) `local x = scope { return 4 }`
-    - useful for grouping logical computations
+  - ex) `local x = scope { return 4 }`
+  - useful for grouping logical computations
+- `defer` keyword
+  - ex) `defer { return myDefaultExport }`
