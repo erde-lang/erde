@@ -1,14 +1,10 @@
 # TODO
 
 - refactor tests
-- lua love (kaos)
+- repl
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
-- repl
 - improved error messages (add pcalls, Rule.diagnose)
-- CLI
-  - `erde format`
-  - `erde` REPL
 
 # Long Term TODO
 
@@ -26,5 +22,7 @@
 - decorators
 - nested break
 - `scope` keyword (allow scoped blocks)
-    - ex) `local x = scope { return 4 }`
-    - useful for grouping logical computations
+  - ex) `local x = scope { return 4 }`
+  - useful for grouping logical computations
+- `defer` keyword
+  - ex) `defer { return myDefaultExport }`

@@ -12,7 +12,7 @@ function Params.parse(ctx)
   return ctx:Parens({
     demand = true,
     rule = function()
-      local node = ctx:List({
+      local node, hasTrailingComma = ctx:List({
         allowEmpty = true,
         allowTrailingComma = true,
         rule = function()
@@ -29,7 +29,7 @@ function Params.parse(ctx)
         end,
       })
 
-      if ctx:branchStr('...') then
+      if (#node == 0 or hasTrailingComma) and ctx:branchStr('...') then
         node[#node + 1] = {
           varargs = true,
           name = ctx:Try(ctx.Name),
@@ -51,7 +51,15 @@ function Params.compile(ctx, node)
 
   for i, param in ipairs(node) do
     local name, destructure
-    if param.ruleName == 'Name' then
+
+    if param.varargs then
+      name = '...'
+      if param.name then
+        prebody[#prebody + 1] = 'local '
+          .. ctx:compile(param.name)
+          .. ' = { ... }'
+      end
+    elseif param.ruleName == 'Name' then
       name = ctx:compile(param)
     else
       destructure = ctx:compile(param)
@@ -60,7 +68,7 @@ function Params.compile(ctx, node)
 
     if param.default then
       prebody[#prebody + 1] = 'if ' .. name .. ' == nil then'
-      prebody[#prebody + 1] = ctx:compile(param.default)
+      prebody[#prebody + 1] = name .. ' = ' .. ctx:compile(param.default)
       prebody[#prebody + 1] = 'end'
     end
 

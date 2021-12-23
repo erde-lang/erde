@@ -31,6 +31,7 @@ C.TERMINALS = {
   'true',
   'false',
   'nil',
+  '...',
 }
 
 -- -----------------------------------------------------------------------------
@@ -41,7 +42,8 @@ C.LEFT_ASSOCIATIVE = -1
 C.RIGHT_ASSOCIATIVE = 1
 
 C.OP_BLACKLIST = {
-  '>>',
+  '>>', -- Custom rule for pipes
+  '--', -- Do not parse comments as substraction!
 }
 
 C.UNOPS = {

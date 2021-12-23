@@ -60,7 +60,7 @@ function String.parse(ctx)
     end
   end
 
-  if #capture > 0 then
+  if #node == 0 or #capture > 0 then
     node[#node + 1] = table.concat(capture)
   end
 
