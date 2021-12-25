@@ -17,21 +17,26 @@ function Block.parse(ctx, opts)
   if opts.isLoopBlock then
     node.isLoopBlock = true
     node.continueNodes = {}
-    ctx.loopBlock = node
-  elseif opts.isFunctionBlock then
-    -- Reset loopBlock for function blocks. Break / Continue cannot
-    -- traverse these.
-    ctx.loopBlock = nil
   elseif opts.isModuleBlock then
     node.isModuleBlock = true
     node.moduleNames = {}
     node.stdNames = ctx.stdNames
-    ctx.moduleBlock = node
-  else
-    ctx.moduleBlock = nil
   end
 
   repeat
+    -- Run this on ever iteration in case nested blocks change values
+    if opts.isLoopBlock then
+      ctx.loopBlock = node
+    elseif opts.isFunctionBlock then
+      -- Reset loopBlock for function blocks. Break / Continue cannot
+      -- traverse these.
+      ctx.loopBlock = nil
+    elseif opts.isModuleBlock then
+      ctx.moduleBlock = node
+    else
+      ctx.moduleBlock = nil
+    end
+
     local statement = ctx:Switch({
       ctx.Assignment,
       ctx.Break,
