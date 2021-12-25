@@ -9,7 +9,7 @@ function erde.parse(input)
   -- TODO: remove node refs before returning (for example Continue nodes
   -- pointing back to the loopBlock)
   parserCtx:load(input)
-  return parserCtx:Block({ isModuleBlock = true })
+  return parserCtx:Block()
 end
 
 function erde.compile(ast)

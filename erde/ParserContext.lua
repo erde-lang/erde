@@ -12,41 +12,51 @@ for ruleName, parser in pairs(rules.parse) do
   ParserContext[ruleName] = parser
 end
 
-function ParserContext:load(input)
+function ParserContext:reset()
   self.buffer = {}
-  for i = 1, #input do
-    self.buffer[i] = input:sub(i, i)
-  end
-  self.buffer[#self.buffer + 1] = constants.EOF
-
   self.bufIndex = 1
-  self.bufValue = self.buffer[self.bufIndex]
+  self.bufValue = constants.EOF
   self.line = 1
   self.column = 1
 
-  self.stdNames = {}
+  self.blockDepth = 0
+
+  -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
+  -- RepeatUntil, WhileLoop). This is used to validate and link Break and
+  -- Continue statements.
   self.loopBlock = nil
+
+  -- Keeps track of the top level Block. This is used to register module
+  -- nodes when using the 'module' scope.
   self.moduleBlock = nil
 end
 
+function ParserContext:load(input)
+  self:reset()
+
+  for i = 1, #input do
+    self.buffer[i] = input:sub(i, i)
+  end
+
+  self.buffer[#self.buffer + 1] = constants.EOF
+  self.bufIndex = 1
+  self.bufValue = self.buffer[self.bufIndex]
+end
+
 function ParserContext:backup()
-  return {
-    bufIndex = self.bufIndex,
-    bufValue = self.bufValue,
-    line = self.line,
-    column = self.column,
-    loopBlock = self.loopBlock,
-    moduleBlock = self.moduleBlock,
-  }
+  local backup = {}
+
+  for key, value in pairs(self) do
+    backup[key] = value
+  end
+
+  return backup
 end
 
 function ParserContext:restore(backup)
-  self.bufIndex = backup.bufIndex
-  self.bufValue = backup.bufValue
-  self.line = backup.line
-  self.column = backup.column
-  self.loopBlock = backup.loopBlock
-  self.moduleBlock = backup.moduleBlock
+  for key, value in pairs(backup) do
+    self[key] = value
+  end
 end
 
 function ParserContext:throw(err)
@@ -292,23 +302,7 @@ end
 -- -----------------------------------------------------------------------------
 
 return function()
-  return setmetatable({
-    buffer = {},
-    bufIndex = 1,
-    bufValue = 0,
-    line = 1,
-    column = 1,
-
-    -- Keeps track of the referenced erdestd calls.
-    stdNames = {},
-
-    -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
-    -- RepeatUntil, WhileLoop). This is used to validate and link Break and
-    -- Continue statements.
-    loopBlock = nil,
-
-    -- Keeps track of the top level Block. This is used to register module
-    -- nodes when using the 'module' scope.
-    moduleBlock = nil,
-  }, ParserContextMT)
+  local newParserCtx = setmetatable({}, ParserContextMT)
+  newParserCtx:reset()
+  return newParserCtx
 end

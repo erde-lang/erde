@@ -1,5 +1,3 @@
-local erdestd = require('erde.std')
-
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
@@ -11,27 +9,34 @@ local Block = { ruleName = 'Block' }
 -- -----------------------------------------------------------------------------
 
 function Block.parse(ctx, opts)
+  ctx.blockDepth = ctx.blockDepth + 1
   opts = opts or {}
-  local node = {}
 
-  if opts.isLoopBlock then
-    node.isLoopBlock = true
-    node.continueNodes = {}
-    ctx.loopBlock = node
-  elseif opts.isFunctionBlock then
-    -- Reset loopBlock for function blocks. Break / Continue cannot
-    -- traverse these.
-    ctx.loopBlock = nil
-  elseif opts.isModuleBlock then
-    node.isModuleBlock = true
-    node.moduleNames = {}
-    node.stdNames = ctx.stdNames
-    ctx.moduleBlock = node
-  else
-    ctx.moduleBlock = nil
-  end
+  local node = {
+    blockDepth = ctx.blockDepth,
+
+    -- Table for Continue nodes to register themselves.
+    continueNodes = {},
+
+    -- Table for Declaration and Function nodes to register `module` scope
+    -- variables.
+    moduleNames = {},
+  }
 
   repeat
+    -- Run this on ever iteration in case nested blocks change values
+    if opts.isLoopBlock then
+      ctx.loopBlock = node
+    elseif opts.isFunctionBlock then
+      -- Reset loopBlock for function blocks. Break / Continue cannot
+      -- traverse these.
+      ctx.loopBlock = nil
+    elseif node.blockDepth == 1 then
+      ctx.moduleBlock = node
+    else
+      ctx.moduleBlock = nil
+    end
+
     local statement = ctx:Switch({
       ctx.Assignment,
       ctx.Break,
@@ -52,15 +57,17 @@ function Block.parse(ctx, opts)
     node[#node + 1] = statement
   until not statement
 
-  if opts.isModuleBlock and #node.moduleNames > 0 then
+  if #node.moduleNames > 0 then
     for i, statement in ipairs(node) do
       if statement.ruleName == 'Return' then
         -- Block cannot use both `return` and `module`
+        -- TODO: not good enough! What about conditional return?
         error()
       end
     end
   end
 
+  ctx.blockDepth = ctx.blockDepth - 1
   return node
 end
 
@@ -79,7 +86,7 @@ local function compileBlockStatements(ctx, node)
 end
 
 function Block.compile(ctx, node)
-  if node.isLoopBlock then
+  if #node.continueNodes > 0 then
     local continueName = ctx:newTmpName()
 
     for i, continueNode in ipairs(node.continueNodes) do
@@ -103,29 +110,16 @@ function Block.compile(ctx, node)
       continueName,
       continueName
     )
-  elseif node.isModuleBlock then
-    local stdDefs = {}
-    for stdName, _ in pairs(node.stdNames) do
-      stdDefs[#stdDefs + 1] = erdestd[stdName].def
+  elseif #node.moduleNames > 0 then
+    local moduleTableElements = {}
+    for i, moduleName in ipairs(node.moduleNames) do
+      moduleTableElements[i] = moduleName .. '=' .. moduleName
     end
 
-    if #node.moduleNames == 0 then
-      return table.concat({
-        table.concat(stdDefs, '\n'),
-        compileBlockStatements(ctx, node),
-      }, '\n')
-    else
-      local moduleTableElements = {}
-      for i, moduleName in ipairs(node.moduleNames) do
-        moduleTableElements[i] = moduleName .. '=' .. moduleName
-      end
-
-      return table.concat({
-        table.concat(stdDefs, '\n'),
-        compileBlockStatements(ctx, node),
-        'return { ' .. table.concat(moduleTableElements, ',') .. ' }',
-      }, '\n')
-    end
+    return table.concat({
+      compileBlockStatements(ctx, node),
+      'return { ' .. table.concat(moduleTableElements, ',') .. ' }',
+    }, '\n')
   else
     return compileBlockStatements(ctx, node)
   end

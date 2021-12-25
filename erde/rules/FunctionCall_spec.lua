@@ -14,31 +14,4 @@ describe('FunctionCall.parse', function()
       parse.FunctionCall('hello()')
     end)
   end)
-
-  spec('stdlib', function()
-    assert.has_subtable({
-      base = {
-        value = '__ERDESTD_SPLIT__',
-      },
-      {
-        optional = false,
-        variant = 'functionCall',
-      },
-    }, parse.FunctionCall(
-      '!split("hello world")'
-    ))
-  end)
-end)
-
--- -----------------------------------------------------------------------------
--- Compile
--- -----------------------------------------------------------------------------
-
-describe('FunctionCall.compile', function()
-  spec('stdlib', function()
-    assert.run(
-      { 'hello', 'world' },
-      compile.Block('return !split("hello world")', { isModuleBlock = true })
-    )
-  end)
 end)

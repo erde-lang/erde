@@ -21,8 +21,7 @@ describe('Function.parse', function()
         names = { 'a' },
       },
     }, parse.Block(
-      'module function a() {}',
-      { isModuleBlock = true }
+      'module function a() {}'
     ))
   end)
 
@@ -73,14 +72,11 @@ describe('Function.compile', function()
   end)
 
   spec('module function', function()
-    local testModule = utils.run(compile.Block(
-      [[
-        module function test() {
-          return 1
-        }
-      ]],
-      { isModuleBlock = true }
-    ))
+    local testModule = utils.run(compile.Block([[
+      module function test() {
+        return 1
+      }
+    ]]))
     assert.are.equal(1, testModule.test())
   end)
 
