@@ -24,7 +24,6 @@ function ParserContext:load(input)
   self.line = 1
   self.column = 1
 
-  self.stdNames = {}
   self.loopBlock = nil
   self.moduleBlock = nil
 end
@@ -298,9 +297,6 @@ return function()
     bufValue = 0,
     line = 1,
     column = 1,
-
-    -- Keeps track of the referenced erdestd calls.
-    stdNames = {},
 
     -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
     -- RepeatUntil, WhileLoop). This is used to validate and link Break and
