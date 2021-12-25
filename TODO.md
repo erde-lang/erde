@@ -1,6 +1,5 @@
 # TODO
 
-- remove erdestd
 - replace moduleBlock w/ block depth
 - formatter (Rule.format)
 - improved error messages (add pcalls, Rule.diagnose)
