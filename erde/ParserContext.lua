@@ -19,6 +19,8 @@ function ParserContext:reset()
   self.line = 1
   self.column = 1
 
+  self.blockDepth = 0
+
   -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
   -- RepeatUntil, WhileLoop). This is used to validate and link Break and
   -- Continue statements.

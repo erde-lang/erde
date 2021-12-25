@@ -26,8 +26,7 @@ describe('Declaration.parse', function()
         varList = { { value = 'abc' } },
       },
     }, parse.Block(
-      'module abc',
-      { isModuleBlock = true }
+      'module abc'
     ))
     assert.has_subtable({
       {
@@ -36,8 +35,7 @@ describe('Declaration.parse', function()
         exprList = { { value = '2' } },
       },
     }, parse.Block(
-      'module abc = 2',
-      { isModuleBlock = true }
+      'module abc = 2'
     ))
   end)
 
@@ -118,10 +116,7 @@ describe('Declaration.compile', function()
   end)
 
   spec('module declaration', function()
-    assert.run(
-      { a = 1 },
-      compile.Block('module a = 1', { isModuleBlock = true })
-    )
+    assert.run({ a = 1 }, compile.Block('module a = 1'))
   end)
 
   spec('global declaration', function()

@@ -9,16 +9,19 @@ local Block = { ruleName = 'Block' }
 -- -----------------------------------------------------------------------------
 
 function Block.parse(ctx, opts)
+  ctx.blockDepth = ctx.blockDepth + 1
   opts = opts or {}
-  local node = {}
 
-  if opts.isLoopBlock then
-    node.isLoopBlock = true
-    node.continueNodes = {}
-  elseif opts.isModuleBlock then
-    node.isModuleBlock = true
-    node.moduleNames = {}
-  end
+  local node = {
+    blockDepth = ctx.blockDepth,
+
+    -- Table for Continue nodes to register themselves.
+    continueNodes = {},
+
+    -- Table for Declaration and Function nodes to register `module` scope
+    -- variables.
+    moduleNames = {},
+  }
 
   repeat
     -- Run this on ever iteration in case nested blocks change values
@@ -28,7 +31,7 @@ function Block.parse(ctx, opts)
       -- Reset loopBlock for function blocks. Break / Continue cannot
       -- traverse these.
       ctx.loopBlock = nil
-    elseif opts.isModuleBlock then
+    elseif node.blockDepth == 1 then
       ctx.moduleBlock = node
     else
       ctx.moduleBlock = nil
@@ -54,15 +57,17 @@ function Block.parse(ctx, opts)
     node[#node + 1] = statement
   until not statement
 
-  if opts.isModuleBlock and #node.moduleNames > 0 then
+  if #node.moduleNames > 0 then
     for i, statement in ipairs(node) do
       if statement.ruleName == 'Return' then
         -- Block cannot use both `return` and `module`
+        -- TODO: not good enough! What about conditional return?
         error()
       end
     end
   end
 
+  ctx.blockDepth = ctx.blockDepth - 1
   return node
 end
 
@@ -81,7 +86,7 @@ local function compileBlockStatements(ctx, node)
 end
 
 function Block.compile(ctx, node)
-  if node.isLoopBlock and #node.continueNodes > 0 then
+  if #node.continueNodes > 0 then
     local continueName = ctx:newTmpName()
 
     for i, continueNode in ipairs(node.continueNodes) do
@@ -105,7 +110,7 @@ function Block.compile(ctx, node)
       continueName,
       continueName
     )
-  elseif node.isModuleBlock and #node.moduleNames > 0 then
+  elseif #node.moduleNames > 0 then
     local moduleTableElements = {}
     for i, moduleName in ipairs(node.moduleNames) do
       moduleTableElements[i] = moduleName .. '=' .. moduleName
