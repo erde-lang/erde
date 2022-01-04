@@ -41,7 +41,9 @@ function Expr.parse(ctx, opts)
     }
 
     if binop.tag == 'ternary' then
+      ctx.isTernaryExpr = true
       node[#node + 1] = ctx:Expr()
+      ctx.isTernaryExpr = false
       ctx:assertChar(':')
     end
 

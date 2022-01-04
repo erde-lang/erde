@@ -21,6 +21,11 @@ function ParserContext:reset()
 
   self.blockDepth = 0
 
+  -- Used to tell other rules whether the current expression is part of the
+  -- ternary block. Required to know whether ':' should be parsed exclusively
+  -- as a method accessor or also consider ternary ':'.
+  self.isTernaryExpr = false
+
   -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
   -- RepeatUntil, WhileLoop). This is used to validate and link Break and
   -- Continue statements.

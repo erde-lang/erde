@@ -61,9 +61,17 @@ function OptChain.parse(ctx)
         end,
       })
     elseif ctx:branchChar(':') then
-      chain.variant = 'method'
-      chain.value = ctx:Name().value
-      if ctx.bufValue ~= '(' then
+      local methodName = ctx:Try(ctx.Name)
+
+      if methodName and ctx.bufValue == '(' then
+        chain.variant = 'method'
+        chain.value = methodName.value
+      elseif ctx.isTernaryExpr then
+        -- Do not throw error here, instead assume ':' is from ternary
+        -- operator. Simply revert consumptions and break
+        ctx:restore(backup)
+        break
+      else
         -- missing args after method call
         error()
       end
