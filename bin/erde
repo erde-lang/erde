@@ -3,6 +3,7 @@
 local argparse = require('argparse')
 local lfs = require('lfs')
 local erde = require('erde')
+local inspect = require('inspect')
 require('erde.loader')
 
 local COMPILE_HEADER_TAG = 'ERDE_META'
@@ -151,6 +152,21 @@ local function processRunCmd()
 end
 
 -- -----------------------------------------------------------------------------
+-- Parse
+-- -----------------------------------------------------------------------------
+
+local runCmd = cli:command('parse')
+runCmd:argument('file', 'File to parse.')
+
+local function processParseCmd()
+  local srcFilePath = path.join(root, args.file)
+  local srcFile = io.open(srcFilePath, 'r')
+  local moduleContents = srcFile:read('*a')
+  srcFile:close()
+  print(inspect(erde.parse(moduleContents)))
+end
+
+-- -----------------------------------------------------------------------------
 -- Compile
 -- -----------------------------------------------------------------------------
 
@@ -283,6 +299,8 @@ if args.version then
   print('v0.1.0')
 elseif args.run then
   processRunCmd()
+elseif args.parse then
+  processParseCmd()
 elseif args.compile then
   processCompileCmd()
 elseif args.clean then
