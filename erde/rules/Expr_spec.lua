@@ -172,6 +172,14 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 ? -2 : 3 + 4'
     ))
+    assert.has_subtable({
+      op = { tag = 'ternary' },
+      { value = '1' },
+      { ruleName = 'OptChain' },
+      { ruleName = 'Number' },
+    }, parse.Expr(
+      '1 ? a:b() : 2'
+    ))
   end)
 end)
 
