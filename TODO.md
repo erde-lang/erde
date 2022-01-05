@@ -1,9 +1,9 @@
 # TODO
 
-- formatter (Rule.format)
 - improved error messages (add pcalls, Rule.diagnose)
   - pcalls + Rule.diagnose
   - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)
+- formatter (Rule.format)
 - erde REPL
 
 # Long Term TODO
