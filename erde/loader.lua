@@ -27,7 +27,6 @@ function require(moduleName)
         package.loaded[moduleName] = true
       end
 
-      print(moduleName, module)
       return module
     end
   end
