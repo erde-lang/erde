@@ -79,7 +79,21 @@ local function compileBlockStatements(ctx, node)
   local compiledStatements = {}
 
   for _, statement in ipairs(node) do
-    compiledStatements[#compiledStatements + 1] = ctx:compile(statement)
+    local compiledStatement = ctx:compile(statement)
+
+    if
+      statement.ruleName == 'OptChain'
+      and statement[#statement].variant == 'functionCall'
+    then
+      -- As of January 5, 2022, we use a lot of iife statements in compiled code.
+      -- This semicolon removes Lua's ambiguous syntax error when using iife by
+      -- funtion calls.
+      --
+      -- http://lua-users.org/lists/lua-l/2009-08/msg00543.html
+      compiledStatement = compiledStatement .. ';'
+    end
+
+    compiledStatements[#compiledStatements + 1] = compiledStatement
   end
 
   return table.concat(compiledStatements, '\n')
