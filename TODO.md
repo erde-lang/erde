@@ -27,3 +27,47 @@
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
 - optional types
+
+# Ideas
+
+Modes
+- mode operator for statements / blocks. parsed only when mode is active
+  - specified via `erde run !dev`
+  - uses `!` operator in code
+  - allow mode for expressions, `true` when active otherwise false
+  - allow mode 'nesting' using `:`
+
+```erde
+-- only runs in `dev` mode, i.e. `erde run !dev`
+!dev local x = 2
+
+-- runs in `dev` and `test` mode
+!dev !test print()
+
+-- functions
+!unit local function setupUnitTests() {
+
+}
+
+-- nesting, both run on mode == 'unit:myFunc'
+!unit setupUnitTests()
+!unit:myFunc myFunc()
+
+-- multiline works nice
+!dev !test !debug
+print()
+
+-- block, debug mode
+!debug {
+
+}
+
+-- mode expressions
+local x = !dev ? 1 : 2
+
+if !dev {
+  
+} else {
+
+}
+```
