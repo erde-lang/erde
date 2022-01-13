@@ -9,7 +9,7 @@ local DoBlock = { ruleName = 'DoBlock' }
 -- -----------------------------------------------------------------------------
 
 function DoBlock.parse(ctx)
-  ctx:assertWord('do')
+  assert(ctx:consume() == 'do')
   return { body = ctx:Surround('{', '}', ctx.Block) }
 end
 

@@ -9,7 +9,7 @@ local WhileLoop = { ruleName = 'WhileLoop' }
 -- -----------------------------------------------------------------------------
 
 function WhileLoop.parse(ctx)
-  ctx:assertWord('while')
+  assert(ctx:consume() == 'while')
   return {
     cond = ctx:Expr(),
     body = ctx:Surround('{', '}', function()

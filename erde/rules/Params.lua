@@ -21,7 +21,7 @@ function Params.parse(ctx)
             ctx.Destructure,
           })
 
-          if param and ctx:branchChar('=') then
+          if param and ctx:branch('=') then
             param.default = ctx:Expr()
           end
 
@@ -29,7 +29,7 @@ function Params.parse(ctx)
         end,
       })
 
-      if (#node == 0 or hasTrailingComma) and ctx:branchStr('...') then
+      if (#node == 0 or hasTrailingComma) and ctx:branch('...') then
         node[#node + 1] = {
           varargs = true,
           name = ctx:Try(ctx.Name),

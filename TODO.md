@@ -1,5 +1,8 @@
 # TODO
 
+- restore tests from tokenizer changes
+- record line column for parsing errors
+- store comments in separate token table
 - improved error messages (add pcalls, Rule.diagnose)
   - pcalls + Rule.diagnose
   - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)
@@ -27,6 +30,19 @@
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
 - optional types
+- allow module refs anywhere
+  - lua requires declarations to happen before reference
+  - compile to forward declare top level module variables
+  - ex) 
+    ```erde
+      local function a() { b() }`
+      local function b() { ... }`
+    ```
+    ```lua
+      local a, b
+      a = function() b() end
+      b = function() ... end
+    ```
 
 # Ideas
 

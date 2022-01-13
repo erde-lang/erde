@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Expr
@@ -15,23 +15,22 @@ function Expr.parse(ctx, opts)
   local node = { ruleName = Expr.ruleName }
   local lhs
 
-  local unop = ctx:Unop()
-  if unop ~= nil then
-    ctx:consume(#unop.token)
+  if C.UNOPS[ctx.token] then
+    ctx:consume()
     node.variant = 'unop'
-    node.op = unop
-    node.operand = ctx:Expr({ minPrec = unop.prec + 1 })
+    node.operand = ctx:Expr({ minPrec = C.UNOPS[ctx.token].prec + 1 })
+    node.op = ctx:consume()
   else
     node = ctx:Terminal()
   end
 
   while true do
-    local binop = ctx:Binop()
+    local binop = C.BINOPS[ctx.token]
     if not binop or binop.prec < minPrec then
       break
     end
 
-    ctx:consume(#binop.token)
+    ctx:consume()
 
     node = {
       ruleName = Expr.ruleName,
@@ -40,19 +39,19 @@ function Expr.parse(ctx, opts)
       node,
     }
 
-    if binop.tag == 'ternary' then
+    if binop.token == '?' then
       ctx.isTernaryExpr = true
       node[#node + 1] = ctx:Expr()
       ctx.isTernaryExpr = false
-      ctx:assertChar(':')
+      assert(ctx.token == ':')
     end
 
-    node[#node + 1] = binop.assoc == constants.LEFT_ASSOCIATIVE
+    node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE
         and ctx:Expr({ minPrec = binop.prec + 1 })
       or ctx:Expr({ minPrec = binop.prec })
   end
 
-  if ctx:peek(2) == '>>' then
+  if ctx.token == '>>' then
     return ctx:Pipe({
       initValues = { node },
     })
@@ -75,10 +74,10 @@ function Expr.compile(ctx, node)
       return table.concat({ token, operand }, ' ')
     end
 
-    if op.tag == 'bnot' then
+    if op.token == '.~' then
       return _VERSION:find('5.[34]') and compileUnop('~')
         or ('require("bit").bnot(%1)'):format(operand)
-    elseif op.tag == 'not' then
+    elseif op.token == '~' then
       return compileUnop('not')
     else
       return op.token .. operand
@@ -87,7 +86,7 @@ function Expr.compile(ctx, node)
     local lhs = ctx:compile(node[1])
     local rhs = ctx:compile(node[2])
 
-    if op.tag == 'ternary' then
+    if op.token == '?' then
       return table.concat({
         '(function()',
         'if %s then',

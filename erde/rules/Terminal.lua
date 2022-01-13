@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Terminal
@@ -11,8 +11,8 @@ local Terminal = { ruleName = 'Terminal' }
 -- -----------------------------------------------------------------------------
 
 function Terminal.parse(ctx)
-  for _, terminal in pairs(constants.TERMINALS) do
-    if ctx:branchWord(terminal) then
+  for _, terminal in pairs(C.TERMINALS) do
+    if ctx:branch(terminal) then
       return { value = terminal }
     end
   end

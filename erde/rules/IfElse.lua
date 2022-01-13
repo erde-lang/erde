@@ -10,21 +10,21 @@ local IfElse = { ruleName = 'IfElse' }
 
 function IfElse.parse(ctx)
   local node = { elseifNodes = {} }
-  ctx:assertWord('if')
+  assert(ctx:consume() == 'if')
 
   node.ifNode = {
     cond = ctx:Expr(),
     body = ctx:Surround('{', '}', ctx.Block),
   }
 
-  while ctx:branchWord('elseif') do
+  while ctx:branch('elseif') do
     node.elseifNodes[#node.elseifNodes + 1] = {
       cond = ctx:Expr(),
       body = ctx:Surround('{', '}', ctx.Block),
     }
   end
 
-  if ctx:branchWord('else') then
+  if ctx:branch('else') then
     node.elseNode = { body = ctx:Surround('{', '}', ctx.Block) }
   end
 

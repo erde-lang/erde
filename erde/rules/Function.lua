@@ -11,9 +11,9 @@ local Function = { ruleName = 'Function' }
 function Function.parse(ctx)
   local node = { isMethod = false }
 
-  if ctx:branchWord('local') then
+  if ctx:branch('local') then
     node.variant = 'local'
-  elseif ctx:branchWord('module') then
+  elseif ctx:branch('module') then
     if not ctx.moduleBlock then
       -- Module declarations only allowed at the top level
       error()
@@ -21,18 +21,18 @@ function Function.parse(ctx)
 
     node.variant = 'module'
   else
-    ctx:branchWord('global')
+    ctx:branch('global')
     node.variant = 'global'
   end
 
-  ctx:assertWord('function')
+  assert(ctx:consume() == 'function')
   node.names = { ctx:Name().value }
 
   while true do
-    if ctx:branchChar('.') then
+    if ctx:branch('.') then
       node.names[#node.names + 1] = ctx:Name().value
     else
-      if ctx:branchChar(':') then
+      if ctx:branch(':') then
         node.isMethod = true
         node.names[#node.names + 1] = ctx:Name().value
       end

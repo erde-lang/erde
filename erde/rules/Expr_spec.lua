@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -11,24 +11,23 @@ describe('Expr.parse', function()
     assert.are.equal('String', parse.Expr('"hello"').ruleName)
   end)
 
-  spec('unop tags', function()
-    for _, op in pairs(constants.UNOPS) do
+  spec('unop tokens', function()
+    for opToken, op in pairs(C.UNOPS) do
       assert.has_subtable({
         variant = 'unop',
-        op = { tag = op.tag },
+        op = { token = op.token },
       }, parse.Expr(
-        op.token .. '1'
+        opToken .. '1'
       ))
     end
   end)
 
-  spec('binop tags', function()
-    for _, op in pairs(constants.BINOPS) do
-      local testExpr = op.tag == 'ternary' and '1 ? 2 : 3'
-        or '1' .. op.token .. '2'
+  spec('binop tokens', function()
+    for opToken, op in pairs(C.BINOPS) do
+      local testExpr = op.token == '?' and '1 ? 2 : 3' or '1' .. opToken .. '2'
       assert.has_subtable({
         variant = 'binop',
-        op = { tag = op.tag },
+        op = { token = op.token },
       }, parse.Expr(
         testExpr
       ))
@@ -37,9 +36,9 @@ describe('Expr.parse', function()
 
   spec('left associative binop precedence', function()
     assert.has_subtable({
-      op = { tag = 'add' },
+      op = { token = '+' },
       {
-        op = { tag = 'mult' },
+        op = { token = '*' },
         { value = '1' },
         { value = '2' },
       },
@@ -48,10 +47,10 @@ describe('Expr.parse', function()
       '1 * 2 + 3'
     ))
     assert.has_subtable({
-      op = { tag = 'add' },
+      op = { token = '+' },
       { value = '1' },
       {
-        op = { tag = 'mult' },
+        op = { token = '*' },
         { value = '2' },
         { value = '3' },
       },
@@ -59,12 +58,12 @@ describe('Expr.parse', function()
       '1 + 2 * 3'
     ))
     assert.has_subtable({
-      op = { tag = 'add' },
+      op = { token = '+' },
       {
-        op = { tag = 'add' },
+        op = { token = '+' },
         { value = '1' },
         {
-          op = { tag = 'mult' },
+          op = { token = '*' },
           { value = '2' },
           { value = '3' },
         },
@@ -77,10 +76,10 @@ describe('Expr.parse', function()
 
   spec('right associative binop precedence', function()
     assert.has_subtable({
-      op = { tag = 'exp' },
+      op = { token = '^' },
       { value = '1' },
       {
-        op = { tag = 'exp' },
+        op = { token = '^' },
         { value = '2' },
         { value = '3' },
       },
@@ -88,9 +87,9 @@ describe('Expr.parse', function()
       '1 ^ 2 ^ 3'
     ))
     assert.has_subtable({
-      op = { tag = 'add' },
+      op = { token = '+' },
       {
-        op = { tag = 'exp' },
+        op = { token = '^' },
         { value = '1' },
         { value = '2' },
       },
@@ -102,11 +101,11 @@ describe('Expr.parse', function()
 
   spec('binop parens', function()
     assert.has_subtable({
-      op = { tag = 'mult' },
+      op = { token = '*' },
       { value = '1' },
       {
         parens = true,
-        op = { tag = 'add' },
+        op = { token = '+' },
         { value = '2' },
         { value = '3' },
       },
@@ -117,19 +116,19 @@ describe('Expr.parse', function()
 
   spec('unops', function()
     assert.has_subtable({
-      op = { tag = 'mult' },
+      op = { token = '*' },
       { value = '1' },
       {
-        op = { tag = 'neg' },
+        op = { token = '-' },
         operand = { value = '3' },
       },
     }, parse.Expr(
       '1 * -3'
     ))
     assert.has_subtable({
-      op = { tag = 'neg' },
+      op = { token = '-' },
       operand = {
-        op = { tag = 'exp' },
+        op = { token = '^' },
         { value = '2' },
         { value = '3' },
       },
@@ -137,9 +136,9 @@ describe('Expr.parse', function()
       '-2 ^ 3'
     ))
     assert.has_subtable({
-      op = { tag = 'mult' },
+      op = { token = '*' },
       {
-        op = { tag = 'neg' },
+        op = { token = '-' },
         operand = { value = '2' },
       },
       { value = '3' },
@@ -150,7 +149,7 @@ describe('Expr.parse', function()
 
   spec('ternary operator', function()
     assert.has_subtable({
-      op = { tag = 'ternary' },
+      op = { token = '?' },
       { value = '1' },
       { value = '2' },
       { value = '3' },
@@ -158,14 +157,14 @@ describe('Expr.parse', function()
       '1 ? 2 : 3'
     ))
     assert.has_subtable({
-      op = { tag = 'ternary' },
+      op = { token = '?' },
       { value = '1' },
       {
-        op = { tag = 'neg' },
+        op = { token = '-' },
         operand = { value = '2' },
       },
       {
-        op = { tag = 'add' },
+        op = { token = '+' },
         { value = '3' },
         { value = '4' },
       },
@@ -173,7 +172,7 @@ describe('Expr.parse', function()
       '1 ? -2 : 3 + 4'
     ))
     assert.has_subtable({
-      op = { tag = 'ternary' },
+      op = { token = '?' },
       { value = '1' },
       { ruleName = 'OptChain' },
       { ruleName = 'Number' },

@@ -11,11 +11,11 @@ local Destructure = { ruleName = 'Destructure' }
 local function parseDestruct(ctx)
   local destruct = { name = ctx:Name().value }
 
-  if ctx:branchChar(':') then
+  if ctx:branch(':') then
     destruct.alias = ctx:Name().value
   end
 
-  if ctx:branchChar('=') then
+  if ctx:branch('=') then
     destruct.default = ctx:Expr()
   end
 

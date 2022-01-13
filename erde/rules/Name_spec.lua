@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -16,7 +16,7 @@ describe('Name.parse', function()
   end)
 
   spec('prevent keyword names', function()
-    for _, keyword in pairs(constants.KEYWORDS) do
+    for _, keyword in pairs(C.KEYWORDS) do
       assert.has_error(function()
         parse.Name(keyword)
       end)

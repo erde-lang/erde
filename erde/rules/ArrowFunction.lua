@@ -13,7 +13,7 @@ function ArrowFunction.parse(ctx)
     hasImplicitReturns = true,
   }
 
-  if ctx.bufValue == '(' then
+  if ctx.token == '(' then
     node.params = ctx:Params()
   else
     node.params = {
@@ -25,20 +25,20 @@ function ArrowFunction.parse(ctx)
     }
   end
 
-  if ctx:branchStr('->') then
+  if ctx:branch('->') then
     node.variant = 'skinny'
-  elseif ctx:branchStr('=>') then
+  elseif ctx:branch('=>') then
     node.variant = 'fat'
   else
-    error()
+    error('Unexpected token ' .. ctx.token)
   end
 
-  if ctx.bufValue == '{' then
+  if ctx.token == '{' then
     node.hasImplicitReturns = false
     node.body = ctx:Surround('{', '}', function()
       return ctx:Block({ isFunctionBlock = true })
     end)
-  elseif ctx.bufValue == '(' then
+  elseif ctx.token == '(' then
     -- Only allow multiple implicit returns w/ parentheses
     node.returns = ctx:Parens({
       allowRecursion = true,

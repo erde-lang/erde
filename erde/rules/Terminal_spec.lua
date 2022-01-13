@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Parse
@@ -12,7 +12,7 @@ describe('Terminal.parse', function()
   end)
 
   spec('terminals', function()
-    for _, terminal in pairs(constants.TERMINALS) do
+    for _, terminal in pairs(C.TERMINALS) do
       assert.are.equal(terminal, parse.Terminal(terminal).value)
     end
   end)
@@ -43,7 +43,7 @@ end)
 
 describe('Terminal.compile', function()
   spec('terminals', function()
-    for _, terminal in pairs(constants.TERMINALS) do
+    for _, terminal in pairs(C.TERMINALS) do
       assert.are.equal(terminal, compile.Terminal(terminal))
     end
   end)
