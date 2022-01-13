@@ -1,3 +1,5 @@
+local constants = require('erde.constants')
+
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
@@ -68,6 +70,12 @@ function Block.parse(ctx, opts)
   end
 
   ctx.blockDepth = ctx.blockDepth - 1
+
+  if ctx.blockDepth == 0 and ctx.bufValue ~= constants.EOF then
+    -- parse error
+    error()
+  end
+
   return node
 end
 
