@@ -47,41 +47,41 @@ local function contains(t, element)
 end
 
 -- TODO: make this cross platform + error handling?
--- 2) Stopping point (dont use $HOME?)
-local function getPackage()
+-- 1) Stopping point (dont use $HOME?)
+local function getManifest()
   local home = os.getenv('HOME')
   local restoreDir = lfs.currentdir()
 
-  local packageRoot = restoreDir
-  local packageFile = io.open(path.join(packageRoot, 'package.erde'), 'r')
-  while packageFile == nil and packageRoot:find(home) do
+  local manifestRoot = restoreDir
+  local manifestFile = io.open(path.join(manifestRoot, 'manifest.erde'), 'r')
+  while manifestFile == nil and manifestRoot:find(home) do
     lfs.chdir('..')
-    packageRoot = lfs.currentdir()
-    packageFile = io.open(path.join(packageRoot, 'package.erde'), 'r')
+    manifestRoot = lfs.currentdir()
+    manifestFile = io.open(path.join(manifestRoot, 'manifest.erde'), 'r')
   end
 
   lfs.chdir(restoreDir)
 
-  if packageFile == nil then
+  if manifestFile == nil then
     return {}, nil
   end
 
-  local packageContents = packageFile:read('*a')
-  packageFile:close()
-  local parsedPackage = erde.parse(packageContents)
-  local compiledPackage = erde.compile(parsedPackage)
+  local manifestContents = manifestFile:read('*a')
+  manifestFile:close()
+  local parsedmanifest = erde.parse(manifestContents)
+  local compiledmanifest = erde.compile(parsedmanifest)
 
-  local loadedPackage = (loadstring or load)(compiledPackage)
-  if not loadedPackage then
+  local loadedmanifest = (loadstring or load)(compiledmanifest)
+  if not loadedmanifest then
     return {}, nil
   end
 
-  return loadedPackage(), packageRoot
+  return loadedmanifest(), manifestRoot
 end
 
 local function traverseDir(root, excludeDirs, callback)
   for fileName in lfs.dir(root) do
-    if fileName ~= '.' and fileName ~= '..' and fileName ~= 'package.erde' then
+    if fileName ~= '.' and fileName ~= '..' and fileName ~= 'manifest.erde' then
       local filePath = path.join(root, fileName)
       local attributes = lfs.attributes(filePath)
 
@@ -145,25 +145,23 @@ local format = cli:command('format')
 -- -----------------------------------------------------------------------------
 
 local runCmd = cli:command('run')
-runCmd:argument('main', 'Main file to run.')
+runCmd:argument('main', 'Main file to run.'):args('*')
 
 local function processRunCmd()
-  require(args.main:gsub('%.erde$', ''))
-end
+  local mainModuleNames = #args.main > 0
+    and args.main
+    or type(manifest.main) == 'table'
+    and manifest.main
+    or type(manifest.main) == 'string'
+    and { manifest.main }
 
--- -----------------------------------------------------------------------------
--- Parse
--- -----------------------------------------------------------------------------
+  if not mainModuleNames then
+    error('Need to specify modules either on command line or in manifest.erde')
+  end
 
-local runCmd = cli:command('parse')
-runCmd:argument('file', 'File to parse.')
-
-local function processParseCmd()
-  local srcFilePath = path.join(root, args.file)
-  local srcFile = io.open(srcFilePath, 'r')
-  local moduleContents = srcFile:read('*a')
-  srcFile:close()
-  print(inspect(erde.parse(moduleContents)))
+  for i, mainModuleName in pairs(mainModuleNames) do
+    require(mainModuleName:gsub('%.erde$', ''))
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -271,25 +269,26 @@ end
 -- Main
 -- -----------------------------------------------------------------------------
 
+
 args = cli:parse()
 cwd = lfs.currentdir()
-package, packageRoot = getPackage()
-root = args.root or packageRoot or cwd
+manifest, manifestRoot = getManifest()
+root = args.root or manifestRoot or cwd
 
-outDir = args.outDir or package.outDir
+outDir = args.outDir or manifest.outDir
 outDir = outDir and path.join(root, outDir) or nil
 
 includeDirs = {}
 excludeDirs = {}
-if package then
-  if type(package.include) == 'table' then
-    for i, includeDir in ipairs(package.include) do
+if manifest then
+  if type(manifest.include) == 'table' then
+    for i, includeDir in ipairs(manifest.include) do
       includeDirs[i] = path.join(root, includeDir)
     end
   end
 
-  if type(package.exclude) == 'table' then
-    for i, excludeDir in ipairs(package.exclude) do
+  if type(manifest.exclude) == 'table' then
+    for i, excludeDir in ipairs(manifest.exclude) do
       excludeDirs[i] = path.join(root, excludeDir)
     end
   end
@@ -299,8 +298,6 @@ if args.version then
   print('v0.1.0')
 elseif args.run then
   processRunCmd()
-elseif args.parse then
-  processParseCmd()
 elseif args.compile then
   processCompileCmd()
 elseif args.clean then
