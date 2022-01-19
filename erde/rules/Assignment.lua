@@ -18,6 +18,7 @@ local Assignment = { ruleName = 'Assignment' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
+-- TODO: ops
 function Assignment.parse(ctx)
   local node = {
     idList = ctx:List({ rule = ctx.Id }),

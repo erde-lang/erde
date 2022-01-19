@@ -11,9 +11,7 @@ function rules:register(rule)
   local ruleName = rule.ruleName
 
   self.parse[ruleName] = function(ctx, ...)
-    ctx:Space()
     local node = rule.parse(ctx, ...)
-    ctx:Space()
 
     if node.ruleName == nil then
       node.ruleName = ruleName

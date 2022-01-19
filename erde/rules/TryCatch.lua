@@ -11,10 +11,10 @@ local TryCatch = { ruleName = 'TryCatch' }
 function TryCatch.parse(ctx)
   local node = {}
 
-  ctx:assertWord('try')
+  assert(ctx:consume() == 'try')
   node.try = ctx:Surround('{', '}', ctx.Block)
 
-  ctx:assertWord('catch')
+  assert(ctx:consume() == 'catch')
   node.errorName = ctx:Surround('(', ')', function()
     return ctx:Try(ctx.Name)
   end)

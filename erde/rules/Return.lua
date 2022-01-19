@@ -9,7 +9,7 @@ local Return = { ruleName = 'Return' }
 -- -----------------------------------------------------------------------------
 
 function Return.parse(ctx)
-  ctx:assertWord('return')
+  assert(ctx:consume() == 'return')
   return ctx:Parens({
     allowRecursion = true,
     prioritizeRule = true,

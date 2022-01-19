@@ -1,6 +1,5 @@
 local ParserContext = require('erde.ParserContext')
-local constants = require('erde.constants')
-local rules = require('erde.rules')
+local rules = require('erde.oldrules')
 
 -- -----------------------------------------------------------------------------
 -- CompilerContext

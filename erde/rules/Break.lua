@@ -9,15 +9,9 @@ local Break = { ruleName = 'Break' }
 -- -----------------------------------------------------------------------------
 
 function Break.parse(ctx)
-  local node = {}
-
-  if ctx.loopBlock == nil then
-    -- No loop for `break`
-    error()
-  end
-
-  ctx:assertWord('break')
-  return node
+  assert(ctx.loopBlock ~= nil)
+  assert(ctx:consume() == 'break')
+  return {}
 end
 
 -- -----------------------------------------------------------------------------

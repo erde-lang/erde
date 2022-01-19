@@ -1,8 +1,7 @@
--- -----------------------------------------------------------------------------
--- State
--- -----------------------------------------------------------------------------
+local C = require('erde.constants')
 
-local buffer, bufIndex, bufValue, tokens
+-- forward declare for use in TokenizeContext:Interpolation
+local tokenize
 
 -- -----------------------------------------------------------------------------
 -- Lookup Tables
@@ -31,119 +30,187 @@ for byte = string.byte('0'), string.byte('9') do
 end
 
 -- -----------------------------------------------------------------------------
--- Helpers
+-- TokenizeContext
 -- -----------------------------------------------------------------------------
 
-local function peek(n)
-  return buffer:sub(bufIndex, bufIndex + n - 1)
+local TokenizeContext = setmetatable({}, {
+  __call = function(self, text)
+    local ctx = {
+      buffer = text,
+      bufIndex = 1,
+      bufValue = text:sub(1, 1),
+      tokens = {},
+    }
+
+    setmetatable(ctx, { __index = self })
+    return ctx
+  end,
+})
+
+function TokenizeContext:commit(token)
+  self.tokens[#self.tokens + 1] = token
 end
 
-local function consume(n)
+function TokenizeContext:peek(n)
+  return self.buffer:sub(self.bufIndex, self.bufIndex + n - 1)
+end
+
+function TokenizeContext:consume(n)
   n = n or 1
-  local consumed = n == 1 and bufValue or peek(n)
-  bufIndex = bufIndex + n
-  bufValue = buffer:sub(bufIndex, bufIndex)
+  local consumed = n == 1 and self.bufValue or self:peek(n)
+  self.bufIndex = self.bufIndex + n
+  self.bufValue = self.buffer:sub(self.bufIndex, self.bufIndex)
   return consumed
 end
 
-local function space()
-  while bufValue == ' ' or bufValue == '\t' do
-    consume()
+function TokenizeContext:Space()
+  while self.bufValue == ' ' or self.bufValue == '\t' do
+    self:consume()
   end
 end
 
-local function LongString()
-  consume() -- '['
+function TokenizeContext:String(opts)
+  local strClose
+  if not opts.long then
+    strClose = self:consume()
+    self:commit(strClose) -- commit opening
+  else
+    self:consume() -- '['
 
-  local strEq = ''
-  while bufValue == '=' do
-    strEq = strEq .. consume()
+    local strEq = ''
+    while self.bufValue == '=' do
+      strEq = strEq .. self:consume()
+    end
+
+    if self:consume() ~= '[' then
+      -- TODO: invalid
+      error()
+    end
+
+    strClose = ']' .. strEq .. ']'
+    self:commit('[' .. strEq .. '[') -- commit opening
   end
 
-  if consume() ~= '[' then
-    -- TODO
-    error()
+  local token = ''
+  local isEscaped = false
+
+  while self:peek(#strClose) ~= strClose do
+    if self.bufValue == '' or not opts.long and self.bufValue == '\n' then
+      -- TODO: unterminated
+      error()
+    elseif isEscaped then
+      isEscaped = false
+      token = token .. self:consume()
+    elseif opts.interpolation and self.bufValue == '{' then
+      if #token > 0 then
+        self:commit(token)
+        token = ''
+      end
+
+      self:commit(self:consume()) -- '{'
+
+      -- Keep track of brace depth to differentiate end of interpolation from
+      -- nested braces
+      local braceDepth = 0
+      local text = ''
+
+      while braceDepth > 0 or self.bufValue ~= '}' do
+        if self.bufValue == '{' then
+          braceDepth = braceDepth + 1
+        elseif self.bufValue == '}' then
+          braceDepth = braceDepth - 1
+        end
+
+        text = text .. self:consume()
+      end
+
+      for i, token in pairs(tokenize(text)) do
+        self:commit(token)
+      end
+
+      self:commit(self:consume()) -- '}'
+    else
+      isEscaped = self.bufValue == '\\'
+      token = token .. self:consume()
+    end
   end
 
-  local strOpen = '[' .. strEq .. '['
-  local strClose = ']' .. strEq .. ']'
-  local strContents = ''
-
-  while bufValue ~= ']' or peek(#strClose) ~= strClose do
-    -- TODO: what if end of buffer?
-    strContents = strContents .. consume()
+  if #token > 0 then
+    self:commit(token)
   end
 
-  consume(#strClose)
-  return strOpen .. strContents .. strClose
+  self:commit(self:consume(#strClose))
 end
 
 -- -----------------------------------------------------------------------------
 -- Tokenize
 -- -----------------------------------------------------------------------------
 
-return function(input)
-  buffer = input
-  bufIndex = 1
-  bufValue = buffer:sub(bufIndex, bufIndex)
-  tokens = {}
+function tokenize(text)
+  local ctx = TokenizeContext(text)
 
-  space()
+  ctx:Space()
 
-  while bufValue ~= '' do
-    local token = ''
+  while ctx.bufValue ~= '' do
+    if WORD_HEAD[ctx.bufValue] then
+      local token = ctx:consume()
 
-    if bufValue == '\n' then
-      token = '\n'
-      while bufValue == '\n' do
-        consume()
+      while WORD_BODY[ctx.bufValue] do
+        token = token .. ctx:consume()
       end
-    elseif WORD_HEAD[bufValue] then
-      token = consume()
-      while WORD_BODY[bufValue] do
-        token = token .. consume()
-      end
-    elseif DIGIT[bufValue] then
-      token = consume()
-      while DIGIT[bufValue] do
-        token = token .. consume()
-      end
-    elseif bufValue == '"' or bufValue == "'" then
-      local strQuote = consume()
-      token = strQuote
-      local isEscaped = false
 
-      repeat
-        if bufValue == '' or bufValue == '\n' then
-          break
-        elseif bufValue == strQuote and not isEscaped then
-          token = token .. consume()
-          break
-        else
-          isEscaped = bufValue == '\\'
-          token = token .. consume()
-        end
-      until false
-    elseif peek(2):match('--') then
-      token = consume(2)
+      ctx:commit(token)
+    elseif DIGIT[ctx.bufValue] then
+      local token = ctx:consume()
 
-      if peek(2):match('%[[[=]') then
-        token = token .. LongString()
+      while DIGIT[ctx.bufValue] do
+        token = token .. ctx:consume()
+      end
+
+      ctx:commit(token)
+    elseif ctx.bufValue == '.' and C.BINOPS[ctx:peek(3)] then
+      -- Tokenize operators of length 3. This exploits the fact that all ops of
+      -- length 3 are binops that start with a period.
+      ctx:commit(ctx:consume(3))
+    elseif C.BINOPS[ctx:peek(2)] then
+      -- Tokenize operators of length 2. This exploits the fact
+      -- that the only unop of length 2 is also a valid binop.
+      ctx:commit(ctx:consume(2))
+    elseif ctx.bufValue == '\n' then
+      ctx:commit(ctx:consume())
+      while ctx.bufValue == '\n' do
+        ctx:consume()
+      end
+    elseif ctx.bufValue == '"' or ctx.bufValue == "'" then
+      ctx:String({ long = false, interpolation = true })
+    elseif ctx:peek(2):match('^%[[[=]$') then
+      ctx:String({ long = true, interpolation = true })
+    elseif ctx:peek(2):match('^--$') then
+      ctx:commit(ctx:consume(2))
+
+      if ctx:peek(2):match('^%[[[=]$') then
+        ctx:String({ long = true, interpolation = false })
       else
-        while bufValue ~= '' and bufValue ~= '\n' do
-          token = token .. consume()
+        local token = ''
+
+        while ctx.bufValue ~= '' and ctx.bufValue ~= '\n' do
+          token = token .. ctx:consume()
         end
+
+        ctx:commit(token)
       end
-    elseif peek(2):match('%[[[=]') then
-      token = LongString()
-    else -- symbol
-      token = consume()
+    else
+      ctx:commit(ctx:consume())
     end
 
-    tokens[#tokens + 1] = token
-
-    space()
+    ctx:Space()
   end
 
-  return tokens
+  return ctx.tokens
 end
+
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
+
+return tokenize

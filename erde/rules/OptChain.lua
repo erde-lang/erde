@@ -26,9 +26,9 @@ function OptChain.parse(ctx)
 
   while true do
     local backup = ctx:backup()
-    local chain = { optional = ctx:branchChar('?') }
+    local chain = { optional = ctx:branch('?') }
 
-    if ctx:branchChar('.') then
+    if ctx:branch('.') then
       local name = ctx:Try(ctx.Name)
 
       if name then
@@ -40,10 +40,10 @@ function OptChain.parse(ctx)
         ctx:restore(backup)
         break
       end
-    elseif ctx.bufValue == '[' then
+    elseif ctx.token == '[' then
       chain.variant = 'bracketIndex'
       chain.value = ctx:Surround('[', ']', ctx.Expr)
-    elseif ctx.bufValue == '(' then
+    elseif ctx.token == '(' then
       chain.variant = 'functionCall'
       chain.value = ctx:Parens({
         demand = true,
@@ -60,10 +60,10 @@ function OptChain.parse(ctx)
           })
         end,
       })
-    elseif ctx:branchChar(':') then
+    elseif ctx:branch(':') then
       local methodName = ctx:Try(ctx.Name)
 
-      if methodName and ctx.bufValue == '(' then
+      if methodName and ctx.token == '(' then
         chain.variant = 'method'
         chain.value = methodName.value
       elseif ctx.isTernaryExpr then
@@ -76,7 +76,7 @@ function OptChain.parse(ctx)
         error()
       end
     else
-      ctx:restore(backup) -- revert consumption from ctx:branchChar('?')
+      ctx:restore(backup) -- revert consumption from ctx:branch('?')
       break
     end
 

@@ -1,5 +1,5 @@
-local constants = require('erde.constants')
-local rules = require('erde.rules')
+local C = require('erde.constants')
+local rules = require('erde.oldrules')
 
 -- -----------------------------------------------------------------------------
 -- ParserContext
@@ -15,7 +15,7 @@ end
 function ParserContext:reset()
   self.buffer = {}
   self.bufIndex = 1
-  self.bufValue = constants.EOF
+  self.bufValue = C.EOF
   self.line = 1
   self.column = 1
 
@@ -43,7 +43,7 @@ function ParserContext:load(input)
     self.buffer[i] = input:sub(i, i)
   end
 
-  self.buffer[#self.buffer + 1] = constants.EOF
+  self.buffer[#self.buffer + 1] = C.EOF
   self.bufIndex = 1
   self.bufValue = self.buffer[self.bufIndex]
 end
@@ -84,14 +84,14 @@ function ParserContext:consume(n, capture)
   end
 
   for i = 1, n do
-    if self.bufValue == constants.EOF then
+    if self.bufValue == C.EOF then
       error()
     end
 
     self.bufIndex = self.bufIndex + 1
     self.bufValue = self.buffer[self.bufIndex]
 
-    if self.bufValue == constants.Newline then
+    if self.bufValue == C.Newline then
       self.line = self.line + 1
       self.column = 1
     else
@@ -106,7 +106,7 @@ function ParserContext:peek(n)
   for i = 1, n - 1 do
     local char = self.buffer[self.bufIndex + i]
 
-    if not char or char == constants.EOF then
+    if not char or char == C.EOF then
       break
     end
 
@@ -168,7 +168,7 @@ end
 
 function ParserContext:branchWord(word, opts)
   local trailingChar = self.buffer[self.bufIndex + #word]
-  return not constants.ALNUM[trailingChar] and self:branchStr(word, opts)
+  return not C.ALNUM[trailingChar] and self:branchStr(word, opts)
 end
 
 function ParserContext:assertChar(char, opts)
@@ -194,7 +194,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function ParserContext:Space()
-  while constants.WHITESPACE[self.bufValue] do
+  while C.WHITESPACE[self.bufValue] do
     self:consume()
   end
 end
@@ -236,7 +236,7 @@ function ParserContext:Switch(rules)
 end
 
 function ParserContext:Op(opMap, opMaxLen)
-  for i, opToken in ipairs(constants.OP_BLACKLIST) do
+  for i, opToken in ipairs(C.OP_BLACKLIST) do
     if self:peek(#opToken) == opToken then
       return nil
     end
@@ -251,11 +251,11 @@ function ParserContext:Op(opMap, opMaxLen)
 end
 
 function ParserContext:Unop()
-  return self:Op(constants.UNOP_MAP, constants.UNOP_MAX_LEN)
+  return self:Op(C.UNOP_MAP, C.UNOP_MAX_LEN)
 end
 
 function ParserContext:Binop()
-  return self:Op(constants.BINOP_MAP, constants.BINOP_MAX_LEN)
+  return self:Op(C.BINOP_MAP, C.BINOP_MAX_LEN)
 end
 
 function ParserContext:Parens(opts)

@@ -14,9 +14,9 @@ function Declaration.parse(ctx)
     exprList = {},
   }
 
-  if ctx:branchWord('local') then
+  if ctx:branch('local') then
     node.variant = 'local'
-  elseif ctx:branchWord('module') then
+  elseif ctx:branch('module') then
     if not ctx.moduleBlock then
       -- Module declarations only allowed at the top level
       error()
@@ -24,7 +24,7 @@ function Declaration.parse(ctx)
 
     node.variant = 'module'
   else
-    ctx:branchWord('global')
+    ctx:branch('global')
     node.variant = 'global'
   end
 
@@ -52,7 +52,7 @@ function Declaration.parse(ctx)
     end
   end
 
-  if ctx:branchChar('=') then
+  if ctx:branch('=') then
     node.exprList = ctx:List({ rule = ctx.Expr })
   end
 

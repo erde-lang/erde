@@ -27,6 +27,19 @@
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
 - optional types
+- allow module refs anywhere
+  - lua requires declarations to happen before reference
+  - compile to forward declare top level module variables
+  - ex) 
+    ```erde
+      local function a() { b() }`
+      local function b() { ... }`
+    ```
+    ```lua
+      local a, b
+      a = function() b() end
+      b = function() ... end
+    ```
 
 # Ideas
 

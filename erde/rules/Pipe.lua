@@ -13,7 +13,7 @@ local Pipe = { ruleName = 'Pipe' }
 function Pipe.parse(ctx, opts)
   local node = { initValues = opts.initValues }
 
-  while ctx:branchStr('>>') do
+  while ctx:branch('>>') do
     node[#node + 1] = ctx:FunctionCall()
   end
 

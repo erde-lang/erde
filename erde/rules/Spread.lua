@@ -9,7 +9,7 @@ local Spread = { ruleName = 'Spread' }
 -- -----------------------------------------------------------------------------
 
 function Spread.parse(ctx)
-  ctx:assertStr('...')
+  assert(ctx:consume() == '...')
   return { value = ctx:Expr() }
 end
 

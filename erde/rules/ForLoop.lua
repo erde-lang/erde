@@ -9,12 +9,12 @@ local ForLoop = { ruleName = 'ForLoop' }
 -- -----------------------------------------------------------------------------
 
 function ForLoop.parse(ctx)
-  ctx:assertWord('for')
+  assert(ctx:consume() == 'for')
 
   local firstName = ctx:Name().value
   local node
 
-  if ctx:branchChar('=') then
+  if ctx:branch('=') then
     node = {
       variant = 'numeric',
       name = firstName,
@@ -32,11 +32,11 @@ function ForLoop.parse(ctx)
     node = { variant = 'generic' }
 
     node.nameList = { firstName }
-    while ctx:branchChar(',') do
+    while ctx:branch(',') do
       node.nameList[#node.nameList + 1] = ctx:Name().value
     end
 
-    ctx:assertWord('in')
+    assert(ctx:consume() == 'in')
     node.exprList = ctx:List({ rule = ctx.Expr })
   end
 

@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Expr
@@ -10,6 +10,7 @@ local Expr = { ruleName = 'Expr' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
+-- TODO: ops
 function Expr.parse(ctx, opts)
   local minPrec = opts and opts.minPrec or 1
   local node = { ruleName = Expr.ruleName }
@@ -47,7 +48,7 @@ function Expr.parse(ctx, opts)
       ctx:assertChar(':')
     end
 
-    node[#node + 1] = binop.assoc == constants.LEFT_ASSOCIATIVE
+    node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE
         and ctx:Expr({ minPrec = binop.prec + 1 })
       or ctx:Expr({ minPrec = binop.prec })
   end

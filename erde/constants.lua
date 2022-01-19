@@ -47,57 +47,37 @@ C.OP_BLACKLIST = {
 }
 
 C.UNOPS = {
-  { tag = 'neg', token = '-', prec = 13 },
-  { tag = 'len', token = '#', prec = 13 },
-  { tag = 'not', token = '~', prec = 13 },
-  { tag = 'bnot', token = '.~', prec = 13 },
+  ['-'] = { tag = 'neg', prec = 13 },
+  ['#'] = { tag = 'len', prec = 13 },
+  ['~'] = { tag = 'not', prec = 13 },
+  ['.~'] = { tag = 'bnot', prec = 13 },
 }
-
-C.UNOP_MAP = {}
-for _, op in pairs(C.UNOPS) do
-  C.UNOP_MAP[op.token] = op
-end
-
-C.UNOP_MAX_LEN = 0
-for _, op in pairs(C.UNOPS) do
-  C.UNOP_MAX_LEN = math.max(C.UNOP_MAX_LEN, #op.token)
-end
 
 C.BINOPS = {
-  { tag = 'ternary', token = '?', prec = 1, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'nc', token = '??', prec = 2, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'or', token = '|', prec = 3, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'and', token = '&', prec = 4, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'eq', token = '==', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'neq', token = '~=', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'lte', token = '<=', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'gte', token = '>=', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'lt', token = '<', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'gt', token = '>', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'bor', token = '.|', prec = 6, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'bxor', token = '.~', prec = 7, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'band', token = '.&', prec = 8, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'lshift', token = '.<<', prec = 9, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'rshift', token = '.>>', prec = 9, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'concat', token = '..', prec = 10, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'add', token = '+', prec = 11, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'sub', token = '-', prec = 11, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'mult', token = '*', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'div', token = '/', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'intdiv', token = '//', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'mod', token = '%', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
-  { tag = 'exp', token = '^', prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
+  ['?'] = { tag = 'ternary', prec = 1, assoc = C.LEFT_ASSOCIATIVE },
+  ['??'] = { tag = 'nc', prec = 2, assoc = C.LEFT_ASSOCIATIVE },
+  ['|'] = { tag = 'or', prec = 3, assoc = C.LEFT_ASSOCIATIVE },
+  ['&'] = { tag = 'and', prec = 4, assoc = C.LEFT_ASSOCIATIVE },
+  ['=='] = { tag = 'eq', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['~='] = { tag = 'neq', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['<='] = { tag = 'lte', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['>='] = { tag = 'gte', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['<'] = { tag = 'lt', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['>'] = { tag = 'gt', prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['.|'] = { tag = 'bor', prec = 6, assoc = C.LEFT_ASSOCIATIVE },
+  ['.~'] = { tag = 'bxor', prec = 7, assoc = C.LEFT_ASSOCIATIVE },
+  ['.&'] = { tag = 'band', prec = 8, assoc = C.LEFT_ASSOCIATIVE },
+  ['.<<'] = { tag = 'lshift', prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+  ['.>>'] = { tag = 'rshift', prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+  ['..'] = { tag = 'concat', prec = 10, assoc = C.LEFT_ASSOCIATIVE },
+  ['+'] = { tag = 'add', prec = 11, assoc = C.LEFT_ASSOCIATIVE },
+  ['-'] = { tag = 'sub', prec = 11, assoc = C.LEFT_ASSOCIATIVE },
+  ['*'] = { tag = 'mult', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
+  ['/'] = { tag = 'div', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
+  ['//'] = { tag = 'intdiv', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
+  ['%'] = { tag = 'mod', prec = 12, assoc = C.LEFT_ASSOCIATIVE },
+  ['^'] = { tag = 'exp', prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
 }
-
-C.BINOP_MAP = {}
-for _, op in pairs(C.BINOPS) do
-  C.BINOP_MAP[op.token] = op
-end
-
-C.BINOP_MAX_LEN = 0
-for _, op in pairs(C.BINOPS) do
-  C.BINOP_MAX_LEN = math.max(C.BINOP_MAX_LEN, #op.token)
-end
 
 -- -----------------------------------------------------------------------------
 -- Lookup Tables

@@ -68,15 +68,15 @@ local function getManifest()
 
   local manifestContents = manifestFile:read('*a')
   manifestFile:close()
-  local parsedmanifest = erde.parse(manifestContents)
-  local compiledmanifest = erde.compile(parsedmanifest)
+  local parsedManifest = erde.oldparse(manifestContents)
+  local compiledManifest = erde.compile(parsedManifest)
 
-  local loadedmanifest = (loadstring or load)(compiledmanifest)
-  if not loadedmanifest then
+  local loadedManifest = (loadstring or load)(compiledManifest)
+  if not loadedManifest then
     return {}, nil
   end
 
-  return loadedmanifest(), manifestRoot
+  return loadedManifest(), manifestRoot
 end
 
 local function traverseDir(root, excludeDirs, callback)
@@ -268,7 +268,6 @@ end
 -- -----------------------------------------------------------------------------
 -- Main
 -- -----------------------------------------------------------------------------
-
 
 args = cli:parse()
 cwd = lfs.currentdir()

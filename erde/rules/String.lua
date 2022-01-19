@@ -8,16 +8,17 @@ local String = { ruleName = 'String' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
+-- TODO
 function String.parse(ctx)
   local node = {}
   local capture = {}
   local terminatingStr
   local terminalBranchOpts = { pad = false }
 
-  if ctx:branchChar("'", terminalBranchOpts) then
+  if ctx:branch("'", terminalBranchOpts) then
     node.variant = 'single'
     terminatingStr = "'"
-  elseif ctx:branchChar('"', terminalBranchOpts) then
+  elseif ctx:branch('"', terminalBranchOpts) then
     node.variant = 'double'
     terminatingStr = '"'
   elseif ctx:branchChar('[', terminalBranchOpts) then

@@ -1,4 +1,4 @@
-local constants = require('erde.constants')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Number
@@ -10,12 +10,13 @@ local Number = { ruleName = 'Number' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
+-- TODO
 function Number.parse(ctx)
   local capture = {}
   local branchOpts = { pad = false, capture = capture }
 
   if ctx:branchStr('0x', branchOpts) or ctx:branchStr('0X', branchOpts) then
-    ctx:stream(constants.HEX, capture, true)
+    ctx:stream(C.HEX, capture, true)
 
     if ctx.bufValue == '.' and not ctx:Binop() then
       if _VERSION:find('5%.1') then
@@ -24,7 +25,7 @@ function Number.parse(ctx)
       end
 
       ctx:consume(1, capture)
-      ctx:stream(constants.HEX, capture, true)
+      ctx:stream(C.HEX, capture, true)
     end
 
     if ctx:branchChar('p', branchOpts) or ctx:branchChar('P', branchOpts) then
@@ -35,23 +36,23 @@ function Number.parse(ctx)
 
       ctx:branchChar('+', branchOpts)
       ctx:branchChar('-', branchOpts)
-      ctx:stream(constants.DIGIT, capture, true)
+      ctx:stream(C.DIGIT, capture, true)
     end
   else
-    while constants.DIGIT[ctx.bufValue] do
+    while C.DIGIT[ctx.bufValue] do
       ctx:consume(1, capture)
     end
 
     if ctx.bufValue == '.' and not ctx:Binop() then
       ctx:consume(1, capture)
-      ctx:stream(constants.DIGIT, capture, true)
+      ctx:stream(C.DIGIT, capture, true)
     end
 
     if #capture > 0 then
       if ctx:branchChar('e', branchOpts) or ctx:branchChar('E', branchOpts) then
         ctx:branchChar('+', branchOpts)
         ctx:branchChar('-', branchOpts)
-        ctx:stream(constants.DIGIT, capture, true)
+        ctx:stream(C.DIGIT, capture, true)
       end
     end
   end
