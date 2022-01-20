@@ -10,58 +10,64 @@ local Number = { ruleName = 'Number' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
--- TODO
 function Number.parse(ctx)
-  local capture = {}
-  local branchOpts = { pad = false, capture = capture }
+  local value = ''
 
-  if ctx:branchStr('0x', branchOpts) or ctx:branchStr('0X', branchOpts) then
-    ctx:stream(C.HEX, capture, true)
+  if ctx.token == '0' and ctx:peek(1):match('^[xX]$') then
+    value = ctx:consume() .. ctx:consume()
 
-    if ctx.bufValue == '.' and not ctx:Binop() then
-      if _VERSION:find('5%.1') then
-        -- Decimal hex values only supported in Lua 5.2+
-        error()
-      end
-
-      ctx:consume(1, capture)
-      ctx:stream(C.HEX, capture, true)
+    while ctx.token:match('^[a-fA-F0-9]+$') do
+      value = value .. ctx:consume()
     end
 
-    if ctx:branchChar('p', branchOpts) or ctx:branchChar('P', branchOpts) then
-      if _VERSION:find('5%.1') then
-        -- Hex exponents only supported in Lua 5.2+
-        error()
+    if ctx.token == '.' then
+      value = value .. ctx:consume()
+      while ctx.token:match('^[a-fA-F0-9]+$') do
+        value = value .. ctx:consume()
+      end
+    end
+
+    if ctx.token == 'p' or ctx.token == 'P' then
+      value = value .. ctx:consume()
+
+      if ctx.token:match('^[+-]$') then
+        value = value .. ctx:consume()
       end
 
-      ctx:branchChar('+', branchOpts)
-      ctx:branchChar('-', branchOpts)
-      ctx:stream(C.DIGIT, capture, true)
+      if not ctx.token:match('^[0-9]+$') then
+        error()
+      end
     end
   else
-    while C.DIGIT[ctx.bufValue] do
-      ctx:consume(1, capture)
+    if ctx.token:match('^[0-9]+$') then
+      value = ctx:consume()
     end
 
-    if ctx.bufValue == '.' and not ctx:Binop() then
-      ctx:consume(1, capture)
-      ctx:stream(C.DIGIT, capture, true)
+    if ctx.token == '.' then
+      value = value .. ctx:consume()
+      if ctx.token:match('^[0-9]+$') then
+        value = ctx:consume()
+      end
     end
 
-    if #capture > 0 then
-      if ctx:branchChar('e', branchOpts) or ctx:branchChar('E', branchOpts) then
-        ctx:branchChar('+', branchOpts)
-        ctx:branchChar('-', branchOpts)
-        ctx:stream(C.DIGIT, capture, true)
+    if #value == 0 then
+      error()
+    end
+
+    if ctx.token == 'e' or ctx.token == 'E' then
+      value = value .. ctx:consume()
+
+      if ctx.token:match('^[+-]$') then
+        value = value .. ctx:consume()
+      end
+
+      if not ctx.token:match('^[0-9]+$') then
+        error()
       end
     end
   end
 
-  if #capture == 0 then
-    error()
-  end
-
-  return { value = table.concat(capture) }
+  return { value = value }
 end
 
 -- -----------------------------------------------------------------------------

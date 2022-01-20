@@ -12,7 +12,7 @@ local Comment = { ruleName = 'Comment' }
 function Comment.parse(ctx)
   -- Actual matching done during tokenization
   assert(ctx.token:match('^--*$'))
-  return { value = consume() }
+  return { value = ctx:consume() }
 end
 
 -- -----------------------------------------------------------------------------

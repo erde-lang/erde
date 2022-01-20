@@ -8,63 +8,33 @@ local String = { ruleName = 'String' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
--- TODO
 function String.parse(ctx)
   local node = {}
-  local capture = {}
-  local terminatingStr
-  local terminalBranchOpts = { pad = false }
+  local terminatingToken
 
-  if ctx:branch("'", terminalBranchOpts) then
+  if ctx.token == "'" then
     node.variant = 'single'
-    terminatingStr = "'"
-  elseif ctx:branch('"', terminalBranchOpts) then
+    terminatingToken = ctx:consume()
+  elseif ctx.token == '"' then
     node.variant = 'double'
-    terminatingStr = '"'
-  elseif ctx:branchChar('[', terminalBranchOpts) then
-    local equals = {}
-    ctx:stream({ ['='] = true }, equals)
-    node.equals = table.concat(equals)
-
-    if not ctx:branchChar('[', terminalBranchOpts) then
-      error()
-    end
-
+    terminatingToken = ctx:consume()
+  elseif ctx.token:match('^%[=*%[$') then
     node.variant = 'long'
-    terminatingStr = ']' .. node.equals .. ']'
+    node.equals = ctx:consume():sub(1, #ctx.token - 1)
+    terminatingToken = ']' .. node.equals .. ']'
   else
     error()
   end
 
-  while not ctx:branchStr(terminatingStr, terminalBranchOpts) do
-    if ctx.bufValue == '\\' then
-      if ('{}'):find(ctx.buffer[ctx.bufIndex + 1]) then
-        ctx:consume()
-        ctx:consume(1, capture)
-      else
-        ctx:consume(2, capture)
-      end
-    elseif ctx.bufValue == '{' then
-      if #capture > 0 then
-        node[#node + 1] = table.concat(capture)
-        capture = {}
-      end
-
+  while ctx.token ~= terminatingToken do
+    if ctx.token == '{' then
       node[#node + 1] = ctx:Surround('{', '}', ctx.Expr)
-    elseif ctx:branchChar('\n', { pad = false, capture = capture }) then
-      if node.variant ~= 'long' then
-        -- Newlines only allowed in block strings
-        error()
-      end
     else
-      ctx:consume(1, capture)
+      node[#node + 1] = ctx:consume()
     end
   end
 
-  if #node == 0 or #capture > 0 then
-    node[#node + 1] = table.concat(capture)
-  end
-
+  node[#node + 1] = ctx:consume()
   return node
 end
 

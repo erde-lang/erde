@@ -24,6 +24,10 @@ function ctx:consume()
   return token
 end
 
+function ctx:peek()
+  return self.tokens[self.tokenIndex + n]
+end
+
 function ctx:branch(branchToken)
   if self.token ~= branchToken then
     return false

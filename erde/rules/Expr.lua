@@ -10,29 +10,27 @@ local Expr = { ruleName = 'Expr' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
--- TODO: ops
 function Expr.parse(ctx, opts)
   local minPrec = opts and opts.minPrec or 1
   local node = { ruleName = Expr.ruleName }
   local lhs
 
-  local unop = ctx:Unop()
-  if unop ~= nil then
-    ctx:consume(#unop.token)
+  if C.UNOPS[ctx.token] then
+    ctx:consume()
     node.variant = 'unop'
-    node.op = unop
-    node.operand = ctx:Expr({ minPrec = unop.prec + 1 })
+    node.operand = ctx:Expr({ minPrec = C.UNOPS[ctx.token].prec + 1 })
+    node.op = ctx:consume()
   else
     node = ctx:Terminal()
   end
 
   while true do
-    local binop = ctx:Binop()
+    local binop = C.BINOPS[ctx.token]
     if not binop or binop.prec < minPrec then
       break
     end
 
-    ctx:consume(#binop.token)
+    ctx:consume()
 
     node = {
       ruleName = Expr.ruleName,
@@ -45,7 +43,7 @@ function Expr.parse(ctx, opts)
       ctx.isTernaryExpr = true
       node[#node + 1] = ctx:Expr()
       ctx.isTernaryExpr = false
-      ctx:assertChar(':')
+      assert(ctx.token == ':')
     end
 
     node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE
@@ -53,7 +51,7 @@ function Expr.parse(ctx, opts)
       or ctx:Expr({ minPrec = binop.prec })
   end
 
-  if ctx:peek(2) == '>>' then
+  if ctx.token == '>>' then
     return ctx:Pipe({
       initValues = { node },
     })

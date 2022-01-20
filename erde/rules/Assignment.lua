@@ -1,3 +1,4 @@
+local C = require('erde.constants')
 local BINOP_ASSIGNMENT_BLACKLIST = {
   ['?'] = true,
   ['=='] = true,
@@ -18,23 +19,19 @@ local Assignment = { ruleName = 'Assignment' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
--- TODO: ops
 function Assignment.parse(ctx)
-  local node = {
-    idList = ctx:List({ rule = ctx.Id }),
-    op = ctx:Binop(),
-  }
+  local node = { idList = ctx:List({ rule = ctx.Id }) }
 
-  if node.op then
-    if BINOP_ASSIGNMENT_BLACKLIST[node.op.token] then
+  if C.BINOPS[ctx.token] then
+    if BINOP_ASSIGNMENT_BLACKLIST[ctx.token] then
       -- These operators cannot be used w/ operator assignment
       error()
     else
-      ctx:consume(#node.op.token)
+      ctx:consume()
     end
   end
 
-  ctx:assertChar('=')
+  assert(ctx.token == '=')
   node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end
