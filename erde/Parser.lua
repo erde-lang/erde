@@ -1,34 +1,84 @@
 local C = require('erde.constants')
 local rules = require('erde.rules')
-local tokenize = require('erde.tokenize')
+local Tokenizer = require('erde.Tokenizer')
 
 -- -----------------------------------------------------------------------------
--- Context
+-- Parser
 -- -----------------------------------------------------------------------------
 
-local ctx = {}
+local Parser = setmetatable({}, {
+  __call = function(self, text)
+    local parser = { tokenizer = Tokenizer() }
+    setmetatable(parser, { __index = self })
 
-function ctx:backup()
+    if text ~= nil then
+      parser:reset(text)
+    end
+
+    return parser
+  end,
+})
+
+-- Allow calling all rule parsers directly from parser
+for ruleName, ruleParser in pairs(rules.parse) do
+  Parser[ruleName] = ruleParser
+end
+
+-- -----------------------------------------------------------------------------
+-- Methods
+-- -----------------------------------------------------------------------------
+
+function Parser:reset(text)
+  self.Tokenizer:reset(text)
+  self.tokens = self.Tokenizer:tokenize()
+  self.tokenIndex = 1
+  self.token = self.tokens[1]
+  self.blockDepth = 0
+
+  -- Used to tell other rules whether the current expression is part of the
+  -- ternary block. Required to know whether ':' should be parsed exclusively
+  -- as a method accessor or also consider ternary ':'.
+  self.isTernaryExpr = false
+
+  -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
+  -- RepeatUntil, WhileLoop). This is used to validate and link Break and
+  -- Continue statements.
+  self.loopBlock = nil
+
+  -- Keeps track of the top level Block. This is used to register module
+  -- nodes when using the 'module' scope.
+  self.moduleBlock = nil
+end
+
+function Parser:backup()
   return self.tokenIndex
 end
 
-function ctx:restore(backup)
+function Parser:restore(backup)
   self.tokenIndex = backup
   self.token = self.tokens[backup]
 end
 
-function ctx:consume()
+function Parser:consume()
   local token = self.token
+
   self.tokenIndex = self.tokenIndex + 1
   self.token = self.tokens[self.tokenIndex]
+  while self.token:match('^--*$') do
+    -- Skip comments
+    -- TODO
+    self.tokenIndex = self.tokenIndex + 1
+    self.token = self.tokens[self.tokenIndex]
+  end
+
   return token
 end
 
-function ctx:peek()
+function Parser:peek()
   return self.tokens[self.tokenIndex + n]
 end
 
-function ctx:branch(branchToken)
+function Parser:branch(branchToken)
   if self.token ~= branchToken then
     return false
   end
@@ -38,15 +88,10 @@ function ctx:branch(branchToken)
 end
 
 -- -----------------------------------------------------------------------------
--- Context Macros
+-- Macros
 -- -----------------------------------------------------------------------------
 
--- Allow calling all rule parsers directly from context
-for ruleName, parser in pairs(rules.parse) do
-  ctx[ruleName] = parser
-end
-
-function ctx:Try(rule)
+function Parser:Try(rule)
   local backup = self:backup()
   local ok, node = pcall(function()
     return rule(self)
@@ -59,7 +104,7 @@ function ctx:Try(rule)
   end
 end
 
-function ctx:Switch(rules)
+function Parser:Switch(rules)
   for i, rule in ipairs(rules) do
     local node = self:Try(rule)
     if node then
@@ -68,14 +113,14 @@ function ctx:Switch(rules)
   end
 end
 
-function ctx:Surround(openChar, closeChar, rule)
+function Parser:Surround(openChar, closeChar, rule)
   assert(self:consume() == openChar)
   local capture = rule(self)
   assert(self:consume() == closeChar)
   return capture
 end
 
-function ctx:Parens(opts)
+function Parser:Parens(opts)
   if opts.demand or self.token == '(' then
     opts.demand = false
 
@@ -94,7 +139,7 @@ function ctx:Parens(opts)
   end
 end
 
-function ctx:List(opts)
+function Parser:List(opts)
   local list = {}
   local hasTrailingComma = false
 
@@ -115,28 +160,7 @@ function ctx:List(opts)
 end
 
 -- -----------------------------------------------------------------------------
--- Parse
+-- Return
 -- -----------------------------------------------------------------------------
 
-return function(input)
-  ctx.tokens = tokenize(input)
-  ctx.tokenIndex = 1
-  ctx.token = ctx.tokens[1]
-  ctx.blockDepth = 0
-
-  -- Used to tell other rules whether the current expression is part of the
-  -- ternary block. Required to know whether ':' should be parsed exclusively
-  -- as a method accessor or also consider ternary ':'.
-  ctx.isTernaryExpr = false
-
-  -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
-  -- RepeatUntil, WhileLoop). This is used to validate and link Break and
-  -- Continue statements.
-  ctx.loopBlock = nil
-
-  -- Keeps track of the top level Block. This is used to register module
-  -- nodes when using the 'module' scope.
-  ctx.moduleBlock = nil
-
-  return ctx:Block()
-end
+return Parser

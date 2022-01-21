@@ -1,25 +1,19 @@
-local CompilerContext = require('erde.CompilerContext')
-local ParserContext = require('erde.ParserContext')
+local Compiler = require('erde.Compiler')
+local Parser = require('erde.Parser')
 
-local erde = { parse = require('erde.parse') }
+local erde = {}
 
-local parserCtx = ParserContext()
-local compilerCtx = CompilerContext()
-
-function erde.oldparse(input)
-  -- TODO: remove node refs before returning (for example Continue nodes
-  -- pointing back to the loopBlock)
-  parserCtx:load(input)
-  return parserCtx:Block()
+function erde.parse(text)
+  return Parser(text):Block()
 end
 
 function erde.compile(ast)
-  compilerCtx:reset()
-  return compilerCtx:Block(ast)
+  return Compiler():compile(ast)
 end
 
-function erde.run(input)
-  local ast = erde.parse(input)
+-- TODO: clean this up
+function erde.run(text)
+  local ast = erde.parse(text)
   local source = erde.compile(ast)
 
   local loader, err = (loadstring or load)(source)

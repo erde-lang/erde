@@ -1,10 +1,9 @@
--- Explicit import required for helper scripts
-local busted = require('busted')
-local say = require('say')
-local ParserContext = require('erde.ParserContext')
-local CompilerContext = require('erde.CompilerContext')
+local busted = require('busted') -- Explicit import required for helper scripts
+local Compiler = require('erde.Compiler')
+local Parser = require('erde.Parser')
 local rules = require('erde.rules')
 local utils = require('erde.utils')
+local say = require('say')
 
 -- -----------------------------------------------------------------------------
 -- Asserts
@@ -68,22 +67,23 @@ busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
 -- -----------------------------------------------------------------------------
 
 busted.expose('setup', function()
-  parserCtx = ParserContext()
-  compilerCtx = CompilerContext()
+  parser = Parser()
+  compiler = Compiler()
 
   parse = {}
-  for ruleName, parser in pairs(rules.parse) do
-    parse[ruleName] = function(input, opts)
-      parserCtx:load(input)
-      return parser(parserCtx, opts)
+  for ruleName, ruleParser in pairs(rules.parse) do
+    parse[ruleName] = function(text, opts)
+      parser:reset(text)
+      return ruleParser(parser, opts)
     end
   end
 
   compile = {}
-  for ruleName, compiler in pairs(rules.compile) do
-    compile[ruleName] = function(input, opts)
-      local node = parse[ruleName](input, opts)
-      return compilerCtx:compile(node)
+  for ruleName, ruleCompiler in pairs(rules.compile) do
+    compile[ruleName] = function(text, opts)
+      local node = parse[ruleName](text, opts)
+      compiler:reset()
+      return compiler:compile(node)
     end
   end
 end)

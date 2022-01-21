@@ -40,7 +40,6 @@ function Block.parse(ctx, opts)
     local statement = ctx:Switch({
       ctx.Assignment,
       ctx.Break,
-      ctx.Comment,
       ctx.Continue,
       ctx.FunctionCall, -- must be before declaration!
       ctx.Declaration,

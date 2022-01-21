@@ -1,22 +1,32 @@
-local ParserContext = require('erde.ParserContext')
-local rules = require('erde.oldrules')
+local C = require('erde.constants')
+local rules = require('erde.rules')
 
 -- -----------------------------------------------------------------------------
--- CompilerContext
+-- Compiler
 -- -----------------------------------------------------------------------------
 
-local CompilerContext = {}
-local CompilerContextMT = { __index = CompilerContext }
+local Compiler = setmetatable({}, {
+  __call = function(self)
+    local compiler = { tmpNameCounter = 1 }
+    setmetatable(compiler, { __index = self })
+    return compiler
+  end,
+})
 
-for ruleName, compiler in pairs(rules.compile) do
-  CompilerContext[ruleName] = compiler
+-- Allow calling all rule compilers directly from context
+for ruleName, ruleCompiler in pairs(rules.parse) do
+  Compiler[ruleName] = ruleCompiler
 end
 
-function CompilerContext:reset()
+-- -----------------------------------------------------------------------------
+-- Methods
+-- -----------------------------------------------------------------------------
+
+function Compiler:reset()
   self.tmpNameCounter = 1
 end
 
-function CompilerContext:compile(node)
+function Compiler:compile(node)
   if type(node) ~= 'table' or not rules.compile[node.ruleName] then
     -- TODO
     error('No node compiler for ' .. require('inspect')(node))
@@ -25,16 +35,17 @@ function CompilerContext:compile(node)
   return rules.compile[node.ruleName](self, node)
 end
 
--- -----------------------------------------------------------------------------
--- Compile Helpers
--- -----------------------------------------------------------------------------
-
-function CompilerContext:newTmpName()
+function Compiler:newTmpName()
   self.tmpNameCounter = self.tmpNameCounter + 1
   return ('__ERDE_TMP_%d__'):format(self.tmpNameCounter)
 end
 
-function CompilerContext:compileBinop(op, lhs, rhs)
+-- -----------------------------------------------------------------------------
+-- Macros
+-- -----------------------------------------------------------------------------
+
+-- TODO: rename
+function Compiler:compileBinop(op, lhs, rhs)
   if op.tag == 'nc' then
     local ncTmpName = self:newTmpName()
     return table.concat({
@@ -74,7 +85,8 @@ function CompilerContext:compileBinop(op, lhs, rhs)
   end
 end
 
-function CompilerContext:compileOptChain(node)
+-- TODO: rename
+function Compiler:compileOptChain(node)
   local chain = self:compile(node.base)
   local optSubChains = {}
 
@@ -133,8 +145,4 @@ end
 -- Return
 -- -----------------------------------------------------------------------------
 
-return function()
-  return setmetatable({
-    tmpNameCounter = 1,
-  }, CompilerContextMT)
-end
+return Compiler
