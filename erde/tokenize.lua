@@ -1,33 +1,15 @@
 local C = require('erde.constants')
 local rules = require('erde.rules')
 
--- -----------------------------------------------------------------------------
--- Tokenizer
--- -----------------------------------------------------------------------------
+-- Foward declare for recursive use in Tokenizer
+local tokenize
 
-local Tokenizer = setmetatable({}, {
-  __call = function(self, text)
-    local tokenizer = {}
-    setmetatable(tokenizer, { __index = self })
-
-    if text ~= nil then
-      tokenizer:reset(text)
-    end
-
-    return tokenizer
-  end,
-})
+local Tokenizer = {}
+local TokenizerMT = { __index = Tokenizer }
 
 -- -----------------------------------------------------------------------------
--- Methods
+-- Tokenizer Methods
 -- -----------------------------------------------------------------------------
-
-function Tokenizer:reset(text)
-  self.buffer = text
-  self.bufIndex = 1
-  self.bufValue = text:sub(1, 1)
-  self.tokens = {}
-end
 
 function Tokenizer:commit(token)
   self.tokens[#self.tokens + 1] = token
@@ -45,8 +27,65 @@ function Tokenizer:consume(n)
   return consumed
 end
 
+function Tokenizer:tokenize()
+  self:Space()
+
+  while self.bufValue ~= '' do
+    if C.WORD_HEAD[self.bufValue] then
+      local token = self:consume()
+
+      while C.WORD_BODY[self.bufValue] do
+        token = token .. self:consume()
+      end
+
+      self:commit(token)
+    elseif C.DIGIT[self.bufValue] then
+      local token = self:consume()
+
+      while C.DIGIT[self.bufValue] do
+        token = token .. self:consume()
+      end
+
+      self:commit(token)
+    elseif C.SYMBOLS[self:peek(3)] then
+      self:commit(self:consume(3))
+    elseif C.SYMBOLS[self:peek(2)] then
+      self:commit(self:consume(2))
+    elseif self.bufValue == '\n' then
+      self:commit(self:consume())
+      while self.bufValue == '\n' do
+        self:consume()
+      end
+    elseif self.bufValue == '"' or self.bufValue == "'" then
+      self:String({ long = false, interpolation = true })
+    elseif self:peek(2):match('^%[[[=]$') then
+      self:String({ long = true, interpolation = true })
+    elseif self:peek(2):match('^--$') then
+      self:commit(self:consume(2))
+
+      if self:peek(2):match('^%[[[=]$') then
+        self:String({ long = true, interpolation = false })
+      else
+        local token = ''
+
+        while self.bufValue ~= '' and self.bufValue ~= '\n' do
+          token = token .. self:consume()
+        end
+
+        self:commit(token)
+      end
+    else
+      self:commit(self:consume())
+    end
+
+    self:Space()
+  end
+
+  return self.tokens
+end
+
 -- -----------------------------------------------------------------------------
--- Macros
+-- Tokenizer Macros
 -- -----------------------------------------------------------------------------
 
 function Tokenizer:Space()
@@ -110,8 +149,7 @@ function Tokenizer:String(opts)
         text = text .. self:consume()
       end
 
-      local interpolationTokenizer = Tokenizer(text)
-      for i, token in pairs(interpolationTokenizer:tokenize()) do
+      for i, token in pairs(tokenize(text)) do
         self:commit(token)
       end
 
@@ -130,72 +168,17 @@ function Tokenizer:String(opts)
 end
 
 -- -----------------------------------------------------------------------------
--- Tokenize
--- -----------------------------------------------------------------------------
-
-function Tokenizer:tokenize()
-  self:Space()
-
-  while self.bufValue ~= '' do
-    if WORD_HEAD[self.bufValue] then
-      local token = self:consume()
-
-      while WORD_BODY[self.bufValue] do
-        token = token .. self:consume()
-      end
-
-      self:commit(token)
-    elseif DIGIT[self.bufValue] then
-      local token = self:consume()
-
-      while DIGIT[self.bufValue] do
-        token = token .. self:consume()
-      end
-
-      self:commit(token)
-    elseif self.bufValue == '.' and C.BINOPS[self:peek(3)] then
-      -- Tokenize operators of length 3. This exploits the fact that all ops of
-      -- length 3 are binops that start with a period.
-      self:commit(self:consume(3))
-    elseif C.BINOPS[self:peek(2)] then
-      -- Tokenize operators of length 2. This exploits the fact
-      -- that the only unop of length 2 is also a valid binop.
-      self:commit(self:consume(2))
-    elseif self.bufValue == '\n' then
-      self:commit(self:consume())
-      while self.bufValue == '\n' do
-        self:consume()
-      end
-    elseif self.bufValue == '"' or self.bufValue == "'" then
-      self:String({ long = false, interpolation = true })
-    elseif self:peek(2):match('^%[[[=]$') then
-      self:String({ long = true, interpolation = true })
-    elseif self:peek(2):match('^--$') then
-      self:commit(self:consume(2))
-
-      if self:peek(2):match('^%[[[=]$') then
-        self:String({ long = true, interpolation = false })
-      else
-        local token = ''
-
-        while self.bufValue ~= '' and self.bufValue ~= '\n' do
-          token = token .. self:consume()
-        end
-
-        self:commit(token)
-      end
-    else
-      self:commit(self:consume())
-    end
-
-    self:Space()
-  end
-
-  return self.tokens
-end
-
--- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Tokenizer
+-- Declaration at top of module
+tokenize = function(text)
+  return setmetatable({
+    buffer = text,
+    bufIndex = 1,
+    bufValue = text:sub(1, 1),
+    tokens = {},
+  }, TokenizerMT):tokenize()
+end
+
+return tokenize

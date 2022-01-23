@@ -1,61 +1,54 @@
-local ParserContext = require('erde.ParserContext')
-
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
 describe('ArrowFunction.parse', function()
   spec('skinny arrow function', function()
-    assert.has_subtable({
-      variant = 'skinny',
-    }, parse.ArrowFunction(
-      '() -> { return 1 }'
-    ))
+    assert.subtable(
+      { variant = 'skinny' },
+      parse.ArrowFunction('() -> { return 1 }')
+    )
   end)
 
   spec('fat arrow function', function()
-    assert.has_subtable({
-      variant = 'fat',
-    }, parse.ArrowFunction(
-      '() => { return 1 }'
-    ))
+    assert.subtable(
+      { variant = 'fat' },
+      parse.ArrowFunction('() => { return 1 }')
+    )
   end)
 
   spec('arrow function implicit params', function()
-    assert.has_subtable({
-      params = { { value = 'a' } },
-    }, parse.ArrowFunction(
-      'a -> {}'
-    ))
-    assert.has_subtable({
-      params = { { { name = 'a', variant = 'keyDestruct' } } },
-    }, parse.ArrowFunction(
-      '{ a } -> {}'
-    ))
-    assert.has_subtable({
-      params = { { { name = 'a', variant = 'numberDestruct' } } },
-    }, parse.ArrowFunction(
-      '[ a ] -> {}'
-    ))
-    assert.has_error(function()
+    assert.subtable(
+      { params = { { value = 'a' } } },
+      parse.ArrowFunction('a -> {}')
+    )
+    assert.subtable(
+      { params = { { { name = 'a', variant = 'keyDestruct' } } } },
+      parse.ArrowFunction('{ a } -> {}')
+    )
+    assert.subtable(
+      { params = { { { name = 'a', variant = 'numberDestruct' } } } },
+      parse.ArrowFunction('[ a ] -> {}')
+    )
+    assert.error(function()
       parse.ArrowFunction('a = 1 -> {}')
     end)
-    assert.has_error(function()
+    assert.error(function()
       parse.ArrowFunction('...a -> {}')
     end)
-    assert.has_error(function()
+    assert.error(function()
       parse.ArrowFunction('a.b -> {}')
     end)
   end)
 
   spec('arrow function implicit returns', function()
-    assert.has_subtable({
+    assert.subtable({
       hasImplicitReturns = true,
       returns = { { value = '1' } },
     }, parse.ArrowFunction(
       '() -> 1'
     ))
-    assert.has_subtable({
+    assert.subtable({
       hasImplicitReturns = true,
       returns = {
         { value = '1' },
@@ -64,7 +57,7 @@ describe('ArrowFunction.parse', function()
     }, parse.ArrowFunction(
       '() -> (1, 2)'
     ))
-    assert.has_error(function()
+    assert.error(function()
       parse.ArrowFunction('() -> ()')
     end)
   end)

@@ -12,7 +12,7 @@ local Terminal = { ruleName = 'Terminal' }
 
 function Terminal.parse(ctx)
   for _, terminal in pairs(C.TERMINALS) do
-    if ctx:branchWord(terminal) then
+    if ctx:branch(terminal) then
       return { value = terminal }
     end
   end

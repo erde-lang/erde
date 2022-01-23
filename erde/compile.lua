@@ -1,38 +1,30 @@
 local C = require('erde.constants')
+local parse = require('erde.parse')
 local rules = require('erde.rules')
 
--- -----------------------------------------------------------------------------
+-- =============================================================================
 -- Compiler
--- -----------------------------------------------------------------------------
+-- =============================================================================
 
-local Compiler = setmetatable({}, {
-  __call = function(self)
-    local compiler = { tmpNameCounter = 1 }
-    setmetatable(compiler, { __index = self })
-    return compiler
-  end,
-})
+local Compiler = {}
+local CompilerMT = { __index = Compiler }
 
--- Allow calling all rule compilers directly from context
-for ruleName, ruleCompiler in pairs(rules.parse) do
-  Compiler[ruleName] = ruleCompiler
+-- Allow calling all rule compilers directly from compiler
+for ruleName, rule in pairs(rules) do
+  Compiler[ruleName] = rule.compile
 end
 
 -- -----------------------------------------------------------------------------
 -- Methods
 -- -----------------------------------------------------------------------------
 
-function Compiler:reset()
-  self.tmpNameCounter = 1
-end
-
 function Compiler:compile(node)
-  if type(node) ~= 'table' or not rules.compile[node.ruleName] then
+  if type(node) ~= 'table' or not rules[node.ruleName] then
     -- TODO
     error('No node compiler for ' .. require('inspect')(node))
   end
 
-  return rules.compile[node.ruleName](self, node)
+  return rules[node.ruleName].compile(self, node)
 end
 
 function Compiler:newTmpName()
@@ -46,7 +38,7 @@ end
 
 -- TODO: rename
 function Compiler:compileBinop(op, lhs, rhs)
-  if op.tag == 'nc' then
+  if op.token == '??' then
     local ncTmpName = self:newTmpName()
     return table.concat({
       '(function()',
@@ -58,26 +50,26 @@ function Compiler:compileBinop(op, lhs, rhs)
       'end',
       'end)()',
     }, '\n')
-  elseif op.tag == 'or' then
+  elseif op.token == '|' then
     return table.concat({ lhs, ' or ', rhs })
-  elseif op.tag == 'and' then
+  elseif op.token == '&' then
     return table.concat({ lhs, ' and ', rhs })
-  elseif op.tag == 'bor' then
+  elseif op.token == '.|' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' | ', rhs })
       or ('require("bit").bor(%s, %s)'):format(lhs, rhs)
-  elseif op.tag == 'bxor' then
+  elseif op.token == '.~' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' ~ ', rhs })
       or ('require("bit").bxor(%s, %s)'):format(lhs, rhs)
-  elseif op.tag == 'band' then
+  elseif op.token == '.&' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' & ', rhs })
       or ('require("bit").band(%s, %s)'):format(lhs, rhs)
-  elseif op.tag == 'lshift' then
+  elseif op.token == '.<<' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' << ', rhs })
       or ('require("bit").lshift(%s, %s)'):format(lhs, rhs)
-  elseif op.tag == 'rshift' then
+  elseif op.token == '.>>' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' >> ', rhs })
       or ('require("bit").rshift(%s, %s)'):format(lhs, rhs)
-  elseif op.tag == 'intdiv' then
+  elseif op.token == '//' then
     return _VERSION:find('5.[34]') and table.concat({ lhs, ' // ', rhs })
       or ('math.floor(%s / %s)'):format(lhs, rhs)
   else
@@ -141,8 +133,26 @@ function Compiler:compileOptChain(node)
   return { optSubChains = optSubChains, chain = chain }
 end
 
--- -----------------------------------------------------------------------------
--- Return
--- -----------------------------------------------------------------------------
+-- =============================================================================
+-- Compile
+-- =============================================================================
 
-return Compiler
+local function compileRule(text, ruleName, parseOpts)
+  local compiler = setmetatable({ newTmpName = 1 }, CompilerMT)
+  local ast = parse[ruleName](text, parseOpts)
+  return compiler:compile(ast)
+end
+
+local compile = setmetatable({}, {
+  __call = function(self, text, parseOpts)
+    return compileRule(text, 'Block', parseOpts)
+  end,
+})
+
+for ruleName, rule in pairs(rules) do
+  compile[ruleName] = function(text, parseOpts)
+    return compileRule(text, ruleName, parseOpts)
+  end
+end
+
+return compile

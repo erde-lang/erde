@@ -3,7 +3,7 @@ return {
     ROOT = { 'erde' },
     lpath = './?/init.lua',
     verbose = true,
-    helper = 'erde/rules/setup_spec.lua',
+    helper = 'erde/setup_spec.lua',
   },
 }
 

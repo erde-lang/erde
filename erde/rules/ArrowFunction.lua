@@ -30,7 +30,7 @@ function ArrowFunction.parse(ctx)
   elseif ctx:branch('=>') then
     node.variant = 'fat'
   else
-    error()
+    error('Unexpected token ' .. ctx.token)
   end
 
   if ctx.token == '{' then

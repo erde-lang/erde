@@ -39,7 +39,7 @@ function Expr.parse(ctx, opts)
       node,
     }
 
-    if binop.tag == 'ternary' then
+    if binop.token == '?' then
       ctx.isTernaryExpr = true
       node[#node + 1] = ctx:Expr()
       ctx.isTernaryExpr = false
@@ -74,10 +74,10 @@ function Expr.compile(ctx, node)
       return table.concat({ token, operand }, ' ')
     end
 
-    if op.tag == 'bnot' then
+    if op.token == '.~' then
       return _VERSION:find('5.[34]') and compileUnop('~')
         or ('require("bit").bnot(%1)'):format(operand)
-    elseif op.tag == 'not' then
+    elseif op.token == '~' then
       return compileUnop('not')
     else
       return op.token .. operand
@@ -86,7 +86,7 @@ function Expr.compile(ctx, node)
     local lhs = ctx:compile(node[1])
     local rhs = ctx:compile(node[2])
 
-    if op.tag == 'ternary' then
+    if op.token == '?' then
       return table.concat({
         '(function()',
         'if %s then',
