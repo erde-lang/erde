@@ -4,7 +4,7 @@
 
 describe('DoBlock.parse', function()
   spec('do block', function()
-    assert.has_subtable({
+    assert.subtable({
       body = {
         { ruleName = 'Assignment' },
       },

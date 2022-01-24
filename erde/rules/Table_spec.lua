@@ -4,7 +4,7 @@
 
 describe('Table.parse', function()
   spec('table numberKey', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         variant = 'numberKey',
         value = { value = '10' },
@@ -15,7 +15,7 @@ describe('Table.parse', function()
   end)
 
   spec('table nameKey', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         variant = 'nameKey',
         key = 'x',
@@ -27,7 +27,7 @@ describe('Table.parse', function()
   end)
 
   spec('table exprKey', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         variant = 'exprKey',
         key = { op = { tag = 'add' } },
@@ -42,7 +42,7 @@ describe('Table.parse', function()
   end)
 
   spec('table mixed variants', function()
-    assert.has_subtable({
+    assert.subtable({
       { value = { value = 'a' } },
       { value = { value = 'b' } },
       { key = 'c' },
@@ -53,7 +53,7 @@ describe('Table.parse', function()
   end)
 
   spec('nested table', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         key = 'x',
         value = {

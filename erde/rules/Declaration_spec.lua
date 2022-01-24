@@ -4,13 +4,13 @@
 
 describe('Declaration.parse', function()
   spec('local declaration', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'local',
       varList = { { value = 'abc' } },
     }, parse.Declaration(
       'local abc'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'local',
       varList = { { value = 'abc' } },
       exprList = { { value = '2' } },
@@ -20,7 +20,7 @@ describe('Declaration.parse', function()
   end)
 
   spec('module declaration', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         variant = 'module',
         varList = { { value = 'abc' } },
@@ -28,7 +28,7 @@ describe('Declaration.parse', function()
     }, parse.Block(
       'module abc'
     ))
-    assert.has_subtable({
+    assert.subtable({
       {
         variant = 'module',
         varList = { { value = 'abc' } },
@@ -40,13 +40,13 @@ describe('Declaration.parse', function()
   end)
 
   spec('global declaration', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'global',
       varList = { { value = 'abc' } },
     }, parse.Declaration(
       'global abc'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'global',
       varList = { { value = 'abc' } },
       exprList = { { value = '2' } },
@@ -56,7 +56,7 @@ describe('Declaration.parse', function()
   end)
 
   spec('multiple declaration', function()
-    assert.has_subtable({
+    assert.subtable({
       varList = {
         { value = 'a' },
         { value = 'b' },
@@ -64,7 +64,7 @@ describe('Declaration.parse', function()
     }, parse.Declaration(
       'local a, b'
     ))
-    assert.has_subtable({
+    assert.subtable({
       exprList = {
         { value = '1' },
         { value = '2' },
@@ -81,13 +81,13 @@ describe('Declaration.parse', function()
   end)
 
   spec('destructure declaration', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'local',
       varList = { { ruleName = 'Destructure' } },
     }, parse.Declaration(
       'local { a } = x'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'local',
       varList = {
         { value = 'a' },

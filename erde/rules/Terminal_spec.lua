@@ -18,14 +18,14 @@ describe('Terminal.parse', function()
   end)
 
   spec('terminal parens', function()
-    assert.has_subtable({
+    assert.subtable({
       ruleName = 'Number',
       value = '1',
       parens = true,
     }, parse.Terminal(
       '(1)'
     ))
-    assert.has_subtable({
+    assert.subtable({
       ruleName = 'ArrowFunction',
       parens = true,
     }, parse.Terminal(

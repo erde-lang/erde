@@ -4,13 +4,13 @@
 
 describe('TryCatch.parse', function()
   spec('try catch', function()
-    assert.has_subtable({
+    assert.subtable({
       try = { ruleName = 'Block' },
       catch = { ruleName = 'Block' },
     }, parse.TryCatch(
       'try {} catch() {}'
     ))
-    assert.has_subtable({
+    assert.subtable({
       try = { ruleName = 'Block' },
       errorName = { value = 'err' },
       catch = { ruleName = 'Block' },

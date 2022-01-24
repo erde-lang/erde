@@ -4,10 +4,10 @@
 
 describe('Return.parse', function()
   spec('return values', function()
-    assert.has_subtable({
+    assert.subtable({
       { value = '1' },
     }, parse.Return('return 1'))
-    assert.has_subtable({
+    assert.subtable({
       { value = '1' },
       { value = '2' },
     }, parse.Return(
