@@ -52,9 +52,15 @@ function Tokenizer:tokenize()
     elseif C.SYMBOLS[self:peek(2)] then
       self:commit(self:consume(2))
     elseif self.bufValue == '\n' then
-      self:commit(self:consume())
-      while self.bufValue == '\n' do
-        self:consume()
+      self:consume()
+      self:Space()
+
+      if self.bufValue == '\n' then
+        -- Record 2 or more newlines for formatting
+        self.newlines[self.bufIndex] = true
+        while self.bufValue == '\n' do
+          self:consume()
+        end
       end
     elseif self.bufValue == '"' or self.bufValue == "'" then
       self:String({ long = false, interpolation = true })
@@ -178,6 +184,7 @@ tokenize = function(text)
     bufIndex = 1,
     bufValue = text:sub(1, 1),
     tokens = {},
+    newlines = {},
   }, TokenizerMT):tokenize()
 end
 
