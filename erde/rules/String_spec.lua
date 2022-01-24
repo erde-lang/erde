@@ -4,11 +4,11 @@
 
 describe('String.parse', function()
   spec('short string', function()
-    assert.has_subtable({ '' }, parse.String('""'))
-    assert.has_subtable({ 'hello' }, parse.String('"hello"'))
-    assert.has_subtable({ 'hello' }, parse.String("'hello'"))
-    assert.has_subtable({ 'hello\\nworld' }, parse.String("'hello\\nworld'"))
-    assert.has_subtable({ '\\\\' }, parse.String("'\\\\'"))
+    assert.are.equal(0, #parse.String('""'))
+    assert.subtable({ 'hello' }, parse.String('"hello"'))
+    assert.subtable({ 'hello' }, parse.String("'hello'"))
+    assert.subtable({ 'hello\\nworld' }, parse.String("'hello\\nworld'"))
+    assert.subtable({ '\\\\' }, parse.String("'\\\\'"))
     assert.has_error(function()
       parse.String('"hello')
     end)
@@ -18,10 +18,10 @@ describe('String.parse', function()
   end)
 
   spec('long string', function()
-    assert.has_subtable({ ' hello world ' }, parse.String('[[ hello world ]]'))
-    assert.has_subtable({ 'hello\nworld' }, parse.String('[[hello\nworld]]'))
-    assert.has_subtable({ 'a{bc}d' }, parse.String('[[a\\{bc}d]]'))
-    assert.has_subtable({ 'a[[b' }, parse.String('[=[a[[b]=]'))
+    assert.subtable({ ' hello world ' }, parse.String('[[ hello world ]]'))
+    assert.subtable({ 'hello\nworld' }, parse.String('[[hello\nworld]]'))
+    assert.subtable({ 'a{bc}d' }, parse.String('[[a\\{bc}d]]'))
+    assert.subtable({ 'a[[b' }, parse.String('[=[a[[b]=]'))
     assert.has_error(function()
       parse.String('[[hello world')
     end)
@@ -31,15 +31,9 @@ describe('String.parse', function()
   end)
 
   spec('interpolation', function()
-    assert.has_subtable(
-      { 'hello ', { value = '3' } },
-      parse.String('"hello {3}"')
-    )
-    assert.has_subtable(
-      { 'hello ', { value = '3' } },
-      parse.String("'hello {3}'")
-    )
-    assert.has_subtable(
+    assert.subtable({ 'hello ', { value = '3' } }, parse.String('"hello {3}"'))
+    assert.subtable({ 'hello ', { value = '3' } }, parse.String("'hello {3}'"))
+    assert.subtable(
       { 'hello ', { value = '3' } },
       parse.String('[[hello {3}]]')
     )
@@ -52,6 +46,7 @@ end)
 
 describe('String.compile', function()
   spec('compile short string', function()
+    assert.are.equal('""', compile.String('""'))
     assert.are.equal('"hello"', compile.String('"hello"'))
     assert.are.equal("'hello'", compile.String("'hello'"))
     assert.are.equal("'hello\\nworld'", compile.String("'hello\\nworld'"))

@@ -13,9 +13,9 @@ describe('Expr.parse', function()
 
   spec('unop tokens', function()
     for opToken, op in pairs(C.UNOPS) do
-      assert.has_subtable({
+      assert.subtable({
         variant = 'unop',
-        op = { token = op.token },
+        op = { token = opToken },
       }, parse.Expr(
         opToken .. '1'
       ))
@@ -24,10 +24,10 @@ describe('Expr.parse', function()
 
   spec('binop tokens', function()
     for opToken, op in pairs(C.BINOPS) do
-      local testExpr = op.token == '?' and '1 ? 2 : 3' or '1' .. opToken .. '2'
-      assert.has_subtable({
+      local testExpr = opToken == '?' and '1 ? 2 : 3' or '1 ' .. opToken .. ' 2'
+      assert.subtable({
         variant = 'binop',
-        op = { token = op.token },
+        op = { token = opToken },
       }, parse.Expr(
         testExpr
       ))
@@ -35,7 +35,7 @@ describe('Expr.parse', function()
   end)
 
   spec('left associative binop precedence', function()
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
       {
         op = { token = '*' },
@@ -46,7 +46,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 * 2 + 3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
       { value = '1' },
       {
@@ -57,7 +57,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 + 2 * 3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
       {
         op = { token = '+' },
@@ -75,7 +75,7 @@ describe('Expr.parse', function()
   end)
 
   spec('right associative binop precedence', function()
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '^' },
       { value = '1' },
       {
@@ -86,7 +86,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 ^ 2 ^ 3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
       {
         op = { token = '^' },
@@ -100,7 +100,7 @@ describe('Expr.parse', function()
   end)
 
   spec('binop parens', function()
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '*' },
       { value = '1' },
       {
@@ -115,7 +115,7 @@ describe('Expr.parse', function()
   end)
 
   spec('unops', function()
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '*' },
       { value = '1' },
       {
@@ -125,7 +125,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 * -3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '-' },
       operand = {
         op = { token = '^' },
@@ -135,7 +135,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '-2 ^ 3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '*' },
       {
         op = { token = '-' },
@@ -148,7 +148,7 @@ describe('Expr.parse', function()
   end)
 
   spec('ternary operator', function()
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '?' },
       { value = '1' },
       { value = '2' },
@@ -156,7 +156,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 ? 2 : 3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '?' },
       { value = '1' },
       {
@@ -171,7 +171,7 @@ describe('Expr.parse', function()
     }, parse.Expr(
       '1 ? -2 : 3 + 4'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '?' },
       { value = '1' },
       { ruleName = 'OptChain' },

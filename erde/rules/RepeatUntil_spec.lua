@@ -4,7 +4,7 @@
 
 describe('RepeatUntil.parse', function()
   spec('repeat until', function()
-    assert.has_subtable({
+    assert.subtable({
       cond = { value = 'true' },
     }, parse.RepeatUntil(
       'repeat {} until true'

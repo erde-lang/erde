@@ -100,7 +100,7 @@ C.SYMBOLS = {
 
 for opToken, op in pairs(C.BINOPS) do
   if #opToken > 1 then
-    C.SYMBOLS[#C.SYMBOLS + 1] = true
+    C.SYMBOLS[opToken] = true
   end
 end
 

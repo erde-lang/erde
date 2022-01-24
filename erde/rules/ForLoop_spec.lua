@@ -4,7 +4,7 @@
 
 describe('ForLoop.parse', function()
   spec('numeric for loop', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'numeric',
       name = 'i',
       parts = {
@@ -14,7 +14,7 @@ describe('ForLoop.parse', function()
     }, parse.ForLoop(
       'for i = 1, 2 {}'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'numeric',
       name = 'i',
       parts = {
@@ -34,21 +34,21 @@ describe('ForLoop.parse', function()
   end)
 
   spec('generic for loop', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'generic',
       nameList = { 'a' },
       exprList = { { value = '1' } },
     }, parse.ForLoop(
       'for a in 1 {}'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'generic',
       nameList = { 'a', 'b' },
       exprList = { { value = '1' } },
     }, parse.ForLoop(
       'for a, b in 1 {}'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'generic',
       nameList = { 'a' },
       exprList = {
@@ -58,7 +58,7 @@ describe('ForLoop.parse', function()
     }, parse.ForLoop(
       'for a in 1, 2 {}'
     ))
-    assert.has_subtable({
+    assert.subtable({
       variant = 'generic',
       nameList = { 'a', 'b' },
       exprList = {

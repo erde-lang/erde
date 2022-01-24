@@ -26,6 +26,7 @@ function Block.parse(ctx, opts)
   repeat
     -- Run this on ever iteration in case nested blocks change values
     if opts.isLoopBlock then
+      -- unset? revert nested loop blocks?
       ctx.loopBlock = node
     elseif opts.isFunctionBlock then
       -- Reset loopBlock for function blocks. Break / Continue cannot
@@ -37,21 +38,43 @@ function Block.parse(ctx, opts)
       ctx.moduleBlock = nil
     end
 
-    local statement = ctx:Switch({
-      ctx.Assignment,
-      ctx.Break,
-      ctx.Continue,
-      ctx.FunctionCall, -- must be before declaration!
-      ctx.Declaration,
-      ctx.DoBlock,
-      ctx.ForLoop,
-      ctx.IfElse,
-      ctx.Function,
-      ctx.RepeatUntil,
-      ctx.Return,
-      ctx.TryCatch,
-      ctx.WhileLoop,
-    })
+    local statement
+    if ctx.token == 'break' then
+      statement = ctx:Break() -- TODO: inline?
+    elseif ctx.token == 'continue' then
+      statement = ctx:Continue() -- TODO: inline?
+    elseif ctx.token == 'do' then
+      statement = ctx:DoBlock()
+    elseif ctx.token == 'if' then
+      statement = ctx:IfElse()
+    elseif ctx.token == 'for' then
+      statement = ctx:ForLoop()
+    elseif ctx.token == 'repeat' then
+      statement = ctx:RepeatUntil()
+    elseif ctx.token == 'return' then
+      statement = ctx:Return()
+    elseif ctx.token == 'try' then
+      statement = ctx:TryCatch()
+    elseif ctx.token == 'while' then
+      statement = ctx:WhileLoop()
+    elseif ctx.token == 'function' then
+      statement = ctx:Function()
+    elseif
+      ctx.token == 'local'
+      or ctx.token == 'module'
+      or ctx.token == 'global'
+    then
+      if ctx:peek(1) == 'function' then
+        statement = ctx:Function()
+      else
+        statement = ctx:Declaration()
+      end
+    else
+      statement = ctx:Switch({
+        ctx.FunctionCall,
+        ctx.Assignment,
+      })
+    end
 
     node[#node + 1] = statement
   until not statement

@@ -16,10 +16,9 @@ function Expr.parse(ctx, opts)
   local lhs
 
   if C.UNOPS[ctx.token] then
-    ctx:consume()
     node.variant = 'unop'
-    node.operand = ctx:Expr({ minPrec = C.UNOPS[ctx.token].prec + 1 })
-    node.op = ctx:consume()
+    node.op = C.UNOPS[ctx:consume()]
+    node.operand = ctx:Expr({ minPrec = node.op.prec + 1 })
   else
     node = ctx:Terminal()
   end
@@ -43,7 +42,7 @@ function Expr.parse(ctx, opts)
       ctx.isTernaryExpr = true
       node[#node + 1] = ctx:Expr()
       ctx.isTernaryExpr = false
-      assert(ctx.token == ':')
+      assert(ctx:consume() == ':')
     end
 
     node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE

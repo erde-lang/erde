@@ -4,7 +4,7 @@
 
 describe('Assignment.parse', function()
   spec('name assignment', function()
-    assert.has_subtable({
+    assert.subtable({
       idList = { { value = 'a' } },
       exprList = { { value = '3' } },
     }, parse.Assignment(
@@ -13,13 +13,13 @@ describe('Assignment.parse', function()
   end)
 
   spec('optchain assignment', function()
-    assert.has_subtable({
+    assert.subtable({
       idList = { { ruleName = 'OptChain' } },
       exprList = { { value = '3' } },
     }, parse.Assignment(
       'a.b = 3'
     ))
-    assert.has_subtable({
+    assert.subtable({
       idList = { { ruleName = 'OptChain' } },
       exprList = { { value = '3' } },
     }, parse.Assignment(
@@ -28,7 +28,7 @@ describe('Assignment.parse', function()
   end)
 
   spec('multiple name assignment', function()
-    assert.has_subtable({
+    assert.subtable({
       idList = {
         { value = 'a' },
         { value = 'b' },
@@ -43,7 +43,7 @@ describe('Assignment.parse', function()
   end)
 
   spec('multiple optchain assignment', function()
-    assert.has_subtable({
+    assert.subtable({
       idList = {
         { ruleName = 'OptChain' },
         { ruleName = 'OptChain' },
@@ -58,19 +58,19 @@ describe('Assignment.parse', function()
   end)
 
   spec('binop assignments', function()
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
       idList = { { value = 'a' } },
       exprList = { { value = '1' } },
     }, parse.Assignment(
       'a += 1'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
     }, parse.Assignment(
       'a, b += 1, 2'
     ))
-    assert.has_subtable({
+    assert.subtable({
       op = { token = '+' },
     }, parse.Assignment(
       'a?.b, x?.y += 1, 2'

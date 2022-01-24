@@ -9,19 +9,13 @@ local OptChain = { ruleName = 'OptChain' }
 -- -----------------------------------------------------------------------------
 
 function OptChain.parse(ctx)
-  local node = {
-    base = ctx:Switch({
-      ctx.Name,
-      function()
-        local base = ctx:Surround('(', ')', ctx.Expr)
-        base.parens = true
-        return base
-      end,
-    }),
-  }
+  local node = {}
 
-  if not node.base then
-    error()
+  if ctx.token == '(' then
+    node.base = ctx:Surround('(', ')', ctx.Expr)
+    node.base.parens = true
+  else
+    node.base = ctx:Name()
   end
 
   while true do
@@ -53,8 +47,10 @@ function OptChain.parse(ctx)
             allowTrailingComma = true,
             rule = function()
               return ctx:Switch({
-                ctx.Expr,
+                -- Spread must be before Expr, otherwise we will parse the
+                -- spread as varargs!
                 ctx.Spread,
+                ctx.Expr,
               })
             end,
           })

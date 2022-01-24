@@ -10,7 +10,7 @@ local Break = { ruleName = 'Break' }
 
 function Break.parse(ctx)
   assert(ctx.loopBlock ~= nil)
-  assert(ctx:consume() == 'break')
+  ctx:consume()
   return {}
 end
 

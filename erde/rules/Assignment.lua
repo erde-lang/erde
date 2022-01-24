@@ -27,11 +27,12 @@ function Assignment.parse(ctx)
       -- These operators cannot be used w/ operator assignment
       error()
     else
+      node.op = C.BINOPS[ctx.token]
       ctx:consume()
     end
   end
 
-  assert(ctx.token == '=')
+  assert(ctx:consume() == '=')
   node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end

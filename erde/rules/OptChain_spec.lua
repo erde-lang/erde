@@ -10,15 +10,13 @@ describe('OptChain.parse', function()
   end)
 
   spec('optchain base', function()
-    assert.has_subtable({
+    assert.subtable({
       value = 'a',
     }, parse.OptChain('a'))
-    assert.has_subtable({
+    assert.subtable({
       base = { value = 'a' },
-    }, parse.OptChain(
-      'a.b'
-    ))
-    assert.has_subtable({
+    }, parse.OptChain('a.b'))
+    assert.subtable({
       base = { ruleName = 'Expr' },
     }, parse.OptChain(
       '(1 + 2).a'
@@ -29,7 +27,7 @@ describe('OptChain.parse', function()
   end)
 
   spec('optchain dotIndex', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = false,
         variant = 'dotIndex',
@@ -38,7 +36,7 @@ describe('OptChain.parse', function()
     }, parse.OptChain(
       'a.b'
     ))
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = true,
         variant = 'dotIndex',
@@ -49,16 +47,16 @@ describe('OptChain.parse', function()
   end)
 
   spec('optchain bracketIndex', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = false,
         variant = 'bracketIndex',
-        value = { op = { tag = 'add' } },
+        value = { op = { token = '+' } },
       },
     }, parse.OptChain(
       'a[2 + 3]'
     ))
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = true,
         variant = 'bracketIndex',
@@ -69,7 +67,7 @@ describe('OptChain.parse', function()
   end)
 
   spec('optchain functionCall', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = false,
         variant = 'functionCall',
@@ -81,7 +79,7 @@ describe('OptChain.parse', function()
     }, parse.OptChain(
       'a(1, 2)'
     ))
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = true,
         variant = 'functionCall',
@@ -93,7 +91,7 @@ describe('OptChain.parse', function()
   end)
 
   spec('optchain method', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = false,
         variant = 'method',
@@ -103,7 +101,7 @@ describe('OptChain.parse', function()
     }, parse.OptChain(
       'a:b(1, 2)'
     ))
-    assert.has_subtable({
+    assert.subtable({
       {
         optional = true,
         variant = 'method',

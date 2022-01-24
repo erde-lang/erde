@@ -10,7 +10,7 @@ local Continue = { ruleName = 'Continue' }
 
 function Continue.parse(ctx)
   assert(ctx.loopBlock ~= nil)
-  assert(ctx:consume() == 'break')
+  ctx:consume()
 
   local node = {}
   local continueNodes = ctx.loopBlock.continueNodes

@@ -4,7 +4,7 @@
 
 describe('IfElse.parse', function()
   spec('if', function()
-    assert.has_subtable({
+    assert.subtable({
       ifNode = {
         cond = { value = 'true' },
         body = {},
@@ -15,7 +15,7 @@ describe('IfElse.parse', function()
   end)
 
   spec('if + elseif', function()
-    assert.has_subtable({
+    assert.subtable({
       ifNode = {},
       elseifNodes = {
         { cond = { value = 'true' } },
@@ -23,7 +23,7 @@ describe('IfElse.parse', function()
     }, parse.IfElse(
       'if false {} elseif true {}'
     ))
-    assert.has_subtable({
+    assert.subtable({
       ifNode = {},
       elseifNodes = {
         { cond = { value = 'false' } },
@@ -35,7 +35,7 @@ describe('IfElse.parse', function()
   end)
 
   spec('if + else', function()
-    assert.has_subtable({
+    assert.subtable({
       ifNode = {},
       elseNode = { body = {} },
     }, parse.IfElse(

@@ -6,7 +6,7 @@ local utils = require('erde.utils')
 
 describe('Function.parse', function()
   spec('local function', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'local',
       names = { 'a' },
     }, parse.Function(
@@ -15,7 +15,7 @@ describe('Function.parse', function()
   end)
 
   spec('module function', function()
-    assert.has_subtable({
+    assert.subtable({
       {
         variant = 'module',
         names = { 'a' },
@@ -26,7 +26,7 @@ describe('Function.parse', function()
   end)
 
   spec('global function', function()
-    assert.has_subtable({
+    assert.subtable({
       variant = 'global',
       names = { 'a' },
     }, parse.Function(
@@ -35,7 +35,7 @@ describe('Function.parse', function()
   end)
 
   spec('method function', function()
-    assert.has_subtable({
+    assert.subtable({
       isMethod = true,
       names = { 'a', 'b' },
     }, parse.Function(

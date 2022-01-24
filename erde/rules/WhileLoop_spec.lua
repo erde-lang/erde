@@ -4,7 +4,7 @@
 
 describe('WhileLoop.parse', function()
   spec('while loop', function()
-    assert.has_subtable({
+    assert.subtable({
       cond = { value = 'true' },
       body = {},
     }, parse.WhileLoop(

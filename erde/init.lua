@@ -1,4 +1,3 @@
-local Compiler = require('erde.Compiler')
 local parse = require('erde.parse')
 local compile = require('erde.compile')
 
@@ -9,8 +8,7 @@ return {
 
   -- TODO: clean this up
   run = function(text)
-    local ast = parse(text)
-    local source = compile(ast)
+    local source = compile(text)
 
     local loader, err = (loadstring or load)(source)
     if type(loader) == 'function' then

@@ -4,10 +4,16 @@
 
 describe('Continue.parse', function()
   spec('continue', function()
-    parse.Block([[
-      local x = 0
-      continue
-    ]])
+    assert.has.no_error(function()
+      parse.Block([[
+        while true {
+          continue
+        }
+      ]])
+    end)
+    assert.has_error(function()
+      parse.Continue('continue')
+    end)
   end)
 end)
 

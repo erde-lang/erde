@@ -40,13 +40,13 @@ function Tokenizer:tokenize()
 
       self:commit(token)
     elseif C.DIGIT[self.bufValue] then
-      local token = self:consume()
-
-      while C.DIGIT[self.bufValue] do
-        token = token .. self:consume()
+      if self:peek(2):match('0[xX]') then
+        self:Number({ hex = true })
+      else
+        self:Number()
       end
-
-      self:commit(token)
+    elseif self:peek(2):match('%.[0-9]') then
+      self:Number()
     elseif C.SYMBOLS[self:peek(3)] then
       self:commit(self:consume(3))
     elseif C.SYMBOLS[self:peek(2)] then
@@ -63,11 +63,17 @@ function Tokenizer:tokenize()
         end
       end
     elseif self.bufValue == '"' or self.bufValue == "'" then
-      self:String({ long = false, interpolation = true })
+      local tokens = self:String({ long = false, interpolation = true })
+      for i, token in pairs(tokens) do
+        self:commit(token)
+      end
     elseif self:peek(2):match('^%[[[=]$') then
-      self:String({ long = true, interpolation = true })
-    elseif self:peek(2):match('^--$') then
-      self:commit(self:consume(2))
+      local tokens = self:String({ long = true, interpolation = true })
+      for i, token in pairs(tokens) do
+        self:commit(token)
+      end
+    elseif self:peek(2):match('^%-%-') then
+      self:consume(2)
 
       if self:peek(2):match('^%[[[=]$') then
         self:String({ long = true, interpolation = false })
@@ -78,7 +84,8 @@ function Tokenizer:tokenize()
           token = token .. self:consume()
         end
 
-        self:commit(token)
+        -- TODO: do something w/ comments
+        -- self:commit(token)
       end
     else
       self:commit(self:consume())
@@ -100,11 +107,66 @@ function Tokenizer:Space()
   end
 end
 
+function Tokenizer:Number(opts)
+  opts = opts or {}
+  local token, lookup, exponent
+
+  if opts.hex then
+    lookup = C.HEX
+    exponent = '[pP]'
+
+    token = self:consume(2) -- 0[xX]
+    if not C.HEX[self.bufValue] and self.bufValue ~= '.' then
+      error()
+    end
+  else
+    token = ''
+    lookup = C.DIGIT
+    exponent = '[eE]'
+  end
+
+  while lookup[self.bufValue] do
+    token = token .. self:consume()
+  end
+
+  if self.bufValue == '.' then
+    token = token .. self:consume()
+
+    if not lookup[self.bufValue] then
+      error() -- invalid
+    end
+
+    while lookup[self.bufValue] do
+      token = token .. self:consume()
+    end
+  end
+
+  if self.bufValue:match(exponent) then
+    token = token .. self:consume()
+
+    if self.bufValue == '+' or self.bufValue == '-' then
+      token = token .. self:consume()
+    end
+
+    if not C.DIGIT[self.bufValue] then
+      error()
+    end
+
+    while C.DIGIT[self.bufValue] do
+      token = token .. self:consume()
+    end
+  end
+
+  self:commit(token)
+end
+
 function Tokenizer:String(opts)
+  local tokens = {}
+
   local strClose
   if not opts.long then
+    tokens[#tokens + 1] = self.bufValue
     strClose = self:consume()
-    self:commit(strClose) -- commit opening
   else
     self:consume() -- '['
 
@@ -118,27 +180,30 @@ function Tokenizer:String(opts)
       error()
     end
 
+    tokens[#tokens + 1] = '[' .. strEq .. '['
     strClose = ']' .. strEq .. ']'
-    self:commit('[' .. strEq .. '[') -- commit opening
   end
 
   local token = ''
-  local isEscaped = false
 
   while self:peek(#strClose) ~= strClose do
     if self.bufValue == '' or not opts.long and self.bufValue == '\n' then
       -- TODO: unterminated
       error()
-    elseif isEscaped then
-      isEscaped = false
-      token = token .. self:consume()
+    elseif self.bufValue == '\\' then
+      self:consume()
+      if self.bufValue == '{' or self.bufValue == '}' then
+        token = token .. self:consume()
+      else
+        token = token .. '\\' .. self:consume()
+      end
     elseif opts.interpolation and self.bufValue == '{' then
       if #token > 0 then
-        self:commit(token)
+        tokens[#tokens + 1] = token
         token = ''
       end
 
-      self:commit(self:consume()) -- '{'
+      tokens[#tokens + 1] = self:consume() -- '{'
 
       -- Keep track of brace depth to differentiate end of interpolation from
       -- nested braces
@@ -150,27 +215,30 @@ function Tokenizer:String(opts)
           braceDepth = braceDepth + 1
         elseif self.bufValue == '}' then
           braceDepth = braceDepth - 1
+        elseif self.bufValue == '' then
+          -- TODO: unterminated
+          error()
         end
 
         text = text .. self:consume()
       end
 
       for i, token in pairs(tokenize(text)) do
-        self:commit(token)
+        tokens[#tokens + 1] = token
       end
 
-      self:commit(self:consume()) -- '}'
+      tokens[#tokens + 1] = self:consume() -- '}'
     else
-      isEscaped = self.bufValue == '\\'
       token = token .. self:consume()
     end
   end
 
   if #token > 0 then
-    self:commit(token)
+    tokens[#tokens + 1] = token -- '}'
   end
 
-  self:commit(self:consume(#strClose))
+  tokens[#tokens + 1] = self:consume(#strClose)
+  return tokens
 end
 
 -- -----------------------------------------------------------------------------

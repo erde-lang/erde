@@ -15,14 +15,10 @@ function ArrowFunction.parse(ctx)
 
   if ctx.token == '(' then
     node.params = ctx:Params()
+  elseif ctx.token == '{' or ctx.token == '[' then
+    node.params = { ruleName = 'Params', ctx:Destructure() }
   else
-    node.params = {
-      ruleName = 'Params',
-      ctx:Switch({
-        ctx.Name,
-        ctx.Destructure,
-      }),
-    }
+    node.params = { ruleName = 'Params', ctx:Name() }
   end
 
   if ctx:branch('->') then
