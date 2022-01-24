@@ -13,7 +13,7 @@ local Name = { ruleName = 'Name' }
 function Name.parse(ctx)
   assert(ctx.token:match('^[_a-zA-Z][_a-zA-Z0-9]*$'))
 
-  for _, keyword in pairs(C.KEYWORDS) do
+  for i, keyword in pairs(C.KEYWORDS) do
     assert(ctx.token ~= keyword)
   end
 

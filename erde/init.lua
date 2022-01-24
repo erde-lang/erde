@@ -1,4 +1,3 @@
-local Compiler = require('erde.Compiler')
 local parse = require('erde.parse')
 local compile = require('erde.compile')
 
