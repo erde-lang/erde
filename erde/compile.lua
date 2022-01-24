@@ -138,7 +138,7 @@ end
 -- =============================================================================
 
 local function compileRule(text, ruleName, parseOpts)
-  local compiler = setmetatable({ newTmpName = 1 }, CompilerMT)
+  local compiler = setmetatable({ tmpNameCounter = 1 }, CompilerMT)
   local ast = parse[ruleName](text, parseOpts)
   return compiler:compile(ast)
 end
