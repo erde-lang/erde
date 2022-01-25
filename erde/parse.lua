@@ -41,7 +41,7 @@ function Parser:consume()
 
   self.tokenIndex = self.tokenIndex + 1
   self.token = self.tokens[self.tokenIndex]
-  while self.token and self.token:match('^--*$') do
+  while self.token and self.token:match('^%-%-') do
     -- Skip comments
     -- TODO
     self.tokenIndex = self.tokenIndex + 1
