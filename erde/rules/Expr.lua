@@ -18,7 +18,7 @@ function Expr.parse(ctx, opts)
   if C.UNOPS[ctx.token] then
     node.variant = 'unop'
     node.op = C.UNOPS[ctx:consume()]
-    node.operand = ctx:Expr({ minPrec = C.UNOPS[ctx.token].prec + 1 })
+    node.operand = ctx:Expr({ minPrec = node.op.prec + 1 })
   else
     node = ctx:Terminal()
   end
