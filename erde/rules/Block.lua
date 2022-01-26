@@ -26,6 +26,7 @@ function Block.parse(ctx, opts)
   repeat
     -- Run this on ever iteration in case nested blocks change values
     if opts.isLoopBlock then
+      -- unset? revert nested loop blocks?
       ctx.loopBlock = node
     elseif opts.isFunctionBlock then
       -- Reset loopBlock for function blocks. Break / Continue cannot

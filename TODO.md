@@ -3,6 +3,7 @@
 - restore tests from tokenizer changes
 - record line column for parsing errors
 - store comments in separate token table
+- refactor ctx state (loopBlock, moduleBlock, etc)
 - improved error messages (add pcalls, Rule.diagnose)
   - pcalls + Rule.diagnose
   - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)

@@ -51,8 +51,8 @@ function Parser:consume()
   return token
 end
 
-function Parser:peek()
-  return self.tokens[self.tokenIndex + n]
+function Parser:peek(n)
+  return self.tokens[self.tokenIndex + n] or ''
 end
 
 function Parser:branch(token)
