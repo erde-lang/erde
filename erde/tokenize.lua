@@ -45,12 +45,8 @@ function Tokenizer:tokenize()
       else
         self:Number()
       end
-    elseif self.bufValue == '.' then
-      if self:peek(2):match('%.[0-9]') then
-        self:Number()
-      else
-        self:commit(self:consume())
-      end
+    elseif self:peek(2):match('%.[0-9]') then
+      self:Number()
     elseif C.SYMBOLS[self:peek(3)] then
       self:commit(self:consume(3))
     elseif C.SYMBOLS[self:peek(2)] then

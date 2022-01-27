@@ -15,7 +15,7 @@ describe('Expr.parse', function()
     for opToken, op in pairs(C.UNOPS) do
       assert.subtable({
         variant = 'unop',
-        op = { token = op.token },
+        op = { token = opToken },
       }, parse.Expr(
         opToken .. '1'
       ))
@@ -24,10 +24,11 @@ describe('Expr.parse', function()
 
   spec('binop tokens', function()
     for opToken, op in pairs(C.BINOPS) do
-      local testExpr = op.token == '?' and '1 ? 2 : 3' or '1' .. opToken .. '2'
+      print('binop', opToken)
+      local testExpr = opToken == '?' and '1 ? 2 : 3' or '1' .. opToken .. '2'
       assert.subtable({
         variant = 'binop',
-        op = { token = op.token },
+        op = { token = opToken },
       }, parse.Expr(
         testExpr
       ))
