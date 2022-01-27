@@ -1,13 +1,15 @@
 # TODO
 
 - restore tests from tokenizer changes
-- record line column for parsing errors
-- store comments in separate token table
+- replace ctx:Switch w/ real branching
+  - cleaner, more explicit, faster
+- add goto rule and use goto in compilation
 - refactor ctx state (loopBlock, moduleBlock, etc)
+- record line column for parsing errors
+- store newlines / comments in separate token table
 - improved error messages (add pcalls, Rule.diagnose)
   - pcalls + Rule.diagnose
   - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)
-- add goto rule and use goto in compilation
 - formatter (Rule.format)
 - erde REPL
 
