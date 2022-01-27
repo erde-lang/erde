@@ -7,6 +7,7 @@
 - improved error messages (add pcalls, Rule.diagnose)
   - pcalls + Rule.diagnose
   - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)
+- add goto rule and use goto in compilation
 - formatter (Rule.format)
 - erde REPL
 

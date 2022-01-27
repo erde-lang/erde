@@ -40,13 +40,17 @@ function Tokenizer:tokenize()
 
       self:commit(token)
     elseif C.DIGIT[self.bufValue] then
-      local token = self:consume()
-
-      while C.DIGIT[self.bufValue] do
-        token = token .. self:consume()
+      if self:peek(2):match('0[xX]') then
+        self:Number({ hex = true })
+      else
+        self:Number()
       end
-
-      self:commit(token)
+    elseif self.bufValue == '.' then
+      if self:peek(2):match('%.[0-9]') then
+        self:Number()
+      else
+        self:commit(self:consume())
+      end
     elseif C.SYMBOLS[self:peek(3)] then
       self:commit(self:consume(3))
     elseif C.SYMBOLS[self:peek(2)] then
@@ -98,6 +102,59 @@ function Tokenizer:Space()
   while self.bufValue == ' ' or self.bufValue == '\t' do
     self:consume()
   end
+end
+
+function Tokenizer:Number(opts)
+  opts = opts or {}
+  local token, lookup, exponent
+
+  if opts.hex then
+    lookup = C.HEX
+    exponent = '[pP]'
+
+    token = self:consume(2) -- 0[xX]
+    if not C.HEX[self.bufValue] and self.bufValue ~= '.' then
+      error()
+    end
+  else
+    token = ''
+    lookup = C.DIGIT
+    exponent = '[eE]'
+  end
+
+  while lookup[self.bufValue] do
+    token = token .. self:consume()
+  end
+
+  if self.bufValue == '.' then
+    token = token .. self:consume()
+
+    if not lookup[self.bufValue] then
+      error() -- invalid
+    end
+
+    while lookup[self.bufValue] do
+      token = token .. self:consume()
+    end
+  end
+
+  if self.bufValue:match(exponent) then
+    token = token .. self:consume()
+
+    if self.bufValue == '+' or self.bufValue == '-' then
+      token = token .. self:consume()
+    end
+
+    if not C.DIGIT[self.bufValue] then
+      error()
+    end
+
+    while C.DIGIT[self.bufValue] do
+      token = token .. self:consume()
+    end
+  end
+
+  self:commit(token)
 end
 
 function Tokenizer:String(opts)

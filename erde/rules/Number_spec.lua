@@ -15,6 +15,7 @@ describe('Number.parse', function()
     assert.are.equal('0xd', parse.Number('0xd').value)
     assert.are.equal('0Xf', parse.Number('0Xf').value)
     assert.are.equal('0xa8F', parse.Number('0xa8F').value)
+    assert.are.equal('0x.1', parse.Number('0x.1').value)
 
     assert.has_error(function()
       parse.Number('x3')
