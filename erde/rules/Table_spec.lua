@@ -30,7 +30,7 @@ describe('Table.parse', function()
     assert.subtable({
       {
         variant = 'exprKey',
-        key = { op = { tag = 'add' } },
+        key = { op = { token = '+' } },
         value = { value = '3' },
       },
     }, parse.Table(
@@ -48,7 +48,7 @@ describe('Table.parse', function()
       { key = 'c' },
       { key = { variant = 'long' } },
     }, parse.Table(
-      '{ a, b, c = 1, [[[d]]] = 2 }'
+      '{ a, b, c = 1, [ [[d]] ] = 2 }'
     ))
   end)
 
