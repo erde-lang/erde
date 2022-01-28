@@ -47,8 +47,10 @@ function Table.parse(ctx)
         return ctx:Switch({
           parseExprKeyField,
           parseNameKeyField,
-          parseNumberKeyField,
+          -- Parse spread before expr, otherwise we will parse the spread as
+          -- varargs!
           parseSpreadField,
+          parseNumberKeyField,
         })
       end,
     })

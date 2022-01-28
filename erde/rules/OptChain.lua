@@ -53,8 +53,10 @@ function OptChain.parse(ctx)
             allowTrailingComma = true,
             rule = function()
               return ctx:Switch({
-                ctx.Expr,
+                -- Spread must be before Expr, otherwise we will parse the
+                -- spread as varargs!
                 ctx.Spread,
+                ctx.Expr,
               })
             end,
           })
