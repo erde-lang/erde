@@ -66,8 +66,8 @@ function Tokenizer:tokenize()
       self:String({ long = false, interpolation = true })
     elseif self:peek(2):match('^%[[[=]$') then
       self:String({ long = true, interpolation = true })
-    elseif self:peek(2):match('^--$') then
-      self:commit(self:consume(2))
+    elseif self:peek(2):match('^%-%-') then
+      self:consume(2)
 
       if self:peek(2):match('^%[[[=]$') then
         self:String({ long = true, interpolation = false })
@@ -78,7 +78,8 @@ function Tokenizer:tokenize()
           token = token .. self:consume()
         end
 
-        self:commit(token)
+        -- TODO: do something w/ comments
+        -- self:commit(token)
       end
     else
       self:commit(self:consume())
