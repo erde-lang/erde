@@ -18,7 +18,7 @@ function Terminal.parse(ctx)
   end
 
   local node
-  if ctx.bufValue == '(' then
+  if ctx.token == '(' then
     node = ctx:Switch({
       ctx.ArrowFunction,
       ctx.OptChain,
