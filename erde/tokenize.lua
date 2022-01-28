@@ -176,15 +176,18 @@ function Tokenizer:String(opts)
   end
 
   local token = ''
-  local isEscaped = false
 
   while self:peek(#strClose) ~= strClose do
     if self.bufValue == '' or not opts.long and self.bufValue == '\n' then
       -- TODO: unterminated
       error()
-    elseif isEscaped then
-      isEscaped = false
-      token = token .. self:consume()
+    elseif self.bufValue == '\\' then
+      self:consume()
+      if self.bufValue == '{' or self.bufValue == '}' then
+        token = token .. self:consume()
+      else
+        token = token .. '\\' .. self:consume()
+      end
     elseif opts.interpolation and self.bufValue == '{' then
       if #token > 0 then
         self:commit(token)
@@ -203,6 +206,9 @@ function Tokenizer:String(opts)
           braceDepth = braceDepth + 1
         elseif self.bufValue == '}' then
           braceDepth = braceDepth - 1
+        elseif self.bufValue == '' then
+          -- TODO: unterminated
+          error()
         end
 
         text = text .. self:consume()
@@ -214,7 +220,6 @@ function Tokenizer:String(opts)
 
       self:commit(self:consume()) -- '}'
     else
-      isEscaped = self.bufValue == '\\'
       token = token .. self:consume()
     end
   end

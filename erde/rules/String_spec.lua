@@ -4,7 +4,7 @@
 
 describe('String.parse', function()
   spec('short string', function()
-    assert.subtable({ '' }, parse.String('""'))
+    assert.are.equal(0, #parse.String('""'))
     assert.subtable({ 'hello' }, parse.String('"hello"'))
     assert.subtable({ 'hello' }, parse.String("'hello'"))
     assert.subtable({ 'hello\\nworld' }, parse.String("'hello\\nworld'"))

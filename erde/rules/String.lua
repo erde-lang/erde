@@ -20,8 +20,9 @@ function String.parse(ctx)
     terminatingToken = ctx:consume()
   elseif ctx.token:match('^%[=*%[$') then
     node.variant = 'long'
-    node.equals = ctx:consume():sub(1, #ctx.token - 1)
+    node.equals = ('='):rep(#ctx.token - 2)
     terminatingToken = ']' .. node.equals .. ']'
+    ctx:consume()
   else
     error()
   end
@@ -34,7 +35,7 @@ function String.parse(ctx)
     end
   end
 
-  node[#node + 1] = ctx:consume()
+  -- node[#node + 1] = ctx:consume()
   return node
 end
 
