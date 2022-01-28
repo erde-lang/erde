@@ -1,6 +1,5 @@
 # TODO
 
-- restore tests from tokenizer changes
 - replace ctx:Switch w/ real branching
   - cleaner, more explicit, faster
 - add goto rule and use goto in compilation
