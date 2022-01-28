@@ -46,6 +46,7 @@ end)
 
 describe('String.compile', function()
   spec('compile short string', function()
+    assert.are.equal('""', compile.String('""'))
     assert.are.equal('"hello"', compile.String('"hello"'))
     assert.are.equal("'hello'", compile.String("'hello'"))
     assert.are.equal("'hello\\nworld'", compile.String("'hello\\nworld'"))

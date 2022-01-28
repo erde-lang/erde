@@ -35,7 +35,7 @@ function String.parse(ctx)
     end
   end
 
-  -- node[#node + 1] = ctx:consume()
+  ctx:consume() -- terminatingToken
   return node
 end
 
@@ -53,6 +53,10 @@ function String.compile(ctx, node)
   elseif node.variant == 'long' then
     openingChar = '[' .. node.equals .. '['
     closingChar = ']' .. node.equals .. ']'
+  end
+
+  if #node == 0 then
+    return openingChar .. closingChar
   end
 
   local compileParts = {}
