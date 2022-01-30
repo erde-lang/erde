@@ -63,9 +63,15 @@ function Tokenizer:tokenize()
         end
       end
     elseif self.bufValue == '"' or self.bufValue == "'" then
-      self:String({ long = false, interpolation = true })
+      local tokens = self:String({ long = false, interpolation = true })
+      for i, token in pairs(tokens) do
+        self:commit(token)
+      end
     elseif self:peek(2):match('^%[[[=]$') then
-      self:String({ long = true, interpolation = true })
+      local tokens = self:String({ long = true, interpolation = true })
+      for i, token in pairs(tokens) do
+        self:commit(token)
+      end
     elseif self:peek(2):match('^%-%-') then
       self:consume(2)
 
@@ -155,10 +161,12 @@ function Tokenizer:Number(opts)
 end
 
 function Tokenizer:String(opts)
+  local tokens = {}
+
   local strClose
   if not opts.long then
+    tokens[#tokens + 1] = self.bufValue
     strClose = self:consume()
-    self:commit(strClose) -- commit opening
   else
     self:consume() -- '['
 
@@ -172,8 +180,8 @@ function Tokenizer:String(opts)
       error()
     end
 
+    tokens[#tokens + 1] = '[' .. strEq .. '['
     strClose = ']' .. strEq .. ']'
-    self:commit('[' .. strEq .. '[') -- commit opening
   end
 
   local token = ''
@@ -191,11 +199,11 @@ function Tokenizer:String(opts)
       end
     elseif opts.interpolation and self.bufValue == '{' then
       if #token > 0 then
-        self:commit(token)
+        tokens[#tokens + 1] = token
         token = ''
       end
 
-      self:commit(self:consume()) -- '{'
+      tokens[#tokens + 1] = self:consume() -- '{'
 
       -- Keep track of brace depth to differentiate end of interpolation from
       -- nested braces
@@ -216,20 +224,21 @@ function Tokenizer:String(opts)
       end
 
       for i, token in pairs(tokenize(text)) do
-        self:commit(token)
+        tokens[#tokens + 1] = token
       end
 
-      self:commit(self:consume()) -- '}'
+      tokens[#tokens + 1] = self:consume() -- '}'
     else
       token = token .. self:consume()
     end
   end
 
   if #token > 0 then
-    self:commit(token)
+    tokens[#tokens + 1] = token -- '}'
   end
 
-  self:commit(self:consume(#strClose))
+  tokens[#tokens + 1] = self:consume(#strClose)
+  return tokens
 end
 
 -- -----------------------------------------------------------------------------

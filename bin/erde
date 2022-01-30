@@ -182,8 +182,7 @@ local function compileFile(srcFilePath)
   local moduleContents = srcFile:read('*a')
   srcFile:close()
 
-  local parsedModule = erde.parse(moduleContents)
-  local compiledModule = COMPILE_HEADER .. erde.compile(parsedModule)
+  local compiledModule = COMPILE_HEADER .. erde.compile(moduleContents)
 
   local destFilePath = srcFilePath:gsub('.erde$', '.lua')
   if outDir ~= nil then
