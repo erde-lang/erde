@@ -9,19 +9,13 @@ local OptChain = { ruleName = 'OptChain' }
 -- -----------------------------------------------------------------------------
 
 function OptChain.parse(ctx)
-  local node = {
-    base = ctx:Switch({
-      ctx.Name,
-      function()
-        local base = ctx:Surround('(', ')', ctx.Expr)
-        base.parens = true
-        return base
-      end,
-    }),
-  }
+  local node = {}
 
-  if not node.base then
-    error()
+  if ctx.token == '(' then
+    node.base = ctx:Surround('(', ')', ctx.Expr)
+    node.base.parens = true
+  else
+    node.base = ctx:Name()
   end
 
   while true do

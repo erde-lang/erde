@@ -30,10 +30,11 @@ function Declaration.parse(ctx)
 
   node.varList = ctx:List({
     rule = function()
-      return ctx:Switch({
-        ctx.Name,
-        ctx.Destructure,
-      })
+      if ctx.token == '{' or ctx.token == '[' then
+        return ctx:Destructure()
+      else
+        return ctx:Name()
+      end
     end,
   })
 

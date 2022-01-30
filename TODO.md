@@ -1,14 +1,11 @@
 # TODO
 
-- replace ctx:Switch w/ real branching
-  - cleaner, more explicit, faster
+- Move Comment_spec to tokenizer, finish tokenizer tests
+- Remove Comment rule, move Comment_spec to tokenizer
 - add goto rule and use goto in compilation
-- refactor ctx state (loopBlock, moduleBlock, etc)
 - record line column for parsing errors
 - store newlines / comments in separate token table
-- improved error messages (add pcalls, Rule.diagnose)
-  - pcalls + Rule.diagnose
-  - Continue parsing on errors (ignore rest of line, try next line for Statement until succeeds)
+- real error messages
 - formatter (Rule.format)
 - erde REPL
 
@@ -24,6 +21,7 @@
 
 # Uncertain Proposals (need community input)
 
+- hoist top block vars?
 - macros
 - decorators
 - nested break

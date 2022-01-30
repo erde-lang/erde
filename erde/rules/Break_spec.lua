@@ -4,10 +4,7 @@
 
 describe('Break.parse', function()
   spec('break', function()
-    parse.Block([[
-      local x = 0
-      break
-    ]])
+    parse.Block('break', { isLoopBlock = true })
   end)
 end)
 

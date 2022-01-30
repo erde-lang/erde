@@ -38,28 +38,25 @@ end
 function Destructure.parse(ctx)
   local node = {}
 
-  local destructs = ctx:Switch({
-    parseNumberKeyDestructs,
-    function()
-      return ctx:Surround('{', '}', function()
-        return ctx:List({
-          allowTrailingComma = true,
-          rule = function()
-            return ctx:Switch({
-              parseNumberKeyDestructs,
-              function()
-                local destruct = parseDestruct(ctx)
-                destruct.variant = 'keyDestruct'
-                return destruct
-              end,
-            })
-          end,
-        })
-      end)
-    end,
-  })
-
-  if not destructs then
+  local destructs
+  if ctx.token == '[' then
+    destructs = parseNumberKeyDestructs(ctx)
+  elseif ctx.token == '{' then
+    destructs = ctx:Surround('{', '}', function()
+      return ctx:List({
+        allowTrailingComma = true,
+        rule = function()
+          if ctx.token == '[' then
+            return parseNumberKeyDestructs(ctx)
+          else
+            local destruct = parseDestruct(ctx)
+            destruct.variant = 'keyDestruct'
+            return destruct
+          end
+        end,
+      })
+    end)
+  else
     error()
   end
 
