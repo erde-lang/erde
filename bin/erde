@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+#!/usr/bin/env luajit
 
 local argparse = require('argparse')
 local lfs = require('lfs')
