@@ -12,34 +12,41 @@ local TokenizerMT = { __index = Tokenizer }
 -- -----------------------------------------------------------------------------
 
 function Tokenizer:commit(token)
-  self.tokens[#self.tokens + 1] = token
+  local tokenId = #self.tokens + 1
+  self.tokens[tokenId] = token
+  self.tokenInfo[tokenId] = {
+    line = self.line,
+    column = self.column,
+  }
+
+  self.column = self.column + #token
 end
 
 function Tokenizer:peek(n)
-  return self.buffer:sub(self.bufIndex, self.bufIndex + n - 1)
+  return self.text:sub(self.charIndex, self.charIndex + n - 1)
 end
 
 function Tokenizer:consume(n)
   n = n or 1
-  local consumed = n == 1 and self.bufValue or self:peek(n)
-  self.bufIndex = self.bufIndex + n
-  self.bufValue = self.buffer:sub(self.bufIndex, self.bufIndex)
+  local consumed = n == 1 and self.char or self:peek(n)
+  self.charIndex = self.charIndex + n
+  self.char = self.text:sub(self.charIndex, self.charIndex)
   return consumed
 end
 
 function Tokenizer:tokenize()
   self:Space()
 
-  while self.bufValue ~= '' do
-    if C.WORD_HEAD[self.bufValue] then
+  while self.char ~= '' do
+    if C.WORD_HEAD[self.char] then
       local token = self:consume()
 
-      while C.WORD_BODY[self.bufValue] do
+      while C.WORD_BODY[self.char] do
         token = token .. self:consume()
       end
 
       self:commit(token)
-    elseif C.DIGIT[self.bufValue] then
+    elseif C.DIGIT[self.char] then
       if self:peek(2):match('0[xX]') then
         self:Number({ hex = true })
       else
@@ -51,36 +58,38 @@ function Tokenizer:tokenize()
       self:commit(self:consume(3))
     elseif C.SYMBOLS[self:peek(2)] then
       self:commit(self:consume(2))
-    elseif self.bufValue == '\n' then
-      self:consume()
+    elseif self.char == '\n' then
+      self:Newline()
       self:Space()
 
-      if self.bufValue == '\n' then
+      if self.char == '\n' then
         -- Record 2 or more newlines for formatting
-        self.newlines[self.bufIndex] = true
-        while self.bufValue == '\n' do
-          self:consume()
-        end
+        self.newlines[#self.tokens] = true
       end
-    elseif self.bufValue == '"' or self.bufValue == "'" then
+
+      while self.char == '\n' do
+        self:Newline()
+        self:Space()
+      end
+    elseif self.char == '"' or self.char == "'" then
       local tokens = self:String({ long = false, interpolation = true })
       for i, token in pairs(tokens) do
         self:commit(token)
       end
-    elseif self:peek(2):match('^%[[[=]$') then
+    elseif self:peek(2):match('%[[[=]') then
       local tokens = self:String({ long = true, interpolation = true })
       for i, token in pairs(tokens) do
         self:commit(token)
       end
-    elseif self:peek(2):match('^%-%-') then
+    elseif self:peek(2):match('%-%-') then
       self:consume(2)
 
-      if self:peek(2):match('^%[[[=]$') then
+      if self:peek(2):match('%[[[=]') then
         self:String({ long = true, interpolation = false })
       else
         local token = ''
 
-        while self.bufValue ~= '' and self.bufValue ~= '\n' do
+        while self.char ~= '' and self.char ~= '\n' do
           token = token .. self:consume()
         end
 
@@ -93,17 +102,22 @@ function Tokenizer:tokenize()
 
     self:Space()
   end
-
-  return self.tokens
 end
 
 -- -----------------------------------------------------------------------------
 -- Tokenizer Macros
 -- -----------------------------------------------------------------------------
 
+function Tokenizer:Newline()
+  self.column = 1
+  self.line = self.line + 1
+  return self:consume()
+end
+
 function Tokenizer:Space()
-  while self.bufValue == ' ' or self.bufValue == '\t' do
+  while self.char == ' ' or self.char == '\t' do
     self:consume()
+    self.column = self.column + 1
   end
 end
 
@@ -116,8 +130,8 @@ function Tokenizer:Number(opts)
     exponent = '[pP]'
 
     token = self:consume(2) -- 0[xX]
-    if not C.HEX[self.bufValue] and self.bufValue ~= '.' then
-      error()
+    if not C.HEX[self.char] and self.char ~= '.' then
+      error('empty hex')
     end
   else
     token = ''
@@ -125,34 +139,34 @@ function Tokenizer:Number(opts)
     exponent = '[eE]'
   end
 
-  while lookup[self.bufValue] do
+  while lookup[self.char] do
     token = token .. self:consume()
   end
 
-  if self.bufValue == '.' then
+  if self.char == '.' then
     token = token .. self:consume()
 
-    if not lookup[self.bufValue] then
-      error() -- invalid
+    if not lookup[self.char] then
+      error('empty decimal') -- invalid
     end
 
-    while lookup[self.bufValue] do
+    while lookup[self.char] do
       token = token .. self:consume()
     end
   end
 
-  if self.bufValue:match(exponent) then
+  if self.char:match(exponent) then
     token = token .. self:consume()
 
-    if self.bufValue == '+' or self.bufValue == '-' then
+    if self.char == '+' or self.char == '-' then
       token = token .. self:consume()
     end
 
-    if not C.DIGIT[self.bufValue] then
-      error()
+    if not C.DIGIT[self.char] then
+      error('empty exponent')
     end
 
-    while C.DIGIT[self.bufValue] do
+    while C.DIGIT[self.char] do
       token = token .. self:consume()
     end
   end
@@ -165,19 +179,19 @@ function Tokenizer:String(opts)
 
   local strClose
   if not opts.long then
-    tokens[#tokens + 1] = self.bufValue
+    tokens[#tokens + 1] = self.char
     strClose = self:consume()
   else
     self:consume() -- '['
 
     local strEq = ''
-    while self.bufValue == '=' do
+    while self.char == '=' do
       strEq = strEq .. self:consume()
     end
 
     if self:consume() ~= '[' then
       -- TODO: invalid
-      error()
+      error('invalid long str')
     end
 
     tokens[#tokens + 1] = '[' .. strEq .. '['
@@ -187,17 +201,23 @@ function Tokenizer:String(opts)
   local token = ''
 
   while self:peek(#strClose) ~= strClose do
-    if self.bufValue == '' or not opts.long and self.bufValue == '\n' then
+    if self.char == '' then
       -- TODO: unterminated
-      error()
-    elseif self.bufValue == '\\' then
+      error('unterminated string')
+    elseif self.char == '\n' then
+      if not opts.long then
+        error('unterminated string')
+      else
+        token = token .. self:Newline()
+      end
+    elseif self.char == '\\' then
       self:consume()
-      if self.bufValue == '{' or self.bufValue == '}' then
+      if self.char == '{' or self.char == '}' then
         token = token .. self:consume()
       else
         token = token .. '\\' .. self:consume()
       end
-    elseif opts.interpolation and self.bufValue == '{' then
+    elseif opts.interpolation and self.char == '{' then
       if #token > 0 then
         tokens[#tokens + 1] = token
         token = ''
@@ -210,19 +230,20 @@ function Tokenizer:String(opts)
       local braceDepth = 0
       local text = ''
 
-      while braceDepth > 0 or self.bufValue ~= '}' do
-        if self.bufValue == '{' then
+      while braceDepth > 0 or self.char ~= '}' do
+        if self.char == '{' then
           braceDepth = braceDepth + 1
-        elseif self.bufValue == '}' then
+        elseif self.char == '}' then
           braceDepth = braceDepth - 1
-        elseif self.bufValue == '' then
+        elseif self.char == '' then
           -- TODO: unterminated
-          error()
+          error('unterminated interpolation')
         end
 
         text = text .. self:consume()
       end
 
+      -- TODO: parsing error on nested tokenize
       for i, token in pairs(tokenize(text)) do
         tokens[#tokens + 1] = token
       end
@@ -247,13 +268,33 @@ end
 
 -- Declaration at top of module
 tokenize = function(text)
-  return setmetatable({
-    buffer = text,
-    bufIndex = 1,
-    bufValue = text:sub(1, 1),
+  local tokenizer = setmetatable({
+    text = text,
+    char = text:sub(1, 1),
+    charIndex = 1,
+    line = 1,
+    column = 1,
     tokens = {},
+    tokenInfo = {},
     newlines = {},
-  }, TokenizerMT):tokenize()
+    comments = {},
+  }, TokenizerMT)
+
+  local ok, errorMsg = pcall(function()
+    tokenizer:tokenize()
+  end)
+
+  if not ok then
+    error(
+      ('Error (Line %d, Column %d): %s'):format(
+        tokenizer.line,
+        tokenizer.column,
+        errorMsg
+      )
+    )
+  end
+
+  return tokenizer.tokens
 end
 
 return tokenize

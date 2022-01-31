@@ -1,16 +1,17 @@
 # TODO
 
+- enforce spaces in tokenizer (ex. `0x3helloworld`)
+- store newlines / comments in separate token table
 - Move Comment_spec to tokenizer, finish tokenizer tests
 - Remove Comment rule, move Comment_spec to tokenizer
-- add goto rule and use goto in compilation
-- record line column for parsing errors
-- store newlines / comments in separate token table
 - real error messages
+- add goto rule and use goto in compilation
 - formatter (Rule.format)
 - erde REPL
 
 # Long Term TODO
 
+- cache unchanged files
 - add real README
 - release v0.1.0
 - rewrite erde in erde
