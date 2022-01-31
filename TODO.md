@@ -1,6 +1,6 @@
 # TODO
 
-- Move Comment_spec to tokenizer, remove Comment rule, finish tokenizer tests
+- finish tokenizer tests
 - real error messages
 - Source maps (for runtime errors when using erde.loader)
 - add goto rule and use goto in compilation
