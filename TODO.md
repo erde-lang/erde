@@ -1,18 +1,23 @@
 # TODO
 
-- Move Comment_spec to tokenizer, finish tokenizer tests
-- Remove Comment rule, move Comment_spec to tokenizer
+- Move Comment_spec to tokenizer, remove Comment rule, finish tokenizer tests
 - real error messages
+- Source maps (for runtime errors when using erde.loader)
 - add goto rule and use goto in compilation
 - formatter (Rule.format)
-- Source maps
 - erde REPL
 - add real README
+- final refactor, extensive tests
+  - more comments
+  - better naming
+  - remove workarounds
+  - test rule interaction
+  - test general parse, compile, etc.
 - release v0.1.0
 
 # Long Term TODO
 
-- cache unchanged files
+- cache unchanged files?
 - rewrite erde in erde
 - remove closure compilations (ternary, null coalescence, optchain, etc).
   - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
