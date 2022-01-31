@@ -82,10 +82,11 @@ function Tokenizer:tokenize()
         self:commit(token)
       end
     elseif self:peek(2):match('%-%-') then
+      local comment = { line = self.line, column = self.column }
       self:consume(2)
 
       if self:peek(2):match('%[[[=]') then
-        self:String({ long = true, interpolation = false })
+        comment.token = self:String({ long = true, interpolation = false })[1]
       else
         local token = ''
 
@@ -93,9 +94,10 @@ function Tokenizer:tokenize()
           token = token .. self:consume()
         end
 
-        -- TODO: do something w/ comments
-        -- self:commit(token)
+        comment.token = token
       end
+
+      self.comments[#self.comments + 1] = comment
     else
       self:commit(self:consume())
     end

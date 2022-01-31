@@ -1,7 +1,5 @@
 # TODO
 
-- enforce spaces in tokenizer (ex. `0x3helloworld`)
-- store newlines / comments in separate token table
 - Move Comment_spec to tokenizer, finish tokenizer tests
 - Remove Comment rule, move Comment_spec to tokenizer
 - real error messages
