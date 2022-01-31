@@ -1,259 +1,313 @@
 local C = require('erde.constants')
 local rules = require('erde.rules')
 
--- Foward declare for recursive use in Tokenizer
-local tokenize
-
-local Tokenizer = {}
-local TokenizerMT = { __index = Tokenizer }
+-- Foward declare
+local Token
 
 -- -----------------------------------------------------------------------------
--- Tokenizer Methods
+-- State
 -- -----------------------------------------------------------------------------
 
-function Tokenizer:commit(token)
-  self.tokens[#self.tokens + 1] = token
+local text, char, charIndex
+local line, column
+local tokens, numTokens, tokenInfo
+local newlines, comments
+
+local token
+local numLookup, numExp1, numExp2
+
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function commit(token)
+  numTokens = numTokens + 1
+  tokens[numTokens] = token
+  tokenInfo[numTokens] = { line = line, column = column }
+  column = column + #token
 end
 
-function Tokenizer:peek(n)
-  return self.buffer:sub(self.bufIndex, self.bufIndex + n - 1)
+local function peek(n)
+  return text:sub(charIndex, charIndex + n - 1)
 end
 
-function Tokenizer:consume(n)
+local function consume(n)
   n = n or 1
-  local consumed = n == 1 and self.bufValue or self:peek(n)
-  self.bufIndex = self.bufIndex + n
-  self.bufValue = self.buffer:sub(self.bufIndex, self.bufIndex)
+  local consumed = n == 1 and char or peek(n)
+  charIndex = charIndex + n
+  char = text:sub(charIndex, charIndex)
   return consumed
 end
 
-function Tokenizer:tokenize()
-  self:Space()
+-- -----------------------------------------------------------------------------
+-- Macros
+-- -----------------------------------------------------------------------------
 
-  while self.bufValue ~= '' do
-    if C.WORD_HEAD[self.bufValue] then
-      local token = self:consume()
+local function Newline()
+  column = 1
+  line = line + 1
+  return consume()
+end
 
-      while C.WORD_BODY[self.bufValue] do
-        token = token .. self:consume()
-      end
+local function Space()
+  while char == ' ' or char == '\t' do
+    consume()
+    column = column + 1
+  end
+end
 
-      self:commit(token)
-    elseif C.DIGIT[self.bufValue] then
-      if self:peek(2):match('0[xX]') then
-        self:Number({ hex = true })
-      else
-        self:Number()
-      end
-    elseif self:peek(2):match('%.[0-9]') then
-      self:Number()
-    elseif C.SYMBOLS[self:peek(3)] then
-      self:commit(self:consume(3))
-    elseif C.SYMBOLS[self:peek(2)] then
-      self:commit(self:consume(2))
-    elseif self.bufValue == '\n' then
-      self:consume()
-      self:Space()
+local function Number()
+  while numLookup[char] do
+    token = token .. consume()
+  end
 
-      if self.bufValue == '\n' then
-        -- Record 2 or more newlines for formatting
-        self.newlines[self.bufIndex] = true
-        while self.bufValue == '\n' do
-          self:consume()
-        end
-      end
-    elseif self.bufValue == '"' or self.bufValue == "'" then
-      local tokens = self:String({ long = false, interpolation = true })
-      for i, token in pairs(tokens) do
-        self:commit(token)
-      end
-    elseif self:peek(2):match('^%[[[=]$') then
-      local tokens = self:String({ long = true, interpolation = true })
-      for i, token in pairs(tokens) do
-        self:commit(token)
-      end
-    elseif self:peek(2):match('^%-%-') then
-      self:consume(2)
+  if char == '.' then
+    token = token .. consume()
 
-      if self:peek(2):match('^%[[[=]$') then
-        self:String({ long = true, interpolation = false })
-      else
-        local token = ''
+    if not numLookup[char] then
+      error('Missing number after decimal point')
+    end
 
-        while self.bufValue ~= '' and self.bufValue ~= '\n' do
-          token = token .. self:consume()
-        end
+    while numLookup[char] do
+      token = token .. consume()
+    end
+  end
 
-        -- TODO: do something w/ comments
-        -- self:commit(token)
-      end
+  if char == numExp1 or char == numExp2 then
+    token = token .. consume()
+
+    if char == '+' or char == '-' then
+      token = token .. consume()
+    end
+
+    if not C.DIGIT[char] then
+      error('Missing number after exponent')
+    end
+
+    while C.DIGIT[char] do
+      token = token .. consume()
+    end
+  end
+
+  if C.ALPHA[char] then
+    error('Words cannot start with a digit')
+  end
+
+  commit(token)
+end
+
+local function InnerString()
+  if char == '' then
+    error('Unexpected EOF (unterminated string)')
+  elseif char == '\\' then
+    consume()
+    if char == '{' or char == '}' then
+      -- Remove escape for '{', '}' (not allowed in pure lua)
+      token = token .. consume()
     else
-      self:commit(self:consume())
+      token = token .. '\\' .. consume()
+    end
+  elseif char == '{' then
+    if #token > 0 then
+      commit(token)
     end
 
-    self:Space()
-  end
+    commit(consume()) -- '{'
 
-  return self.tokens
-end
+    -- Keep track of brace depth to differentiate end of interpolation from
+    -- nested braces
+    local braceDepth = 0
 
--- -----------------------------------------------------------------------------
--- Tokenizer Macros
--- -----------------------------------------------------------------------------
-
-function Tokenizer:Space()
-  while self.bufValue == ' ' or self.bufValue == '\t' do
-    self:consume()
-  end
-end
-
-function Tokenizer:Number(opts)
-  opts = opts or {}
-  local token, lookup, exponent
-
-  if opts.hex then
-    lookup = C.HEX
-    exponent = '[pP]'
-
-    token = self:consume(2) -- 0[xX]
-    if not C.HEX[self.bufValue] and self.bufValue ~= '.' then
-      error()
+    while char ~= '}' or braceDepth > 0 do
+      if char == '{' then
+        braceDepth = braceDepth + 1
+        commit(consume())
+      elseif char == '}' then
+        braceDepth = braceDepth - 1
+        commit(consume())
+      elseif char == '' then
+        error('Unexpected EOF (unterminated interpolation)')
+      else
+        Token()
+      end
     end
-  else
+
+    commit(consume()) -- '}'
     token = ''
-    lookup = C.DIGIT
-    exponent = '[eE]'
-  end
-
-  while lookup[self.bufValue] do
-    token = token .. self:consume()
-  end
-
-  if self.bufValue == '.' then
-    token = token .. self:consume()
-
-    if not lookup[self.bufValue] then
-      error() -- invalid
-    end
-
-    while lookup[self.bufValue] do
-      token = token .. self:consume()
-    end
-  end
-
-  if self.bufValue:match(exponent) then
-    token = token .. self:consume()
-
-    if self.bufValue == '+' or self.bufValue == '-' then
-      token = token .. self:consume()
-    end
-
-    if not C.DIGIT[self.bufValue] then
-      error()
-    end
-
-    while C.DIGIT[self.bufValue] do
-      token = token .. self:consume()
-    end
-  end
-
-  self:commit(token)
-end
-
-function Tokenizer:String(opts)
-  local tokens = {}
-
-  local strClose
-  if not opts.long then
-    tokens[#tokens + 1] = self.bufValue
-    strClose = self:consume()
   else
-    self:consume() -- '['
-
-    local strEq = ''
-    while self.bufValue == '=' do
-      strEq = strEq .. self:consume()
-    end
-
-    if self:consume() ~= '[' then
-      -- TODO: invalid
-      error()
-    end
-
-    tokens[#tokens + 1] = '[' .. strEq .. '['
-    strClose = ']' .. strEq .. ']'
+    token = token .. consume()
   end
+end
 
-  local token = ''
+function Token()
+  local peekTwo = peek(2)
+  token = ''
 
-  while self:peek(#strClose) ~= strClose do
-    if self.bufValue == '' or not opts.long and self.bufValue == '\n' then
-      -- TODO: unterminated
-      error()
-    elseif self.bufValue == '\\' then
-      self:consume()
-      if self.bufValue == '{' or self.bufValue == '}' then
-        token = token .. self:consume()
-      else
-        token = token .. '\\' .. self:consume()
-      end
-    elseif opts.interpolation and self.bufValue == '{' then
-      if #token > 0 then
-        tokens[#tokens + 1] = token
-        token = ''
-      end
+  if C.WORD_HEAD[char] then
+    token = consume()
 
-      tokens[#tokens + 1] = self:consume() -- '{'
+    while C.WORD_BODY[char] do
+      token = token .. consume()
+    end
 
-      -- Keep track of brace depth to differentiate end of interpolation from
-      -- nested braces
-      local braceDepth = 0
-      local text = ''
+    commit(token)
+  elseif C.DIGIT[char] then
+    if peekTwo:match('0[xX]') then
+      numLookup = C.HEX
+      numExp1, numExp2 = 'p', 'P'
 
-      while braceDepth > 0 or self.bufValue ~= '}' do
-        if self.bufValue == '{' then
-          braceDepth = braceDepth + 1
-        elseif self.bufValue == '}' then
-          braceDepth = braceDepth - 1
-        elseif self.bufValue == '' then
-          -- TODO: unterminated
-          error()
-        end
-
-        text = text .. self:consume()
+      token = consume(2) -- 0[xX]
+      if not C.HEX[char] and char ~= '.' then
+        error('Missing hex after decimal point')
       end
 
-      for i, token in pairs(tokenize(text)) do
-        tokens[#tokens + 1] = token
-      end
-
-      tokens[#tokens + 1] = self:consume() -- '}'
+      Number()
     else
-      token = token .. self:consume()
+      numLookup = C.DIGIT
+      numExp1, numExp2 = 'e', 'E'
+      Number()
     end
-  end
+  elseif peekTwo:match('%.[0-9]') then
+    numLookup = C.DIGIT
+    numExp1, numExp2 = 'e', 'E'
+    Number()
+  elseif C.SYMBOLS[peek(3)] then
+    commit(consume(3))
+  elseif C.SYMBOLS[peekTwo] then
+    commit(consume(2))
+  elseif char == '\n' then
+    Newline()
+    Space()
 
-  if #token > 0 then
-    tokens[#tokens + 1] = token -- '}'
-  end
+    if char == '\n' then
+      -- Record 2 or more newlines for formatting
+      newlines[numTokens] = true
+    end
 
-  tokens[#tokens + 1] = self:consume(#strClose)
-  return tokens
+    while char == '\n' do
+      Newline()
+      Space()
+    end
+  elseif char == '"' or char == "'" then
+    local quote = consume()
+    commit(quote)
+
+    while char ~= quote do
+      if char == '\n' then
+        error('Unexpected newline (unterminated string)')
+      else
+        InnerString()
+      end
+    end
+
+    if #token > 0 then
+      commit(token)
+    end
+
+    commit(consume()) -- quote
+  elseif peekTwo:match('%[[[=]') then
+    consume() -- '['
+
+    local strEq, strCloseLen = '', 2
+    while char == '=' do
+      strEq = strEq .. consume()
+      strCloseLen = strCloseLen + 1
+    end
+
+    if char ~= '[' then
+      error('Invalid start of long string (expected [ got ' .. char .. ')')
+    else
+      consume()
+    end
+
+    commit('[' .. strEq .. '[')
+    strClose = ']' .. strEq .. ']'
+
+    while peek(strCloseLen) ~= strClose do
+      if char == '\n' then
+        token = token .. Newline()
+      else
+        InnerString()
+      end
+    end
+
+    if #token > 0 then
+      commit(token)
+    end
+
+    commit(consume(strCloseLen))
+  elseif peekTwo:match('%-%-') then
+    local comment = { line = line, column = column }
+    consume(2)
+
+    if peek(2):match('%[[[=]') then
+      comment.tokenIndex = numTokens
+      consume() -- '['
+
+      local strEq, strCloseLen = '', 2
+      while char == '=' do
+        strEq = strEq .. consume()
+        strCloseLen = strCloseLen + 1
+      end
+
+      if char ~= '[' then
+        error('Invalid start of long comment (expected [ got ' .. char .. ')')
+      else
+        consume()
+      end
+
+      strClose = ']' .. strEq .. ']'
+      comment.eq = strEq
+
+      while peek(strCloseLen) ~= strClose do
+        if char == '' then
+          error('Unexpected EOF (unterminated comment)')
+        elseif char == '\n' then
+          token = token .. Newline()
+        else
+          token = token .. consume()
+        end
+      end
+
+      consume(strCloseLen)
+    else
+      while char ~= '' and char ~= '\n' do
+        token = token .. consume()
+      end
+    end
+
+    comment.token = token
+    comments[#comments + 1] = comment
+  else
+    commit(consume())
+  end
 end
 
 -- -----------------------------------------------------------------------------
--- Return
+-- Tokenize
 -- -----------------------------------------------------------------------------
 
--- Declaration at top of module
-tokenize = function(text)
-  return setmetatable({
-    buffer = text,
-    bufIndex = 1,
-    bufValue = text:sub(1, 1),
-    tokens = {},
-    newlines = {},
-  }, TokenizerMT):tokenize()
-end
+return function(input)
+  text, char, charIndex = input, input:sub(1, 1), 1
+  line, column = 1, 1
+  tokens, numTokens, tokenInfo = {}, 0, {}
+  newlines, comments = {}, {}
 
-return tokenize
+  local ok, errorMsg = pcall(function()
+    while char ~= '' do
+      Space()
+      Token()
+    end
+  end)
+
+  if not ok then
+    error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
+  end
+
+  return {
+    tokens = tokens,
+    tokenInfo = tokenInfo,
+    newlines = newlines,
+    comments = comments,
+  }
+end

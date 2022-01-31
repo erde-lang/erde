@@ -155,7 +155,7 @@ end
 -- =============================================================================
 
 local function parseRule(text, ruleName, opts)
-  local tokens = tokenize(text)
+  local tokens = tokenize(text).tokens
   local parser = setmetatable({
     tokens = tokens,
     tokenIndex = 1,

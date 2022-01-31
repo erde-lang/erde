@@ -1,9 +1,9 @@
 return {
   default = {
-    ROOT = { 'erde' },
+    ROOT = { 'spec' },
     lpath = './?/init.lua',
     verbose = true,
-    helper = 'erde/setup_spec.lua',
+    helper = 'spec/setup_spec.lua',
   },
 }
 

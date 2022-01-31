@@ -1,20 +1,23 @@
 # TODO
 
-- Move Comment_spec to tokenizer, finish tokenizer tests
-- Remove Comment rule, move Comment_spec to tokenizer
-- add goto rule and use goto in compilation
-- record line column for parsing errors
-- store newlines / comments in separate token table
 - real error messages
-- formatter (Rule.format)
+- add goto rule and use goto in compilation
+- Source maps (for runtime errors when using erde.loader)
 - erde REPL
+- formatter (Rule.format)
+- add real README
+- final refactor, extensive tests
+  - more comments
+  - better naming
+  - remove workarounds
+  - test rule interaction
+  - test general parse, compile, etc.
+- release v0.1.0
 
 # Long Term TODO
 
-- add real README
-- release v0.1.0
+- cache unchanged files?
 - rewrite erde in erde
-- Source maps
 - remove closure compilations (ternary, null coalescence, optchain, etc).
   - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
   - NOTE: cannot simply use functions w/ params (need conditional execution)
@@ -44,47 +47,3 @@
       a = function() b() end
       b = function() ... end
     ```
-
-# Ideas
-
-Modes
-- mode operator for statements / blocks. parsed only when mode is active
-  - specified via `erde run !dev`
-  - uses `!` operator in code
-  - allow mode for expressions, `true` when active otherwise false
-  - allow mode 'nesting' using `:`
-
-```erde
--- only runs in `dev` mode, i.e. `erde run !dev`
-!dev local x = 2
-
--- runs in `dev` and `test` mode
-!dev !test print()
-
--- functions
-!unit local function setupUnitTests() {
-
-}
-
--- nesting, both run on mode == 'unit:myFunc'
-!unit setupUnitTests()
-!unit:myFunc myFunc()
-
--- multiline works nice
-!dev !test !debug
-print()
-
--- block, debug mode
-!debug {
-
-}
-
--- mode expressions
-local x = !dev ? 1 : 2
-
-if !dev {
-  
-} else {
-
-}
-```
