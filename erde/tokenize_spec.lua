@@ -4,9 +4,6 @@ local tokenize = require('erde.tokenize')
 --
 -- operator symbol
 -- other symbols (ex. arrow function)
--- single quote string
--- double quote string
--- long string
 -- short comments
 -- long comments
 -- newlines
@@ -110,6 +107,68 @@ describe('tokenize', function()
         assert.has_error(function()
           tokenize('9e-')
         end)
+      end)
+    end)
+  end)
+
+  describe('string', function()
+    spec('single quote', function()
+      assert.are.equal(2, #tokenize("''"))
+      assert.subtable({ "'", 'hello', "'" }, tokenize("'hello'"))
+      assert.subtable({ "'", 'a\\nb', "'" }, tokenize("'a\\nb'"))
+      assert.subtable({ "'", '\\\\', "'" }, tokenize("'\\\\'"))
+
+      assert.has_error(function()
+        tokenize("'hello")
+      end)
+      assert.has_error(function()
+        tokenize("'hello\nworld'")
+      end)
+    end)
+
+    spec('double quote', function()
+      assert.are.equal(2, #tokenize('""'))
+      assert.subtable({ '"', 'hello', '"' }, tokenize('"hello"'))
+      assert.subtable(
+        { '"', 'hello\\nworld', '"' },
+        tokenize('"hello\\nworld"')
+      )
+      assert.subtable({ '"', '\\\\', '"' }, tokenize('"\\\\"'))
+
+      assert.has_error(function()
+        tokenize('"hello')
+      end)
+      assert.has_error(function()
+        tokenize('"hello\nworld"')
+      end)
+    end)
+
+    spec('long string', function()
+      assert.subtable({ '[[', ' a b ', ']]' }, tokenize('[[ a b ]]'))
+      assert.subtable({ '[[', 'a\nb', ']]' }, tokenize('[[a\nb]]'))
+      assert.subtable({ '[=[', 'a[[b', ']=]' }, tokenize('[=[a[[b]=]'))
+
+      assert.has_error(function()
+        tokenize('[[hello world')
+      end)
+      assert.has_error(function()
+        tokenize('[=hello world')
+      end)
+    end)
+
+    spec('interpolation', function()
+      assert.subtable({ "'", 'a{bc}d', "'" }, tokenize("'a\\{bc}d'"))
+      assert.subtable({ '"', 'a{bc}d', '"' }, tokenize('"a\\{bc}d"'))
+      assert.subtable({ '[[', 'a{bc}d', ']]' }, tokenize('[[a\\{bc}d]]'))
+
+      assert.has_error(function()
+        tokenize('"hello world {2"')
+      end)
+      assert.has_error(function()
+        tokenize('"hello {2 world"')
+      end)
+      assert.has_error(function()
+        tokenize('"hello {} world"')
       end)
     end)
   end)

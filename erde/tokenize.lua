@@ -249,6 +249,10 @@ function Tokenizer:String(opts)
         text = text .. self:consume()
       end
 
+      if #text:gsub('[ \t\n]', '') == 0 then
+        error('empty interpolation')
+      end
+
       -- TODO: parsing error on nested tokenize
       for i, token in pairs(tokenize(text)) do
         tokens[#tokens + 1] = token
