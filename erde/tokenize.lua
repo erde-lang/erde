@@ -173,6 +173,10 @@ function Tokenizer:Number(opts)
     end
   end
 
+  if C.ALPHA[self.char] then
+    error('word cannot start with digit')
+  end
+
   self:commit(token)
 end
 
