@@ -1,0 +1,117 @@
+local tokenize = require('erde.tokenize')
+
+local function benchmark(callback)
+  local start = os.clock()
+  for i = 1, 10000 do
+    callback()
+  end
+  print(os.clock() - start)
+end
+
+local test = [[
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  hello
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  0xfp+1
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  1.23e29
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  'a\nb'
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a[[b]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a\{xc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  [=[a{bc}d]=]
+  ->
+  ->
+  ->
+  ->
+  ->
+  ->
+  ->
+  ->
+  ->
+  ->
+]]
+
+benchmark(function()
+  tokenize(test)
+end)
+benchmark(function()
+  tokenize(test)
+end)
+benchmark(function()
+  optimalTokenize(test)
+end)
+benchmark(function()
+  optimalTokenize(test)
+end)
