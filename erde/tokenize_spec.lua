@@ -167,9 +167,6 @@ describe('tokenize', function()
       assert.has_error(function()
         tokenize('"hello {2 world"')
       end)
-      assert.has_error(function()
-        tokenize('"hello {} world"')
-      end)
     end)
   end)
 
@@ -179,8 +176,6 @@ describe('tokenize', function()
       ')',
       '->',
       'x',
-    }, tokenize(
-      '() -> x'
-    ))
+    }, tokenize('() -> x'))
   end)
 end)
