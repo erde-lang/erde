@@ -305,5 +305,10 @@ return function(input)
     error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
   end
 
-  return tokens
+  return {
+    tokens = tokens,
+    tokenInfo = tokenInfo,
+    newlines = newlines,
+    comments = comments,
+  }
 end

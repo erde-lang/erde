@@ -2,10 +2,10 @@
 
 - finish tokenizer tests
 - real error messages
-- Source maps (for runtime errors when using erde.loader)
 - add goto rule and use goto in compilation
-- formatter (Rule.format)
+- Source maps (for runtime errors when using erde.loader)
 - erde REPL
+- formatter (Rule.format)
 - add real README
 - final refactor, extensive tests
   - more comments
