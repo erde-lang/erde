@@ -242,7 +242,7 @@ function Token()
     local comment = { line = line, column = column }
     consume(2)
 
-    if peekTwo:match('%[[[=]') then
+    if peek(2):match('%[[[=]') then
       consume() -- '['
 
       local strEq, strCloseLen = '', 2

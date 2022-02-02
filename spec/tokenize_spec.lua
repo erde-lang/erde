@@ -197,8 +197,16 @@ describe('tokenize', function()
     end)
     spec('long comment', function()
       assert.subtable(
-        { { token = ' hello world ' } },
-        tokenize('--[[ hello world ]]').comments
+        { { eq = '', token = ' hello world ' } },
+        tokenize('--[[ hello world ]] ').comments
+      )
+      assert.subtable(
+        { { eq = '=', token = 'hello ]]' } },
+        tokenize('--[=[hello ]]]=] ').comments
+      )
+      assert.subtable(
+        { { eq = '=', token = 'hello\nworld' } },
+        tokenize('--[=[hello\nworld]=] ').comments
       )
     end)
   end)
