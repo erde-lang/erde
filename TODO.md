@@ -1,7 +1,6 @@
 # TODO
 
 - finish tokenizer tests
-- move tests to separate folder
 - real error messages
 - Source maps (for runtime errors when using erde.loader)
 - add goto rule and use goto in compilation
