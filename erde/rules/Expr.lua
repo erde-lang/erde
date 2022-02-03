@@ -74,8 +74,7 @@ function Expr.compile(ctx, node)
     end
 
     if op.token == '.~' then
-      return _VERSION:find('5.[34]') and compileUnop('~')
-        or ('require("bit").bnot(%1)'):format(operand)
+      return ('require("bit").bnot(%1)'):format(operand)
     elseif op.token == '~' then
       return compileUnop('not')
     else

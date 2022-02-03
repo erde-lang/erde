@@ -28,8 +28,6 @@ end
 -- Compile
 -- -----------------------------------------------------------------------------
 
-local unpackCompiled = _VERSION:find('5.1') and 'unpack' or 'table.unpack'
-
 function Pipe.compile(ctx, node)
   local compiled = {}
 
@@ -64,7 +62,7 @@ function Pipe.compile(ctx, node)
     compiled[#compiled + 1] = ('local %s = { %s(%s(%s)) }'):format(
       pipeResult,
       ctx:compile(pipeCopy),
-      unpackCompiled,
+      'unpack',
       pipeArgs
     )
   end
@@ -72,7 +70,7 @@ function Pipe.compile(ctx, node)
   return table.concat({
     '(function()',
     table.concat(compiled, '\n'),
-    ('return %s(%s)'):format(unpackCompiled, pipeResult),
+    ('return %s(%s)'):format('unpack', pipeResult),
     'end)()',
   }, '\n')
 end
