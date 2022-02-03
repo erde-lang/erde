@@ -1,6 +1,5 @@
 # TODO
 
-- real error messages
 - add goto rule and use goto in compilation
 - Source maps (for runtime errors when using erde.loader)
 - erde REPL

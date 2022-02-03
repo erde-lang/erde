@@ -12,7 +12,7 @@ local Pipe = { ruleName = 'Pipe' }
 
 function Pipe.parse(ctx, opts)
   local node = { initValues = opts.initValues }
-  assert(ctx.token == '>>')
+  ctx:assert('>>', true)
 
   while ctx:branch('>>') do
     node[#node + 1] = ctx:FunctionCall()

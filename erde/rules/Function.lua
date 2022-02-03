@@ -24,7 +24,7 @@ function Function.parse(ctx)
     node.variant = 'global'
   end
 
-  assert(ctx:consume() == 'function')
+  ctx:assert('function')
   node.names = { ctx:Name().value }
 
   while true do

@@ -32,7 +32,7 @@ function Assignment.parse(ctx)
     end
   end
 
-  assert(ctx:consume() == '=')
+  ctx:assert('=')
   node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end
