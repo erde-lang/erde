@@ -10,7 +10,7 @@ local Token
 
 local text, char, charIndex
 local line, column
-local tokens, tokenLen, tokenInfo
+local tokens, numTokens, tokenInfo
 local newlines, comments
 
 local token
@@ -21,9 +21,9 @@ local numLookup, numExp1, numExp2
 -- -----------------------------------------------------------------------------
 
 local function commit(token)
-  tokenLen = tokenLen + 1
-  tokens[tokenLen] = token
-  tokenInfo[tokenLen] = { line = line, column = column }
+  numTokens = numTokens + 1
+  tokens[numTokens] = token
+  tokenInfo[numTokens] = { line = line, column = column }
   column = column + #token
 end
 
@@ -183,7 +183,7 @@ function Token()
 
     if char == '\n' then
       -- Record 2 or more newlines for formatting
-      newlines[#tokens] = true
+      newlines[numTokens] = true
     end
 
     while char == '\n' do
@@ -243,6 +243,7 @@ function Token()
     consume(2)
 
     if peek(2):match('%[[[=]') then
+      comment.tokenIndex = numTokens
       consume() -- '['
 
       local strEq, strCloseLen = '', 2
@@ -291,7 +292,7 @@ end
 return function(input)
   text, char, charIndex = input, input:sub(1, 1), 1
   line, column = 1, 1
-  tokens, tokenLen, tokenInfo = {}, 0, {}
+  tokens, numTokens, tokenInfo = {}, 0, {}
   newlines, comments = {}, {}
 
   local ok, errorMsg = pcall(function()

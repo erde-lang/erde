@@ -10,12 +10,6 @@ local function getTokens(text)
   return tokenize(text).tokens
 end
 
--- TODO: more tests
---
--- short comments
--- long comments
--- tokenInfo (line / column numbers)
-
 describe('tokenize', function()
   spec('symbols', function()
     for symbol in pairs(C.SYMBOLS) do
@@ -23,7 +17,7 @@ describe('tokenize', function()
     end
   end)
 
-  describe('word', function()
+  describe('words', function()
     spec('word head', function()
       assert.are.equal('lua', getToken('lua'))
       assert.are.equal('Erde', getToken('Erde'))
@@ -39,7 +33,7 @@ describe('tokenize', function()
     end)
   end)
 
-  describe('number', function()
+  describe('numbers', function()
     describe('hex', function()
       spec('integer', function()
         assert.are.equal('0x123456789', getToken('0x123456789'))
@@ -121,7 +115,7 @@ describe('tokenize', function()
     end)
   end)
 
-  describe('string', function()
+  describe('strings', function()
     spec('single quote', function()
       assert.are.equal(2, #getTokens("''"))
       assert.subtable({ "'", 'hello', "'" }, getTokens("'hello'"))
@@ -180,7 +174,7 @@ describe('tokenize', function()
     end)
   end)
 
-  describe('comment', function()
+  describe('comments', function()
     spec('short comment', function()
       assert.subtable(
         { { token = 'hello world' } },
@@ -197,16 +191,52 @@ describe('tokenize', function()
     end)
     spec('long comment', function()
       assert.subtable(
-        { { eq = '', token = ' hello world ' } },
+        { { token = ' hello world ' } },
         tokenize('--[[ hello world ]] ').comments
+      )
+      assert.subtable(
+        { { token = 'hello\nworld' } },
+        tokenize('--[[hello\nworld]] ').comments
+      )
+      assert.subtable(
+        { { eq = '', token = 'hello world' } },
+        tokenize('--[[hello world]] ').comments
       )
       assert.subtable(
         { { eq = '=', token = 'hello ]]' } },
         tokenize('--[=[hello ]]]=] ').comments
       )
       assert.subtable(
-        { { eq = '=', token = 'hello\nworld' } },
-        tokenize('--[=[hello\nworld]=] ').comments
+        { { tokenIndex = 2 } },
+        tokenize('x + --[[hi]] 4').comments
+      )
+    end)
+  end)
+
+  spec('newlines', function()
+    assert.are.equal(nil, tokenize('a\nb').newlines[1])
+    assert.are.equal(nil, tokenize('a\nb').newlines[2])
+    assert.are.equal(true, tokenize('a\n\nb').newlines[1])
+    assert.subtable({ 'a', 'b' }, getTokens('a\n\nb'))
+  end)
+
+  describe('tokenInfo', function()
+    spec('tokenInfo', function()
+      assert.subtable(
+        { { line = 1 }, { line = 2 } },
+        tokenize('a\nb').tokenInfo
+      )
+      assert.subtable(
+        { { line = 1 }, { line = 1 }, { line = 2 }, { line = 2 } },
+        tokenize('hello world\ngoodbye world').tokenInfo
+      )
+      assert.subtable(
+        { { column = 1 }, { column = 1 } },
+        tokenize('a\nb').tokenInfo
+      )
+      assert.subtable(
+        { { column = 1 }, { column = 7 }, { column = 1 }, { column = 9 } },
+        tokenize('hello world\ngoodbye world').tokenInfo
       )
     end)
   end)
