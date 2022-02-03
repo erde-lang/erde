@@ -25,14 +25,14 @@ function Assignment.parse(ctx)
   if C.BINOPS[ctx.token] then
     if BINOP_ASSIGNMENT_BLACKLIST[ctx.token] then
       -- These operators cannot be used w/ operator assignment
-      error()
+      error('Invalid assignment operator: ' .. ctx.token)
     else
       node.op = C.BINOPS[ctx.token]
       ctx:consume()
     end
   end
 
-  assert(ctx:consume() == '=')
+  ctx:assert('=')
   node.exprList = ctx:List({ rule = ctx.Expr })
   return node
 end

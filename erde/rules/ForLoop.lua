@@ -9,7 +9,7 @@ local ForLoop = { ruleName = 'ForLoop' }
 -- -----------------------------------------------------------------------------
 
 function ForLoop.parse(ctx)
-  assert(ctx:consume() == 'for')
+  ctx:assert('for')
 
   local firstName = ctx:Name().value
   local node
@@ -22,11 +22,9 @@ function ForLoop.parse(ctx)
     }
 
     if #node.parts < 2 then
-      -- numeric for too few parts
-      error()
+      error('Invalid for loop parameters (missing parameters)')
     elseif #node.parts > 3 then
-      -- numeric for too many parts
-      error()
+      error('Invalid for loop parameters (too many parameters)')
     end
   else
     node = { variant = 'generic' }
@@ -36,7 +34,7 @@ function ForLoop.parse(ctx)
       node.nameList[#node.nameList + 1] = ctx:Name().value
     end
 
-    assert(ctx:consume() == 'in')
+    ctx:assert('in')
     node.exprList = ctx:List({ rule = ctx.Expr })
   end
 

@@ -64,10 +64,10 @@ function Parser:branch(token)
   return true
 end
 
-function Parser:assume(token)
+function Parser:assert(token, skipConsume)
   if self.token ~= token then
     error('Expected ' .. token .. ' got ' .. tostring(self.token))
-  else
+  elseif not skipConsume then
     self:consume()
   end
 end
@@ -99,9 +99,9 @@ function Parser:Switch(rules)
 end
 
 function Parser:Surround(openChar, closeChar, rule)
-  self:assume(openChar)
+  self:assert(openChar)
   local capture = rule(self)
-  self:assume(closeChar)
+  self:assert(closeChar)
   return capture
 end
 

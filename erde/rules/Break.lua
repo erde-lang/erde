@@ -9,7 +9,7 @@ local Break = { ruleName = 'Break' }
 -- -----------------------------------------------------------------------------
 
 function Break.parse(ctx)
-  assert(ctx.loopBlock ~= nil)
+  assert(ctx.loopBlock ~= nil, 'Cannot use `break` outside of loop')
   ctx:consume()
   return {}
 end

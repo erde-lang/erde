@@ -9,7 +9,7 @@ local RepeatUntil = { ruleName = 'RepeatUntil' }
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil.parse(ctx)
-  assert(ctx:consume() == 'repeat')
+  ctx:assert('repeat')
 
   local node = {
     body = ctx:Surround('{', '}', function()
@@ -17,7 +17,7 @@ function RepeatUntil.parse(ctx)
     end),
   }
 
-  assert(ctx:consume() == 'until')
+  ctx:assert('until')
   node.cond = ctx:Expr()
 
   return node

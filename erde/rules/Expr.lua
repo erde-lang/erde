@@ -42,7 +42,7 @@ function Expr.parse(ctx, opts)
       ctx.isTernaryExpr = true
       node[#node + 1] = ctx:Expr()
       ctx.isTernaryExpr = false
-      assert(ctx:consume() == ':')
+      ctx:assert(':')
     end
 
     node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE

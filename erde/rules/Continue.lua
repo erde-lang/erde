@@ -9,7 +9,7 @@ local Continue = { ruleName = 'Continue' }
 -- -----------------------------------------------------------------------------
 
 function Continue.parse(ctx)
-  assert(ctx.loopBlock ~= nil)
+  assert(ctx.loopBlock ~= nil, 'Cannot use `continue` outside of loop')
   ctx:consume()
 
   local node = {}

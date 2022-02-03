@@ -18,8 +18,7 @@ function Declaration.parse(ctx)
     node.variant = 'local'
   elseif ctx:branch('module') then
     if not ctx.moduleBlock then
-      -- Module declarations only allowed at the top level
-      error()
+      error('`module` declarations cannot be nested')
     end
 
     node.variant = 'module'
@@ -60,8 +59,7 @@ function Declaration.parse(ctx)
   for i, var in ipairs(node.varList) do
     if var.ruleName == 'Destructure' then
       if not node.exprList[i] then
-        -- do not allow destructure without assignment
-        error()
+        error('Missing expression to destructure')
       end
     end
   end

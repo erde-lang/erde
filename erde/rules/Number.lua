@@ -12,7 +12,7 @@ local Number = { ruleName = 'Number' }
 
 function Number.parse(ctx)
   if not ctx.token:match('^%.?[0-9]') then
-    error()
+    error('Malformed number: ' .. ctx.token)
   end
 
   return { value = ctx:consume() }

@@ -68,8 +68,7 @@ function OptChain.parse(ctx)
         ctx:restore(backup)
         break
       else
-        -- missing args after method call
-        error()
+        error('Missing parentheses for method call')
       end
     else
       ctx:restore(backup) -- revert consumption from ctx:branch('?')

@@ -11,10 +11,13 @@ local Name = { ruleName = 'Name' }
 -- -----------------------------------------------------------------------------
 
 function Name.parse(ctx)
-  assert(ctx.token:match('^[_a-zA-Z][_a-zA-Z0-9]*$'))
+  assert(
+    ctx.token:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
+    'Malformed name: ' .. ctx.token
+  )
 
   for i, keyword in pairs(C.KEYWORDS) do
-    assert(ctx.token ~= keyword)
+    assert(ctx.token ~= keyword, 'Cannot use keyword as name: ' .. ctx.token)
   end
 
   return { value = ctx:consume() }

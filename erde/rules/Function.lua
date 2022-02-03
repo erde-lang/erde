@@ -15,8 +15,7 @@ function Function.parse(ctx)
     node.variant = 'local'
   elseif ctx:branch('module') then
     if not ctx.moduleBlock then
-      -- Module declarations only allowed at the top level
-      error()
+      error('`module` declarations cannot be nested')
     end
 
     node.variant = 'module'
@@ -25,7 +24,7 @@ function Function.parse(ctx)
     node.variant = 'global'
   end
 
-  assert(ctx:consume() == 'function')
+  ctx:assert('function')
   node.names = { ctx:Name().value }
 
   while true do
@@ -43,8 +42,7 @@ function Function.parse(ctx)
 
   if node.variant == 'module' then
     if #node.names > 1 then
-      -- Cannot combine `module` w/ method
-      error()
+      error('Cannot declare nested field as `module`')
     end
 
     table.insert(ctx.moduleBlock.moduleNames, node.names[1])

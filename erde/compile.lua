@@ -20,8 +20,7 @@ end
 
 function Compiler:compile(node)
   if type(node) ~= 'table' or not rules[node.ruleName] then
-    -- TODO
-    error('No node compiler for ' .. require('inspect')(node))
+    error('No compiler for ruleName: ' .. tostring(node.ruleName))
   end
 
   return rules[node.ruleName].compile(self, node)

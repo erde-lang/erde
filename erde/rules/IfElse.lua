@@ -10,7 +10,7 @@ local IfElse = { ruleName = 'IfElse' }
 
 function IfElse.parse(ctx)
   local node = { elseifNodes = {} }
-  assert(ctx:consume() == 'if')
+  ctx:assert('if')
 
   node.ifNode = {
     cond = ctx:Expr(),
