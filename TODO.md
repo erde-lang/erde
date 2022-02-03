@@ -3,7 +3,6 @@
 - add goto rule and use goto in compilation
 - Source maps (for runtime errors when using erde.loader)
 - erde REPL
-- formatter (Rule.format)
 - add real README
 - final refactor, extensive tests
   - more comments
@@ -12,6 +11,14 @@
   - test rule interaction
   - test general parse, compile, etc.
 - release v0.1.0
+
+# v0.2.0
+
+- Bug fixes
+- Formatting
+  - Rule.format method
+  - cli support `erde format [FILES]`
+- ONE new language feature
 
 # Long Term TODO
 
