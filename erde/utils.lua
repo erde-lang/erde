@@ -9,12 +9,7 @@ local utils = {}
 -- -----------------------------------------------------------------------------
 
 function utils.load(code)
-  local runner
-  if _VERSION:find('5.1') then
-    runner = loadstring(code)
-  else
-    runner = load(code)
-  end
+  local runner = loadstring(code)
 
   if runner == nil then
     error('Invalid Lua code: ' .. code)

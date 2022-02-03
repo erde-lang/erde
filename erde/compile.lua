@@ -55,23 +55,17 @@ function Compiler:compileBinop(op, lhs, rhs)
   elseif op.token == '&' then
     return table.concat({ lhs, ' and ', rhs })
   elseif op.token == '.|' then
-    return _VERSION:find('5.[34]') and table.concat({ lhs, ' | ', rhs })
-      or ('require("bit").bor(%s, %s)'):format(lhs, rhs)
+    return ('require("bit").bor(%s, %s)'):format(lhs, rhs)
   elseif op.token == '.~' then
-    return _VERSION:find('5.[34]') and table.concat({ lhs, ' ~ ', rhs })
-      or ('require("bit").bxor(%s, %s)'):format(lhs, rhs)
+    return ('require("bit").bxor(%s, %s)'):format(lhs, rhs)
   elseif op.token == '.&' then
-    return _VERSION:find('5.[34]') and table.concat({ lhs, ' & ', rhs })
-      or ('require("bit").band(%s, %s)'):format(lhs, rhs)
+    return ('require("bit").band(%s, %s)'):format(lhs, rhs)
   elseif op.token == '.<<' then
-    return _VERSION:find('5.[34]') and table.concat({ lhs, ' << ', rhs })
-      or ('require("bit").lshift(%s, %s)'):format(lhs, rhs)
+    return ('require("bit").lshift(%s, %s)'):format(lhs, rhs)
   elseif op.token == '.>>' then
-    return _VERSION:find('5.[34]') and table.concat({ lhs, ' >> ', rhs })
-      or ('require("bit").rshift(%s, %s)'):format(lhs, rhs)
+    return ('require("bit").rshift(%s, %s)'):format(lhs, rhs)
   elseif op.token == '//' then
-    return _VERSION:find('5.[34]') and table.concat({ lhs, ' // ', rhs })
-      or ('math.floor(%s / %s)'):format(lhs, rhs)
+    return ('math.floor(%s / %s)'):format(lhs, rhs)
   else
     return table.concat({ lhs, op.token, rhs }, ' ')
   end
@@ -113,7 +107,7 @@ function Compiler:compileOptChain(node)
 
         chain = ('%s(%s(%s))'):format(
           chain,
-          _VERSION:find('5.1') and 'unpack' or 'table.unpack',
+          'unpack',
           self:Spread(spreadFields)
         )
       else
