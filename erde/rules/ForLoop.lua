@@ -22,11 +22,9 @@ function ForLoop.parse(ctx)
     }
 
     if #node.parts < 2 then
-      -- numeric for too few parts
-      error()
+      error('Invalid for loop parameters (missing parameters)')
     elseif #node.parts > 3 then
-      -- numeric for too many parts
-      error()
+      error('Invalid for loop parameters (too many parameters)')
     end
   else
     node = { variant = 'generic' }

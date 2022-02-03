@@ -57,7 +57,7 @@ function Destructure.parse(ctx)
       })
     end)
   else
-    error()
+    error('Unexpected token: ' .. ctx.token)
   end
 
   for i, destruct in ipairs(destructs) do

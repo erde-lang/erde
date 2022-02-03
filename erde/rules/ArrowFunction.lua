@@ -26,7 +26,7 @@ function ArrowFunction.parse(ctx)
   elseif ctx:branch('=>') then
     node.variant = 'fat'
   else
-    error('Unexpected token ' .. ctx.token)
+    error('Expected arrow (->, =>), got ' .. ctx.token)
   end
 
   if ctx.token == '{' then

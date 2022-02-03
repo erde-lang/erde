@@ -51,7 +51,7 @@ function Terminal.parse(ctx)
   end
 
   if not node then
-    error()
+    error('Unexpected token ' .. ctx.token)
   end
 
   return node

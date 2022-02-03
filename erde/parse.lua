@@ -64,7 +64,7 @@ function Parser:branch(token)
   return true
 end
 
-function Parser:assume(token)
+function Parser:assert(token)
   if self.token ~= token then
     error('Expected ' .. token .. ' got ' .. tostring(self.token))
   else

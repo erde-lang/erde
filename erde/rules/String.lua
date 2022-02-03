@@ -24,7 +24,7 @@ function String.parse(ctx)
     terminatingToken = ']' .. node.equals .. ']'
     ctx:consume()
   else
-    error()
+    error('Unexpected token: ' .. ctx.token)
   end
 
   while ctx.token ~= terminatingToken do

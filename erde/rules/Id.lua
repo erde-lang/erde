@@ -13,7 +13,7 @@ function Id.parse(ctx)
   local last = node[#node]
 
   if last and last.variant == 'functionCall' then
-    error()
+    error('Unexpected function call')
   end
 
   return node
