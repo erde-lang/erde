@@ -65,7 +65,7 @@ local function Number()
     token = token .. consume()
 
     if not numLookup[char] then
-      error('empty decimal') -- invalid
+      error('Missing number after decimal point')
     end
 
     while numLookup[char] do
@@ -81,7 +81,7 @@ local function Number()
     end
 
     if not C.DIGIT[char] then
-      error('empty exponent')
+      error('Missing number after exponent')
     end
 
     while C.DIGIT[char] do
@@ -90,7 +90,7 @@ local function Number()
   end
 
   if C.ALPHA[char] then
-    error('word cannot start with digit')
+    error('Words cannot start with a digit')
   end
 
   commit(token)
@@ -98,8 +98,7 @@ end
 
 local function InnerString()
   if char == '' then
-    -- TODO: unterminated
-    error('unterminated string')
+    error('Unexpected EOF (unterminated string)')
   elseif char == '\\' then
     consume()
     if char == '{' or char == '}' then
@@ -127,8 +126,7 @@ local function InnerString()
         braceDepth = braceDepth - 1
         commit(consume())
       elseif char == '' then
-        -- TODO: unterminated
-        error('unterminated interpolation')
+        error('Unexpected EOF (unterminated interpolation)')
       else
         Token()
       end
@@ -160,7 +158,7 @@ function Token()
 
       token = consume(2) -- 0[xX]
       if not C.HEX[char] and char ~= '.' then
-        error('empty hex')
+        error('Missing hex after decimal point')
       end
 
       Number()
@@ -196,8 +194,7 @@ function Token()
 
     while char ~= quote do
       if char == '\n' then
-        -- TODO: unterminated
-        error('unterminated string')
+        error('Unexpected newline (unterminated string)')
       else
         InnerString()
       end
@@ -217,9 +214,10 @@ function Token()
       strCloseLen = strCloseLen + 1
     end
 
-    if consume() ~= '[' then
-      -- TODO: invalid
-      error('invalid long str')
+    if char ~= '[' then
+      error('Invalid start of long string (expected [ got ' .. char .. ')')
+    else
+      consume()
     end
 
     commit('[' .. strEq .. '[')
@@ -252,9 +250,10 @@ function Token()
         strCloseLen = strCloseLen + 1
       end
 
-      if consume() ~= '[' then
-        -- TODO: invalid
-        error('invalid long comment')
+      if char ~= '[' then
+        error('Invalid start of long comment (expected [ got ' .. char .. ')')
+      else
+        consume()
       end
 
       strClose = ']' .. strEq .. ']'
@@ -262,8 +261,7 @@ function Token()
 
       while peek(strCloseLen) ~= strClose do
         if char == '' then
-          -- TODO: unterminated
-          error('unterminated comment')
+          error('Unexpected EOF (unterminated comment)')
         elseif char == '\n' then
           token = token .. Newline()
         else
