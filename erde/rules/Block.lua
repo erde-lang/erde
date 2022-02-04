@@ -43,6 +43,8 @@ function Block.parse(ctx, opts)
       statement = ctx:Break() -- TODO: inline?
     elseif ctx.token == 'continue' then
       statement = ctx:Continue() -- TODO: inline?
+    elseif ctx.token == 'goto' or ctx.token == ':' then
+      statement = ctx:Goto()
     elseif ctx.token == 'do' then
       statement = ctx:DoBlock()
     elseif ctx.token == 'if' then

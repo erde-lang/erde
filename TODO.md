@@ -1,6 +1,6 @@
 # TODO
 
-- add goto rule and use goto in compilation
+- use goto in Continue compilation
 - Source maps (for runtime errors when using erde.loader)
 - erde REPL
 - add real README
