@@ -1,33 +1,45 @@
 -- -----------------------------------------------------------------------------
--- Continue
+-- Goto
 -- -----------------------------------------------------------------------------
 
-local Continue = { ruleName = 'Continue' }
+local Goto = { ruleName = 'Goto' }
 
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Continue.parse(ctx)
-  assert(ctx.loopBlock ~= nil, 'Cannot use `continue` outside of loop')
-  ctx:consume()
-
+function Goto.parse(ctx)
   local node = {}
-  local continueNodes = ctx.loopBlock.continueNodes
-  continueNodes[#continueNodes + 1] = node
+
+  if ctx:branch('goto') then
+    node.variant = 'jump'
+    node.name = ctx:Name().value
+  else
+    node.variant = 'definition'
+    ctx:assert(':')
+    ctx:assert(':')
+    node.name = ctx:Name().value
+    ctx:assert(':')
+    ctx:assert(':')
+  end
+
   return node
 end
 
 -- -----------------------------------------------------------------------------
--- Compile
+-- Goto
 -- -----------------------------------------------------------------------------
 
-function Continue.compile(ctx, node)
-  return 'goto ' .. node.gotoLabel
+function Goto.compile(ctx, node)
+  if node.variant == 'jump' then
+    return 'goto ' .. node.name
+  elseif node.variant == 'definition' then
+    return '::' .. node.name .. '::'
+  end
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-return Continue
+return Goto

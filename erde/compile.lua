@@ -137,8 +137,8 @@ local function compileRule(text, ruleName, parseOpts)
 end
 
 local compile = setmetatable({}, {
-  __call = function(self, text, parseOpts)
-    return compileRule(text, 'Block', parseOpts)
+  __call = function(self, text)
+    return compileRule(text, 'Block')
   end,
 })
 
