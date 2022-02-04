@@ -125,28 +125,15 @@ end
 
 function Block.compile(ctx, node)
   if #node.continueNodes > 0 then
-    local continueName = ctx:newTmpName()
+    local continueGotoLabel = ctx:newTmpName()
 
     for i, continueNode in ipairs(node.continueNodes) do
-      continueNode.continueName = continueName
+      continueNode.gotoLabel = continueGotoLabel
     end
 
-    return ([[
-      local %s = false
-
-      repeat
-        %s
-        %s = true
-      until true
-
-      if not %s then
-        break
-      end
-    ]]):format(
-      continueName,
+    return ('%s\n::%s::'):format(
       compileBlockStatements(ctx, node),
-      continueName,
-      continueName
+      continueGotoLabel
     )
   elseif #node.moduleNames > 0 then
     local moduleTableElements = {}

@@ -23,10 +23,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue.compile(ctx, node)
-  return table.concat({
-    node.continueName .. ' = true',
-    'break',
-  }, '\n')
+  return 'goto ' .. node.gotoLabel
 end
 
 -- -----------------------------------------------------------------------------
