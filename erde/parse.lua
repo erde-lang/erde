@@ -181,8 +181,8 @@ local function parseRule(text, ruleName, opts)
 end
 
 local parse = setmetatable({}, {
-  __call = function(self, text, opts)
-    return parseRule(text, 'Block', opts)
+  __call = function(self, text)
+    return parseRule(text, 'Block')
   end,
 })
 

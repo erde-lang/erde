@@ -5,14 +5,21 @@ return {
   tokenize = require('erde.tokenize'),
   parse = parse,
   compile = compile,
-
-  -- TODO: clean this up
   run = function(text)
     local source = compile(text)
 
-    local loader, err = (loadstring or load)(source)
+    local loader, err = loadstring(source)
     if type(loader) == 'function' then
-      return loader()
+      -- TODO: provide option to avoid pcall? Maybe disableSourceMap in manifest?
+      local ok, result = pcall(function()
+        return loader()
+      end)
+
+      if ok then
+        return result
+      else
+        error('intercepted: ' .. result)
+      end
     else
       error(table.concat({
         'Failed to load compiled Lua.',
