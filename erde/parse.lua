@@ -154,42 +154,41 @@ end
 -- Parse
 -- =============================================================================
 
-local function parseRule(text, ruleName, opts)
-  local tokens = tokenize(text).tokens
-  local parser = setmetatable({
-    tokens = tokens,
-    tokenIndex = 1,
-    token = tokens[1],
-    blockDepth = 0,
+local parse, parseMT = {}, {}
+
+parseMT.__call = function(self, text)
+  return parse.Block(text)
+end
+
+for ruleName, rule in pairs(rules) do
+  parse[ruleName] = function(text, opts)
+    local ctx = tokenize(text)
+    setmetatable(ctx, ParserMT)
+
+    ctx.tokenIndex = 1
+    ctx.token = ctx.tokens[1]
+
+    -- Keep track of block depth. Especially useful to know whether we are at
+    -- the top level for `module` declarations.
+    ctx.blockDepth = 0
 
     -- Used to tell other rules whether the current expression is part of the
     -- ternary block. Required to know whether ':' should be parsed exclusively
     -- as a method accessor or also consider ternary ':'.
-    isTernaryExpr = false,
+    ctx.isTernaryExpr = false
 
     -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
     -- RepeatUntil, WhileLoop). This is used to validate and link Break and
     -- Continue statements.
-    loopBlock = nil,
+    ctx.loopBlock = nil
 
     -- Keeps track of the top level Block. This is used to register module
     -- nodes when using the 'module' scope.
-    moduleBlock = nil,
-  }, ParserMT)
+    ctx.moduleBlock = nil
 
-  return parser[ruleName](parser, opts)
-end
-
-local parse = setmetatable({}, {
-  __call = function(self, text)
-    return parseRule(text, 'Block')
-  end,
-})
-
-for ruleName, rule in pairs(rules) do
-  parse[ruleName] = function(text, opts)
-    return parseRule(text, ruleName, opts)
+    return rules[ruleName].parse(ctx, opts)
   end
 end
 
+setmetatable(parse, parseMT)
 return parse
