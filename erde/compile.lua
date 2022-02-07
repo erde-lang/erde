@@ -130,22 +130,25 @@ end
 -- Compile
 -- =============================================================================
 
-local function compileRule(text, ruleName, parseOpts)
-  local compiler = setmetatable({ tmpNameCounter = 1 }, CompilerMT)
-  local ast = parse[ruleName](text, parseOpts)
-  return compiler:compile(ast)
-end
+local compile, compileMT = {}, {}
 
-local compile = setmetatable({}, {
-  __call = function(self, text)
-    return compileRule(text, 'Block')
-  end,
-})
+compileMT.__call = function(self, text)
+  return compile.Block(text)
+end
 
 for ruleName, rule in pairs(rules) do
   compile[ruleName] = function(text, parseOpts)
-    return compileRule(text, ruleName, parseOpts)
+    local ast = parse[ruleName](text, parseOpts)
+
+    local ctx = {}
+    setmetatable(ctx, CompilerMT)
+
+    ctx.tmpNameCounter = 1
+    ctx.sourceMap = {}
+
+    return rules[ruleName].compile(ctx, ast)
   end
 end
 
+setmetatable(compile, compileMT)
 return compile

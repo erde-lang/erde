@@ -14,7 +14,12 @@ local function register(rule)
 
     compile = function(ctx, node, ...)
       local compiled = rule.compile(ctx, node, ...)
-      return node.parens and '(' .. compiled .. ')' or compiled
+
+      if node.parens then
+        compiled = '(' .. compiled .. ')'
+      end
+
+      return compiled
     end,
   }
 end
