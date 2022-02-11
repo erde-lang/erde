@@ -1,5 +1,6 @@
 # TODO
 
+- do not require expr for destructure declaration (multi returns)
 - Source maps (for runtime errors when using erde.loader)
 - erde REPL
 - add real README
