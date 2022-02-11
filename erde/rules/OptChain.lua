@@ -14,6 +14,8 @@ function OptChain.parse(ctx)
   if ctx.token == '(' then
     node.base = ctx:Surround('(', ')', ctx.Expr)
     node.base.parens = true
+  elseif ctx.token == '$' then
+    node.base = ctx:Self()
   else
     node.base = ctx:Name()
   end

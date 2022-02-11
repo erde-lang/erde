@@ -47,6 +47,9 @@ function Terminal.parse(ctx)
       ctx.String,
       ctx.Table,
       ctx.OptChain,
+      -- Self must be checked after OptChain, since we allow it as an OptChain
+      -- base.
+      ctx.Self,
     })
   end
 
