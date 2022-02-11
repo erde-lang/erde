@@ -9,10 +9,15 @@ local ForLoop = { ruleName = 'ForLoop' }
 -- -----------------------------------------------------------------------------
 
 function ForLoop.parse(ctx)
+  local node
   ctx:assert('for')
 
-  local firstName = ctx:Name().value
-  local node
+  local firstName
+  if ctx.token == '{' or ctx.token == '[' then
+    firstName = ctx:Destructure()
+  else
+    firstName = ctx:Name()
+  end
 
   if ctx:branch('=') then
     node = {
@@ -21,7 +26,9 @@ function ForLoop.parse(ctx)
       parts = ctx:List({ rule = ctx.Expr }),
     }
 
-    if #node.parts < 2 then
+    if firstName.ruleName == 'Destructure' then
+      error('Cannot use destructure in numeric for loop')
+    elseif #node.parts < 2 then
       error('Invalid for loop parameters (missing parameters)')
     elseif #node.parts > 3 then
       error('Invalid for loop parameters (too many parameters)')
@@ -29,9 +36,13 @@ function ForLoop.parse(ctx)
   else
     node = { variant = 'generic' }
 
-    node.nameList = { firstName }
+    node.varList = { firstName }
     while ctx:branch(',') do
-      node.nameList[#node.nameList + 1] = ctx:Name().value
+      if ctx.token == '{' or ctx.token == '[' then
+        node.varList[#node.varList + 1] = ctx:Destructure()
+      else
+        node.varList[#node.varList + 1] = ctx:Name()
+      end
     end
 
     ctx:assert('in')
@@ -57,19 +68,33 @@ function ForLoop.compile(ctx, node)
     end
 
     return ('for %s=%s do\n%s\nend'):format(
-      node.name,
+      node.name.value,
       table.concat(parts, ','),
       ctx:compile(node.body)
     )
   else
+    local prebody = {}
+
+    local nameList = {}
+    for i, var in ipairs(node.varList) do
+      if var.ruleName == 'Destructure' then
+        local destructure = ctx:compile(var)
+        nameList[i] = destructure.baseName
+        prebody[#prebody + 1] = destructure.compiled
+      else
+        nameList[i] = var.value
+      end
+    end
+
     local exprList = {}
     for i, expr in ipairs(node.exprList) do
       exprList[i] = ctx:compile(expr)
     end
 
-    return ('for %s in %s do\n%s\nend'):format(
-      table.concat(node.nameList, ','),
+    return ('for %s in %s do\n%s\n%s\nend'):format(
+      table.concat(nameList, ','),
       table.concat(exprList, ','),
+      table.concat(prebody, '\n'),
       ctx:compile(node.body)
     )
   end
