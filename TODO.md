@@ -1,11 +1,11 @@
 # TODO
 
-- do not require expr for destructure declaration (multi returns)
 - erde REPL
 - add real README
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
+- readd lua5.1+ support
 - release v0.1.0
 
 # v0.2.0
