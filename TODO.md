@@ -1,24 +1,18 @@
 # TODO
 
 - do not require expr for destructure declaration (multi returns)
-- Source maps (for runtime errors when using erde.loader)
 - erde REPL
 - add real README
-- final refactor, extensive tests
-  - more comments
-  - better naming
-  - remove workarounds
-  - test rule interaction
-  - test general parse, compile, etc.
+- Formatting
+  - Rule.format method
+  - cli support `erde format [FILES]`
 - release v0.1.0
 
 # v0.2.0
 
+- Source maps (for runtime errors when using erde.loader)
 - Bug fixes
-- Formatting
-  - Rule.format method
-  - cli support `erde format [FILES]`
-- ONE new language feature
+- up to 2 new language features
 
 # Long Term TODO
 
@@ -30,7 +24,6 @@
 
 # Uncertain Proposals (need community input)
 
-- hoist top block vars?
 - macros
 - decorators
 - nested break
@@ -39,17 +32,18 @@
   - useful for grouping logical computations
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
-- optional types
-- allow module refs anywhere
-  - lua requires declarations to happen before reference
-  - compile to forward declare top level module variables
-  - ex) 
-    ```erde
-      local function a() { b() }`
-      local function b() { ... }`
-    ```
-    ```lua
-      local a, b
-      a = function() b() end
-      b = function() ... end
-    ```
+  - difficult, maybe impossible? dont know when return will happen?
+- hoist top block vars?
+  - or just allow module refs anywhere
+    - lua requires declarations to happen before reference
+    - compile to forward declare top level module variables
+    - ex) 
+      ```erde
+        local function a() { b() }`
+        local function b() { ... }`
+      ```
+      ```lua
+        local a, b
+        a = function() b() end
+        b = function() ... end
+      ```

@@ -56,14 +56,6 @@ function Declaration.parse(ctx)
     node.exprList = ctx:List({ rule = ctx.Expr })
   end
 
-  for i, var in ipairs(node.varList) do
-    if var.ruleName == 'Destructure' then
-      if not node.exprList[i] then
-        error('Missing expression to destructure')
-      end
-    end
-  end
-
   return node
 end
 
