@@ -3,22 +3,22 @@ local parse = require('erde.parse')
 local rules = require('erde.rules')
 
 -- =============================================================================
--- Compiler
+-- CompileCtx
 -- =============================================================================
 
-local Compiler = {}
-local CompilerMT = { __index = Compiler }
+local CompileCtx = {}
+local CompileCtxMT = { __index = CompileCtx }
 
 -- Allow calling all rule compilers directly from compiler
 for ruleName, rule in pairs(rules) do
-  Compiler[ruleName] = rule.compile
+  CompileCtx[ruleName] = rule.compile
 end
 
 -- -----------------------------------------------------------------------------
 -- Methods
 -- -----------------------------------------------------------------------------
 
-function Compiler:compile(node)
+function CompileCtx:compile(node)
   if type(node) ~= 'table' or not rules[node.ruleName] then
     error('No compiler for ruleName: ' .. tostring(node.ruleName))
   end
@@ -26,7 +26,7 @@ function Compiler:compile(node)
   return rules[node.ruleName].compile(self, node)
 end
 
-function Compiler:newTmpName()
+function CompileCtx:newTmpName()
   self.tmpNameCounter = self.tmpNameCounter + 1
   return ('__ERDE_TMP_%d__'):format(self.tmpNameCounter)
 end
@@ -36,7 +36,7 @@ end
 -- -----------------------------------------------------------------------------
 
 -- TODO: rename
-function Compiler:compileBinop(op, lhs, rhs)
+function CompileCtx:compileBinop(op, lhs, rhs)
   if op.token == '??' then
     local ncTmpName = self:newTmpName()
     return table.concat({
@@ -71,7 +71,7 @@ function Compiler:compileBinop(op, lhs, rhs)
 end
 
 -- TODO: rename
-function Compiler:compileOptChain(node)
+function CompileCtx:compileOptChain(node)
   local chain = self:compile(node.base)
   local optSubChains = {}
 
@@ -131,6 +131,7 @@ end
 -- =============================================================================
 
 local compile, compileMT = {}, {}
+setmetatable(compile, compileMT)
 
 compileMT.__call = function(self, text)
   return compile.Block(text)
@@ -141,7 +142,7 @@ for ruleName, rule in pairs(rules) do
     local ast = parse[ruleName](text, parseOpts)
 
     local ctx = {}
-    setmetatable(ctx, CompilerMT)
+    setmetatable(ctx, CompileCtxMT)
 
     ctx.tmpNameCounter = 1
     ctx.sourceMap = {}
@@ -150,5 +151,4 @@ for ruleName, rule in pairs(rules) do
   end
 end
 
-setmetatable(compile, compileMT)
 return compile

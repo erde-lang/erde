@@ -10,7 +10,8 @@ local ArrowFunction = { ruleName = 'ArrowFunction' }
 
 function ArrowFunction.parse(ctx)
   local node = {
-    hasImplicitReturns = true,
+    hasFatArrow = false,
+    hasImplicitReturns = false,
   }
 
   if ctx.token == '(' then
@@ -21,20 +22,18 @@ function ArrowFunction.parse(ctx)
     node.params = { ruleName = 'Params', ctx:Name() }
   end
 
-  if ctx:branch('->') then
-    node.variant = 'skinny'
-  elseif ctx:branch('=>') then
-    node.variant = 'fat'
-  else
+  if ctx:branch('=>') then
+    node.hasFatArrow = true
+  elseif not ctx:branch('->') then
     error('Expected arrow (->, =>), got ' .. ctx.token)
   end
 
   if ctx.token == '{' then
-    node.hasImplicitReturns = false
     node.body = ctx:Surround('{', '}', function()
       return ctx:Block({ isFunctionBlock = true })
     end)
   elseif ctx.token == '(' then
+    node.hasImplicitReturns = true
     -- Only allow multiple implicit returns w/ parentheses
     node.returns = ctx:Parens({
       allowRecursion = true,
@@ -46,6 +45,7 @@ function ArrowFunction.parse(ctx)
       end,
     })
   else
+    node.hasImplicitReturns = true
     node.returns = { ctx:Expr() }
   end
 
@@ -60,7 +60,7 @@ function ArrowFunction.compile(ctx, node)
   local params = ctx:compile(node.params)
   local paramNames = params.names
 
-  if node.variant == 'fat' then
+  if node.hasFatArrow then
     table.insert(paramNames, 1, 'self')
   end
 
@@ -83,6 +83,18 @@ function ArrowFunction.compile(ctx, node)
     body,
     'end',
   }, '\n')
+end
+
+-- -----------------------------------------------------------------------------
+-- Format
+-- -----------------------------------------------------------------------------
+
+function ArrowFunction.format(ctx, node)
+  return ('(%s) %s {\n%s\n}'):format(
+    ctx:format(node.params),
+    node.hasFatArrow and '=>' or '->',
+    ctx:format(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------

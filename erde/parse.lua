@@ -3,22 +3,22 @@ local rules = require('erde.rules')
 local tokenize = require('erde.tokenize')
 
 -- =============================================================================
--- Parser
+-- ParseCtx
 -- =============================================================================
 
-local Parser = {}
-local ParserMT = { __index = Parser }
+local ParseCtx = {}
+local ParseCtxMT = { __index = ParseCtx }
 
 -- Allow calling all rule parsers directly from parser
 for ruleName, rule in pairs(rules) do
-  Parser[ruleName] = rule.parse
+  ParseCtx[ruleName] = rule.parse
 end
 
 -- -----------------------------------------------------------------------------
 -- Methods
 -- -----------------------------------------------------------------------------
 
-function Parser:backup()
+function ParseCtx:backup()
   local backup = {}
 
   for key, value in pairs(self) do
@@ -30,13 +30,13 @@ function Parser:backup()
   return backup
 end
 
-function Parser:restore(backup)
+function ParseCtx:restore(backup)
   for key, value in pairs(backup) do
     self[key] = value
   end
 end
 
-function Parser:consume()
+function ParseCtx:consume()
   local token = self.token
 
   self.tokenIndex = self.tokenIndex + 1
@@ -51,11 +51,11 @@ function Parser:consume()
   return token
 end
 
-function Parser:peek(n)
+function ParseCtx:peek(n)
   return self.tokens[self.tokenIndex + n] or ''
 end
 
-function Parser:branch(token)
+function ParseCtx:branch(token)
   if self.token ~= token then
     return false
   end
@@ -64,7 +64,7 @@ function Parser:branch(token)
   return true
 end
 
-function Parser:assert(token, skipConsume)
+function ParseCtx:assert(token, skipConsume)
   if self.token ~= token then
     error('Expected ' .. token .. ' got ' .. tostring(self.token))
   elseif not skipConsume then
@@ -76,7 +76,7 @@ end
 -- Macros
 -- -----------------------------------------------------------------------------
 
-function Parser:Try(rule)
+function ParseCtx:Try(rule)
   local backup = self:backup()
   local ok, node = pcall(function()
     return rule(self)
@@ -89,7 +89,7 @@ function Parser:Try(rule)
   end
 end
 
-function Parser:Switch(rules)
+function ParseCtx:Switch(rules)
   for i, rule in ipairs(rules) do
     local node = self:Try(rule)
     if node then
@@ -98,14 +98,14 @@ function Parser:Switch(rules)
   end
 end
 
-function Parser:Surround(openChar, closeChar, rule)
+function ParseCtx:Surround(openChar, closeChar, rule)
   self:assert(openChar)
   local capture = rule(self)
   self:assert(closeChar)
   return capture
 end
 
-function Parser:Parens(opts)
+function ParseCtx:Parens(opts)
   if opts.demand or self.token == '(' then
     opts.demand = false
 
@@ -124,7 +124,7 @@ function Parser:Parens(opts)
   end
 end
 
-function Parser:List(opts)
+function ParseCtx:List(opts)
   local list = {}
   local hasTrailingComma = false
 
@@ -155,6 +155,7 @@ end
 -- =============================================================================
 
 local parse, parseMT = {}, {}
+setmetatable(parse, parseMT)
 
 parseMT.__call = function(self, text)
   return parse.Block(text)
@@ -163,7 +164,7 @@ end
 for ruleName, rule in pairs(rules) do
   parse[ruleName] = function(text, opts)
     local ctx = tokenize(text)
-    setmetatable(ctx, ParserMT)
+    setmetatable(ctx, ParseCtxMT)
 
     ctx.tokenIndex = 1
     ctx.token = ctx.tokens[1]
@@ -190,5 +191,4 @@ for ruleName, rule in pairs(rules) do
   end
 end
 
-setmetatable(parse, parseMT)
 return parse

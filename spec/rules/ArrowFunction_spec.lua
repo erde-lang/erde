@@ -5,14 +5,14 @@
 describe('ArrowFunction.parse', function()
   spec('skinny arrow function', function()
     assert.subtable(
-      { variant = 'skinny' },
+      { hasFatArrow = false },
       parse.ArrowFunction('() -> { return 1 }')
     )
   end)
 
   spec('fat arrow function', function()
     assert.subtable(
-      { variant = 'fat' },
+      { hasFatArrow = true },
       parse.ArrowFunction('() => { return 1 }')
     )
   end)
