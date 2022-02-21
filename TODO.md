@@ -1,11 +1,13 @@
 # TODO
 
-- erde REPL
-- add real README
+- remove ruleName manipulations
+- remove rules/init.lua method wrappers
+- readd lua5.1+ support
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
-- readd lua5.1+ support
+- erde REPL
+- add real README
 - release v0.1.0
 
 # v0.2.0

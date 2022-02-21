@@ -1,15 +1,15 @@
 local rules = require('erde.rules')
 
 -- =============================================================================
--- Formatter
+-- FormatCtx
 -- =============================================================================
 
-local Formatter = {}
-local FormatterMT = { __index = Parser }
+local FormatCtx = {}
+local FormatCtxMT = { __index = Parser }
 
 -- Allow calling all rule formatters directly from formatter
 for ruleName, rule in pairs(rules) do
-  Formatter[ruleName] = rule.format
+  FormatCtx[ruleName] = rule.format
 end
 
 -- -----------------------------------------------------------------------------
@@ -30,6 +30,10 @@ end
 for ruleName, rule in pairs(rules) do
   format[ruleName] = function(text, opts)
     local ctx = {}
+
+    -- Keep track of the indent level
+    ctx.indentLevel = 0
+
     return rules[ruleName].format(ctx, opts)
   end
 end
