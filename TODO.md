@@ -49,3 +49,18 @@
         a = function() b() end
         b = function() ... end
       ```
+
+# Design Decisions (need to move to erde website)
+
+## Do not allow multiple assignments at the same time.
+
+This is not too widely used, arguable makes code more difficult to read, and 
+isn't possible to support assignment operators and optional assignments due to
+functions being able to support multiple returns:
+
+```erde
+a, { b }, c += oneOrTwoReturns(), anotherOneOrTwoReturns()
+a, b?.c, d = oneOrTwoReturns(), anotherOneOrTwoReturns()
+```
+
+This only affects assignment. Multiple _declaractions_ are supported.

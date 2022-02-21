@@ -12,8 +12,10 @@ function Id.parse(ctx)
   local node = ctx:OptChain()
   local last = node[#node]
 
-  if last and last.variant == 'functionCall' then
-    error('Unexpected function call')
+  if last then
+    if last.variant == 'functionCall' then
+      error('Unexpected function call')
+    end
   end
 
   return node
