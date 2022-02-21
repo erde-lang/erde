@@ -40,14 +40,14 @@ function Expr.parse(ctx, opts)
 
     if binop.token == '?' then
       ctx.isTernaryExpr = true
-      node[#node + 1] = ctx:Expr()
+      table.insert(node, ctx:Expr())
       ctx.isTernaryExpr = false
       ctx:assert(':')
     end
 
-    node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE
-        and ctx:Expr({ minPrec = binop.prec + 1 })
-      or ctx:Expr({ minPrec = binop.prec })
+    local nextMinPrec = binop.prec
+      + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
+    table.insert(node, ctx:Expr({ minPrec = nextMinPrec }))
   end
 
   if ctx.token == '>>' then

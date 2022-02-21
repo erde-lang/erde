@@ -40,9 +40,9 @@ function Block.parse(ctx, opts)
 
     local statement
     if ctx.token == 'break' then
-      statement = ctx:Break() -- TODO: inline?
+      statement = ctx:Break()
     elseif ctx.token == 'continue' then
-      statement = ctx:Continue() -- TODO: inline?
+      statement = ctx:Continue()
     elseif ctx.token == 'goto' or ctx.token == ':' then
       statement = ctx:Goto()
     elseif ctx.token == 'do' then
@@ -78,7 +78,7 @@ function Block.parse(ctx, opts)
       })
     end
 
-    node[#node + 1] = statement
+    table.insert(node, statement)
   until not statement
 
   if #node.moduleNames > 0 then
@@ -108,7 +108,7 @@ local function compileBlockStatements(ctx, node)
     -- funtion calls.
     --
     -- http://lua-users.org/lists/lua-l/2009-08/msg00543.html
-    compiledStatements[#compiledStatements + 1] = ctx:compile(statement) .. ';'
+    table.insert(compiledStatements, ctx:compile(statement) .. ';')
   end
 
   return table.concat(compiledStatements, '\n')

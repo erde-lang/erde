@@ -18,7 +18,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock.compile(ctx, node)
-  return 'do ' .. ctx:compile(node.body) .. ' end'
+  return 'do\n' .. ctx:compile(node.body) .. '\nend'
 end
 
 -- -----------------------------------------------------------------------------

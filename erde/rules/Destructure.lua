@@ -62,10 +62,10 @@ function Destructure.parse(ctx)
 
   for i, destruct in ipairs(destructs) do
     if destruct.variant ~= nil then
-      node[#node + 1] = destruct
+      table.insert(node, destruct)
     else
       for i, numberDestruct in ipairs(destruct) do
-        node[#node + 1] = numberDestruct
+        table.insert(node, numberDestruct)
       end
     end
   end
@@ -88,27 +88,27 @@ function Destructure.compile(ctx, node)
     varNames[i] = varName
 
     if field.variant == 'keyDestruct' then
-      compileParts[#compileParts + 1] = ('%s = %s.%s'):format(
-        varName,
-        baseName,
-        field.name
+      table.insert(
+        compileParts,
+        ('%s = %s.%s'):format(varName, baseName, field.name)
       )
     elseif field.variant == 'numberDestruct' then
-      compileParts[#compileParts + 1] = ('%s = %s[%s]'):format(
-        varName,
-        baseName,
-        numberKeyCounter
+      table.insert(
+        compileParts,
+        ('%s = %s[%s]'):format(varName, baseName, numberKeyCounter)
       )
       numberKeyCounter = numberKeyCounter + 1
     end
 
     if field.default then
-      compileParts[#compileParts + 1] =
+      table.insert(
+        compileParts,
         ('if %s == nil then %s = %s end'):format(
           varName,
           varName,
           ctx:compile(field.default)
         )
+      )
     end
   end
 

@@ -31,7 +31,7 @@ function Return.compile(ctx, node)
   local returnValues = {}
 
   for i, returnValue in ipairs(node) do
-    returnValues[#returnValues + 1] = ctx:compile(returnValue)
+    returnValues[i] = ctx:compile(returnValue)
   end
 
   return 'return ' .. table.concat(returnValues, ',')

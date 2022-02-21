@@ -29,28 +29,33 @@ function Spread.compile(ctx, fields)
   for i, field in ipairs(fields) do
     if field.ruleName == Spread.ruleName then
       local spreadTmpName = ctx:newTmpName()
-      compileParts[#compileParts + 1] = table.concat({
-        'local ' .. spreadTmpName .. ' = ' .. ctx:compile(field.value),
-        'for key, value in pairs(' .. spreadTmpName .. ') do',
-        'if type(key) == "number" then',
-        ('%s[%s + key] = value'):format(tableVar, lenVar),
-        'else',
-        tableVar .. '[key] = value',
-        'end',
-        'end',
-        ('%s = %s + #%s'):format(lenVar, lenVar, spreadTmpName),
-      }, '\n')
+      table.insert(
+        compileParts,
+        table.concat({
+          'local ' .. spreadTmpName .. ' = ' .. ctx:compile(field.value),
+          'for key, value in pairs(' .. spreadTmpName .. ') do',
+          'if type(key) == "number" then',
+          ('%s[%s + key] = value'):format(tableVar, lenVar),
+          'else',
+          tableVar .. '[key] = value',
+          'end',
+          'end',
+          ('%s = %s + #%s'):format(lenVar, lenVar, spreadTmpName),
+        }, '\n')
+      )
     elseif field.key then
-      compileParts[#compileParts + 1] = ('%s[%s] = %s'):format(
-        tableVar,
-        field.key,
-        field.value
+      table.insert(
+        compileParts,
+        ('%s[%s] = %s'):format(tableVar, field.key, field.value)
       )
     else
-      compileParts[#compileParts + 1] = table.concat({
-        ('%s[%s + 1] = %s'):format(tableVar, lenVar, field.value),
-        ('%s = %s + 1'):format(lenVar, lenVar),
-      }, '\n')
+      table.insert(
+        compileParts,
+        table.concat({
+          ('%s[%s + 1] = %s'):format(tableVar, lenVar, field.value),
+          ('%s = %s + 1'):format(lenVar, lenVar),
+        }, '\n')
+      )
     end
   end
 

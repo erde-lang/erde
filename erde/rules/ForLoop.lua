@@ -39,9 +39,9 @@ function ForLoop.parse(ctx)
     node.varList = { firstName }
     while ctx:branch(',') do
       if ctx.token == '{' or ctx.token == '[' then
-        node.varList[#node.varList + 1] = ctx:Destructure()
+        table.insert(node.varList, ctx:Destructure())
       else
-        node.varList[#node.varList + 1] = ctx:Name()
+        table.insert(node.varList, ctx:Name())
       end
     end
 
@@ -64,7 +64,7 @@ function ForLoop.compile(ctx, node)
   if node.variant == 'numeric' then
     local parts = {}
     for i, part in ipairs(node.parts) do
-      parts[#parts + 1] = ctx:compile(part)
+      table.insert(parts, ctx:compile(part))
     end
 
     return ('for %s=%s do\n%s\nend'):format(
@@ -80,7 +80,7 @@ function ForLoop.compile(ctx, node)
       if var.ruleName == 'Destructure' then
         local destructure = ctx:compile(var)
         nameList[i] = destructure.baseName
-        prebody[#prebody + 1] = destructure.compiled
+        table.insert(prebody, destructure.compiled)
       else
         nameList[i] = var.value
       end

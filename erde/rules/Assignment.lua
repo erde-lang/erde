@@ -1,5 +1,6 @@
 local C = require('erde.constants')
 
+-- These operators cannot be used w/ operator assignment
 local BINOP_ASSIGNMENT_BLACKLIST = {
   ['?'] = true,
   ['=='] = true,
@@ -24,7 +25,6 @@ function Assignment.parse(ctx)
   local node = { id = ctx:Id() }
 
   if BINOP_ASSIGNMENT_BLACKLIST[ctx.token] then
-    -- These operators cannot be used w/ operator assignment
     error('Invalid assignment operator: ' .. ctx.token)
   elseif C.BINOPS[ctx.token] then
     node.op = C.BINOPS[ctx:consume()]
@@ -60,16 +60,13 @@ function Assignment.compile(ctx, node)
   else
     local optChecks = {}
     for i, optSubChain in ipairs(optChain.optSubChains) do
-      optChecks[#optChecks + 1] = optSubChain .. ' ~= nil'
+      table.insert(optChecks, optSubChain .. ' ~= nil')
     end
 
-    return table.concat({
-      'if',
+    return ('if %s then\n%s\nend'):format(
       table.concat(optChecks, ' and '),
-      'then',
-      compiledAssignment,
-      'end',
-    }, '\n')
+      compiledAssignment
+    )
   end
 end
 

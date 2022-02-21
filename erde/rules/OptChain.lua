@@ -77,7 +77,7 @@ function OptChain.parse(ctx)
       break
     end
 
-    node[#node + 1] = chain
+    table.insert(node, chain)
   end
 
   -- unpack trivial OptChain
@@ -97,9 +97,7 @@ function OptChain.compile(ctx, node)
 
   local optChecks = {}
   for i, optSubChain in ipairs(optChain.optSubChains) do
-    optChecks[#optChecks + 1] = 'if '
-      .. optSubChain
-      .. ' == nil then return end'
+    optChecks[i] = 'if ' .. optSubChain .. ' == nil then return end'
   end
 
   return table.concat({

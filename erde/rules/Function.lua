@@ -29,11 +29,11 @@ function Function.parse(ctx)
 
   while true do
     if ctx:branch('.') then
-      node.names[#node.names + 1] = ctx:Name().value
+      table.insert(node.names, ctx:Name().value)
     else
       if ctx:branch(':') then
         node.isMethod = true
-        node.names[#node.names + 1] = ctx:Name().value
+        table.insert(node.names, ctx:Name().value)
       end
 
       break

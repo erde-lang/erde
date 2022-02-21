@@ -13,8 +13,7 @@ function Continue.parse(ctx)
   ctx:consume()
 
   local node = {}
-  local continueNodes = ctx.loopBlock.continueNodes
-  continueNodes[#continueNodes + 1] = node
+  table.insert(ctx.loopBlock.continueNodes, node)
   return node
 end
 

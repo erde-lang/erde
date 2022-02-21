@@ -75,25 +75,25 @@ function Declaration.compile(ctx, node)
 
   for i, var in ipairs(node.varList) do
     if var.ruleName == 'Name' then
-      nameList[#nameList + 1] = ctx:compile(var)
+      table.insert(nameList, ctx:compile(var))
     elseif var.ruleName == 'Destructure' then
       local destructure = ctx:compile(var)
-      nameList[#nameList + 1] = destructure.baseName
-      compileParts[#compileParts + 1] = destructure.compiled
+      table.insert(nameList, destructure.baseName)
+      table.insert(compileParts, destructure.compiled)
     end
   end
 
-  declarationParts[#declarationParts + 1] = table.concat(nameList, ',')
+  table.insert(declarationParts, table.concat(nameList, ','))
 
   if #node.exprList > 0 then
     local exprList = {}
 
     for i, expr in ipairs(node.exprList) do
-      exprList[#exprList + 1] = ctx:compile(expr)
+      table.insert(exprList, ctx:compile(expr))
     end
 
-    declarationParts[#declarationParts + 1] = '='
-    declarationParts[#declarationParts + 1] = table.concat(exprList, ',')
+    table.insert(declarationParts, '=')
+    table.insert(declarationParts, table.concat(exprList, ','))
   end
 
   table.insert(compileParts, 1, table.concat(declarationParts, ' '))
