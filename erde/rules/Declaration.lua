@@ -27,15 +27,7 @@ function Declaration.parse(ctx)
     node.variant = 'global'
   end
 
-  node.varList = ctx:List({
-    rule = function()
-      if ctx.token == '{' or ctx.token == '[' then
-        return ctx:Destructure()
-      else
-        return ctx:Name()
-      end
-    end,
-  })
+  node.varList = ctx:List({ rule = ctx.Var })
 
   if node.variant == 'module' then
     for i, var in ipairs(node.varList) do

@@ -12,12 +12,7 @@ function ForLoop.parse(ctx)
   local node
   ctx:assert('for')
 
-  local firstName
-  if ctx.token == '{' or ctx.token == '[' then
-    firstName = ctx:Destructure()
-  else
-    firstName = ctx:Name()
-  end
+  local firstName = ctx:Var()
 
   if ctx:branch('=') then
     node = {
@@ -38,11 +33,7 @@ function ForLoop.parse(ctx)
 
     node.varList = { firstName }
     while ctx:branch(',') do
-      if ctx.token == '{' or ctx.token == '[' then
-        table.insert(node.varList, ctx:Destructure())
-      else
-        table.insert(node.varList, ctx:Name())
-      end
+      table.insert(node.varList, ctx:Var())
     end
 
     ctx:assert('in')

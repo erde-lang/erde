@@ -16,12 +16,7 @@ function Params.parse(ctx)
         allowEmpty = true,
         allowTrailingComma = true,
         rule = function()
-          local param
-          if ctx.token == '{' or ctx.token == '(' then
-            param = ctx:Destructure()
-          else
-            param = ctx:Name()
-          end
+          local param = ctx:Var()
 
           if param and ctx:branch('=') then
             param.default = ctx:Expr()

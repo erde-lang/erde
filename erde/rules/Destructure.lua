@@ -38,11 +38,8 @@ end
 function Destructure.parse(ctx)
   local node = {}
 
-  local destructs
-  if ctx.token == '[' then
-    destructs = parseNumberKeyDestructs(ctx)
-  elseif ctx.token == '{' then
-    destructs = ctx:Surround('{', '}', function()
+  local destructs = ctx.token == '[' and parseNumberKeyDestructs(ctx)
+    or ctx:Surround('{', '}', function()
       return ctx:List({
         allowTrailingComma = true,
         rule = function()
@@ -56,15 +53,12 @@ function Destructure.parse(ctx)
         end,
       })
     end)
-  else
-    error('Unexpected token: ' .. ctx.token)
-  end
 
-  for i, destruct in ipairs(destructs) do
+  for _, destruct in ipairs(destructs) do
     if destruct.variant ~= nil then
       table.insert(node, destruct)
     else
-      for i, numberDestruct in ipairs(destruct) do
+      for _, numberDestruct in ipairs(destruct) do
         table.insert(node, numberDestruct)
       end
     end
