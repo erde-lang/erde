@@ -5,7 +5,6 @@ local rules = require('erde.rules')
 -- =============================================================================
 
 local FormatCtx = {}
-local FormatCtxMT = { __index = Parser }
 
 -- Allow calling all rule formatters directly from formatter
 for ruleName, rule in pairs(rules) do

@@ -6,8 +6,36 @@ local tokenize = require('erde.tokenize')
 -- ParseCtx
 -- =============================================================================
 
-local ParseCtx = {}
-local ParseCtxMT = { __index = ParseCtx }
+local ParseCtx, ParseCtxMT = {}, {}
+setmetatable(ParseCtx, ParseCtxMT)
+
+function ParseCtxMT.__call(_, text)
+  local ctx = tokenize(text)
+  setmetatable(ctx, { __index = ParseCtx })
+
+  ctx.tokenIndex = 1
+  ctx.token = ctx.tokens[1]
+
+  -- Keep track of block depth. Especially useful to know whether we are at
+  -- the top level for `module` declarations.
+  ctx.blockDepth = 0
+
+  -- Used to tell other rules whether the current expression is part of the
+  -- ternary block. Required to know whether ':' should be parsed exclusively
+  -- as a method accessor or also consider ternary ':'.
+  ctx.isTernaryExpr = false
+
+  -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
+  -- RepeatUntil, WhileLoop). This is used to validate and link Break and
+  -- Continue statements.
+  ctx.loopBlock = nil
+
+  -- Keeps track of the top level Block. This is used to register module
+  -- nodes when using the 'module' scope.
+  ctx.moduleBlock = nil
+
+  return ctx
+end
 
 -- Allow calling all rule parsers directly from parser
 for ruleName, rule in pairs(rules) do
@@ -150,6 +178,36 @@ function ParseCtx:List(opts)
   return list, hasTrailingComma
 end
 
+-- -----------------------------------------------------------------------------
+-- Pseudo Rules
+-- -----------------------------------------------------------------------------
+
+function ParseCtx:Var()
+  return (self.token == '{' or self.token == '[') and self:Destructure()
+    or self:Name()
+end
+
+function ParseCtx:Name()
+  assert(
+    self.token:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
+    'Malformed name: ' .. self.token
+  )
+
+  for i, keyword in pairs(C.KEYWORDS) do
+    assert(self.token ~= keyword, 'Cannot use keyword as name: ' .. self.token)
+  end
+
+  return self:consume()
+end
+
+function ParseCtx:Number()
+  if not self.token:match('^%.?[0-9]') then
+    error('Malformed number: ' .. self.token)
+  end
+
+  return self:consume()
+end
+
 -- =============================================================================
 -- Parse
 -- =============================================================================
@@ -161,33 +219,18 @@ parseMT.__call = function(self, text)
   return parse.Block(text)
 end
 
+-- Allow parsing individual rules
 for ruleName, rule in pairs(rules) do
-  parse[ruleName] = function(text, opts)
-    local ctx = tokenize(text)
-    setmetatable(ctx, ParseCtxMT)
+  parse[ruleName] = function(text, ...)
+    return rules[ruleName].parse(ParseCtx(text), ...)
+  end
+end
 
-    ctx.tokenIndex = 1
-    ctx.token = ctx.tokens[1]
-
-    -- Keep track of block depth. Especially useful to know whether we are at
-    -- the top level for `module` declarations.
-    ctx.blockDepth = 0
-
-    -- Used to tell other rules whether the current expression is part of the
-    -- ternary block. Required to know whether ':' should be parsed exclusively
-    -- as a method accessor or also consider ternary ':'.
-    ctx.isTernaryExpr = false
-
-    -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
-    -- RepeatUntil, WhileLoop). This is used to validate and link Break and
-    -- Continue statements.
-    ctx.loopBlock = nil
-
-    -- Keeps track of the top level Block. This is used to register module
-    -- nodes when using the 'module' scope.
-    ctx.moduleBlock = nil
-
-    return rules[ruleName].parse(ctx, opts)
+-- Allow parsing individual pseudo rules
+for _, ruleName in pairs({ 'Var', 'Name', 'Number' }) do
+  parse[ruleName] = function(text, ...)
+    local ctx = ParseCtx(text)
+    return ctx[ruleName](ctx, ...)
   end
 end
 

@@ -9,10 +9,10 @@ local Destructure = { ruleName = 'Destructure' }
 -- -----------------------------------------------------------------------------
 
 local function parseDestruct(ctx)
-  local destruct = { name = ctx:Name().value }
+  local destruct = { name = ctx:Name() }
 
   if ctx:branch(':') then
-    destruct.alias = ctx:Name().value
+    destruct.alias = ctx:Name()
   end
 
   if ctx:branch('=') then
@@ -38,11 +38,8 @@ end
 function Destructure.parse(ctx)
   local node = {}
 
-  local destructs
-  if ctx.token == '[' then
-    destructs = parseNumberKeyDestructs(ctx)
-  elseif ctx.token == '{' then
-    destructs = ctx:Surround('{', '}', function()
+  local destructs = ctx.token == '[' and parseNumberKeyDestructs(ctx)
+    or ctx:Surround('{', '}', function()
       return ctx:List({
         allowTrailingComma = true,
         rule = function()
@@ -56,16 +53,13 @@ function Destructure.parse(ctx)
         end,
       })
     end)
-  else
-    error('Unexpected token: ' .. ctx.token)
-  end
 
-  for i, destruct in ipairs(destructs) do
+  for _, destruct in ipairs(destructs) do
     if destruct.variant ~= nil then
-      node[#node + 1] = destruct
+      table.insert(node, destruct)
     else
-      for i, numberDestruct in ipairs(destruct) do
-        node[#node + 1] = numberDestruct
+      for _, numberDestruct in ipairs(destruct) do
+        table.insert(node, numberDestruct)
       end
     end
   end
@@ -88,27 +82,27 @@ function Destructure.compile(ctx, node)
     varNames[i] = varName
 
     if field.variant == 'keyDestruct' then
-      compileParts[#compileParts + 1] = ('%s = %s.%s'):format(
-        varName,
-        baseName,
-        field.name
+      table.insert(
+        compileParts,
+        ('%s = %s.%s'):format(varName, baseName, field.name)
       )
     elseif field.variant == 'numberDestruct' then
-      compileParts[#compileParts + 1] = ('%s = %s[%s]'):format(
-        varName,
-        baseName,
-        numberKeyCounter
+      table.insert(
+        compileParts,
+        ('%s = %s[%s]'):format(varName, baseName, numberKeyCounter)
       )
       numberKeyCounter = numberKeyCounter + 1
     end
 
     if field.default then
-      compileParts[#compileParts + 1] =
+      table.insert(
+        compileParts,
         ('if %s == nil then %s = %s end'):format(
           varName,
           varName,
           ctx:compile(field.default)
         )
+      )
     end
   end
 

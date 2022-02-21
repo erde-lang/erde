@@ -39,7 +39,7 @@ function TryCatch.compile(ctx, node)
     ),
     'if ' .. okName .. ' == false then',
     not node.errorName and '' or ('local %s = %s'):format(
-      ctx:compile(node.errorName),
+      node.errorName,
       errorName
     ),
     ctx:compile(node.catch),

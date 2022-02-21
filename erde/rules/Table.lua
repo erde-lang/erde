@@ -22,7 +22,7 @@ end
 local function parseNameKeyField(ctx)
   local field = {
     variant = 'nameKey',
-    key = ctx:Name().value,
+    key = ctx:Name(),
   }
 
   ctx:assert('=')

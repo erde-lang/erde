@@ -12,15 +12,11 @@ function ArrowFunction.parse(ctx)
   local node = {
     hasFatArrow = false,
     hasImplicitReturns = false,
+    params = ctx.token == '(' and ctx:Params() or {
+      ruleName = 'Params',
+      { value = ctx:Var() },
+    },
   }
-
-  if ctx.token == '(' then
-    node.params = ctx:Params()
-  elseif ctx.token == '{' or ctx.token == '[' then
-    node.params = { ruleName = 'Params', ctx:Destructure() }
-  else
-    node.params = { ruleName = 'Params', ctx:Name() }
-  end
 
   if ctx:branch('=>') then
     node.hasFatArrow = true

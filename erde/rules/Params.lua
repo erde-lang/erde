@@ -16,12 +16,7 @@ function Params.parse(ctx)
         allowEmpty = true,
         allowTrailingComma = true,
         rule = function()
-          local param
-          if ctx.token == '{' or ctx.token == '(' then
-            param = ctx:Destructure()
-          else
-            param = ctx:Name()
-          end
+          local param = { value = ctx:Var() }
 
           if param and ctx:branch('=') then
             param.default = ctx:Expr()
@@ -32,10 +27,10 @@ function Params.parse(ctx)
       })
 
       if (#node == 0 or hasTrailingComma) and ctx:branch('...') then
-        node[#node + 1] = {
+        table.insert(node, {
           varargs = true,
-          name = ctx:Try(ctx.Name),
-        }
+          value = ctx:Try(ctx.Name),
+        })
       end
 
       return node
@@ -56,29 +51,27 @@ function Params.compile(ctx, node)
 
     if param.varargs then
       name = '...'
-      if param.name then
-        prebody[#prebody + 1] = 'local '
-          .. ctx:compile(param.name)
-          .. ' = { ... }'
+      if param.value then
+        table.insert(prebody, 'local ' .. param.value .. ' = { ... }')
       end
-    elseif param.ruleName == 'Name' then
-      name = ctx:compile(param)
+    elseif type(param.value) == 'string' then
+      name = param.value
     else
-      destructure = ctx:compile(param)
+      destructure = ctx:compile(param.value)
       name = destructure.baseName
     end
 
     if param.default then
-      prebody[#prebody + 1] = 'if ' .. name .. ' == nil then'
-      prebody[#prebody + 1] = name .. ' = ' .. ctx:compile(param.default)
-      prebody[#prebody + 1] = 'end'
+      table.insert(prebody, 'if ' .. name .. ' == nil then')
+      table.insert(prebody, name .. ' = ' .. ctx:compile(param.default))
+      table.insert(prebody, 'end')
     end
 
     if destructure then
-      prebody[#prebody + 1] = destructure.compiled
+      table.insert(prebody, destructure.compiled)
     end
 
-    names[#names + 1] = name
+    table.insert(names, name)
   end
 
   return { names = names, prebody = table.concat(prebody, '\n') }

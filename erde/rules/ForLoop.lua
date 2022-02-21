@@ -9,24 +9,17 @@ local ForLoop = { ruleName = 'ForLoop' }
 -- -----------------------------------------------------------------------------
 
 function ForLoop.parse(ctx)
-  local node
+  local node = {}
   ctx:assert('for')
 
-  local firstName
-  if ctx.token == '{' or ctx.token == '[' then
-    firstName = ctx:Destructure()
-  else
-    firstName = ctx:Name()
-  end
+  local firstName = ctx:Var()
 
   if ctx:branch('=') then
-    node = {
-      variant = 'numeric',
-      name = firstName,
-      parts = ctx:List({ rule = ctx.Expr }),
-    }
+    node.variant = 'numeric'
+    node.name = firstName
+    node.parts = ctx:List({ rule = ctx.Expr })
 
-    if firstName.ruleName == 'Destructure' then
+    if type(firstName) == 'table' then
       error('Cannot use destructure in numeric for loop')
     elseif #node.parts < 2 then
       error('Invalid for loop parameters (missing parameters)')
@@ -34,15 +27,11 @@ function ForLoop.parse(ctx)
       error('Invalid for loop parameters (too many parameters)')
     end
   else
-    node = { variant = 'generic' }
-
+    node.variant = 'generic'
     node.varList = { firstName }
+
     while ctx:branch(',') do
-      if ctx.token == '{' or ctx.token == '[' then
-        node.varList[#node.varList + 1] = ctx:Destructure()
-      else
-        node.varList[#node.varList + 1] = ctx:Name()
-      end
+      table.insert(node.varList, ctx:Var())
     end
 
     ctx:assert('in')
@@ -64,11 +53,11 @@ function ForLoop.compile(ctx, node)
   if node.variant == 'numeric' then
     local parts = {}
     for i, part in ipairs(node.parts) do
-      parts[#parts + 1] = ctx:compile(part)
+      table.insert(parts, ctx:compile(part))
     end
 
     return ('for %s=%s do\n%s\nend'):format(
-      node.name.value,
+      ctx:compile(node.name),
       table.concat(parts, ','),
       ctx:compile(node.body)
     )
@@ -77,12 +66,12 @@ function ForLoop.compile(ctx, node)
 
     local nameList = {}
     for i, var in ipairs(node.varList) do
-      if var.ruleName == 'Destructure' then
+      if type(var) == 'table' then
         local destructure = ctx:compile(var)
         nameList[i] = destructure.baseName
-        prebody[#prebody + 1] = destructure.compiled
+        table.insert(prebody, destructure.compiled)
       else
-        nameList[i] = var.value
+        nameList[i] = ctx:compile(var)
       end
     end
 

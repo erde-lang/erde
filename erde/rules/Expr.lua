@@ -12,10 +12,10 @@ local Expr = { ruleName = 'Expr' }
 
 function Expr.parse(ctx, opts)
   local minPrec = opts and opts.minPrec or 1
-  local node = { ruleName = Expr.ruleName }
-  local lhs
+  local node
 
   if C.UNOPS[ctx.token] then
+    node = { ruleName = Expr.ruleName }
     node.variant = 'unop'
     node.op = C.UNOPS[ctx:consume()]
     node.operand = ctx:Expr({ minPrec = node.op.prec + 1 })
@@ -23,31 +23,29 @@ function Expr.parse(ctx, opts)
     node = ctx:Terminal()
   end
 
-  while true do
-    local binop = C.BINOPS[ctx.token]
-    if not binop or binop.prec < minPrec then
-      break
-    end
-
+  local binop = C.BINOPS[ctx.token]
+  while binop and binop.prec >= minPrec do
     ctx:consume()
 
     node = {
       ruleName = Expr.ruleName,
       variant = 'binop',
       op = binop,
-      node,
+      lhs = node,
     }
 
     if binop.token == '?' then
       ctx.isTernaryExpr = true
-      node[#node + 1] = ctx:Expr()
+      node.ternaryExpr = ctx:Expr()
       ctx.isTernaryExpr = false
       ctx:assert(':')
     end
 
-    node[#node + 1] = binop.assoc == C.LEFT_ASSOCIATIVE
-        and ctx:Expr({ minPrec = binop.prec + 1 })
-      or ctx:Expr({ minPrec = binop.prec })
+    local nextMinPrec = binop.prec
+      + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
+    node.rhs = ctx:Expr({ minPrec = nextMinPrec })
+
+    binop = C.BINOPS[ctx.token]
   end
 
   if ctx.token == '>>' then
@@ -81,8 +79,8 @@ function Expr.compile(ctx, node)
       return op.token .. operand
     end
   elseif node.variant == 'binop' then
-    local lhs = ctx:compile(node[1])
-    local rhs = ctx:compile(node[2])
+    local lhs = ctx:compile(node.lhs)
+    local rhs = ctx:compile(node.rhs)
 
     if op.token == '?' then
       return table.concat({
@@ -93,7 +91,7 @@ function Expr.compile(ctx, node)
         'return %s',
         'end',
         'end)()',
-      }, '\n'):format(lhs, rhs, ctx:compile(node[3]))
+      }, '\n'):format(lhs, ctx:compile(node.ternaryExpr), rhs)
     else
       return ctx:compileBinop(op, lhs, rhs)
     end

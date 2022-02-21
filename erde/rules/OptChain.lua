@@ -29,7 +29,7 @@ function OptChain.parse(ctx)
 
       if name then
         chain.variant = 'dotIndex'
-        chain.value = name.value
+        chain.value = name
       else
         -- Do not throw error here, as '.' may be from an operator! Simply
         -- revert consumptions and break
@@ -63,7 +63,7 @@ function OptChain.parse(ctx)
 
       if methodName and ctx.token == '(' then
         chain.variant = 'method'
-        chain.value = methodName.value
+        chain.value = methodName
       elseif ctx.isTernaryExpr then
         -- Do not throw error here, instead assume ':' is from ternary
         -- operator. Simply revert consumptions and break
@@ -77,7 +77,7 @@ function OptChain.parse(ctx)
       break
     end
 
-    node[#node + 1] = chain
+    table.insert(node, chain)
   end
 
   -- unpack trivial OptChain
@@ -97,9 +97,7 @@ function OptChain.compile(ctx, node)
 
   local optChecks = {}
   for i, optSubChain in ipairs(optChain.optSubChains) do
-    optChecks[#optChecks + 1] = 'if '
-      .. optSubChain
-      .. ' == nil then return end'
+    optChecks[i] = 'if ' .. optSubChain .. ' == nil then return end'
   end
 
   return table.concat({

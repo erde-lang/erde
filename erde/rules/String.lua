@@ -29,9 +29,9 @@ function String.parse(ctx)
 
   while ctx.token ~= terminatingToken do
     if ctx.token == '{' then
-      node[#node + 1] = ctx:Surround('{', '}', ctx.Expr)
+      table.insert(node, ctx:Surround('{', '}', ctx.Expr))
     else
-      node[#node + 1] = ctx:consume()
+      table.insert(node, ctx:consume())
     end
   end
 
@@ -62,7 +62,7 @@ function String.compile(ctx, node)
   local compileParts = {}
 
   for i, capture in ipairs(node) do
-    compileParts[#compileParts + 1] = type(capture) == 'string'
+    compileParts[i] = type(capture) == 'string'
         and openingChar .. capture .. closingChar
       or 'tostring(' .. ctx:compile(capture) .. ')'
   end

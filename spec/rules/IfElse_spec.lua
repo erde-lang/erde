@@ -6,41 +6,33 @@ describe('IfElse.parse', function()
   spec('if', function()
     assert.subtable({
       ifNode = {
-        cond = { value = 'true' },
+        condition = { value = 'true' },
         body = {},
       },
-    }, parse.IfElse(
-      'if true {}'
-    ))
+    }, parse.IfElse('if true {}'))
   end)
 
   spec('if + elseif', function()
     assert.subtable({
       ifNode = {},
       elseifNodes = {
-        { cond = { value = 'true' } },
+        { condition = { value = 'true' } },
       },
-    }, parse.IfElse(
-      'if false {} elseif true {}'
-    ))
+    }, parse.IfElse('if false {} elseif true {}'))
     assert.subtable({
       ifNode = {},
       elseifNodes = {
-        { cond = { value = 'false' } },
-        { cond = { value = 'true' } },
+        { condition = { value = 'false' } },
+        { condition = { value = 'true' } },
       },
-    }, parse.IfElse(
-      'if false {} elseif false {} elseif true {}'
-    ))
+    }, parse.IfElse('if false {} elseif false {} elseif true {}'))
   end)
 
   spec('if + else', function()
     assert.subtable({
       ifNode = {},
       elseNode = { body = {} },
-    }, parse.IfElse(
-      'if true {} else {}'
-    ))
+    }, parse.IfElse('if true {} else {}'))
   end)
 
   spec('if + elseif + else', function()

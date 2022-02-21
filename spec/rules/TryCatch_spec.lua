@@ -12,7 +12,7 @@ describe('TryCatch.parse', function()
     ))
     assert.subtable({
       try = { ruleName = 'Block' },
-      errorName = { value = 'err' },
+      errorName = 'err',
       catch = { ruleName = 'Block' },
     }, parse.TryCatch(
       'try {} catch(err) {}'

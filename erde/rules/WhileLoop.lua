@@ -11,7 +11,7 @@ local WhileLoop = { ruleName = 'WhileLoop' }
 function WhileLoop.parse(ctx)
   ctx:assert('while')
   return {
-    cond = ctx:Expr(),
+    condition = ctx:Expr(),
     body = ctx:Surround('{', '}', function()
       return ctx:Block({ isLoopBlock = true })
     end),
@@ -24,7 +24,7 @@ end
 
 function WhileLoop.compile(ctx, node)
   return ('while %s do\n%s\nend'):format(
-    ctx:compile(node.cond),
+    ctx:compile(node.condition),
     ctx:compile(node.body)
   )
 end

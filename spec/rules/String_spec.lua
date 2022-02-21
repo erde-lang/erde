@@ -31,12 +31,9 @@ describe('String.parse', function()
   end)
 
   spec('interpolation', function()
-    assert.subtable({ 'hello ', { value = '3' } }, parse.String('"hello {3}"'))
-    assert.subtable({ 'hello ', { value = '3' } }, parse.String("'hello {3}'"))
-    assert.subtable(
-      { 'hello ', { value = '3' } },
-      parse.String('[[hello {3}]]')
-    )
+    assert.subtable({ 'hello ', '3' }, parse.String('"hello {3}"'))
+    assert.subtable({ 'hello ', '3' }, parse.String("'hello {3}'"))
+    assert.subtable({ 'hello ', '3' }, parse.String('[[hello {3}]]'))
   end)
 end)
 

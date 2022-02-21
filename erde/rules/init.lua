@@ -6,7 +6,7 @@ local function register(rule)
       local node = rule.parse(ctx, ...)
 
       -- TODO: remove this, assign unconditionally
-      if node.ruleName == nil then
+      if type(node) == 'table' and node.ruleName == nil then
         node.ruleName = rule.ruleName
       end
 
@@ -41,8 +41,6 @@ register(require('erde.rules.FunctionCall'))
 register(require('erde.rules.Goto'))
 register(require('erde.rules.Id'))
 register(require('erde.rules.IfElse'))
-register(require('erde.rules.Name'))
-register(require('erde.rules.Number'))
 register(require('erde.rules.OptChain'))
 register(require('erde.rules.Params'))
 register(require('erde.rules.Pipe'))

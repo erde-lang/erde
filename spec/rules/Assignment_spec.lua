@@ -5,41 +5,31 @@
 describe('Assignment.parse', function()
   spec('name assignment', function()
     assert.subtable({
-      id = { value = 'a' },
-      expr = { value = '3' },
-    }, parse.Assignment(
-      'a = 3'
-    ))
+      id = 'a',
+      expr = '3',
+    }, parse.Assignment('a = 3'))
   end)
 
   spec('optchain assignment', function()
     assert.subtable({
       id = { ruleName = 'OptChain' },
-      expr = { value = '3' },
-    }, parse.Assignment(
-      'a.b = 3'
-    ))
+      expr = '3',
+    }, parse.Assignment('a.b = 3'))
     assert.subtable({
       id = { ruleName = 'OptChain' },
-      expr = { value = '3' },
-    }, parse.Assignment(
-      'a?.b = 3'
-    ))
+      expr = '3',
+    }, parse.Assignment('a?.b = 3'))
   end)
 
   spec('binop assignments', function()
     assert.subtable({
       op = { token = '+' },
-      id = { value = 'a' },
-      expr = { value = '1' },
-    }, parse.Assignment(
-      'a += 1'
-    ))
+      id = 'a',
+      expr = '1',
+    }, parse.Assignment('a += 1'))
     assert.subtable({
       op = { token = '+' },
-    }, parse.Assignment(
-      'a?.b += 1'
-    ))
+    }, parse.Assignment('a?.b += 1'))
 
     assert.are.equal('??', parse.Assignment('a ??= 1').op.token)
     assert.are.equal('|', parse.Assignment('a |= 1').op.token)

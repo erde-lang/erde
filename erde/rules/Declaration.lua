@@ -27,22 +27,14 @@ function Declaration.parse(ctx)
     node.variant = 'global'
   end
 
-  node.varList = ctx:List({
-    rule = function()
-      if ctx.token == '{' or ctx.token == '[' then
-        return ctx:Destructure()
-      else
-        return ctx:Name()
-      end
-    end,
-  })
+  node.varList = ctx:List({ rule = ctx.Var })
 
   if node.variant == 'module' then
-    for i, var in ipairs(node.varList) do
-      if var.ruleName == 'Name' then
-        table.insert(ctx.moduleBlock.moduleNames, var.value)
+    for _, var in ipairs(node.varList) do
+      if type(var) == 'string' then
+        table.insert(ctx.moduleBlock.moduleNames, var)
       else
-        for i, destruct in ipairs(var) do
+        for _, destruct in ipairs(var) do
           table.insert(
             ctx.moduleBlock.moduleNames,
             destruct.alias or destruct.name
@@ -74,26 +66,26 @@ function Declaration.compile(ctx, node)
   local nameList = {}
 
   for i, var in ipairs(node.varList) do
-    if var.ruleName == 'Name' then
-      nameList[#nameList + 1] = ctx:compile(var)
-    elseif var.ruleName == 'Destructure' then
+    if type(var) == 'string' then
+      table.insert(nameList, var)
+    else
       local destructure = ctx:compile(var)
-      nameList[#nameList + 1] = destructure.baseName
-      compileParts[#compileParts + 1] = destructure.compiled
+      table.insert(nameList, destructure.baseName)
+      table.insert(compileParts, destructure.compiled)
     end
   end
 
-  declarationParts[#declarationParts + 1] = table.concat(nameList, ',')
+  table.insert(declarationParts, table.concat(nameList, ','))
 
   if #node.exprList > 0 then
     local exprList = {}
 
     for i, expr in ipairs(node.exprList) do
-      exprList[#exprList + 1] = ctx:compile(expr)
+      table.insert(exprList, ctx:compile(expr))
     end
 
-    declarationParts[#declarationParts + 1] = '='
-    declarationParts[#declarationParts + 1] = table.concat(exprList, ',')
+    table.insert(declarationParts, '=')
+    table.insert(declarationParts, table.concat(exprList, ','))
   end
 
   table.insert(compileParts, 1, table.concat(declarationParts, ' '))
