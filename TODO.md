@@ -1,8 +1,12 @@
 # TODO
 
+- finish refactor review
 - remove ruleName manipulations
 - remove rules/init.lua method wrappers
-- readd lua5.1+ support
+- move Terminal to Expr helper
+- do not allow optchain parsing for non name trivial chains
+
+- readd lua5.1+ support? what about goto?
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
