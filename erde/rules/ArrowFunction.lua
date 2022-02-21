@@ -92,7 +92,7 @@ end
 function ArrowFunction.format(ctx, node)
   return ('(%s) %s {\n%s\n}'):format(
     ctx:format(node.params),
-    node.hasFatArrow == 'skinny' and '->' or '=>',
+    node.hasFatArrow and '=>' or '->',
     ctx:format(node.body)
   )
 end

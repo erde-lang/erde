@@ -131,6 +131,7 @@ end
 -- =============================================================================
 
 local compile, compileMT = {}, {}
+setmetatable(compile, compileMT)
 
 compileMT.__call = function(self, text)
   return compile.Block(text)
@@ -150,5 +151,4 @@ for ruleName, rule in pairs(rules) do
   end
 end
 
-setmetatable(compile, compileMT)
 return compile

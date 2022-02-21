@@ -155,6 +155,7 @@ end
 -- =============================================================================
 
 local parse, parseMT = {}, {}
+setmetatable(parse, parseMT)
 
 parseMT.__call = function(self, text)
   return parse.Block(text)
@@ -190,5 +191,4 @@ for ruleName, rule in pairs(rules) do
   end
 end
 
-setmetatable(parse, parseMT)
 return parse

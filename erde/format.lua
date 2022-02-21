@@ -21,6 +21,7 @@ end
 -- =============================================================================
 
 local format, formatMT = {}, {}
+setmetatable(format, formatMT)
 
 formatMT.__call = function(self, text)
   return format.Block(text)
@@ -33,5 +34,4 @@ for ruleName, rule in pairs(rules) do
   end
 end
 
-setmetatable(format, formatMT)
 return format
