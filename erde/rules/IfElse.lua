@@ -13,13 +13,13 @@ function IfElse.parse(ctx)
   ctx:assert('if')
 
   node.ifNode = {
-    cond = ctx:Expr(),
+    condition = ctx:Expr(),
     body = ctx:Surround('{', '}', ctx.Block),
   }
 
   while ctx:branch('elseif') do
     table.insert(node.elseifNodes, {
-      cond = ctx:Expr(),
+      condition = ctx:Expr(),
       body = ctx:Surround('{', '}', ctx.Block),
     })
   end
@@ -37,14 +37,14 @@ end
 
 function IfElse.compile(ctx, node)
   local compileParts = {
-    'if ' .. ctx:compile(node.ifNode.cond) .. ' then',
+    'if ' .. ctx:compile(node.ifNode.condition) .. ' then',
     ctx:compile(node.ifNode.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
     table.insert(
       compileParts,
-      'elseif ' .. ctx:compile(elseifNode.cond) .. ' then'
+      'elseif ' .. ctx:compile(elseifNode.condition) .. ' then'
     )
     table.insert(compileParts, ctx:compile(elseifNode.body))
   end

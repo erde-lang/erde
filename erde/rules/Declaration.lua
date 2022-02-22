@@ -30,11 +30,11 @@ function Declaration.parse(ctx)
   node.varList = ctx:List({ rule = ctx.Var })
 
   if node.variant == 'module' then
-    for i, var in ipairs(node.varList) do
+    for _, var in ipairs(node.varList) do
       if var.ruleName == 'Name' then
         table.insert(ctx.moduleBlock.moduleNames, var.value)
       else
-        for i, destruct in ipairs(var) do
+        for _, destruct in ipairs(var) do
           table.insert(
             ctx.moduleBlock.moduleNames,
             destruct.alias or destruct.name

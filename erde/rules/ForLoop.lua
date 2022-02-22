@@ -9,17 +9,15 @@ local ForLoop = { ruleName = 'ForLoop' }
 -- -----------------------------------------------------------------------------
 
 function ForLoop.parse(ctx)
-  local node
+  local node = {}
   ctx:assert('for')
 
   local firstName = ctx:Var()
 
   if ctx:branch('=') then
-    node = {
-      variant = 'numeric',
-      name = firstName,
-      parts = ctx:List({ rule = ctx.Expr }),
-    }
+    node.variant = 'numeric'
+    node.name = firstName
+    node.parts = ctx:List({ rule = ctx.Expr })
 
     if firstName.ruleName == 'Destructure' then
       error('Cannot use destructure in numeric for loop')
@@ -29,9 +27,9 @@ function ForLoop.parse(ctx)
       error('Invalid for loop parameters (too many parameters)')
     end
   else
-    node = { variant = 'generic' }
-
+    node.variant = 'generic'
     node.varList = { firstName }
+
     while ctx:branch(',') do
       table.insert(node.varList, ctx:Var())
     end

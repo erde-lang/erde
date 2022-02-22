@@ -18,7 +18,7 @@ function RepeatUntil.parse(ctx)
   }
 
   ctx:assert('until')
-  node.cond = ctx:Expr()
+  node.condition = ctx:Expr()
 
   return node
 end
@@ -30,7 +30,7 @@ end
 function RepeatUntil.compile(ctx, node)
   return ('repeat\n%s\nuntil %s'):format(
     ctx:compile(node.body),
-    ctx:compile(node.cond)
+    ctx:compile(node.condition)
   )
 end
 
