@@ -23,13 +23,16 @@ describe('ArrowFunction.parse', function()
       parse.ArrowFunction('a -> {}')
     )
     assert.subtable(
-      { params = { { { name = 'a', variant = 'keyDestruct' } } } },
+      { params = { { value = { { name = 'a', variant = 'keyDestruct' } } } } },
       parse.ArrowFunction('{ a } -> {}')
     )
-    assert.subtable(
-      { params = { { { name = 'a', variant = 'numberDestruct' } } } },
-      parse.ArrowFunction('[ a ] -> {}')
-    )
+    assert.subtable({
+      params = {
+        { value = { { name = 'a', variant = 'numberDestruct' } } },
+      },
+    }, parse.ArrowFunction(
+      '[ a ] -> {}'
+    ))
     assert.error(function()
       parse.ArrowFunction('a = 1 -> {}')
     end)

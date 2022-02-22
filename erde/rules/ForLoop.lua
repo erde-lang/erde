@@ -19,7 +19,7 @@ function ForLoop.parse(ctx)
     node.name = firstName
     node.parts = ctx:List({ rule = ctx.Expr })
 
-    if firstName.ruleName == 'Destructure' then
+    if type(firstName) == 'table' then
       error('Cannot use destructure in numeric for loop')
     elseif #node.parts < 2 then
       error('Invalid for loop parameters (missing parameters)')
@@ -66,7 +66,7 @@ function ForLoop.compile(ctx, node)
 
     local nameList = {}
     for i, var in ipairs(node.varList) do
-      if var.ruleName == 'Destructure' then
+      if type(var) == 'table' then
         local destructure = ctx:compile(var)
         nameList[i] = destructure.baseName
         table.insert(prebody, destructure.compiled)

@@ -18,7 +18,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function CompileCtx:compile(node)
-  if type == 'string' then
+  if type(node) == 'string' then
     return node
   elseif type(node) ~= 'table' then
     error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
@@ -83,7 +83,7 @@ function CompileCtx:compileOptChain(node)
 
     local newSubChainFormat
     if chainNode.variant == 'dotIndex' then
-      chain = ('%s.%s'):format(chain, self:compile(chainNode.value))
+      chain = ('%s.%s'):format(chain, chainNode.value)
     elseif chainNode.variant == 'bracketIndex' then
       -- Space around brackets to avoid long string expressions
       -- [ [=[some string]=] ]
@@ -120,7 +120,7 @@ function CompileCtx:compileOptChain(node)
         chain = chain .. '(' .. table.concat(args, ',') .. ')'
       end
     elseif chainNode.variant == 'method' then
-      chain = chain .. ':' .. self:compile(chainNode.value)
+      chain = chain .. ':' .. chainNode.value
     end
   end
 

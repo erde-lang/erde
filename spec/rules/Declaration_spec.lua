@@ -6,13 +6,13 @@ describe('Declaration.parse', function()
   spec('local declaration', function()
     assert.subtable({
       variant = 'local',
-      varList = { { value = 'abc' } },
+      varList = { 'abc' },
     }, parse.Declaration(
       'local abc'
     ))
     assert.subtable({
       variant = 'local',
-      varList = { { value = 'abc' } },
+      varList = { 'abc' },
       exprList = { { value = '2' } },
     }, parse.Declaration(
       'local abc = 2'
@@ -23,7 +23,7 @@ describe('Declaration.parse', function()
     assert.subtable({
       {
         variant = 'module',
-        varList = { { value = 'abc' } },
+        varList = { 'abc' },
       },
     }, parse.Block(
       'module abc'
@@ -31,7 +31,7 @@ describe('Declaration.parse', function()
     assert.subtable({
       {
         variant = 'module',
-        varList = { { value = 'abc' } },
+        varList = { 'abc' },
         exprList = { { value = '2' } },
       },
     }, parse.Block(
@@ -42,13 +42,13 @@ describe('Declaration.parse', function()
   spec('global declaration', function()
     assert.subtable({
       variant = 'global',
-      varList = { { value = 'abc' } },
+      varList = { 'abc' },
     }, parse.Declaration(
       'global abc'
     ))
     assert.subtable({
       variant = 'global',
-      varList = { { value = 'abc' } },
+      varList = { 'abc' },
       exprList = { { value = '2' } },
     }, parse.Declaration(
       'global abc = 2'
@@ -58,8 +58,8 @@ describe('Declaration.parse', function()
   spec('multiple declaration', function()
     assert.subtable({
       varList = {
-        { value = 'a' },
-        { value = 'b' },
+        'a',
+        'b',
       },
     }, parse.Declaration(
       'local a, b'
@@ -90,9 +90,9 @@ describe('Declaration.parse', function()
     assert.subtable({
       variant = 'local',
       varList = {
-        { value = 'a' },
+        'a',
         { ruleName = 'Destructure' },
-        { value = 'c' },
+        'c',
       },
     }, parse.Declaration(
       'local a, { b }, c = x, y'

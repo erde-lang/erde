@@ -6,7 +6,7 @@ local function register(rule)
       local node = rule.parse(ctx, ...)
 
       -- TODO: remove this, assign unconditionally
-      if node.ruleName == nil then
+      if type(node) == 'table' and node.ruleName == nil then
         node.ruleName = rule.ruleName
       end
 

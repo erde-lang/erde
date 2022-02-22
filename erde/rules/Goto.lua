@@ -32,9 +32,9 @@ end
 
 function Goto.compile(ctx, node)
   if node.variant == 'jump' then
-    return 'goto ' .. ctx:compile(node.name)
+    return 'goto ' .. node.name
   elseif node.variant == 'definition' then
-    return '::' .. ctx:compile(node.name) .. '::'
+    return '::' .. node.name .. '::'
   end
 end
 

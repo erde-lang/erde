@@ -41,7 +41,7 @@ describe('Params.parse', function()
       { value = 'a' },
       {
         varargs = true,
-        name = { value = 'b' },
+        value = 'b',
       },
     }, parse.Params(
       '(a, ...b)'
@@ -53,13 +53,13 @@ describe('Params.parse', function()
 
   spec('destructure params', function()
     assert.subtable({
-      { ruleName = 'Destructure' },
+      { value = { ruleName = 'Destructure' } },
     }, parse.Params(
       '({ a })'
     ))
     assert.subtable({
       {
-        ruleName = 'Destructure',
+        value = { ruleName = 'Destructure' },
         default = { ruleName = 'Table' },
       },
     }, parse.Params(

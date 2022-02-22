@@ -31,8 +31,8 @@ function Declaration.parse(ctx)
 
   if node.variant == 'module' then
     for _, var in ipairs(node.varList) do
-      if var.ruleName == 'Name' then
-        table.insert(ctx.moduleBlock.moduleNames, var.value)
+      if type(var) == 'string' then
+        table.insert(ctx.moduleBlock.moduleNames, var)
       else
         for _, destruct in ipairs(var) do
           table.insert(
@@ -66,9 +66,9 @@ function Declaration.compile(ctx, node)
   local nameList = {}
 
   for i, var in ipairs(node.varList) do
-    if var.ruleName == 'Name' then
-      table.insert(nameList, ctx:compile(var))
-    elseif var.ruleName == 'Destructure' then
+    if type(var) == 'string' then
+      table.insert(nameList, var)
+    else
       local destructure = ctx:compile(var)
       table.insert(nameList, destructure.baseName)
       table.insert(compileParts, destructure.compiled)

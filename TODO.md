@@ -1,9 +1,9 @@
 # TODO
 
+- move Number, Terminal to Pseudorules
 - remove ruleName manipulations
   - Expr, ArrowFunction
 - remove rules/init.lua method wrappers
-- move Number, Name, Terminal to Groups
 - remove pipes, move to proposals
 - do not allow optchain parsing for non name trivial chains
 

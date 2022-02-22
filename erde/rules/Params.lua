@@ -16,7 +16,7 @@ function Params.parse(ctx)
         allowEmpty = true,
         allowTrailingComma = true,
         rule = function()
-          local param = ctx:Var()
+          local param = { value = ctx:Var() }
 
           if param and ctx:branch('=') then
             param.default = ctx:Expr()
@@ -29,7 +29,7 @@ function Params.parse(ctx)
       if (#node == 0 or hasTrailingComma) and ctx:branch('...') then
         table.insert(node, {
           varargs = true,
-          name = ctx:Try(ctx.Name),
+          value = ctx:Try(ctx.Name),
         })
       end
 
@@ -51,16 +51,13 @@ function Params.compile(ctx, node)
 
     if param.varargs then
       name = '...'
-      if param.name then
-        table.insert(
-          prebody,
-          'local ' .. ctx:compile(param.name) .. ' = { ... }'
-        )
+      if param.value then
+        table.insert(prebody, 'local ' .. param.value .. ' = { ... }')
       end
-    elseif param.ruleName == 'Name' then
-      name = ctx:compile(param)
+    elseif type(param.value) == 'string' then
+      name = param.value
     else
-      destructure = ctx:compile(param)
+      destructure = ctx:compile(param.value)
       name = destructure.baseName
     end
 

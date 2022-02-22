@@ -6,21 +6,25 @@ describe('ForLoop.parse', function()
   spec('numeric for loop', function()
     assert.subtable({
       variant = 'numeric',
-      name = { value = 'i' },
+      name = 'i',
       parts = {
         { value = '1' },
         { value = '2' },
       },
-    }, parse.ForLoop('for i = 1, 2 {}'))
+    }, parse.ForLoop(
+      'for i = 1, 2 {}'
+    ))
     assert.subtable({
       variant = 'numeric',
-      name = { value = 'i' },
+      name = 'i',
       parts = {
         { value = '1' },
         { value = '2' },
         { value = '3' },
       },
-    }, parse.ForLoop('for i = 1, 2, 3 {}'))
+    }, parse.ForLoop(
+      'for i = 1, 2, 3 {}'
+    ))
     assert.has_error(function()
       parse.ForLoop('for i = 1 {}')
     end)
@@ -32,34 +36,44 @@ describe('ForLoop.parse', function()
   spec('generic for loop', function()
     assert.subtable({
       variant = 'generic',
-      varList = { { value = 'a' } },
+      varList = { 'a' },
       exprList = { { value = '1' } },
-    }, parse.ForLoop('for a in 1 {}'))
+    }, parse.ForLoop(
+      'for a in 1 {}'
+    ))
     assert.subtable({
       variant = 'generic',
-      varList = { { value = 'a' }, { value = 'b' } },
+      varList = { 'a', 'b' },
       exprList = { { value = '1' } },
-    }, parse.ForLoop('for a, b in 1 {}'))
+    }, parse.ForLoop(
+      'for a, b in 1 {}'
+    ))
     assert.subtable({
       variant = 'generic',
-      varList = { { value = 'a' } },
+      varList = { 'a' },
       exprList = {
         { value = '1' },
         { value = '2' },
       },
-    }, parse.ForLoop('for a in 1, 2 {}'))
+    }, parse.ForLoop(
+      'for a in 1, 2 {}'
+    ))
     assert.subtable({
       variant = 'generic',
-      varList = { { value = 'a' }, { value = 'b' } },
+      varList = { 'a', 'b' },
       exprList = {
         { value = '1' },
         { value = '2' },
       },
-    }, parse.ForLoop('for a, b in 1, 2 {}'))
+    }, parse.ForLoop(
+      'for a, b in 1, 2 {}'
+    ))
     assert.subtable({
       variant = 'generic',
       varList = { { ruleName = 'Destructure' } },
-    }, parse.ForLoop('for [a, b] in myiter() {}'))
+    }, parse.ForLoop(
+      'for [a, b] in myiter() {}'
+    ))
   end)
 end)
 

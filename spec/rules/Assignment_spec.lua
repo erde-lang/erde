@@ -5,7 +5,7 @@
 describe('Assignment.parse', function()
   spec('name assignment', function()
     assert.subtable({
-      id = { value = 'a' },
+      id = 'a',
       expr = { value = '3' },
     }, parse.Assignment(
       'a = 3'
@@ -30,7 +30,7 @@ describe('Assignment.parse', function()
   spec('binop assignments', function()
     assert.subtable({
       op = { token = '+' },
-      id = { value = 'a' },
+      id = 'a',
       expr = { value = '1' },
     }, parse.Assignment(
       'a += 1'

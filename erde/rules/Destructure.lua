@@ -9,10 +9,10 @@ local Destructure = { ruleName = 'Destructure' }
 -- -----------------------------------------------------------------------------
 
 local function parseDestruct(ctx)
-  local destruct = { name = ctx:Name().value }
+  local destruct = { name = ctx:Name() }
 
   if ctx:branch(':') then
-    destruct.alias = ctx:Name().value
+    destruct.alias = ctx:Name()
   end
 
   if ctx:branch('=') then

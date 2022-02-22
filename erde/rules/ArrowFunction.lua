@@ -14,7 +14,7 @@ function ArrowFunction.parse(ctx)
     hasImplicitReturns = false,
     params = ctx.token == '(' and ctx:Params() or {
       ruleName = 'Params',
-      ctx:Var(),
+      { value = ctx:Var() },
     },
   }
 

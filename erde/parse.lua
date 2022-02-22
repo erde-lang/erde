@@ -182,9 +182,22 @@ end
 -- Pseudo Rules
 -- -----------------------------------------------------------------------------
 
-function ParseCtx:Var(opts)
-  return (self.token == '{' or self.token == '[') and self:Destructure(opts)
-    or self:Name(opts)
+function ParseCtx:Var()
+  return (self.token == '{' or self.token == '[') and self:Destructure()
+    or self:Name()
+end
+
+function ParseCtx:Name()
+  assert(
+    self.token:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
+    'Malformed name: ' .. self.token
+  )
+
+  for i, keyword in pairs(C.KEYWORDS) do
+    assert(self.token ~= keyword, 'Cannot use keyword as name: ' .. self.token)
+  end
+
+  return self:consume()
 end
 
 -- =============================================================================
@@ -202,6 +215,14 @@ end
 for ruleName, rule in pairs(rules) do
   parse[ruleName] = function(text, opts)
     return rules[ruleName].parse(ParseCtx(text), opts)
+  end
+end
+
+-- Allow parsing individual pseudo rules
+for _, ruleName in pairs({ 'Var', 'Name' }) do
+  parse[ruleName] = function(text, opts)
+    local ctx = ParseCtx(text)
+    return ctx[ruleName](ctx, opts)
   end
 end
 

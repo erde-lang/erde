@@ -25,15 +25,15 @@ function Function.parse(ctx)
   end
 
   ctx:assert('function')
-  node.names = { ctx:Name().value }
+  node.names = { ctx:Name() }
 
   while true do
     if ctx:branch('.') then
-      table.insert(node.names, ctx:Name().value)
+      table.insert(node.names, ctx:Name())
     else
       if ctx:branch(':') then
         node.isMethod = true
-        table.insert(node.names, ctx:Name().value)
+        table.insert(node.names, ctx:Name())
       end
 
       break
