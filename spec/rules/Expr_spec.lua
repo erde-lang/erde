@@ -16,9 +16,7 @@ describe('Expr.parse', function()
       assert.subtable({
         variant = 'unop',
         op = { token = opToken },
-      }, parse.Expr(
-        opToken .. '1'
-      ))
+      }, parse.Expr(opToken .. '1'))
     end
   end)
 
@@ -28,157 +26,131 @@ describe('Expr.parse', function()
       assert.subtable({
         variant = 'binop',
         op = { token = opToken },
-      }, parse.Expr(
-        testExpr
-      ))
+      }, parse.Expr(testExpr))
     end
   end)
 
   spec('left associative binop precedence', function()
     assert.subtable({
       op = { token = '+' },
-      {
+      lhs = {
         op = { token = '*' },
-        { value = '1' },
-        { value = '2' },
+        lhs = { value = '1' },
+        rhs = { value = '2' },
       },
-      { value = '3' },
-    }, parse.Expr(
-      '1 * 2 + 3'
-    ))
+      rhs = { value = '3' },
+    }, parse.Expr('1 * 2 + 3'))
     assert.subtable({
       op = { token = '+' },
-      { value = '1' },
-      {
+      lhs = { value = '1' },
+      rhs = {
         op = { token = '*' },
-        { value = '2' },
-        { value = '3' },
+        lhs = { value = '2' },
+        rhs = { value = '3' },
       },
-    }, parse.Expr(
-      '1 + 2 * 3'
-    ))
+    }, parse.Expr('1 + 2 * 3'))
     assert.subtable({
       op = { token = '+' },
-      {
+      lhs = {
         op = { token = '+' },
-        { value = '1' },
-        {
+        lhs = { value = '1' },
+        rhs = {
           op = { token = '*' },
-          { value = '2' },
-          { value = '3' },
+          lhs = { value = '2' },
+          rhs = { value = '3' },
         },
       },
-      { value = '4' },
-    }, parse.Expr(
-      '1 + 2 * 3 + 4'
-    ))
+      rhs = { value = '4' },
+    }, parse.Expr('1 + 2 * 3 + 4'))
   end)
 
   spec('right associative binop precedence', function()
     assert.subtable({
       op = { token = '^' },
-      { value = '1' },
-      {
+      lhs = { value = '1' },
+      rhs = {
         op = { token = '^' },
-        { value = '2' },
-        { value = '3' },
+        lhs = { value = '2' },
+        rhs = { value = '3' },
       },
-    }, parse.Expr(
-      '1 ^ 2 ^ 3'
-    ))
+    }, parse.Expr('1 ^ 2 ^ 3'))
     assert.subtable({
       op = { token = '+' },
-      {
+      lhs = {
         op = { token = '^' },
-        { value = '1' },
-        { value = '2' },
+        lhs = { value = '1' },
+        rhs = { value = '2' },
       },
-      { value = '3' },
-    }, parse.Expr(
-      '1 ^ 2 + 3'
-    ))
+      rhs = { value = '3' },
+    }, parse.Expr('1 ^ 2 + 3'))
   end)
 
   spec('binop parens', function()
     assert.subtable({
       op = { token = '*' },
-      { value = '1' },
-      {
+      lhs = { value = '1' },
+      rhs = {
         parens = true,
         op = { token = '+' },
-        { value = '2' },
-        { value = '3' },
+        lhs = { value = '2' },
+        rhs = { value = '3' },
       },
-    }, parse.Expr(
-      '1 * (2 + 3)'
-    ))
+    }, parse.Expr('1 * (2 + 3)'))
   end)
 
   spec('unops', function()
     assert.subtable({
       op = { token = '*' },
-      { value = '1' },
-      {
+      lhs = { value = '1' },
+      rhs = {
         op = { token = '-' },
         operand = { value = '3' },
       },
-    }, parse.Expr(
-      '1 * -3'
-    ))
+    }, parse.Expr('1 * -3'))
     assert.subtable({
       op = { token = '-' },
       operand = {
         op = { token = '^' },
-        { value = '2' },
-        { value = '3' },
+        lhs = { value = '2' },
+        rhs = { value = '3' },
       },
-    }, parse.Expr(
-      '-2 ^ 3'
-    ))
+    }, parse.Expr('-2 ^ 3'))
     assert.subtable({
       op = { token = '*' },
-      {
+      lhs = {
         op = { token = '-' },
         operand = { value = '2' },
       },
-      { value = '3' },
-    }, parse.Expr(
-      '-2 * 3'
-    ))
+      rhs = { value = '3' },
+    }, parse.Expr('-2 * 3'))
   end)
 
   spec('ternary operator', function()
     assert.subtable({
       op = { token = '?' },
-      { value = '1' },
-      { value = '2' },
-      { value = '3' },
-    }, parse.Expr(
-      '1 ? 2 : 3'
-    ))
+      lhs = { value = '1' },
+      ternaryExpr = { value = '2' },
+      rhs = { value = '3' },
+    }, parse.Expr('1 ? 2 : 3'))
     assert.subtable({
       op = { token = '?' },
-      { value = '1' },
-      {
+      lhs = { value = '1' },
+      ternaryExpr = {
         op = { token = '-' },
         operand = { value = '2' },
       },
-      {
+      rhs = {
         op = { token = '+' },
-        { value = '3' },
-        { value = '4' },
+        lhs = { value = '3' },
+        rhs = { value = '4' },
       },
-    }, parse.Expr(
-      '1 ? -2 : 3 + 4'
-    ))
+    }, parse.Expr('1 ? -2 : 3 + 4'))
     assert.subtable({
       op = { token = '?' },
-      { value = '1' },
-      { ruleName = 'OptChain' },
-      { ruleName = 'Number' },
-    }, parse.Expr(
-      '1 ? a:b() : 2'
-    ))
+      lhs = { value = '1' },
+      ternaryExpr = { ruleName = 'OptChain' },
+      rhs = { ruleName = 'Number' },
+    }, parse.Expr('1 ? a:b() : 2'))
   end)
 end)
 

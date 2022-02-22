@@ -1,17 +1,21 @@
 # TODO
 
-- finish refactor review
 - remove ruleName manipulations
+  - Expr, ArrowFunction
 - remove rules/init.lua method wrappers
-- move Terminal to Expr helper
+- move Number, Name, Terminal to Groups
+- remove pipes, move to proposals
 - do not allow optchain parsing for non name trivial chains
 
 - readd lua5.1+ support? what about goto?
+  - compile when encountered, assume user knows what he / she is doing
+- add block assignment shorthands
+  - ex) `local x = do { ... return result }`
+- erde REPL
+- add real README
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
-- erde REPL
-- add real README
 - release v0.1.0
 
 # v0.2.0
