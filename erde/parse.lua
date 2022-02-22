@@ -6,8 +6,36 @@ local tokenize = require('erde.tokenize')
 -- ParseCtx
 -- =============================================================================
 
-local ParseCtx = {}
-local ParseCtxMT = { __index = ParseCtx }
+local ParseCtx, ParseCtxMT = {}, {}
+setmetatable(ParseCtx, ParseCtxMT)
+
+function ParseCtxMT.__call(_, text)
+  local ctx = tokenize(text)
+  setmetatable(ctx, { __index = ParseCtx })
+
+  ctx.tokenIndex = 1
+  ctx.token = ctx.tokens[1]
+
+  -- Keep track of block depth. Especially useful to know whether we are at
+  -- the top level for `module` declarations.
+  ctx.blockDepth = 0
+
+  -- Used to tell other rules whether the current expression is part of the
+  -- ternary block. Required to know whether ':' should be parsed exclusively
+  -- as a method accessor or also consider ternary ':'.
+  ctx.isTernaryExpr = false
+
+  -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
+  -- RepeatUntil, WhileLoop). This is used to validate and link Break and
+  -- Continue statements.
+  ctx.loopBlock = nil
+
+  -- Keeps track of the top level Block. This is used to register module
+  -- nodes when using the 'module' scope.
+  ctx.moduleBlock = nil
+
+  return ctx
+end
 
 -- Allow calling all rule parsers directly from parser
 for ruleName, rule in pairs(rules) do
@@ -151,7 +179,7 @@ function ParseCtx:List(opts)
 end
 
 -- -----------------------------------------------------------------------------
--- Groups
+-- Pseudo Rules
 -- -----------------------------------------------------------------------------
 
 function ParseCtx:Var(opts)
@@ -170,33 +198,10 @@ parseMT.__call = function(self, text)
   return parse.Block(text)
 end
 
+-- Allow parsing individual rules
 for ruleName, rule in pairs(rules) do
   parse[ruleName] = function(text, opts)
-    local ctx = tokenize(text)
-    setmetatable(ctx, ParseCtxMT)
-
-    ctx.tokenIndex = 1
-    ctx.token = ctx.tokens[1]
-
-    -- Keep track of block depth. Especially useful to know whether we are at
-    -- the top level for `module` declarations.
-    ctx.blockDepth = 0
-
-    -- Used to tell other rules whether the current expression is part of the
-    -- ternary block. Required to know whether ':' should be parsed exclusively
-    -- as a method accessor or also consider ternary ':'.
-    ctx.isTernaryExpr = false
-
-    -- Keeps track of the Block body of the closest loop ancestor (ForLoop,
-    -- RepeatUntil, WhileLoop). This is used to validate and link Break and
-    -- Continue statements.
-    ctx.loopBlock = nil
-
-    -- Keeps track of the top level Block. This is used to register module
-    -- nodes when using the 'module' scope.
-    ctx.moduleBlock = nil
-
-    return rules[ruleName].parse(ctx, opts)
+    return rules[ruleName].parse(ParseCtx(text), opts)
   end
 end
 

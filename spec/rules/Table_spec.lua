@@ -9,21 +9,17 @@ describe('Table.parse', function()
         variant = 'numberKey',
         value = { value = '10' },
       },
-    }, parse.Table(
-      '{ 10 }'
-    ))
+    }, parse.Table('{ 10 }'))
   end)
 
   spec('table nameKey', function()
     assert.subtable({
       {
         variant = 'nameKey',
-        key = 'x',
+        key = { value = 'x' },
         value = { value = '2' },
       },
-    }, parse.Table(
-      '{ x = 2 }'
-    ))
+    }, parse.Table('{ x = 2 }'))
   end)
 
   spec('table exprKey', function()
@@ -33,9 +29,7 @@ describe('Table.parse', function()
         key = { op = { token = '+' } },
         value = { value = '3' },
       },
-    }, parse.Table(
-      '{ [1 + 2] = 3 }'
-    ))
+    }, parse.Table('{ [1 + 2] = 3 }'))
     assert.has_error(function()
       parse.Table('{ [1 + 2] }')
     end)
@@ -45,24 +39,20 @@ describe('Table.parse', function()
     assert.subtable({
       { value = { value = 'a' } },
       { value = { value = 'b' } },
-      { key = 'c' },
+      { key = { value = 'c' } },
       { key = { variant = 'long' } },
-    }, parse.Table(
-      '{ a, b, c = 1, [ [[d]] ] = 2 }'
-    ))
+    }, parse.Table('{ a, b, c = 1, [ [[d]] ] = 2 }'))
   end)
 
   spec('nested table', function()
     assert.subtable({
       {
-        key = 'x',
+        key = { value = 'x' },
         value = {
-          { key = 'y', value = { value = '1' } },
+          { key = { value = 'y' }, value = { value = '1' } },
         },
       },
-    }, parse.Table(
-      '{ x = { y = 1 } }'
-    ))
+    }, parse.Table('{ x = { y = 1 } }'))
   end)
 end)
 

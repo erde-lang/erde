@@ -57,7 +57,7 @@ function ForLoop.compile(ctx, node)
     end
 
     return ('for %s=%s do\n%s\nend'):format(
-      node.name.value,
+      ctx:compile(node.name),
       table.concat(parts, ','),
       ctx:compile(node.body)
     )
@@ -71,7 +71,7 @@ function ForLoop.compile(ctx, node)
         nameList[i] = destructure.baseName
         table.insert(prebody, destructure.compiled)
       else
-        nameList[i] = var.value
+        nameList[i] = ctx:compile(var)
       end
     end
 

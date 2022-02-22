@@ -6,13 +6,13 @@ describe('Goto.parse', function()
   spec('definition', function()
     assert.subtable({
       variant = 'definition',
-      name = 'mylabel',
+      name = { value = 'mylabel' },
     }, parse.Goto('::mylabel::'))
   end)
   spec('jump', function()
     assert.subtable({
       variant = 'jump',
-      name = 'mylabel',
+      name = { value = 'mylabel' },
     }, parse.Goto('goto mylabel'))
   end)
 end)

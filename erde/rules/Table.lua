@@ -22,7 +22,7 @@ end
 local function parseNameKeyField(ctx)
   local field = {
     variant = 'nameKey',
-    key = ctx:Name().value,
+    key = ctx:Name(),
   }
 
   ctx:assert('=')
@@ -80,7 +80,7 @@ function Table.compile(ctx, node)
         local spreadField = {}
 
         if field.variant == 'nameKey' then
-          spreadField.key = '"' .. field.key .. '"'
+          spreadField.key = '"' .. ctx:compile(field.key) .. '"'
         elseif field.variant ~= 'numberKey' then
           spreadField.key = ctx:compile(field.key)
         end
@@ -98,7 +98,7 @@ function Table.compile(ctx, node)
       local fieldPart
 
       if field.variant == 'nameKey' then
-        fieldPart = field.key .. ' = ' .. ctx:compile(field.value)
+        fieldPart = ctx:compile(field.key) .. ' = ' .. ctx:compile(field.value)
       elseif field.variant == 'numberKey' then
         fieldPart = ctx:compile(field.value)
       elseif field.variant == 'exprKey' then

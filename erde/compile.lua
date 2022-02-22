@@ -7,7 +7,6 @@ local rules = require('erde.rules')
 -- =============================================================================
 
 local CompileCtx = {}
-local CompileCtxMT = { __index = CompileCtx }
 
 -- Allow calling all rule compilers directly from compiler
 for ruleName, rule in pairs(rules) do
@@ -19,8 +18,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function CompileCtx:compile(node)
-  if type(node) ~= 'table' or not rules[node.ruleName] then
-    error('No compiler for ruleName: ' .. tostring(node.ruleName))
+  if type == 'string' then
+    return node
+  elseif type(node) ~= 'table' then
+    error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
   end
 
   return rules[node.ruleName].compile(self, node)
@@ -82,7 +83,7 @@ function CompileCtx:compileOptChain(node)
 
     local newSubChainFormat
     if chainNode.variant == 'dotIndex' then
-      chain = ('%s.%s'):format(chain, chainNode.value)
+      chain = ('%s.%s'):format(chain, self:compile(chainNode.value))
     elseif chainNode.variant == 'bracketIndex' then
       -- Space around brackets to avoid long string expressions
       -- [ [=[some string]=] ]
@@ -119,7 +120,7 @@ function CompileCtx:compileOptChain(node)
         chain = chain .. '(' .. table.concat(args, ',') .. ')'
       end
     elseif chainNode.variant == 'method' then
-      chain = chain .. ':' .. chainNode.value
+      chain = chain .. ':' .. self:compile(chainNode.value)
     end
   end
 
@@ -142,7 +143,7 @@ for ruleName, rule in pairs(rules) do
     local ast = parse[ruleName](text, parseOpts)
 
     local ctx = {}
-    setmetatable(ctx, CompileCtxMT)
+    setmetatable(ctx, { __index = CompileCtx })
 
     ctx.tmpNameCounter = 1
     ctx.sourceMap = {}

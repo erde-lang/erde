@@ -13,12 +13,12 @@ function Goto.parse(ctx)
 
   if ctx:branch('goto') then
     node.variant = 'jump'
-    node.name = ctx:Name().value
+    node.name = ctx:Name()
   else
     node.variant = 'definition'
     ctx:assert(':')
     ctx:assert(':')
-    node.name = ctx:Name().value
+    node.name = ctx:Name()
     ctx:assert(':')
     ctx:assert(':')
   end
@@ -32,9 +32,9 @@ end
 
 function Goto.compile(ctx, node)
   if node.variant == 'jump' then
-    return 'goto ' .. node.name
+    return 'goto ' .. ctx:compile(node.name)
   elseif node.variant == 'definition' then
-    return '::' .. node.name .. '::'
+    return '::' .. ctx:compile(node.name) .. '::'
   end
 end
 
