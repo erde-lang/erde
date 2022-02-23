@@ -1,6 +1,5 @@
 # TODO
 
-- move Terminal to Pseudorules
 - remove ruleName manipulations
   - Expr, ArrowFunction
 - remove rules/init.lua method wrappers

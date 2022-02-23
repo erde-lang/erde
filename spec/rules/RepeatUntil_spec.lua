@@ -5,8 +5,10 @@
 describe('RepeatUntil.parse', function()
   spec('repeat until', function()
     assert.subtable({
-      condition = { value = 'true' },
-    }, parse.RepeatUntil('repeat {} until true'))
+      condition = 'true',
+    }, parse.RepeatUntil(
+      'repeat {} until true'
+    ))
     assert.has_error(function()
       parse.RepeatUntil('repeat {} until ()')
     end)

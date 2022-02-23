@@ -49,7 +49,6 @@ register(require('erde.rules.Self'))
 register(require('erde.rules.Spread'))
 register(require('erde.rules.String'))
 register(require('erde.rules.Table'))
-register(require('erde.rules.Terminal'))
 register(require('erde.rules.TryCatch'))
 register(require('erde.rules.WhileLoop'))
 

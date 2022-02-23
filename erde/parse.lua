@@ -208,6 +208,46 @@ function ParseCtx:Number()
   return self:consume()
 end
 
+function ParseCtx:Terminal()
+  for _, terminal in pairs(C.TERMINALS) do
+    if self:branch(terminal) then
+      return terminal
+    end
+  end
+
+  local node
+  if self.token == '(' then
+    node = self:Switch({
+      self.ArrowFunction,
+      self.OptChain,
+      function()
+        local node = self:Surround('(', ')', self.Expr)
+        node.parens = true
+        return node
+      end,
+    })
+  else
+    node = self:Switch({
+      -- Check ArrowFunction again for implicit params! This must be checked
+      -- before Table for implicit params + destructure
+      self.ArrowFunction,
+      self.Number,
+      self.String,
+      self.Table,
+      self.OptChain,
+      -- Self must be checked after OptChain, since we allow it as an OptChain
+      -- base.
+      self.Self,
+    })
+  end
+
+  if not node then
+    error('Unexpected token ' .. self.token)
+  end
+
+  return node
+end
+
 -- =============================================================================
 -- Parse
 -- =============================================================================
@@ -227,7 +267,7 @@ for ruleName, rule in pairs(rules) do
 end
 
 -- Allow parsing individual pseudo rules
-for _, ruleName in pairs({ 'Var', 'Name', 'Number' }) do
+for _, ruleName in pairs({ 'Var', 'Name', 'Number', 'Terminal' }) do
   parse[ruleName] = function(text, ...)
     local ctx = ParseCtx(text)
     return ctx[ruleName](ctx, ...)
