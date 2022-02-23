@@ -226,18 +226,21 @@ function ParseCtx:Terminal()
         return node
       end,
     })
+  elseif self.token:match('[.0-9]') then
+    node = self:Number()
+  elseif
+    self.token == '"'
+    or self.token == "'"
+    or self.token:match('^%[[[=]')
+  then
+    node = self:String()
   else
     node = self:Switch({
       -- Check ArrowFunction again for implicit params! This must be checked
       -- before Table for implicit params + destructure
       self.ArrowFunction,
-      self.Number,
-      self.String,
       self.Table,
       self.OptChain,
-      -- Self must be checked after OptChain, since we allow it as an OptChain
-      -- base.
-      self.Self,
     })
   end
 

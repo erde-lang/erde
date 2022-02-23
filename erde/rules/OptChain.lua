@@ -13,7 +13,9 @@ function OptChain.parse(ctx)
 
   if ctx.token == '(' then
     node.base = ctx:Surround('(', ')', ctx.Expr)
-    node.base.parens = true
+    if type(node.base) == 'table' then
+      node.base.parens = true
+    end
   elseif ctx.token == '$' then
     node.base = ctx:Self()
   else
@@ -80,8 +82,20 @@ function OptChain.parse(ctx)
     table.insert(node, chain)
   end
 
-  -- unpack trivial OptChain
-  return #node == 0 and node.base or node
+  if #node == 0 then
+    -- unpack trivial OptChain
+    node = node.base
+
+    if type(node) == 'string' then
+      if not node:match('^[_a-zA-Z][_a-zA-Z0-9]*$') then
+        error('Arbitrary expressions not allowed as OptChains')
+      end
+    elseif node.ruleName ~= 'Self' and node.ruleName ~= 'OptChain' then
+      error('Arbitrary expressions not allowed as OptChains')
+    end
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
