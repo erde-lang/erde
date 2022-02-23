@@ -1,10 +1,8 @@
 # TODO
 
-- move Terminal to Pseudorules
 - remove ruleName manipulations
   - Expr, ArrowFunction
 - remove rules/init.lua method wrappers
-- remove pipes, move to proposals
 - do not allow optchain parsing for non name trivial chains
 
 - officially readd lua5.2+ support?
