@@ -1,9 +1,6 @@
 # TODO
 
-- remove ruleName manipulations
-  - Expr, ArrowFunction
 - remove rules/init.lua method wrappers
-
 - officially readd lua5.2+ support?
   - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
   - code in order to avoid closure constructors, which cannot be JIT compiled

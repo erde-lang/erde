@@ -8,34 +8,40 @@ local Params = { ruleName = 'Params' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function Params.parse(ctx)
-  return ctx:Parens({
-    demand = true,
-    rule = function()
-      local node, hasTrailingComma = ctx:List({
-        allowEmpty = true,
-        allowTrailingComma = true,
-        rule = function()
-          local param = { value = ctx:Var() }
+function Params.parse(ctx, opts)
+  opts = opts or {}
 
-          if param and ctx:branch('=') then
-            param.default = ctx:Expr()
-          end
+  if ctx.token ~= '(' and opts.allowImplicitParams then
+    return { { value = ctx:Var() } }
+  else
+    return ctx:Parens({
+      demand = true,
+      rule = function()
+        local node, hasTrailingComma = ctx:List({
+          allowEmpty = true,
+          allowTrailingComma = true,
+          rule = function()
+            local param = { value = ctx:Var() }
 
-          return param
-        end,
-      })
+            if param and ctx:branch('=') then
+              param.default = ctx:Expr()
+            end
 
-      if (#node == 0 or hasTrailingComma) and ctx:branch('...') then
-        table.insert(node, {
-          varargs = true,
-          value = ctx:Try(ctx.Name),
+            return param
+          end,
         })
-      end
 
-      return node
-    end,
-  })
+        if (#node == 0 or hasTrailingComma) and ctx:branch('...') then
+          table.insert(node, {
+            varargs = true,
+            value = ctx:Try(ctx.Name),
+          })
+        end
+
+        return node
+      end,
+    })
+  end
 end
 
 -- -----------------------------------------------------------------------------
