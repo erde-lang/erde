@@ -8,23 +8,19 @@ describe('ForLoop.parse', function()
       variant = 'numeric',
       name = 'i',
       parts = {
-        { value = '1' },
-        { value = '2' },
+        '1',
+        '2',
       },
-    }, parse.ForLoop(
-      'for i = 1, 2 {}'
-    ))
+    }, parse.ForLoop('for i = 1, 2 {}'))
     assert.subtable({
       variant = 'numeric',
       name = 'i',
       parts = {
-        { value = '1' },
-        { value = '2' },
-        { value = '3' },
+        '1',
+        '2',
+        '3',
       },
-    }, parse.ForLoop(
-      'for i = 1, 2, 3 {}'
-    ))
+    }, parse.ForLoop('for i = 1, 2, 3 {}'))
     assert.has_error(function()
       parse.ForLoop('for i = 1 {}')
     end)
@@ -37,43 +33,33 @@ describe('ForLoop.parse', function()
     assert.subtable({
       variant = 'generic',
       varList = { 'a' },
-      exprList = { { value = '1' } },
-    }, parse.ForLoop(
-      'for a in 1 {}'
-    ))
+      exprList = { '1' },
+    }, parse.ForLoop('for a in 1 {}'))
     assert.subtable({
       variant = 'generic',
       varList = { 'a', 'b' },
-      exprList = { { value = '1' } },
-    }, parse.ForLoop(
-      'for a, b in 1 {}'
-    ))
+      exprList = { '1' },
+    }, parse.ForLoop('for a, b in 1 {}'))
     assert.subtable({
       variant = 'generic',
       varList = { 'a' },
       exprList = {
-        { value = '1' },
-        { value = '2' },
+        '1',
+        '2',
       },
-    }, parse.ForLoop(
-      'for a in 1, 2 {}'
-    ))
+    }, parse.ForLoop('for a in 1, 2 {}'))
     assert.subtable({
       variant = 'generic',
       varList = { 'a', 'b' },
       exprList = {
-        { value = '1' },
-        { value = '2' },
+        '1',
+        '2',
       },
-    }, parse.ForLoop(
-      'for a, b in 1, 2 {}'
-    ))
+    }, parse.ForLoop('for a, b in 1, 2 {}'))
     assert.subtable({
       variant = 'generic',
       varList = { { ruleName = 'Destructure' } },
-    }, parse.ForLoop(
-      'for [a, b] in myiter() {}'
-    ))
+    }, parse.ForLoop('for [a, b] in myiter() {}'))
   end)
 end)
 

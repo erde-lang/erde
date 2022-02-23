@@ -7,16 +7,12 @@ describe('Declaration.parse', function()
     assert.subtable({
       variant = 'local',
       varList = { 'abc' },
-    }, parse.Declaration(
-      'local abc'
-    ))
+    }, parse.Declaration('local abc'))
     assert.subtable({
       variant = 'local',
       varList = { 'abc' },
-      exprList = { { value = '2' } },
-    }, parse.Declaration(
-      'local abc = 2'
-    ))
+      exprList = { '2' },
+    }, parse.Declaration('local abc = 2'))
   end)
 
   spec('module declaration', function()
@@ -25,34 +21,26 @@ describe('Declaration.parse', function()
         variant = 'module',
         varList = { 'abc' },
       },
-    }, parse.Block(
-      'module abc'
-    ))
+    }, parse.Block('module abc'))
     assert.subtable({
       {
         variant = 'module',
         varList = { 'abc' },
-        exprList = { { value = '2' } },
+        exprList = { '2' },
       },
-    }, parse.Block(
-      'module abc = 2'
-    ))
+    }, parse.Block('module abc = 2'))
   end)
 
   spec('global declaration', function()
     assert.subtable({
       variant = 'global',
       varList = { 'abc' },
-    }, parse.Declaration(
-      'global abc'
-    ))
+    }, parse.Declaration('global abc'))
     assert.subtable({
       variant = 'global',
       varList = { 'abc' },
-      exprList = { { value = '2' } },
-    }, parse.Declaration(
-      'global abc = 2'
-    ))
+      exprList = { '2' },
+    }, parse.Declaration('global abc = 2'))
   end)
 
   spec('multiple declaration', function()
@@ -61,17 +49,13 @@ describe('Declaration.parse', function()
         'a',
         'b',
       },
-    }, parse.Declaration(
-      'local a, b'
-    ))
+    }, parse.Declaration('local a, b'))
     assert.subtable({
       exprList = {
-        { value = '1' },
-        { value = '2' },
+        '1',
+        '2',
       },
-    }, parse.Declaration(
-      'local a, b = 1, 2'
-    ))
+    }, parse.Declaration('local a, b = 1, 2'))
     assert.has_error(function()
       parse.Declaration('local a,')
     end)
@@ -84,9 +68,7 @@ describe('Declaration.parse', function()
     assert.subtable({
       variant = 'local',
       varList = { { ruleName = 'Destructure' } },
-    }, parse.Declaration(
-      'local { a } = x'
-    ))
+    }, parse.Declaration('local { a } = x'))
     assert.subtable({
       variant = 'local',
       varList = {
@@ -94,9 +76,7 @@ describe('Declaration.parse', function()
         { ruleName = 'Destructure' },
         'c',
       },
-    }, parse.Declaration(
-      'local a, { b }, c = x, y'
-    ))
+    }, parse.Declaration('local a, { b }, c = x, y'))
   end)
 end)
 

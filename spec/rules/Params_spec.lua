@@ -11,20 +11,16 @@ describe('Params.parse', function()
     assert.subtable({
       { value = 'a' },
       { value = 'b' },
-    }, parse.Params(
-      '(a, b)'
-    ))
+    }, parse.Params('(a, b)'))
   end)
 
   spec('optional params', function()
     assert.subtable({
       {
         value = 'a',
-        default = { value = '2' },
+        default = '2',
       },
-    }, parse.Params(
-      '(a = 2)'
-    ))
+    }, parse.Params('(a = 2)'))
   end)
 
   spec('params varargs', function()
@@ -34,18 +30,14 @@ describe('Params.parse', function()
     assert.subtable({
       { value = 'a' },
       { varargs = true },
-    }, parse.Params(
-      '(a, ...)'
-    ))
+    }, parse.Params('(a, ...)'))
     assert.subtable({
       { value = 'a' },
       {
         varargs = true,
         value = 'b',
       },
-    }, parse.Params(
-      '(a, ...b)'
-    ))
+    }, parse.Params('(a, ...b)'))
     assert.has_error(function()
       parse.Params('(..., a)')
     end)
@@ -54,17 +46,13 @@ describe('Params.parse', function()
   spec('destructure params', function()
     assert.subtable({
       { value = { ruleName = 'Destructure' } },
-    }, parse.Params(
-      '({ a })'
-    ))
+    }, parse.Params('({ a })'))
     assert.subtable({
       {
         value = { ruleName = 'Destructure' },
         default = { ruleName = 'Table' },
       },
-    }, parse.Params(
-      '({ a } = { 2 })'
-    ))
+    }, parse.Params('({ a } = { 2 })'))
   end)
 end)
 

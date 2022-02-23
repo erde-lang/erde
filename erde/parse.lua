@@ -200,6 +200,14 @@ function ParseCtx:Name()
   return self:consume()
 end
 
+function ParseCtx:Number()
+  if not self.token:match('^%.?[0-9]') then
+    error('Malformed number: ' .. self.token)
+  end
+
+  return self:consume()
+end
+
 -- =============================================================================
 -- Parse
 -- =============================================================================
@@ -213,16 +221,16 @@ end
 
 -- Allow parsing individual rules
 for ruleName, rule in pairs(rules) do
-  parse[ruleName] = function(text, opts)
-    return rules[ruleName].parse(ParseCtx(text), opts)
+  parse[ruleName] = function(text, ...)
+    return rules[ruleName].parse(ParseCtx(text), ...)
   end
 end
 
 -- Allow parsing individual pseudo rules
-for _, ruleName in pairs({ 'Var', 'Name' }) do
-  parse[ruleName] = function(text, opts)
+for _, ruleName in pairs({ 'Var', 'Name', 'Number' }) do
+  parse[ruleName] = function(text, ...)
     local ctx = ParseCtx(text)
-    return ctx[ruleName](ctx, opts)
+    return ctx[ruleName](ctx, ...)
   end
 end
 

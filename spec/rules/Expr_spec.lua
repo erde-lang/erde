@@ -7,7 +7,7 @@ local C = require('erde.constants')
 describe('Expr.parse', function()
   spec('ruleName', function()
     assert.are.equal('Expr', parse.Expr('1 + 2').ruleName)
-    assert.are.equal('Number', parse.Expr('1').ruleName)
+    assert.are.equal('1', parse.Expr('1'))
     assert.are.equal('String', parse.Expr('"hello"').ruleName)
   end)
 
@@ -35,65 +35,65 @@ describe('Expr.parse', function()
       op = { token = '+' },
       lhs = {
         op = { token = '*' },
-        lhs = { value = '1' },
-        rhs = { value = '2' },
+        lhs = '1',
+        rhs = '2',
       },
-      rhs = { value = '3' },
+      rhs = '3',
     }, parse.Expr('1 * 2 + 3'))
     assert.subtable({
       op = { token = '+' },
-      lhs = { value = '1' },
+      lhs = '1',
       rhs = {
         op = { token = '*' },
-        lhs = { value = '2' },
-        rhs = { value = '3' },
+        lhs = '2',
+        rhs = '3',
       },
     }, parse.Expr('1 + 2 * 3'))
     assert.subtable({
       op = { token = '+' },
       lhs = {
         op = { token = '+' },
-        lhs = { value = '1' },
+        lhs = '1',
         rhs = {
           op = { token = '*' },
-          lhs = { value = '2' },
-          rhs = { value = '3' },
+          lhs = '2',
+          rhs = '3',
         },
       },
-      rhs = { value = '4' },
+      rhs = '4',
     }, parse.Expr('1 + 2 * 3 + 4'))
   end)
 
   spec('right associative binop precedence', function()
     assert.subtable({
       op = { token = '^' },
-      lhs = { value = '1' },
+      lhs = '1',
       rhs = {
         op = { token = '^' },
-        lhs = { value = '2' },
-        rhs = { value = '3' },
+        lhs = '2',
+        rhs = '3',
       },
     }, parse.Expr('1 ^ 2 ^ 3'))
     assert.subtable({
       op = { token = '+' },
       lhs = {
         op = { token = '^' },
-        lhs = { value = '1' },
-        rhs = { value = '2' },
+        lhs = '1',
+        rhs = '2',
       },
-      rhs = { value = '3' },
+      rhs = '3',
     }, parse.Expr('1 ^ 2 + 3'))
   end)
 
   spec('binop parens', function()
     assert.subtable({
       op = { token = '*' },
-      lhs = { value = '1' },
+      lhs = '1',
       rhs = {
         parens = true,
         op = { token = '+' },
-        lhs = { value = '2' },
-        rhs = { value = '3' },
+        lhs = '2',
+        rhs = '3',
       },
     }, parse.Expr('1 * (2 + 3)'))
   end)
@@ -101,55 +101,55 @@ describe('Expr.parse', function()
   spec('unops', function()
     assert.subtable({
       op = { token = '*' },
-      lhs = { value = '1' },
+      lhs = '1',
       rhs = {
         op = { token = '-' },
-        operand = { value = '3' },
+        operand = '3',
       },
     }, parse.Expr('1 * -3'))
     assert.subtable({
       op = { token = '-' },
       operand = {
         op = { token = '^' },
-        lhs = { value = '2' },
-        rhs = { value = '3' },
+        lhs = '2',
+        rhs = '3',
       },
     }, parse.Expr('-2 ^ 3'))
     assert.subtable({
       op = { token = '*' },
       lhs = {
         op = { token = '-' },
-        operand = { value = '2' },
+        operand = '2',
       },
-      rhs = { value = '3' },
+      rhs = '3',
     }, parse.Expr('-2 * 3'))
   end)
 
   spec('ternary operator', function()
     assert.subtable({
       op = { token = '?' },
-      lhs = { value = '1' },
-      ternaryExpr = { value = '2' },
-      rhs = { value = '3' },
+      lhs = '1',
+      ternaryExpr = '2',
+      rhs = '3',
     }, parse.Expr('1 ? 2 : 3'))
     assert.subtable({
       op = { token = '?' },
-      lhs = { value = '1' },
+      lhs = '1',
       ternaryExpr = {
         op = { token = '-' },
-        operand = { value = '2' },
+        operand = '2',
       },
       rhs = {
         op = { token = '+' },
-        lhs = { value = '3' },
-        rhs = { value = '4' },
+        lhs = '3',
+        rhs = '4',
       },
     }, parse.Expr('1 ? -2 : 3 + 4'))
     assert.subtable({
       op = { token = '?' },
-      lhs = { value = '1' },
+      lhs = '1',
       ternaryExpr = { ruleName = 'OptChain' },
-      rhs = { ruleName = 'Number' },
+      rhs = '2',
     }, parse.Expr('1 ? a:b() : 2'))
   end)
 end)

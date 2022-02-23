@@ -30,9 +30,7 @@ describe('ArrowFunction.parse', function()
       params = {
         { value = { { name = 'a', variant = 'numberDestruct' } } },
       },
-    }, parse.ArrowFunction(
-      '[ a ] -> {}'
-    ))
+    }, parse.ArrowFunction('[ a ] -> {}'))
     assert.error(function()
       parse.ArrowFunction('a = 1 -> {}')
     end)
@@ -47,19 +45,15 @@ describe('ArrowFunction.parse', function()
   spec('arrow function implicit returns', function()
     assert.subtable({
       hasImplicitReturns = true,
-      returns = { { value = '1' } },
-    }, parse.ArrowFunction(
-      '() -> 1'
-    ))
+      returns = { '1' },
+    }, parse.ArrowFunction('() -> 1'))
     assert.subtable({
       hasImplicitReturns = true,
       returns = {
-        { value = '1' },
-        { value = '2' },
+        '1',
+        '2',
       },
-    }, parse.ArrowFunction(
-      '() -> (1, 2)'
-    ))
+    }, parse.ArrowFunction('() -> (1, 2)'))
     assert.error(function()
       parse.ArrowFunction('() -> ()')
     end)
