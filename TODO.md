@@ -9,11 +9,11 @@
   - code in order to avoid closure constructors, which cannot be JIT compiled
 - add block assignment shorthands
   - ex) `local x = do { ... return result }`
-- erde REPL
-- add real README
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
+- erde REPL
+- add real README
 - release v0.1.0
 
 # v0.2.0
