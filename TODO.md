@@ -7,8 +7,9 @@
 - remove pipes, move to proposals
 - do not allow optchain parsing for non name trivial chains
 
-- readd lua5.1+ support? what about goto?
-  - compile when encountered, assume user knows what he / she is doing
+- officially readd lua5.2+ support?
+  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
+  - code in order to avoid closure constructors, which cannot be JIT compiled
 - add block assignment shorthands
   - ex) `local x = do { ... return result }`
 - erde REPL
@@ -37,6 +38,9 @@
 - macros
 - decorators
 - nested break
+- pipes?
+  - included (and even implemented) in original spec. Removed due to awkardness
+  - of functional programming style compared to rest of lua.
 - `scope` keyword (allow scoped blocks)
   - ex) `local x = scope { return 4 }`
   - useful for grouping logical computations
