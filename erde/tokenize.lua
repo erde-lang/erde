@@ -1,5 +1,4 @@
 local C = require('erde.constants')
-local rules = require('erde.rules')
 
 -- Foward declare
 local Token

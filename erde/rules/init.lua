@@ -5,7 +5,6 @@ local function register(rule)
     parse = function(ctx, ...)
       local node = rule.parse(ctx, ...)
 
-      -- TODO: remove this, assign unconditionally
       if type(node) == 'table' and node.ruleName == nil then
         node.ruleName = rule.ruleName
       end
@@ -16,7 +15,6 @@ local function register(rule)
     compile = function(ctx, node, ...)
       local compiled = rule.compile(ctx, node, ...)
 
-      -- TODO: move this to ctx:compile?
       if node.parens then
         compiled = '(' .. compiled .. ')'
       end

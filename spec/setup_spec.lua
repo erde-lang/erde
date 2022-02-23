@@ -1,5 +1,4 @@
 local busted = require('busted') -- Explicit import required for helper scripts
-local rules = require('erde.rules')
 local utils = require('erde.utils')
 local say = require('say')
 

@@ -228,11 +228,7 @@ function ParseCtx:Terminal()
     })
   elseif self.token:match('[.0-9]') then
     node = self:Number()
-  elseif
-    self.token == '"'
-    or self.token == "'"
-    or self.token:match('^%[[[=]')
-  then
+  elseif self.token:match('^[\'"]$') or self.token:match('^%[[[=]') then
     node = self:String()
   else
     node = self:Switch({

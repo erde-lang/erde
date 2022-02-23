@@ -12,10 +12,7 @@ function ArrowFunction.parse(ctx)
   local node = {
     hasFatArrow = false,
     hasImplicitReturns = false,
-    params = ctx.token == '(' and ctx:Params() or {
-      ruleName = 'Params',
-      { value = ctx:Var() },
-    },
+    params = ctx:Params({ allowImplicitParams = true }),
   }
 
   if ctx:branch('=>') then
