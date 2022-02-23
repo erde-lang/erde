@@ -48,12 +48,6 @@ function Expr.parse(ctx, opts)
     binop = C.BINOPS[ctx.token]
   end
 
-  if ctx.token == '>>' then
-    return ctx:Pipe({
-      initValues = { node },
-    })
-  end
-
   return node
 end
 

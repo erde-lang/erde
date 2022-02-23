@@ -23,16 +23,6 @@ function Terminal.parse(ctx)
       ctx.ArrowFunction,
       ctx.OptChain,
       function()
-        return ctx:Pipe({
-          initValues = ctx:Surround('(', ')', function()
-            return ctx:List({
-              allowTrailingComma = true,
-              rule = ctx.Expr,
-            })
-          end),
-        })
-      end,
-      function()
         local node = ctx:Surround('(', ')', ctx.Expr)
         node.parens = true
         return node
