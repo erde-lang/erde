@@ -3,12 +3,15 @@
 - officially readd lua5.2+ support?
   - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
   - code in order to avoid closure constructors, which cannot be JIT compiled
+- add `main` scope for default export
 - add block assignment shorthands
   - ex) `local x = do { ... return result }`
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
 - erde REPL
+- update syntax repos w/ changes
+- update website (port to hugo?)
 - add real README
 - release v0.1.0
 
