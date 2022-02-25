@@ -9,9 +9,14 @@ describe('Function.parse', function()
     assert.subtable({
       variant = 'local',
       names = { 'a' },
-    }, parse.Function(
-      'local function a() {}'
-    ))
+    }, parse.Function('local function a() {}'))
+  end)
+
+  spec('global function', function()
+    assert.subtable({
+      variant = 'global',
+      names = { 'a' },
+    }, parse.Function('function a() {}'))
   end)
 
   spec('module function', function()
@@ -20,27 +25,29 @@ describe('Function.parse', function()
         variant = 'module',
         names = { 'a' },
       },
-    }, parse.Block(
-      'module function a() {}'
-    ))
+    }, parse.Block('module function a() {}'))
+    assert.has_error(function()
+      parse.Block('module function a.b() {}')
+    end)
   end)
 
-  spec('global function', function()
+  spec('main function', function()
     assert.subtable({
-      variant = 'global',
-      names = { 'a' },
-    }, parse.Function(
-      'function a() {}'
-    ))
+      {
+        variant = 'main',
+        names = { 'a' },
+      },
+    }, parse.Block('main function a() {}'))
+    assert.has_error(function()
+      parse.Block('main function a.b() {}')
+    end)
   end)
 
   spec('method function', function()
     assert.subtable({
       isMethod = true,
       names = { 'a', 'b' },
-    }, parse.Function(
-      'function a:b() {}'
-    ))
+    }, parse.Function('function a:b() {}'))
     assert.has_error(function()
       parse.Function('function a:b.c() {}')
     end)
@@ -71,15 +78,6 @@ describe('Function.compile', function()
     )
   end)
 
-  spec('module function', function()
-    local testModule = utils.run(compile.Block([[
-      module function test() {
-        return 1
-      }
-    ]]))
-    assert.are.equal(1, testModule.test())
-  end)
-
   spec('global function', function()
     assert.run(
       1,
@@ -97,6 +95,24 @@ describe('Function.compile', function()
         return test()
       ]])
     )
+  end)
+
+  spec('module function', function()
+    local testModule = utils.run(compile.Block([[
+      module function test() {
+        return 1
+      }
+    ]]))
+    assert.are.equal(1, testModule.test())
+  end)
+
+  spec('main function', function()
+    local testModule = utils.run(compile.Block([[
+      main function test() {
+        return 1
+      }
+    ]]))
+    assert.are.equal(1, testModule())
   end)
 
   spec('method function', function()

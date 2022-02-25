@@ -13,12 +13,12 @@ function Function.parse(ctx)
 
   if ctx:branch('local') then
     node.variant = 'local'
-  elseif ctx:branch('module') then
+  elseif ctx.token == 'module' or ctx.token == 'main' then
     if not ctx.moduleBlock then
-      error('`module` declarations cannot be nested')
+      error(ctx.token .. ' declarations cannot be nested')
     end
 
-    node.variant = 'module'
+    node.variant = ctx:consume()
   else
     ctx:branch('global')
     node.variant = 'global'
@@ -40,12 +40,20 @@ function Function.parse(ctx)
     end
   end
 
-  if node.variant == 'module' then
+  if node.variant == 'module' or node.variant == 'main' then
     if #node.names > 1 then
-      error('Cannot declare nested field as `module`')
+      error('Cannot declare nested field as ' .. node.variant)
     end
 
-    table.insert(ctx.moduleBlock.moduleNames, node.names[1])
+    if node.variant == 'main' then
+      if ctx.moduleBlock.mainName ~= nil then
+        error('Cannot have multiple main declarations')
+      end
+
+      ctx.moduleBlock.mainName = node.names[1]
+    else
+      table.insert(ctx.moduleBlock.moduleNames, node.names[1])
+    end
   end
 
   node.params = ctx:Params()
@@ -69,7 +77,7 @@ function Function.compile(ctx, node)
   end
 
   return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
-    (node.variant == 'local' or node.variant == 'module') and 'local' or '',
+    (node.variant ~= 'global') and 'local' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
     table.concat(params.names, ','),

@@ -1,6 +1,5 @@
 # TODO
 
-- hoist top block vars
 - add block assignment shorthands
   - ex) `local x = do { ... return result }`
 - erde REPL
@@ -11,6 +10,12 @@
   - generic for loop destructuring
   - goto
 - update website (port to hugo?)
+  - remove pipe
+  - add `main`
+  - self shorthand
+  - generic for loop destructuring
+  - goto
+  - hoisting top block vars
 - add real README
 - release v0.1.0
 
