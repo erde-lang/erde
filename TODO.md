@@ -1,22 +1,24 @@
 # TODO
 
+- hoist top block vars
 - add block assignment shorthands
   - ex) `local x = do { ... return result }`
-- hoist top block vars
-- Formatting
-  - Rule.format method
-  - cli support `erde format [FILES]`
 - erde REPL
-- update syntax repos w/ changes
+- update syntax highlighting support
+  - remove pipe
+  - add `main`
+  - self shorthand
+  - generic for loop destructuring
+  - goto
 - update website (port to hugo?)
-- officially readd lua5.2+ support?
-  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
-  - code in order to avoid closure constructors, which cannot be JIT compiled
 - add real README
 - release v0.1.0
 
 # v0.2.0
 
+- Formatting
+  - Rule.format method
+  - cli support `erde format [FILES]`
 - more forgiving parser in order to allow for more convenient formatting
   - try to infer common mistakes (ex. missing comma)
   - separate parse errors from bad runtime prevention errors
@@ -29,6 +31,11 @@
 
 # Long Term TODO
 
+- officially readd lua5.2+ support?
+  - Not supported initially due to ease + not sure if will take advantage of
+    LuaJIT specific optimizations + bitwise operator awkwardness
+  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
+    code in order to avoid closure constructors, which cannot be JIT compiled
 - cache unchanged files?
 - rewrite erde in erde
 - remove closure compilations (ternary, null coalescence, optchain, etc).
