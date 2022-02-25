@@ -21,6 +21,9 @@ function Block.parse(ctx, opts)
     -- Table for Declaration and Function nodes to register `module` scope
     -- variables.
     moduleNames = {},
+
+    -- Return name for this block. Only valid at the top level.
+    mainName = nil,
   }
 
   repeat
@@ -63,8 +66,9 @@ function Block.parse(ctx, opts)
       statement = ctx:Function()
     elseif
       ctx.token == 'local'
-      or ctx.token == 'module'
       or ctx.token == 'global'
+      or ctx.token == 'module'
+      or ctx.token == 'main'
     then
       if ctx:peek(1) == 'function' then
         statement = ctx:Function()
@@ -135,6 +139,11 @@ function Block.compile(ctx, node)
     return table.concat({
       compileBlockStatements(ctx, node),
       'return { ' .. table.concat(moduleTableElements, ',') .. ' }',
+    }, '\n')
+  elseif node.mainName ~= nil then
+    return table.concat({
+      compileBlockStatements(ctx, node),
+      'return ' .. node.mainName,
     }, '\n')
   else
     return compileBlockStatements(ctx, node)

@@ -15,6 +15,18 @@ describe('Declaration.parse', function()
     }, parse.Declaration('local abc = 2'))
   end)
 
+  spec('global declaration', function()
+    assert.subtable({
+      variant = 'global',
+      varList = { 'abc' },
+    }, parse.Declaration('global abc'))
+    assert.subtable({
+      variant = 'global',
+      varList = { 'abc' },
+      exprList = { '2' },
+    }, parse.Declaration('global abc = 2'))
+  end)
+
   spec('module declaration', function()
     assert.subtable({
       {
@@ -29,18 +41,34 @@ describe('Declaration.parse', function()
         exprList = { '2' },
       },
     }, parse.Block('module abc = 2'))
+    assert.has_error(function()
+      parse.Declaration('if true { module abc }')
+    end)
   end)
 
-  spec('global declaration', function()
+  spec('main declaration', function()
     assert.subtable({
-      variant = 'global',
-      varList = { 'abc' },
-    }, parse.Declaration('global abc'))
+      {
+        variant = 'main',
+        varList = { 'abc' },
+      },
+    }, parse.Block('main abc'))
     assert.subtable({
-      variant = 'global',
-      varList = { 'abc' },
-      exprList = { '2' },
-    }, parse.Declaration('global abc = 2'))
+      {
+        variant = 'main',
+        varList = { 'abc' },
+        exprList = { '2' },
+      },
+    }, parse.Block('main abc = 2'))
+    assert.has_error(function()
+      parse.Declaration('if true { main abc }')
+    end)
+    assert.has_error(function()
+      parse.Declaration('main a, b')
+    end)
+    assert.has_error(function()
+      parse.Declaration('main { a, b } = c')
+    end)
   end)
 
   spec('multiple declaration', function()
@@ -95,10 +123,6 @@ describe('Declaration.compile', function()
     )
   end)
 
-  spec('module declaration', function()
-    assert.run({ a = 1 }, compile.Block('module a = 1'))
-  end)
-
   spec('global declaration', function()
     assert.run(
       1,
@@ -107,6 +131,14 @@ describe('Declaration.compile', function()
         return a
       ]])
     )
+  end)
+
+  spec('module declaration', function()
+    assert.run({ a = 1 }, compile.Block('module a = 1'))
+  end)
+
+  spec('main declaration', function()
+    assert.run(1, compile.Block('main a = 1'))
   end)
 
   spec('multiple declaration', function()
