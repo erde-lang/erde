@@ -16,20 +16,31 @@ function Declaration.parse(ctx)
 
   if ctx:branch('local') then
     node.variant = 'local'
-  elseif ctx:branch('module') then
+  elseif ctx:branch('global') then
+    node.variant = 'global'
+  elseif ctx.token == 'module' or ctx.token == 'main' then
     if not ctx.moduleBlock then
-      error('`module` declarations cannot be nested')
+      error(ctx.token .. ' declarations cannot be nested')
     end
 
-    node.variant = 'module'
+    node.variant = ctx:consume()
   else
-    ctx:branch('global')
-    node.variant = 'global'
+    error('Missing declaration scope')
   end
 
   node.varList = ctx:List({ rule = ctx.Var })
 
-  if node.variant == 'module' then
+  if node.variant == 'main' then
+    if
+      #node.varList > 1
+      or type(node.varList[1]) ~= 'string'
+      or ctx.moduleBlock.mainName ~= nil
+    then
+      error('Cannot have multiple main declarations')
+    end
+
+    ctx.moduleBlock.mainName = node.varList[1]
+  elseif node.variant == 'module' then
     for _, var in ipairs(node.varList) do
       if type(var) == 'string' then
         table.insert(ctx.moduleBlock.moduleNames, var)
@@ -59,8 +70,8 @@ function Declaration.compile(ctx, node)
   local declarationParts = {}
   local compileParts = {}
 
-  if node.variant == 'local' or node.variant == 'module' then
-    declarationParts[#declarationParts + 1] = 'local'
+  if node.variant ~= 'global' then
+    table.insert(declarationParts, 'local')
   end
 
   local nameList = {}
