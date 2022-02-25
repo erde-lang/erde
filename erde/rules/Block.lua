@@ -24,6 +24,10 @@ function Block.parse(ctx, opts)
 
     -- Return name for this block. Only valid at the top level.
     mainName = nil,
+
+    -- Table for all top-level declared names. These are hoisted for convenience
+    -- to have more "module-like" behavior prevalent in other languages.
+    hoistedNames = {},
   }
 
   repeat
@@ -105,6 +109,13 @@ end
 
 local function compileBlockStatements(ctx, node)
   local compiledStatements = {}
+
+  if #node.hoistedNames > 0 then
+    table.insert(
+      compiledStatements,
+      'local ' .. table.concat(node.hoistedNames, ',')
+    )
+  end
 
   for _, statement in ipairs(node) do
     -- As of January 5, 2022, we use a lot of iife statements in compiled code.

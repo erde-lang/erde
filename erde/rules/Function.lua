@@ -9,7 +9,7 @@ local Function = { ruleName = 'Function' }
 -- -----------------------------------------------------------------------------
 
 function Function.parse(ctx)
-  local node = { isMethod = false }
+  local node = { isHoisted = false, isMethod = false }
 
   if ctx:branch('local') then
     node.variant = 'local'
@@ -56,6 +56,11 @@ function Function.parse(ctx)
     end
   end
 
+  if ctx.moduleBlock and node.variant ~= 'global' and #node.names == 1 then
+    node.isHoisted = true
+    table.insert(ctx.moduleBlock.hoistedNames, node.names[1])
+  end
+
   node.params = ctx:Params()
   node.body = ctx:Surround('{', '}', function()
     return ctx:Block({ isFunctionBlock = true })
@@ -77,7 +82,7 @@ function Function.compile(ctx, node)
   end
 
   return ('%s function %s%s(%s)\n%s\n%s\nend'):format(
-    (node.variant ~= 'global') and 'local' or '',
+    (node.variant ~= 'global' and not node.isHoisted) and 'local' or '',
     table.concat(node.names, '.'),
     methodName and ':' .. methodName or '',
     table.concat(params.names, ','),
