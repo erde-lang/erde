@@ -10,6 +10,7 @@ local Declaration = { ruleName = 'Declaration' }
 
 function Declaration.parse(ctx)
   local node = {
+    isHoisted = false,
     varList = {},
     exprList = {},
   }
@@ -40,17 +41,29 @@ function Declaration.parse(ctx)
     end
 
     ctx.moduleBlock.mainName = node.varList[1]
-  elseif node.variant == 'module' then
+  end
+
+  if ctx.moduleBlock and node.variant ~= 'global' then
+    node.isHoisted = true
+    local nameList = {}
+
     for _, var in ipairs(node.varList) do
       if type(var) == 'string' then
-        table.insert(ctx.moduleBlock.moduleNames, var)
+        table.insert(nameList, var)
       else
         for _, destruct in ipairs(var) do
-          table.insert(
-            ctx.moduleBlock.moduleNames,
-            destruct.alias or destruct.name
-          )
+          table.insert(nameList, destruct.alias or destruct.name)
         end
+      end
+    end
+
+    for _, name in ipairs(nameList) do
+      table.insert(ctx.moduleBlock.hoistedNames, name)
+    end
+
+    if node.variant == 'module' then
+      for _, name in ipairs(nameList) do
+        table.insert(ctx.moduleBlock.moduleNames, name)
       end
     end
   end
@@ -70,7 +83,12 @@ function Declaration.compile(ctx, node)
   local declarationParts = {}
   local compileParts = {}
 
-  if node.variant ~= 'global' then
+  if node.isHoisted then
+    if #node.exprList == 0 then
+      -- Nothing to do
+      return ''
+    end
+  elseif node.variant ~= 'global' then
     table.insert(declarationParts, 'local')
   end
 

@@ -169,7 +169,7 @@ function ParseCtx:List(opts)
       hasTrailingComma = true
     end
 
-    list[#list + 1] = node
+    table.insert(list, node)
   until not hasTrailingComma
 
   assert(opts.allowTrailingComma or not hasTrailingComma)
@@ -226,7 +226,7 @@ function ParseCtx:Terminal()
         return node
       end,
     })
-  elseif self.token:match('[.0-9]') then
+  elseif self.token:match('^[.0-9]') then
     node = self:Number()
   elseif self.token:match('^[\'"]$') or self.token:match('^%[[[=]') then
     node = self:String()
