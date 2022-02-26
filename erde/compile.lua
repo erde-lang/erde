@@ -50,22 +50,20 @@ function CompileCtx:compileBinop(op, lhs, rhs)
       'end',
       'end)()',
     }, '\n')
-  elseif op.token == '|' then
+  elseif op.token == '||' then
     return table.concat({ lhs, ' or ', rhs })
-  elseif op.token == '&' then
+  elseif op.token == '&&' then
     return table.concat({ lhs, ' and ', rhs })
-  elseif op.token == '.|' then
+  elseif op.token == '|' then
     return ('require("bit").bor(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '.~' then
+  elseif op.token == '~' then
     return ('require("bit").bxor(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '.&' then
+  elseif op.token == '&' then
     return ('require("bit").band(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '.<<' then
+  elseif op.token == '<<' then
     return ('require("bit").lshift(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '.>>' then
+  elseif op.token == '>>' then
     return ('require("bit").rshift(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '//' then
-    return ('math.floor(%s / %s)'):format(lhs, rhs)
   else
     return table.concat({ lhs, op.token, rhs }, ' ')
   end
