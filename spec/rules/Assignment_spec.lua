@@ -7,18 +7,24 @@ describe('Assignment.parse', function()
     assert.subtable({
       id = 'a',
       expr = '3',
-    }, parse.Assignment('a = 3'))
+    }, parse.Assignment(
+      'a = 3'
+    ))
   end)
 
   spec('optchain assignment', function()
     assert.subtable({
       id = { ruleName = 'OptChain' },
       expr = '3',
-    }, parse.Assignment('a.b = 3'))
+    }, parse.Assignment(
+      'a.b = 3'
+    ))
     assert.subtable({
       id = { ruleName = 'OptChain' },
       expr = '3',
-    }, parse.Assignment('a?.b = 3'))
+    }, parse.Assignment(
+      'a?.b = 3'
+    ))
   end)
 
   spec('binop assignments', function()
@@ -26,33 +32,33 @@ describe('Assignment.parse', function()
       op = { token = '+' },
       id = 'a',
       expr = '1',
-    }, parse.Assignment('a += 1'))
+    }, parse.Assignment(
+      'a += 1'
+    ))
     assert.subtable({
       op = { token = '+' },
-    }, parse.Assignment('a?.b += 1'))
+    }, parse.Assignment(
+      'a?.b += 1'
+    ))
 
     assert.are.equal('??', parse.Assignment('a ??= 1').op.token)
+    assert.are.equal('||', parse.Assignment('a ||= 1').op.token)
+    assert.are.equal('&&', parse.Assignment('a &&= 1').op.token)
     assert.are.equal('|', parse.Assignment('a |= 1').op.token)
+    assert.are.equal('~', parse.Assignment('a ~= 1').op.token)
     assert.are.equal('&', parse.Assignment('a &= 1').op.token)
-    assert.are.equal('.|', parse.Assignment('a .|= 1').op.token)
-    assert.are.equal('.~', parse.Assignment('a .~= 1').op.token)
-    assert.are.equal('.&', parse.Assignment('a .&= 1').op.token)
-    assert.are.equal('.<<', parse.Assignment('a .<<= 1').op.token)
-    assert.are.equal('.>>', parse.Assignment('a .>>= 1').op.token)
+    assert.are.equal('<<', parse.Assignment('a <<= 1').op.token)
+    assert.are.equal('>>', parse.Assignment('a >>= 1').op.token)
     assert.are.equal('..', parse.Assignment('a ..= 1').op.token)
     assert.are.equal('+', parse.Assignment('a += 1').op.token)
     assert.are.equal('-', parse.Assignment('a -= 1').op.token)
     assert.are.equal('*', parse.Assignment('a *= 1').op.token)
     assert.are.equal('/', parse.Assignment('a /= 1').op.token)
-    assert.are.equal('//', parse.Assignment('a //= 1').op.token)
     assert.are.equal('%', parse.Assignment('a %= 1').op.token)
     assert.are.equal('^', parse.Assignment('a ^= 1').op.token)
   end)
 
   spec('binop blacklist', function()
-    assert.has_error(function()
-      parse.Assignment('a >>= 1')
-    end)
     assert.has_error(function()
       parse.Assignment('a ?= 1')
     end)
@@ -125,7 +131,7 @@ describe('Assignment.compile', function()
       4,
       compile.Block([[
         local a = 5
-        a .&= 6
+        a &= 6
         return a
       ]])
     )

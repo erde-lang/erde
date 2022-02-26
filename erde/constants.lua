@@ -50,8 +50,8 @@ C.OP_BLACKLIST = {
 C.UNOPS = {
   ['-'] = { prec = 13 },
   ['#'] = { prec = 13 },
+  ['!'] = { prec = 13 },
   ['~'] = { prec = 13 },
-  ['.~'] = { prec = 13 },
 }
 
 for opToken, op in pairs(C.UNOPS) do
@@ -61,25 +61,24 @@ end
 C.BINOPS = {
   ['?'] = { prec = 1, assoc = C.LEFT_ASSOCIATIVE },
   ['??'] = { prec = 2, assoc = C.LEFT_ASSOCIATIVE },
-  ['|'] = { prec = 3, assoc = C.LEFT_ASSOCIATIVE },
-  ['&'] = { prec = 4, assoc = C.LEFT_ASSOCIATIVE },
+  ['||'] = { prec = 3, assoc = C.LEFT_ASSOCIATIVE },
+  ['&&'] = { prec = 4, assoc = C.LEFT_ASSOCIATIVE },
   ['=='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  ['~='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
+  ['!='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
   ['<='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
   ['>='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
   ['<'] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
   ['>'] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  ['.|'] = { prec = 6, assoc = C.LEFT_ASSOCIATIVE },
-  ['.~'] = { prec = 7, assoc = C.LEFT_ASSOCIATIVE },
-  ['.&'] = { prec = 8, assoc = C.LEFT_ASSOCIATIVE },
-  ['.<<'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
-  ['.>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+  ['|'] = { prec = 6, assoc = C.LEFT_ASSOCIATIVE },
+  ['~'] = { prec = 7, assoc = C.LEFT_ASSOCIATIVE },
+  ['&'] = { prec = 8, assoc = C.LEFT_ASSOCIATIVE },
+  ['<<'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+  ['>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
   ['..'] = { prec = 10, assoc = C.LEFT_ASSOCIATIVE },
   ['+'] = { prec = 11, assoc = C.LEFT_ASSOCIATIVE },
   ['-'] = { prec = 11, assoc = C.LEFT_ASSOCIATIVE },
   ['*'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['/'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
-  ['//'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['%'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['^'] = { prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
 }

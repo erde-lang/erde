@@ -65,9 +65,9 @@ function Expr.compile(ctx, node)
       return table.concat({ token, operand }, ' ')
     end
 
-    if op.token == '.~' then
+    if op.token == '~' then
       return ('require("bit").bnot(%1)'):format(operand)
-    elseif op.token == '~' then
+    elseif op.token == '!' then
       return compileUnop('not')
     else
       return op.token .. operand

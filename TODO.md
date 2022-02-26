@@ -1,5 +1,7 @@
 # TODO
 
+- more standard operators
+- fix multi assignment...
 - add block assignment shorthands
   - ex) `local x = do { ... return result }`
 - erde REPL
@@ -9,6 +11,8 @@
   - self shorthand
   - generic for loop destructuring
   - goto
+  - standard operators
+  - do block expr
 - update website (port to hugo?)
   - remove pipe
   - add `main`
@@ -16,6 +20,9 @@
   - generic for loop destructuring
   - goto
   - hoisting top block vars
+  - multi expression assignment
+  - standard operators
+  - do block expr
 - add real README
 - release v0.1.0
 
@@ -58,24 +65,10 @@
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
   - difficult, maybe impossible? dont know when return will happen?
-- hoist top block vars?
-  - or just allow module refs anywhere
-    - lua requires declarations to happen before reference
-    - compile to forward declare top level module variables
-    - ex) 
-      ```erde
-        local function a() { b() }`
-        local function b() { ... }`
-      ```
-      ```lua
-        local a, b
-        a = function() b() end
-        b = function() ... end
-      ```
 
 # Design Decisions (need to move to erde website)
 
-## Do not allow multiple assignments at the same time.
+## Do not allow multiple assignment expr at the same time.
 
 This is not too widely used, arguable makes code more difficult to read, and 
 isn't possible to support assignment operators and optional assignments due to
@@ -87,3 +80,7 @@ a, b?.c, d = oneOrTwoReturns(), anotherOneOrTwoReturns()
 ```
 
 This only affects assignment. Multiple _declaractions_ are supported.
+
+## Changing negation to `!`
+
+More standard and `~=` conflicts w/ the bitop `~` assignment operator.
