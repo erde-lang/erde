@@ -1,9 +1,6 @@
 # TODO
 
-- more standard operators
 - fix multi assignment...
-- add block assignment shorthands
-  - ex) `local x = do { ... return result }`
 - erde REPL
 - update syntax highlighting support
   - remove pipe
