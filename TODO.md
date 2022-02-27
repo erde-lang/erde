@@ -1,16 +1,6 @@
 # TODO
 
-- fix multi assignment...
-- erde REPL
-- update syntax highlighting support
-  - remove pipe
-  - add `main`
-  - self shorthand
-  - generic for loop destructuring
-  - goto
-  - standard operators
-  - do block expr
-- update website (port to hugo?)
+- update website
   - remove pipe
   - add `main`
   - self shorthand
@@ -20,11 +10,13 @@
   - multi expression assignment
   - standard operators
   - do block expr
+- shebang
 - add real README
 - release v0.1.0
 
 # v0.2.0
 
+- erde REPL
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
@@ -36,7 +28,13 @@
     - 1. using `continue` or `break` outside a loop block
 - Source maps (for runtime errors when using erde.loader)
 - Bug fixes
-- NO NEW LANGUAGE FEATURES. focus on core improvements, more features later.
+
+# v0.3.0
+
+- TYPES
+- remove closure compilations (ternary, null coalescence, optchain, etc).
+  - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
+  - NOTE: cannot simply use functions w/ params (need conditional execution)
 
 # Long Term TODO
 
@@ -47,36 +45,21 @@
     code in order to avoid closure constructors, which cannot be JIT compiled
 - cache unchanged files?
 - rewrite erde in erde
-- remove closure compilations (ternary, null coalescence, optchain, etc).
-  - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
-  - NOTE: cannot simply use functions w/ params (need conditional execution)
 
 # Uncertain Proposals (need community input)
 
 - macros
 - decorators
 - nested break
-- pipes?
+- pipes
   - included (and even implemented) in original spec. Removed due to awkardness
-  - of functional programming style compared to rest of lua.
+    of functional programming style compared to rest of lua.
+  - favor simple `do {}` exprs
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
   - difficult, maybe impossible? dont know when return will happen?
 
 # Design Decisions (need to move to erde website)
-
-## Do not allow multiple assignment expr at the same time.
-
-This is not too widely used, arguable makes code more difficult to read, and 
-isn't possible to support assignment operators and optional assignments due to
-functions being able to support multiple returns:
-
-```erde
-a, { b }, c += oneOrTwoReturns(), anotherOneOrTwoReturns()
-a, b?.c, d = oneOrTwoReturns(), anotherOneOrTwoReturns()
-```
-
-This only affects assignment. Multiple _declaractions_ are supported.
 
 ## Changing negation to `!`
 
