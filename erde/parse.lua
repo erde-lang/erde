@@ -226,6 +226,8 @@ function ParseCtx:Terminal()
         return node
       end,
     })
+  elseif self.token == 'do' then
+    node = self:DoBlock({ isExpr = true })
   elseif self.token:match('^[.0-9]') then
     node = self:Number()
   elseif self.token:match('^[\'"]$') or self.token:match('^%[[[=]') then

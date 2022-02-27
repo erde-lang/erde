@@ -8,9 +8,12 @@ local DoBlock = { ruleName = 'DoBlock' }
 -- Parse
 -- -----------------------------------------------------------------------------
 
-function DoBlock.parse(ctx)
+function DoBlock.parse(ctx, opts)
   ctx:assert('do')
-  return { body = ctx:Surround('{', '}', ctx.Block) }
+  return {
+    isExpr = opts and opts.isExpr,
+    body = ctx:Surround('{', '}', ctx.Block),
+  }
 end
 
 -- -----------------------------------------------------------------------------
@@ -18,7 +21,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock.compile(ctx, node)
-  return 'do\n' .. ctx:compile(node.body) .. '\nend'
+  if node.isExpr then
+    return '(function() ' .. ctx:compile(node.body) .. ' end)()'
+  else
+    return 'do\n' .. ctx:compile(node.body) .. '\nend'
+  end
 end
 
 -- -----------------------------------------------------------------------------

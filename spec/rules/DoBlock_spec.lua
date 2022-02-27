@@ -12,6 +12,13 @@ describe('DoBlock.parse', function()
       'do { a = 3 }'
     ))
   end)
+  spec('do block expr', function()
+    assert.subtable({
+      exprList = { { ruleName = 'DoBlock' } },
+    }, parse.Declaration(
+      'local x = do { return 1 }'
+    ))
+  end)
 end)
 
 -- -----------------------------------------------------------------------------
@@ -36,6 +43,15 @@ describe('DoBlock.compile', function()
         do {
           local x
           x = 1
+        }
+        return x
+      ]])
+    )
+    assert.run(
+      1,
+      compile.Block([[
+        local x = do {
+          return 1
         }
         return x
       ]])
