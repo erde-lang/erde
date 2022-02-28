@@ -292,6 +292,17 @@ return function(input)
   tokens, numTokens, tokenInfo = {}, 0, {}
   newlines, comments = {}, {}
 
+  if peek(2) == '#!' then
+    token = consume(2)
+
+    while char ~= '\n' do
+      token = token .. consume()
+    end
+
+    commit(token)
+    Newline()
+  end
+
   local ok, errorMsg = pcall(function()
     while char ~= '' do
       Space()

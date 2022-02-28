@@ -6,8 +6,7 @@ local erde = require('erde')
 local inspect = require('inspect')
 require('erde.loader')
 
-local COMPILE_HEADER_TAG = 'ERDE_META'
-local COMPILE_HEADER = '-- ' .. COMPILE_HEADER_TAG .. '\n'
+local COMPILE_FOOTER_TAG = 'ERDE_META'
 
 -- -----------------------------------------------------------------------------
 -- Path Helpers
@@ -182,7 +181,7 @@ local function compileFile(srcFilePath)
   local moduleContents = srcFile:read('*a')
   srcFile:close()
 
-  local compiledModule = COMPILE_HEADER .. erde.compile(moduleContents)
+  local compiledModule = erde.compile(moduleContents)
 
   local destFilePath = srcFilePath:gsub('.erde$', '.lua')
   if outDir ~= nil then
@@ -235,10 +234,10 @@ cleanCmd:flag('--hard')
 
 local function cleanFile(filePath)
   local file = io.open(filePath, 'r')
-  local fileHeader = file:read('*l')
+  local head1, head2 = file:read('*l'), file:read('*l')
   file:close()
   
-  if fileHeader and fileHeader:find(COMPILE_HEADER_TAG) then
+  if (head1 and head1:find(COMPILE_FOOTER_TAG)) or (head2 and head2:find(COMPILE_FOOTER_TAG)) then
     os.remove(filePath)
   end
 end
@@ -252,7 +251,7 @@ local function processCleanCmd()
     for i, cleanDir in ipairs(args.dirs) do
       traverseLuaFiles(cleanDir, excludeDirs, cleanFile)
     end
-  else
+  elseif #includeDirs > 0 then
     for i, includeDir in ipairs(includeDirs) do
       traverseLuaFiles(includeDir, excludeDirs, cleanFile)
     end
@@ -261,6 +260,8 @@ local function processCleanCmd()
       traverseLuaFiles(outDir, {}, cleanFile)
       os.remove(outDir)
     end
+  else
+    traverseLuaFiles('.', excludeDirs, cleanFile)
   end
 end
 
