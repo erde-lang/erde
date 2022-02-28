@@ -1,14 +1,6 @@
 # TODO
 
-- update syntax highlighting support (vscode)
-  - remove pipe
-  - add `main`
-  - self shorthand
-  - generic for loop destructuring
-  - goto
-  - standard operators
-  - do block expr
-- update website (port to hugo?)
+- update website
   - remove pipe
   - add `main`
   - self shorthand
@@ -18,6 +10,7 @@
   - multi expression assignment
   - standard operators
   - do block expr
+- shebang
 - add real README
 - release v0.1.0
 
