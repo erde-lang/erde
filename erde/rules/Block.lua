@@ -15,6 +15,9 @@ function Block.parse(ctx, opts)
   local node = {
     blockDepth = ctx.blockDepth,
 
+    -- Shebang
+    shebang = nil,
+
     -- Table for Continue nodes to register themselves.
     continueNodes = {},
 
@@ -29,6 +32,10 @@ function Block.parse(ctx, opts)
     -- to have more "module-like" behavior prevalent in other languages.
     hoistedNames = {},
   }
+
+  if node.blockDepth == 1 and ctx.token:match('^#!') then
+    node.shebang = ctx:consume()
+  end
 
   repeat
     -- Run this on ever iteration in case nested blocks change values
@@ -109,6 +116,14 @@ end
 
 local function compileBlockStatements(ctx, node)
   local compiledStatements = {}
+
+  if node.shebang then
+    table.insert(compiledStatements, node.shebang)
+  end
+
+  if node.blockDepth == 1 then
+    table.insert(compiledStatements, '-- ERDE_META')
+  end
 
   if #node.hoistedNames > 0 then
     table.insert(

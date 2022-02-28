@@ -10,9 +10,8 @@
   - multi expression assignment
   - standard operators
   - do block expr
-- shebang
-- add real README
 - release v0.1.0
+- add real README
 
 # v0.2.0
 
