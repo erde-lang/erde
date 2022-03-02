@@ -3,7 +3,6 @@
 local argparse = require('argparse')
 local lfs = require('lfs')
 local erde = require('erde')
-local inspect = require('inspect')
 require('erde.loader')
 
 local COMPILE_FOOTER_TAG = 'ERDE_META'
