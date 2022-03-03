@@ -18,7 +18,7 @@ support for other Lua versions may be added in the future.
 - table spread operator (`...`)
 - `continue` keyword
 - try catch statement
-- + more!
+- and more!
 
 ## Installation
 
@@ -28,7 +28,7 @@ The recommended way to install is via [luarocks](https://luarocks.org):
 luarocks install erde
 ```
 
-Alternatively, you can clone this repo and update your Lua path.
+Alternatively, you can clone this repo and update your `$LUA_PATH`.
 
 ## Similar Projects
 
