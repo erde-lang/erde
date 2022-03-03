@@ -7,7 +7,7 @@ description = {
   detailed = [[
     Erde is an expressive language that compiles to Lua. Syntactically it favors 
     symbols over keywords and adds support for many features commonly found in 
-    other programming languages that lua otherwise sacrifices for simplicity.
+    other programming languages that Lua otherwise sacrifices for simplicity.
   ]],
   homepage = 'https://erde-lang.github.io/',
   license = 'MIT',
