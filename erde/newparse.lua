@@ -80,7 +80,10 @@ end
 
 local function branch(token)
   if token == currentToken then
-    return consume()
+    consume()
+    return true
+  else
+    return false
   end
 end
 
@@ -322,9 +325,9 @@ function Assignment()
     idList = List({ rule = Id }),
   }
 
-  if C.BINOP_ASSIGNMENT_BLACKLIST[token] then
-    error('Invalid assignment operator: ' .. token)
-  elseif C.BINOPS[token] then
+  if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
+    error('Invalid assignment operator: ' .. currentToken)
+  elseif C.BINOPS[currentToken] then
     node.op = C.BINOPS[consume()]
   end
 
@@ -469,6 +472,7 @@ end
 
 function Declaration()
   local node = {
+    ruleName = 'Declaration',
     isHoisted = false,
     varList = {},
     exprList = {},
@@ -770,7 +774,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Goto()
-  local node = {}
+  local node = { ruleName = 'Goto' }
 
   if branch('goto') then
     node.variant = 'jump'
@@ -986,7 +990,8 @@ end
 
 function Return()
   expect('return')
-  return Parens({
+
+  local node = Parens({
     allowRecursion = true,
     prioritizeRule = true,
     rule = function()
@@ -997,6 +1002,9 @@ function Return()
       })
     end,
   })
+
+  node.ruleName = 'Return'
+  return node
 end
 
 -- -----------------------------------------------------------------------------
@@ -1125,7 +1133,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function TryCatch()
-  local node = {}
+  local node = { ruleName = 'TryCatch' }
 
   expect('try')
   node.try = Surround('{', '}', Block)
@@ -1145,7 +1153,9 @@ end
 
 function WhileLoop()
   expect('while')
+
   return {
+    ruleName = 'WhileLoop',
     condition = Expr(),
     body = Surround('{', '}', function()
       return Block({ isLoopBlock = true })

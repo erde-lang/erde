@@ -22,6 +22,8 @@ function CompileCtx:compile(node)
     return node
   elseif type(node) ~= 'table' then
     error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
+  elseif type(rules[node.ruleName]) ~= 'table' then
+    error(('Invalid ruleName: %s'):format(node.ruleName))
   end
 
   return rules[node.ruleName].compile(self, node)
