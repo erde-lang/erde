@@ -1,4 +1,4 @@
-local parse = require('erde.newparse')
+local parse = require('erde.parse')
 local compile = require('erde.compile')
 
 return {
