@@ -87,6 +87,17 @@ for opToken, op in pairs(C.BINOPS) do
   op.token = opToken
 end
 
+-- These operators cannot be used w/ operator assignment
+C.BINOP_ASSIGNMENT_BLACKLIST = {
+  ['?'] = true,
+  ['=='] = true,
+  ['~='] = true,
+  ['<='] = true,
+  ['>='] = true,
+  ['<'] = true,
+  ['>'] = true,
+}
+
 -- -----------------------------------------------------------------------------
 -- Lookup Tables
 -- -----------------------------------------------------------------------------
