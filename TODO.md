@@ -1,29 +1,26 @@
 # TODO
 
-- update website
-  - remove pipe
-  - add `main`
-  - self shorthand
-  - generic for loop destructuring
-  - goto
-  - hoisting top block vars
-  - multi expression assignment
-  - standard operators
-  - do block expr
-- add real README
-
-# v0.2.0
-
-- erde REPL
-- Formatting
-  - Rule.format method
-  - cli support `erde format [FILES]`
+- Fix String interpolation bug (interpolated Name gets compiled to string content)
+- collapse compiler to single file
+- remove rules dir
 - more forgiving parser in order to allow for more convenient formatting
   - try to infer common mistakes (ex. missing comma)
   - separate parse errors from bad runtime prevention errors
     - ex. combining `module` w/ `return`, nested `module`, etc. are _technically_ not parsing errors, just errors that we will not crash at runtime.
     - 1. combining `module` w/ `return` or `main`
     - 1. using `continue` or `break` outside a loop block
+
+# v0.2.0
+
+- Formatting
+  - Rule.format method
+  - cli support `erde format [FILES]`
+- officially readd lua5.2+ support?
+  - Not supported initially due to ease + not sure if will take advantage of
+    LuaJIT specific optimizations + bitwise operator awkwardness
+  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
+    code in order to avoid closure constructors, which cannot be JIT compiled
+- erde REPL
 - Source maps (for runtime errors when using erde.loader)
 - Bug fixes
 
@@ -36,11 +33,16 @@
 
 # Long Term TODO
 
-- officially readd lua5.2+ support?
-  - Not supported initially due to ease + not sure if will take advantage of
-    LuaJIT specific optimizations + bitwise operator awkwardness
-  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
-    code in order to avoid closure constructors, which cannot be JIT compiled
+- update website
+  - remove pipe
+  - add `main`
+  - self shorthand
+  - generic for loop destructuring
+  - goto
+  - hoisting top block vars
+  - multi expression assignment
+  - standard operators
+  - do block expr
 - cache unchanged files?
 - rewrite erde in erde
 
