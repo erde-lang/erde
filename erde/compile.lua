@@ -1,5 +1,5 @@
 local C = require('erde.constants')
-local parse = require('erde.parse')
+local parse = require('erde.newparse')
 local rules = require('erde.rules')
 
 -- =============================================================================

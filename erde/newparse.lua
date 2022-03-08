@@ -9,6 +9,7 @@ local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructur
 -- State
 -- =============================================================================
 
+local tokens
 local currentTokenIndex, currentToken
 
 -- Keep track of block depth. Especially useful to know whether we are at
@@ -32,6 +33,19 @@ local moduleBlock = nil
 -- =============================================================================
 -- Helpers
 -- =============================================================================
+
+local function reset(text)
+  -- TODO use other tokenize results
+  tokens = tokenize(text).tokens
+
+  currentTokenIndex = 1
+  currentToken = tokens[1]
+
+  blockDepth = 0
+  isTernaryExpr = false
+  loopBlock = nil
+  moduleBlock = nil
+end
 
 local function backup()
   return {
@@ -1150,18 +1164,47 @@ parseMT.__call = function(self, text)
   return parse.Block(text)
 end
 
--- Allow parsing individual rules
-for ruleName, rule in pairs(rules) do
-  parse[ruleName] = function(text, ...)
-    return rules[ruleName].parse(ParseCtx(text), ...)
-  end
-end
+local subParsers = {
+  -- Rules
+  ArrowFunction = ArrowFunction,
+  Assignment = Assignment,
+  Block = Block,
+  Break = Break,
+  Continue = Continue,
+  Declaration = Declaration,
+  Destructure = Destructure,
+  DoBlock = DoBlock,
+  Expr = Expr,
+  ForLoop = ForLoop,
+  Function = Function,
+  FunctionCall = FunctionCall,
+  Goto = Goto,
+  Id = Id,
+  IfElse = IfElse,
+  OptChain = OptChain,
+  Params = Params,
+  RepeatUntil = RepeatUntil,
+  Return = Return,
+  Self = Self,
+  Spread = Spread,
+  String = String,
+  Table = Table,
+  TryCatch = TryCatch,
+  WhileLoop = WhileLoop,
 
--- Allow parsing individual pseudo rules
-for _, ruleName in pairs({ 'Var', 'Name', 'Number', 'Terminal' }) do
-  parse[ruleName] = function(text, ...)
-    local ctx = ParseCtx(text)
-    return ctx[ruleName](ctx, ...)
+  -- Pseudo-Rules
+  Var = Var,
+  Name = Name,
+  Number = Number,
+  Terminal = Terminal,
+  FunctionCall = FunctionCall,
+  Id = Id,
+}
+
+for name, subParser in pairs(subParsers) do
+  parse[name] = function(text, ...)
+    reset(text)
+    return subParser(...)
   end
 end
 
