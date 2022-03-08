@@ -7,7 +7,7 @@ local say = require('say')
 -- -----------------------------------------------------------------------------
 
 compile = require('erde.compile')
-parse = require('erde.parse')
+parse = require('erde.newparse')
 
 -- -----------------------------------------------------------------------------
 -- Asserts
