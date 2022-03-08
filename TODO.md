@@ -1,5 +1,31 @@
 # TODO
 
+- Formatting
+  - Rule.format method
+  - cli support `erde format [FILES]`
+
+# v0.2.0
+
+- refactor tests
+  - separate parse and compile tests
+  - add resolve tests
+  - add format tests
+- erde REPL
+- Bug fixes
+
+# v0.3.0
+
+- Source maps (for runtime errors when using erde.loader)
+- officially readd 5.1+ support
+  - Not supported initially due to ease + not sure if will take advantage of
+    LuaJIT specific optimizations + bitwise operator awkwardness
+  - default compile to 5.1+ using closure constructors, allow optimizations 
+    depending on compilation target (ex. only LuaJIT)
+    - analyze usage and inject code. In particular, transform logical operations 
+      into if constructs (ex. `local a = b or c ?? d`)
+
+# Long Term TODO
+
 - update website
   - remove pipe
   - add `main`
@@ -10,44 +36,26 @@
   - multi expression assignment
   - standard operators
   - do block expr
-- add real README
-
-# v0.2.0
-
-- erde REPL
-- Formatting
-  - Rule.format method
-  - cli support `erde format [FILES]`
-- more forgiving parser in order to allow for more convenient formatting
-  - try to infer common mistakes (ex. missing comma)
-  - separate parse errors from bad runtime prevention errors
-    - ex. combining `module` w/ `return`, nested `module`, etc. are _technically_ not parsing errors, just errors that we will not crash at runtime.
-    - 1. combining `module` w/ `return` or `main`
-    - 1. using `continue` or `break` outside a loop block
-- Source maps (for runtime errors when using erde.loader)
-- Bug fixes
-
-# v0.3.0
-
-- TYPES
-- remove closure compilations (ternary, null coalescence, optchain, etc).
-  - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
-  - NOTE: cannot simply use functions w/ params (need conditional execution)
-
-# Long Term TODO
-
-- officially readd lua5.2+ support?
-  - Not supported initially due to ease + not sure if will take advantage of
-    LuaJIT specific optimizations + bitwise operator awkwardness
-  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
-    code in order to avoid closure constructors, which cannot be JIT compiled
+  - breaking varargs change (actually spread in table!)
 - cache unchanged files?
 - rewrite erde in erde
+- completion scripts for libraries / environments?
+  - want to provide LSP benefits of statically typed languages w/o static typing
+  - kind of painful, like documentation needs manual tracking
 
 # Uncertain Proposals (need community input)
 
+- array destructure skipping
+  - ex) `local [a, ..., c] = {1, 2, 3, 4, 5}`, (a, c) == (1, 5)
+  - too seldom used??
+- function return params (similar to golang)
+  - ex) function double(t) (doubled = {}) {
+          for _, n in ipairs(t) {
+            table.insert(doubled, n * 2)
+          }
+        }
 - macros
-- decorators
+- python/js like decorators?
 - nested break
 - pipes
   - included (and even implemented) in original spec. Removed due to awkardness
@@ -55,7 +63,7 @@
   - favor simple `do {}` exprs
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
-  - difficult, maybe impossible? dont know when return will happen?
+  - hard to optimize?
 
 # Design Decisions (need to move to erde website)
 

@@ -1,5 +1,3 @@
-local utils = require('erde.utils')
-
 -- -----------------------------------------------------------------------------
 -- Parse
 -- -----------------------------------------------------------------------------
@@ -10,13 +8,17 @@ describe('Function.parse', function()
       variant = 'local',
       names = { 'a' },
     }, parse.Function('local function a() {}'))
+    assert.subtable({
+      variant = 'local',
+      names = { 'a' },
+    }, parse.Function('function a() {}'))
   end)
 
   spec('global function', function()
     assert.subtable({
       variant = 'global',
       names = { 'a' },
-    }, parse.Function('function a() {}'))
+    }, parse.Function('global function a() {}'))
   end)
 
   spec('module function', function()
@@ -25,10 +27,7 @@ describe('Function.parse', function()
         variant = 'module',
         names = { 'a' },
       },
-    }, parse.Block('module function a() {}'))
-    assert.has_error(function()
-      parse.Block('module function a.b() {}')
-    end)
+    }, parse.Module('module function a() {}'))
   end)
 
   spec('main function', function()
@@ -37,10 +36,7 @@ describe('Function.parse', function()
         variant = 'main',
         names = { 'a' },
       },
-    }, parse.Block('main function a() {}'))
-    assert.has_error(function()
-      parse.Block('main function a.b() {}')
-    end)
+    }, parse.Module('main function a() {}'))
   end)
 
   spec('method function', function()
@@ -87,7 +83,7 @@ describe('Function.compile', function()
         }
 
         do {
-          function test() {
+          global function test() {
             return 1
           }
         }
@@ -98,21 +94,27 @@ describe('Function.compile', function()
   end)
 
   spec('module function', function()
-    local testModule = utils.run(compile.Block([[
+    local testModule = runErde(compile.Module([[
       module function test() {
         return 1
       }
     ]]))
     assert.are.equal(1, testModule.test())
+    assert.has_error(function()
+      compile.Module('module function a.b() {}')
+    end)
   end)
 
   spec('main function', function()
-    local testModule = utils.run(compile.Block([[
+    local testModule = runErde(compile.Module([[
       main function test() {
         return 1
       }
     ]]))
     assert.are.equal(1, testModule())
+    assert.has_error(function()
+      compile.Module('main function a.b() {}')
+    end)
   end)
 
   spec('method function', function()

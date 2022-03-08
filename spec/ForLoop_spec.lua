@@ -11,7 +11,9 @@ describe('ForLoop.parse', function()
         '1',
         '2',
       },
-    }, parse.ForLoop('for i = 1, 2 {}'))
+    }, parse.ForLoop(
+      'for i = 1, 2 {}'
+    ))
     assert.subtable({
       variant = 'numeric',
       name = 'i',
@@ -20,13 +22,9 @@ describe('ForLoop.parse', function()
         '2',
         '3',
       },
-    }, parse.ForLoop('for i = 1, 2, 3 {}'))
-    assert.has_error(function()
-      parse.ForLoop('for i = 1 {}')
-    end)
-    assert.has_error(function()
-      parse.ForLoop('for i = 1, 2, 3, 4 {}')
-    end)
+    }, parse.ForLoop(
+      'for i = 1, 2, 3 {}'
+    ))
   end)
 
   spec('generic for loop', function()
@@ -34,12 +32,16 @@ describe('ForLoop.parse', function()
       variant = 'generic',
       varList = { 'a' },
       exprList = { '1' },
-    }, parse.ForLoop('for a in 1 {}'))
+    }, parse.ForLoop(
+      'for a in 1 {}'
+    ))
     assert.subtable({
       variant = 'generic',
       varList = { 'a', 'b' },
       exprList = { '1' },
-    }, parse.ForLoop('for a, b in 1 {}'))
+    }, parse.ForLoop(
+      'for a, b in 1 {}'
+    ))
     assert.subtable({
       variant = 'generic',
       varList = { 'a' },
@@ -47,7 +49,9 @@ describe('ForLoop.parse', function()
         '1',
         '2',
       },
-    }, parse.ForLoop('for a in 1, 2 {}'))
+    }, parse.ForLoop(
+      'for a in 1, 2 {}'
+    ))
     assert.subtable({
       variant = 'generic',
       varList = { 'a', 'b' },
@@ -55,11 +59,15 @@ describe('ForLoop.parse', function()
         '1',
         '2',
       },
-    }, parse.ForLoop('for a, b in 1, 2 {}'))
+    }, parse.ForLoop(
+      'for a, b in 1, 2 {}'
+    ))
     assert.subtable({
       variant = 'generic',
       varList = { { ruleName = 'Destructure' } },
-    }, parse.ForLoop('for [a, b] in myiter() {}'))
+    }, parse.ForLoop(
+      'for [a, b] in myiter() {}'
+    ))
   end)
 end)
 

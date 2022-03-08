@@ -11,9 +11,6 @@ describe('Continue.parse', function()
         }
       ]])
     end)
-    assert.has_error(function()
-      parse.Continue('continue')
-    end)
   end)
 end)
 

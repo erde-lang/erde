@@ -3,11 +3,12 @@ version = '0.1-1'
 rockspec_format = '3.0'
 
 description = {
-  summary = 'A language that compile to Lua.',
+  summary = 'A modern Lua dialect',
   detailed = [[
-    Erde is an expressive language that compiles to Lua. Syntactically it favors 
-    symbols over keywords and adds support for many features commonly found in 
-    other programming languages that Lua otherwise sacrifices for simplicity.
+    Erde is an expressive programming language that compiles to Lua. 
+    Syntactically it favors symbols over keywords and adds support for many 
+    features commonly found in other programming languages that Lua otherwise 
+    sacrifices for simplicity.
   ]],
   homepage = 'https://erde-lang.github.io/',
   license = 'MIT',
