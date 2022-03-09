@@ -440,7 +440,7 @@ end
 
 function Break()
   assert(loopBlock ~= nil, 'Cannot use `break` outside of loop')
-  consume()
+  expect('break')
   return { ruleName = 'Break' }
 end
 
@@ -450,7 +450,7 @@ end
 
 function Continue()
   assert(loopBlock ~= nil, 'Cannot use `continue` outside of loop')
-  consume()
+  expect('continue')
 
   local node = { ruleName = 'Continue' }
   table.insert(loopBlock.continueNodes, node)
