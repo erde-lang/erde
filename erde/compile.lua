@@ -929,6 +929,7 @@ SUB_COMPILERS = {
   Function = Function,
   Goto = Goto,
   IfElse = IfElse,
+  Module = Block,
   OptChain = OptChain,
   Params = Params,
   RepeatUntil = RepeatUntil,

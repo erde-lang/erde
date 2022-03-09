@@ -25,9 +25,9 @@ describe('Function.parse', function()
         variant = 'module',
         names = { 'a' },
       },
-    }, parse.Block('module function a() {}'))
+    }, parse.Module('module function a() {}'))
     assert.has_error(function()
-      parse.Block('module function a.b() {}')
+      parse.Module('module function a.b() {}')
     end)
   end)
 
@@ -37,9 +37,9 @@ describe('Function.parse', function()
         variant = 'main',
         names = { 'a' },
       },
-    }, parse.Block('main function a() {}'))
+    }, parse.Module('main function a() {}'))
     assert.has_error(function()
-      parse.Block('main function a.b() {}')
+      parse.Module('main function a.b() {}')
     end)
   end)
 
@@ -98,7 +98,7 @@ describe('Function.compile', function()
   end)
 
   spec('module function', function()
-    local testModule = utils.run(compile.Block([[
+    local testModule = utils.run(compile.Module([[
       module function test() {
         return 1
       }
@@ -107,7 +107,7 @@ describe('Function.compile', function()
   end)
 
   spec('main function', function()
-    local testModule = utils.run(compile.Block([[
+    local testModule = utils.run(compile.Module([[
       main function test() {
         return 1
       }

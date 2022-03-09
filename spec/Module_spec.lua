@@ -2,29 +2,29 @@
 -- Parse
 -- -----------------------------------------------------------------------------
 
-describe('Block.parse', function()
+describe('Module.parse', function()
   spec('hoisted declarations', function()
     assert.subtable(
       { hoistedNames = { 'x', 'y' } },
-      parse.Block('local x = 1 local y')
+      parse.Module('local x = 1 local y')
     )
     assert.subtable(
       { hoistedNames = { 'x', 'y', 'z' } },
-      parse.Block('local x, y = 1 local z')
+      parse.Module('local x, y = 1 local z')
     )
-    assert.are.equal(0, #parse.Block('if true { local x = 1 }').hoistedNames)
-    assert.are.equal(0, #parse.Block('global x = 1').hoistedNames)
+    assert.are.equal(0, #parse.Module('if true { local x = 1 }').hoistedNames)
+    assert.are.equal(0, #parse.Module('global x = 1').hoistedNames)
   end)
   spec('hoisted functions', function()
     assert.subtable(
       { hoistedNames = { 'test' } },
-      parse.Block('local function test() {}')
+      parse.Module('local function test() {}')
     )
-    assert.are.equal(0, #parse.Block('function test() {}').hoistedNames)
-    assert.are.equal(0, #parse.Block('function a.b() {}').hoistedNames)
+    assert.are.equal(0, #parse.Module('function test() {}').hoistedNames)
+    assert.are.equal(0, #parse.Module('function a.b() {}').hoistedNames)
     assert.are.equal(
       0,
-      #parse.Block('if true { local function test() {} }').hoistedNames
+      #parse.Module('if true { local function test() {} }').hoistedNames
     )
   end)
 end)
@@ -33,11 +33,11 @@ end)
 -- Compile
 -- -----------------------------------------------------------------------------
 
-describe('Break.compile', function()
+describe('Module.compile', function()
   spec('hoisted declarations', function()
     assert.run(
       4,
-      compile.Block([[
+      compile.Module([[
         local function test() {
           return x
         }
@@ -50,7 +50,7 @@ describe('Break.compile', function()
   spec('hoisted functions', function()
     assert.run(
       5,
-      compile.Block([[
+      compile.Module([[
         local function test1() {
           return test2()
         }

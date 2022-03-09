@@ -33,14 +33,14 @@ describe('Declaration.parse', function()
         variant = 'module',
         varList = { 'abc' },
       },
-    }, parse.Block('module abc'))
+    }, parse.Module('module abc'))
     assert.subtable({
       {
         variant = 'module',
         varList = { 'abc' },
         exprList = { '2' },
       },
-    }, parse.Block('module abc = 2'))
+    }, parse.Module('module abc = 2'))
     assert.has_error(function()
       parse.Declaration('if true { module abc }')
     end)
@@ -52,14 +52,14 @@ describe('Declaration.parse', function()
         variant = 'main',
         varList = { 'abc' },
       },
-    }, parse.Block('main abc'))
+    }, parse.Module('main abc'))
     assert.subtable({
       {
         variant = 'main',
         varList = { 'abc' },
         exprList = { '2' },
       },
-    }, parse.Block('main abc = 2'))
+    }, parse.Module('main abc = 2'))
     assert.has_error(function()
       parse.Declaration('if true { main abc }')
     end)
@@ -134,11 +134,11 @@ describe('Declaration.compile', function()
   end)
 
   spec('module declaration', function()
-    assert.run({ a = 1 }, compile.Block('module a = 1'))
+    assert.run({ a = 1 }, compile.Module('module a = 1'))
   end)
 
   spec('main declaration', function()
-    assert.run(1, compile.Block('main a = 1'))
+    assert.run(1, compile.Module('main a = 1'))
   end)
 
   spec('multiple declaration', function()

@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
+local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
 
 -- =============================================================================
 -- State
@@ -10,10 +10,6 @@ local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructur
 
 local tokens
 local currentTokenIndex, currentToken
-
--- Keep track of block depth. Especially useful to know whether we are at
--- the top level for `module` declarations.
-local blockDepth = 0
 
 -- Used to tell other rules whether the current expression is part of the
 -- ternary block. Required to know whether ':' should be parsed exclusively
@@ -40,7 +36,6 @@ local function reset(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
 
-  blockDepth = 0
   isTernaryExpr = false
   loopBlock = nil
   moduleBlock = nil
@@ -50,7 +45,6 @@ local function backup()
   return {
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
-    blockDepth = blockDepth,
     isTernaryExpr = isTernaryExpr,
     loopBlock = loopBlock,
     moduleBlock = moduleBlock,
@@ -60,7 +54,6 @@ end
 local function restore(backup)
   currentTokenIndex = backup.currentTokenIndex
   currentToken = backup.currentToken
-  blockDepth = backup.blockDepth
   isTernaryExpr = backup.isTernaryExpr
   loopBlock = backup.loopBlock
   moduleBlock = backup.moduleBlock
@@ -249,7 +242,7 @@ local function FunctionCall()
   return node
 end
 
-function Id()
+local function Id()
   local node = OptChain()
   local last = node[#node]
 
@@ -260,6 +253,48 @@ function Id()
   end
 
   return node
+end
+
+local function Statement()
+  if currentToken == 'break' then
+    return Break()
+  elseif currentToken == 'continue' then
+    return Continue()
+  elseif currentToken == 'goto' or currentToken == ':' then
+    return Goto()
+  elseif currentToken == 'do' then
+    return DoBlock()
+  elseif currentToken == 'if' then
+    return IfElse()
+  elseif currentToken == 'for' then
+    return ForLoop()
+  elseif currentToken == 'repeat' then
+    return RepeatUntil()
+  elseif currentToken == 'return' then
+    return Return()
+  elseif currentToken == 'try' then
+    return TryCatch()
+  elseif currentToken == 'while' then
+    return WhileLoop()
+  elseif currentToken == 'function' then
+    return Function()
+  elseif
+    currentToken == 'local'
+    or currentToken == 'global'
+    or currentToken == 'module'
+    or currentToken == 'main'
+  then
+    if peek(1) == 'function' then
+      return Function()
+    else
+      return Declaration()
+    end
+  else
+    return Switch({
+      FunctionCall,
+      Assignment,
+    })
+  end
 end
 
 -- =============================================================================
@@ -333,12 +368,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function Block(opts)
-  blockDepth = blockDepth + 1
   opts = opts or {}
+
+  -- TODO: remove me
+  moduleBlock = nil
 
   local node = {
     ruleName = 'Block',
-    blockDepth = blockDepth,
 
     -- Shebang
     shebang = nil,
@@ -357,10 +393,6 @@ function Block(opts)
     hoistedNames = {},
   }
 
-  if node.blockDepth == 1 and currentToken:match('^#!') then
-    node.shebang = consume()
-  end
-
   repeat
     -- Run this on ever iteration in case nested blocks change values
     if opts.isLoopBlock then
@@ -370,53 +402,9 @@ function Block(opts)
       -- Reset loopBlock for function blocks. Break / Continue cannot
       -- traverse these.
       loopBlock = nil
-    elseif node.blockDepth == 1 then
-      moduleBlock = node
-    else
-      moduleBlock = nil
     end
 
-    local statement
-    if currentToken == 'break' then
-      statement = Break()
-    elseif currentToken == 'continue' then
-      statement = Continue()
-    elseif currentToken == 'goto' or currentToken == ':' then
-      statement = Goto()
-    elseif currentToken == 'do' then
-      statement = DoBlock()
-    elseif currentToken == 'if' then
-      statement = IfElse()
-    elseif currentToken == 'for' then
-      statement = ForLoop()
-    elseif currentToken == 'repeat' then
-      statement = RepeatUntil()
-    elseif currentToken == 'return' then
-      statement = Return()
-    elseif currentToken == 'try' then
-      statement = TryCatch()
-    elseif currentToken == 'while' then
-      statement = WhileLoop()
-    elseif currentToken == 'function' then
-      statement = Function()
-    elseif
-      currentToken == 'local'
-      or currentToken == 'global'
-      or currentToken == 'module'
-      or currentToken == 'main'
-    then
-      if peek(1) == 'function' then
-        statement = Function()
-      else
-        statement = Declaration()
-      end
-    else
-      statement = Switch({
-        FunctionCall,
-        Assignment,
-      })
-    end
-
+    local statement = Statement()
     table.insert(node, statement)
   until not statement
 
@@ -430,7 +418,6 @@ function Block(opts)
     end
   end
 
-  blockDepth = blockDepth - 1
   return node
 end
 
@@ -814,6 +801,54 @@ function IfElse()
 end
 
 -- -----------------------------------------------------------------------------
+-- Module
+-- -----------------------------------------------------------------------------
+
+function Module()
+  local node = {
+    ruleName = 'Module',
+
+    -- Table for Continue nodes to register themselves.
+    continueNodes = {},
+
+    -- Table for Declaration and Function nodes to register `module` scope
+    -- variables.
+    moduleNames = {},
+
+    -- Return name for this block. Only valid at the top level.
+    mainName = nil,
+
+    -- Table for all top-level declared names. These are hoisted for convenience
+    -- to have more "module-like" behavior prevalent in other languages.
+    hoistedNames = {},
+  }
+
+  if currentToken:match('^#!') then
+    node.shebang = consume()
+  end
+
+  repeat
+    -- TODO: remove me
+    moduleBlock = node
+
+    local statement = Statement()
+    table.insert(node, statement)
+  until not statement
+
+  if #node.moduleNames > 0 then
+    for i, statement in ipairs(node) do
+      if statement.ruleName == 'Return' then
+        -- Block cannot use both `return` and `module`
+        -- TODO: not good enough! What about conditional return?
+        error()
+      end
+    end
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
 -- OptChain
 -- -----------------------------------------------------------------------------
 
@@ -1183,6 +1218,7 @@ local subParsers = {
   Id = Id,
   IfElse = IfElse,
   OptChain = OptChain,
+  Module = Module,
   Params = Params,
   RepeatUntil = RepeatUntil,
   Return = Return,
