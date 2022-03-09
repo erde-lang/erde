@@ -20,7 +20,7 @@ local function reset()
 end
 
 -- TODO: remove?
-local function compile(node)
+local function compileNode(node)
   if type(node) == 'string' then
     return node
   elseif type(node) ~= 'table' then
@@ -76,7 +76,7 @@ end
 
 -- TODO: rename
 local function compileOptChain(node)
-  local chain = compile(node.base)
+  local chain = compileNode(node.base)
   local optSubChains = {}
 
   for i, chainNode in ipairs(node) do
@@ -90,7 +90,7 @@ local function compileOptChain(node)
     elseif chainNode.variant == 'bracketIndex' then
       -- Space around brackets to avoid long string expressions
       -- [ [=[some string]=] ]
-      chain = ('%s[ %s ]'):format(chain, compile(chainNode.value))
+      chain = ('%s[ %s ]'):format(chain, compileNode(chainNode.value))
     elseif chainNode.variant == 'functionCall' then
       local hasSpread = false
       for i, arg in ipairs(chainNode.value) do
@@ -105,7 +105,7 @@ local function compileOptChain(node)
 
         for i, arg in ipairs(chainNode.value) do
           spreadFields[i] = arg.ruleName == 'Spread' and arg
-            or { value = compile(expr) }
+            or { value = compileNode(expr) }
         end
 
         chain = ('%s(%s(%s))'):format(chain, 'unpack', Spread(spreadFields))
@@ -113,7 +113,7 @@ local function compileOptChain(node)
         local args = {}
 
         for i, arg in ipairs(chainNode.value) do
-          args[#args + 1] = compile(arg)
+          args[#args + 1] = compileNode(arg)
         end
 
         chain = chain .. '(' .. table.concat(args, ',') .. ')'
@@ -139,7 +139,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function ArrowFunction(node)
-  local params = compile(node.params)
+  local params = compileNode(node.params)
   local paramNames = params.names
 
   if node.hasFatArrow then
@@ -148,12 +148,12 @@ function ArrowFunction(node)
 
   local body
   if not node.hasImplicitReturns then
-    body = compile(node.body)
+    body = compileNode(node.body)
   else
     local returns = {}
 
     for i, value in ipairs(node.returns) do
-      returns[i] = compile(value)
+      returns[i] = compileNode(value)
     end
 
     body = 'return ' .. table.concat(returns, ',')
@@ -179,7 +179,7 @@ local function compileRawAssignment(node)
     if type(id) == 'string' then
       table.insert(assignmentNames, id)
     elseif id.ruleName ~= 'OptChain' then
-      table.insert(assignmentNames, compile(id))
+      table.insert(assignmentNames, compileNode(id))
     else
       local optChain = compileOptChain(id)
 
@@ -207,7 +207,7 @@ local function compileRawAssignment(node)
 
   local assignmentExprs = {}
   for _, expr in ipairs(node.exprList) do
-    table.insert(assignmentExprs, compile(expr))
+    table.insert(assignmentExprs, compileNode(expr))
   end
 
   local assignment = ('%s = %s'):format(
@@ -229,7 +229,7 @@ local function compileBinopAssignment(node)
 
   local assignmentExprs = {}
   for _, expr in ipairs(node.exprList) do
-    table.insert(assignmentExprs, compile(expr))
+    table.insert(assignmentExprs, compileNode(expr))
   end
 
   table.insert(
@@ -249,7 +249,7 @@ local function compileBinopAssignment(node)
         id .. ' = ' .. compileBinop(node.op, id, assignmentName)
       )
     elseif id.ruleName ~= 'OptChain' then
-      local compiledId = compile(id)
+      local compiledId = compileNode(id)
       table.insert(
         compiled,
         compiledId .. ' = ' .. compileBinop(node.op, compiledId, assignmentName)
@@ -300,7 +300,7 @@ local function compileBlockStatements(node)
     -- funtion calls.
     --
     -- http://lua-users.org/lists/lua-l/2009-08/msg00543.html
-    table.insert(compiledStatements, compile(statement) .. ';')
+    table.insert(compiledStatements, compileNode(statement) .. ';')
   end
 
   return table.concat(compiledStatements, '\n')
@@ -362,7 +362,7 @@ function Declaration(node)
     if type(var) == 'string' then
       table.insert(nameList, var)
     else
-      local destructure = compile(var)
+      local destructure = compileNode(var)
       table.insert(nameList, destructure.baseName)
       table.insert(compileParts, destructure.compiled)
     end
@@ -374,7 +374,7 @@ function Declaration(node)
     local exprList = {}
 
     for i, expr in ipairs(node.exprList) do
-      table.insert(exprList, compile(expr))
+      table.insert(exprList, compileNode(expr))
     end
 
     table.insert(declarationParts, '=')
@@ -418,7 +418,7 @@ function Destructure(node)
         ('if %s == nil then %s = %s end'):format(
           varName,
           varName,
-          compile(field.default)
+          compileNode(field.default)
         )
       )
     end
@@ -438,9 +438,9 @@ end
 
 function DoBlock(node)
   if node.isExpr then
-    return '(function() ' .. compile(node.body) .. ' end)()'
+    return '(function() ' .. compileNode(node.body) .. ' end)()'
   else
-    return 'do\n' .. compile(node.body) .. '\nend'
+    return 'do\n' .. compileNode(node.body) .. '\nend'
   end
 end
 
@@ -453,7 +453,7 @@ function Expr(node)
   local compiled
 
   if node.variant == 'unop' then
-    local operand = compile(node.operand)
+    local operand = compileNode(node.operand)
 
     if op.token == '~' then
       compiled = ('require("bit").bnot(%1)'):format(operand)
@@ -463,8 +463,8 @@ function Expr(node)
       compiled = op.token .. operand
     end
   elseif node.variant == 'binop' then
-    local lhs = compile(node.lhs)
-    local rhs = compile(node.rhs)
+    local lhs = compileNode(node.lhs)
+    local rhs = compileNode(node.rhs)
 
     if op.token == '?' then
       compiled = table.concat({
@@ -475,7 +475,7 @@ function Expr(node)
         'return %s',
         'end',
         'end)()',
-      }, '\n'):format(lhs, compile(node.ternaryExpr), rhs)
+      }, '\n'):format(lhs, compileNode(node.ternaryExpr), rhs)
     else
       compiled = compileBinop(op, lhs, rhs)
     end
@@ -496,13 +496,13 @@ function ForLoop(node)
   if node.variant == 'numeric' then
     local parts = {}
     for i, part in ipairs(node.parts) do
-      table.insert(parts, compile(part))
+      table.insert(parts, compileNode(part))
     end
 
     return ('for %s=%s do\n%s\nend'):format(
-      compile(node.name),
+      compileNode(node.name),
       table.concat(parts, ','),
-      compile(node.body)
+      compileNode(node.body)
     )
   else
     local prebody = {}
@@ -510,24 +510,24 @@ function ForLoop(node)
     local nameList = {}
     for i, var in ipairs(node.varList) do
       if type(var) == 'table' then
-        local destructure = compile(var)
+        local destructure = compileNode(var)
         nameList[i] = destructure.baseName
         table.insert(prebody, destructure.compiled)
       else
-        nameList[i] = compile(var)
+        nameList[i] = compileNode(var)
       end
     end
 
     local exprList = {}
     for i, expr in ipairs(node.exprList) do
-      exprList[i] = compile(expr)
+      exprList[i] = compileNode(expr)
     end
 
     return ('for %s in %s do\n%s\n%s\nend'):format(
       table.concat(nameList, ','),
       table.concat(exprList, ','),
       table.concat(prebody, '\n'),
-      compile(node.body)
+      compileNode(node.body)
     )
   end
 end
@@ -537,7 +537,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Function(node)
-  local params = compile(node.params)
+  local params = compileNode(node.params)
 
   local methodName
   if node.isMethod then
@@ -550,7 +550,7 @@ function Function(node)
     methodName and ':' .. methodName or '',
     table.concat(params.names, ','),
     params.prebody,
-    compile(node.body)
+    compileNode(node.body)
   )
 end
 
@@ -572,21 +572,21 @@ end
 
 function IfElse(node)
   local compileParts = {
-    'if ' .. compile(node.ifNode.condition) .. ' then',
-    compile(node.ifNode.body),
+    'if ' .. compileNode(node.ifNode.condition) .. ' then',
+    compileNode(node.ifNode.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
     table.insert(
       compileParts,
-      'elseif ' .. compile(elseifNode.condition) .. ' then'
+      'elseif ' .. compileNode(elseifNode.condition) .. ' then'
     )
-    table.insert(compileParts, compile(elseifNode.body))
+    table.insert(compileParts, compileNode(elseifNode.body))
   end
 
   if node.elseNode then
     table.insert(compileParts, 'else')
-    table.insert(compileParts, compile(node.elseNode.body))
+    table.insert(compileParts, compileNode(node.elseNode.body))
   end
 
   table.insert(compileParts, 'end')
@@ -674,13 +674,13 @@ function Params(node)
     elseif type(param.value) == 'string' then
       name = param.value
     else
-      destructure = compile(param.value)
+      destructure = compileNode(param.value)
       name = destructure.baseName
     end
 
     if param.default then
       table.insert(prebody, 'if ' .. name .. ' == nil then')
-      table.insert(prebody, name .. ' = ' .. compile(param.default))
+      table.insert(prebody, name .. ' = ' .. compileNode(param.default))
       table.insert(prebody, 'end')
     end
 
@@ -700,8 +700,8 @@ end
 
 function RepeatUntil(node)
   return ('repeat\n%s\nuntil %s'):format(
-    compile(node.body),
-    compile(node.condition)
+    compileNode(node.body),
+    compileNode(node.condition)
   )
 end
 
@@ -713,7 +713,7 @@ function Return(node)
   local returnValues = {}
 
   for i, returnValue in ipairs(node) do
-    returnValues[i] = compile(returnValue)
+    returnValues[i] = compileNode(returnValue)
   end
 
   return 'return ' .. table.concat(returnValues, ',')
@@ -752,7 +752,7 @@ function Spread(fields)
       table.insert(
         compileParts,
         table.concat({
-          'local ' .. spreadTmpName .. ' = ' .. compile(field.value),
+          'local ' .. spreadTmpName .. ' = ' .. compileNode(field.value),
           'for key, value in pairs(' .. spreadTmpName .. ') do',
           'if type(key) == "number" then',
           ('%s[%s + key] = value'):format(tableVar, lenVar),
@@ -812,7 +812,7 @@ function String(node)
   for i, capture in ipairs(node) do
     compileParts[i] = type(capture) == 'string'
         and openingChar .. capture .. closingChar
-      or 'tostring(' .. compile(capture) .. ')'
+      or 'tostring(' .. compileNode(capture) .. ')'
   end
 
   return table.concat(compileParts, '..')
@@ -843,10 +843,10 @@ function Table(node)
         if field.variant == 'nameKey' then
           spreadField.key = '"' .. field.key .. '"'
         elseif field.variant ~= 'numberKey' then
-          spreadField.key = compile(field.key)
+          spreadField.key = compileNode(field.key)
         end
 
-        spreadField.value = compile(field.value)
+        spreadField.value = compileNode(field.value)
         spreadFields[i] = spreadField
       end
     end
@@ -859,13 +859,13 @@ function Table(node)
       local fieldPart
 
       if field.variant == 'nameKey' then
-        fieldPart = field.key .. ' = ' .. compile(field.value)
+        fieldPart = field.key .. ' = ' .. compileNode(field.value)
       elseif field.variant == 'numberKey' then
-        fieldPart = compile(field.value)
+        fieldPart = compileNode(field.value)
       elseif field.variant == 'exprKey' then
         fieldPart = ('[%s] = %s'):format(
-          compile(field.key),
-          compile(field.value)
+          compileNode(field.key),
+          compileNode(field.value)
         )
       end
 
@@ -888,14 +888,14 @@ function TryCatch(node)
     ('local %s, %s = pcall(function() %s end)'):format(
       okName,
       errorName,
-      compile(node.try)
+      compileNode(node.try)
     ),
     'if ' .. okName .. ' == false then',
     not node.errorName and '' or ('local %s = %s'):format(
       node.errorName,
       errorName
     ),
-    compile(node.catch),
+    compileNode(node.catch),
     'end',
   }, '\n')
 end
@@ -906,8 +906,8 @@ end
 
 function WhileLoop(node)
   return ('while %s do\n%s\nend'):format(
-    compile(node.condition),
-    compile(node.body)
+    compileNode(node.condition),
+    compileNode(node.body)
   )
 end
 
