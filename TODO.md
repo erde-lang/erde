@@ -1,8 +1,7 @@
 # TODO
 
 - Fix String interpolation bug (interpolated Name gets compiled to string content)
-- collapse compiler to single file
-- remove rules dir
+- Fix parens compilation
 - more forgiving parser in order to allow for more convenient formatting
   - try to infer common mistakes (ex. missing comma)
   - separate parse errors from bad runtime prevention errors
