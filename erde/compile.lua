@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local parse = require('erde.parse')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
+local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -294,21 +294,6 @@ end
 local function compileBlockStatements(node)
   local compiledStatements = {}
 
-  if node.shebang then
-    table.insert(compiledStatements, node.shebang)
-  end
-
-  if node.blockDepth == 1 then
-    table.insert(compiledStatements, '-- ERDE_META')
-  end
-
-  if #node.hoistedNames > 0 then
-    table.insert(
-      compiledStatements,
-      'local ' .. table.concat(node.hoistedNames, ',')
-    )
-  end
-
   for _, statement in ipairs(node) do
     -- As of January 5, 2022, we use a lot of iife statements in compiled code.
     -- This semicolon removes Lua's ambiguous syntax error when using iife by
@@ -333,21 +318,6 @@ function Block(node)
       compileBlockStatements(node),
       continueGotoLabel
     )
-  elseif #node.moduleNames > 0 then
-    local moduleTableElements = {}
-    for i, moduleName in ipairs(node.moduleNames) do
-      moduleTableElements[i] = moduleName .. '=' .. moduleName
-    end
-
-    return table.concat({
-      compileBlockStatements(node),
-      'return { ' .. table.concat(moduleTableElements, ',') .. ' }',
-    }, '\n')
-  elseif node.mainName ~= nil then
-    return table.concat({
-      compileBlockStatements(node),
-      'return ' .. node.mainName,
-    }, '\n')
   else
     return compileBlockStatements(node)
   end
@@ -621,6 +591,44 @@ function IfElse(node)
 
   table.insert(compileParts, 'end')
   return table.concat(compileParts, '\n')
+end
+
+-- -----------------------------------------------------------------------------
+-- Module
+-- -----------------------------------------------------------------------------
+
+function Module(node)
+  local compiled = {}
+
+  if node.shebang then
+    table.insert(compiled, node.shebang)
+  end
+
+  table.insert(compiled, '-- ERDE_META')
+
+  if #node.hoistedNames > 0 then
+    table.insert(compiled, 'local ' .. table.concat(node.hoistedNames, ','))
+  end
+
+  if #node.moduleNames > 0 then
+    local moduleTableElements = {}
+    for i, moduleName in ipairs(node.moduleNames) do
+      moduleTableElements[i] = moduleName .. '=' .. moduleName
+    end
+
+    table.insert(compiled, compileBlockStatements(node))
+    table.insert(
+      compiled,
+      'return { ' .. table.concat(moduleTableElements, ',') .. ' }'
+    )
+  elseif node.mainName ~= nil then
+    table.insert(compiled, compileBlockStatements(node))
+    table.insert(compiled, 'return ' .. node.mainName)
+  else
+    table.insert(compiled, compileBlockStatements(node))
+  end
+
+  return table.concat(compiled, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -929,7 +937,7 @@ SUB_COMPILERS = {
   Function = Function,
   Goto = Goto,
   IfElse = IfElse,
-  Module = Block,
+  Module = Module,
   OptChain = OptChain,
   Params = Params,
   RepeatUntil = RepeatUntil,

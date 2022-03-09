@@ -376,21 +376,8 @@ function Block(opts)
   local node = {
     ruleName = 'Block',
 
-    -- Shebang
-    shebang = nil,
-
     -- Table for Continue nodes to register themselves.
     continueNodes = {},
-    -- Table for Declaration and Function nodes to register `module` scope
-    -- variables.
-    moduleNames = {},
-
-    -- Return name for this block. Only valid at the top level.
-    mainName = nil,
-
-    -- Table for all top-level declared names. These are hoisted for convenience
-    -- to have more "module-like" behavior prevalent in other languages.
-    hoistedNames = {},
   }
 
   repeat
@@ -407,16 +394,6 @@ function Block(opts)
     local statement = Statement()
     table.insert(node, statement)
   until not statement
-
-  if #node.moduleNames > 0 then
-    for i, statement in ipairs(node) do
-      if statement.ruleName == 'Return' then
-        -- Block cannot use both `return` and `module`
-        -- TODO: not good enough! What about conditional return?
-        error()
-      end
-    end
-  end
 
   return node
 end
@@ -807,9 +784,6 @@ end
 function Module()
   local node = {
     ruleName = 'Module',
-
-    -- Table for Continue nodes to register themselves.
-    continueNodes = {},
 
     -- Table for Declaration and Function nodes to register `module` scope
     -- variables.
