@@ -118,29 +118,29 @@ local function Switch(rules)
   end
 end
 
-local function Surround(openChar, closeChar, rule)
+local function Surround(openChar, closeChar, parse)
   expect(openChar)
-  local capture = rule()
+  local node = parse()
   expect(closeChar)
-  return capture
+  return node
 end
 
 local function Parens(opts)
-  if opts.demand or currentToken == '(' then
+  if currentToken ~= '(' and not opts.demand then
+    return opts.parse()
+  else
     opts.demand = false
 
     if opts.prioritizeRule then
-      local node = Try(opts.rule)
+      local node = Try(opts.parse)
       if node then
         return node
       end
     end
 
     return Surround('(', ')', function()
-      return opts.allowRecursion and Parens(opts) or opts.rule()
+      return opts.allowRecursion and Parens(opts) or opts.parse()
     end)
-  else
-    return opts.rule()
   end
 end
 
@@ -149,18 +149,12 @@ local function List(opts)
   local hasTrailingComma = false
 
   repeat
-    local node = Try(opts.rule)
+    local node = Try(opts.parse)
     if not node then
       break
     end
 
-    if currentToken ~= ',' then
-      hasTrailingComma = false
-    else
-      consume()
-      hasTrailingComma = true
-    end
-
+    hasTrailingComma = branch(',')
     table.insert(list, node)
   until not hasTrailingComma
 
@@ -296,13 +290,12 @@ function ArrowFunction()
     end)
   elseif currentToken == '(' then
     node.hasImplicitReturns = true
-    -- Only allow multiple implicit returns w/ parentheses
     node.returns = Parens({
       allowRecursion = true,
-      rule = function()
+      parse = function()
         return List({
           allowTrailingComma = true,
-          rule = Expr,
+          parse = Expr,
         })
       end,
     })
@@ -321,7 +314,7 @@ end
 function Assignment()
   local node = {
     ruleName = 'Assignment',
-    idList = List({ rule = Id }),
+    idList = List({ parse = Id }),
   }
 
   if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
@@ -331,7 +324,7 @@ function Assignment()
   end
 
   expect('=')
-  node.exprList = List({ rule = Expr })
+  node.exprList = List({ parse = Expr })
   return node
 end
 
@@ -352,7 +345,6 @@ function Block(opts)
 
     -- Table for Continue nodes to register themselves.
     continueNodes = {},
-
     -- Table for Declaration and Function nodes to register `module` scope
     -- variables.
     moduleNames = {},
@@ -491,7 +483,7 @@ function Declaration()
     error('Missing declaration scope')
   end
 
-  node.varList = List({ rule = Var })
+  node.varList = List({ parse = Var })
 
   if node.variant == 'main' then
     if
@@ -531,7 +523,7 @@ function Declaration()
   end
 
   if branch('=') then
-    node.exprList = List({ rule = Expr })
+    node.exprList = List({ parse = Expr })
   end
 
   return node
@@ -559,7 +551,7 @@ local function parseNumberKeyDestructs()
   return Surround('[', ']', function()
     return List({
       allowTrailingComma = true,
-      rule = function()
+      parse = function()
         local destruct = parseDestruct()
         destruct.variant = 'numberDestruct'
         return destruct
@@ -575,7 +567,7 @@ function Destructure()
     or Surround('{', '}', function()
       return List({
         allowTrailingComma = true,
-        rule = function()
+        parse = function()
           if currentToken == '[' then
             return parseNumberKeyDestructs()
           else
@@ -671,7 +663,7 @@ function ForLoop()
   if branch('=') then
     node.variant = 'numeric'
     node.name = firstName
-    node.parts = List({ rule = Expr })
+    node.parts = List({ parse = Expr })
 
     if type(firstName) == 'table' then
       error('Cannot use destructure in numeric for loop')
@@ -689,7 +681,7 @@ function ForLoop()
     end
 
     expect('in')
-    node.exprList = List({ rule = Expr })
+    node.exprList = List({ parse = Expr })
   end
 
   node.body = Surround('{', '}', function()
@@ -862,11 +854,11 @@ function OptChain()
       chain.variant = 'functionCall'
       chain.value = Parens({
         demand = true,
-        rule = function()
+        parse = function()
           return List({
             allowEmpty = true,
             allowTrailingComma = true,
-            rule = function()
+            parse = function()
               return Switch({
                 -- Spread must be before Expr, otherwise we will parse the
                 -- spread as varargs!
@@ -929,11 +921,11 @@ function Params(opts)
   else
     params = Parens({
       demand = true,
-      rule = function()
+      parse = function()
         local node, hasTrailingComma = List({
           allowEmpty = true,
           allowTrailingComma = true,
-          rule = function()
+          parse = function()
             local param = { value = Var() }
 
             if param and branch('=') then
@@ -993,11 +985,11 @@ function Return()
   local node = Parens({
     allowRecursion = true,
     prioritizeRule = true,
-    rule = function()
+    parse = function()
       return List({
         allowEmpty = true,
         allowTrailingComma = true,
-        rule = Expr,
+        parse = Expr,
       })
     end,
   })
@@ -1110,7 +1102,7 @@ function Table()
     return List({
       allowEmpty = true,
       allowTrailingComma = true,
-      rule = function()
+      parse = function()
         return Switch({
           parseExprKeyField,
           parseNameKeyField,
