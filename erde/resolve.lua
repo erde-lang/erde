@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 
 -- Foward declare rules
 local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
-local SUB_COMPILERS
+local SUB_RESOLVERS
 
 -- =============================================================================
 -- State
@@ -14,7 +14,7 @@ local blockDepth
 
 -- Keeps track of the top level Block. This is used to register module
 -- nodes when using the 'module' scope.
-local moduleBlock = nil
+local moduleNode = nil
 
 -- =============================================================================
 -- Helpers
@@ -23,6 +23,25 @@ local moduleBlock = nil
 local function reset(node)
   nodeIdCounter = 1
   blockDepth = 0
+  moduleNode = nil
+end
+
+local function resolveNode(node)
+  if type(SUB_RESOLVERS[node.ruleName]) == 'function' then
+    SUB_RESOLVERS[node.ruleName](node)
+  end
+end
+
+local function resolveTree(tree)
+  for key, value in pairs(tree) do
+    if type(value) == 'table' then
+      if value.ruleName ~= nil then
+        resolveNode(value)
+      else
+        resolveTree(value)
+      end
+    end
+  end
 end
 
 -- =============================================================================
@@ -54,6 +73,8 @@ function Block(node)
 
   for _, statement in ipairs(node) do
   end
+
+  blockDepth = blockDepth - 1
 end
 
 -- -----------------------------------------------------------------------------
@@ -73,9 +94,46 @@ function Continue(node) end
 -- -----------------------------------------------------------------------------
 
 function Declaration(node)
-  if node.variant == 'module' then
+  if
+    blockDepth > 0 and (node.variant == 'module' or node.variant == 'main')
+  then
+    error(node.variant .. ' declarations must appear at the top level')
+  end
+
+  if node.variant == 'main' then
+    if
+      #node.varList > 1
+      or type(node.varList[1]) ~= 'string'
+      or moduleNode.mainName ~= nil
+    then
+      error('Cannot have multiple `main` declarations')
+    end
+
+    moduleBlock.mainName = node.varList[1]
+  end
+
+  if blockDepth == 0 and node.variant ~= 'global' then
+    node.isHoisted = true
+
+    local nameList = {}
+    for _, var in ipairs(node.varList) do
+      if type(var) == 'string' then
+        table.insert(nameList, var)
+      else
+        for _, destruct in ipairs(var) do
+          table.insert(nameList, destruct.alias or destruct.name)
+        end
+      end
+    end
+
     for _, name in ipairs(nameList) do
-      table.insert(moduleBlock.moduleNames, name)
+      table.insert(moduleNode.hoistedNames, name)
+    end
+
+    if node.variant == 'module' then
+      for _, name in ipairs(nameList) do
+        table.insert(moduleNode.exportNames, name)
+      end
     end
   end
 end
@@ -121,6 +179,26 @@ function Goto(node) end
 -- -----------------------------------------------------------------------------
 
 function IfElse(node) end
+
+-- -----------------------------------------------------------------------------
+-- Module
+-- -----------------------------------------------------------------------------
+
+function Module(node)
+  moduleNode = node
+
+  resolveTree(node)
+
+  if #node.exportNames > 0 then
+    for i, statement in ipairs(node) do
+      if statement.ruleName == 'Return' then
+        -- Block cannot use both `return` and `module`
+        -- TODO: not good enough! What about conditional return?
+        error()
+      end
+    end
+  end
+end
 
 -- -----------------------------------------------------------------------------
 -- OptChain
@@ -183,17 +261,17 @@ function TryCatch(node) end
 function WhileLoop(node) end
 
 -- =============================================================================
--- Compile
+-- Resolve
 -- =============================================================================
 
-local compile, compileMT = {}, {}
-setmetatable(compile, compileMT)
+local resolve, resolveMT = {}, {}
+setmetatable(resolve, resolveMT)
 
-compileMT.__call = function(self, text)
-  return compile.Block(text)
+resolveMT.__call = function(self, ast)
+  return resolve.Module(ast)
 end
 
-SUB_COMPILERS = {
+SUB_RESOLVERS = {
   -- Rules
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
@@ -208,6 +286,7 @@ SUB_COMPILERS = {
   Function = Function,
   Goto = Goto,
   IfElse = IfElse,
+  Module = Module,
   OptChain = OptChain,
   Params = Params,
   RepeatUntil = RepeatUntil,
@@ -228,12 +307,11 @@ SUB_COMPILERS = {
   Id = OptChain,
 }
 
-for name, subCompiler in pairs(SUB_COMPILERS) do
-  compile[name] = function(text, ...)
-    local ast = parse[name](text, ...)
+for name, subResolver in pairs(SUB_RESOLVERS) do
+  resolve[name] = function(ast)
     reset()
-    return subCompiler(ast)
+    return subResolver(ast)
   end
 end
 
-return compile
+return resolve

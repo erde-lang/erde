@@ -433,58 +433,18 @@ function Declaration()
     exprList = {},
   }
 
-  if branch('local') then
-    node.variant = 'local'
-  elseif branch('global') then
-    node.variant = 'global'
-  elseif currentToken == 'module' or currentToken == 'main' then
-    if not moduleBlock then
-      error(currentToken .. ' declarations cannot be nested')
-    end
-
+  if
+    currentToken == 'local'
+    or currentToken == 'global'
+    or currentToken == 'module'
+    or currentToken == 'main'
+  then
     node.variant = consume()
   else
     error('Missing declaration scope')
   end
 
   node.varList = List({ parse = Var })
-
-  if node.variant == 'main' then
-    if
-      #node.varList > 1
-      or type(node.varList[1]) ~= 'string'
-      or moduleBlock.mainName ~= nil
-    then
-      error('Cannot have multiple main declarations')
-    end
-
-    moduleBlock.mainName = node.varList[1]
-  end
-
-  if moduleBlock and node.variant ~= 'global' then
-    node.isHoisted = true
-    local nameList = {}
-
-    for _, var in ipairs(node.varList) do
-      if type(var) == 'string' then
-        table.insert(nameList, var)
-      else
-        for _, destruct in ipairs(var) do
-          table.insert(nameList, destruct.alias or destruct.name)
-        end
-      end
-    end
-
-    for _, name in ipairs(nameList) do
-      table.insert(moduleBlock.hoistedNames, name)
-    end
-
-    if node.variant == 'module' then
-      for _, name in ipairs(nameList) do
-        table.insert(moduleBlock.moduleNames, name)
-      end
-    end
-  end
 
   if branch('=') then
     node.exprList = List({ parse = Expr })
@@ -707,7 +667,7 @@ function Function()
 
       moduleBlock.mainName = node.names[1]
     else
-      table.insert(moduleBlock.moduleNames, node.names[1])
+      table.insert(moduleBlock.exportNames, node.names[1])
     end
   end
 
@@ -787,7 +747,7 @@ function Module()
 
     -- Table for Declaration and Function nodes to register `module` scope
     -- variables.
-    moduleNames = {},
+    exportNames = {},
 
     -- Return name for this block. Only valid at the top level.
     mainName = nil,
@@ -808,16 +768,6 @@ function Module()
     local statement = Statement()
     table.insert(node, statement)
   until not statement
-
-  if #node.moduleNames > 0 then
-    for i, statement in ipairs(node) do
-      if statement.ruleName == 'Return' then
-        -- Block cannot use both `return` and `module`
-        -- TODO: not good enough! What about conditional return?
-        error()
-      end
-    end
-  end
 
   return node
 end
@@ -1171,7 +1121,7 @@ local parse, parseMT = {}, {}
 setmetatable(parse, parseMT)
 
 parseMT.__call = function(self, text)
-  return parse.Block(text)
+  return parse.Module(text)
 end
 
 local subParsers = {

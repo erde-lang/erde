@@ -1,5 +1,6 @@
 local C = require('erde.constants')
 local parse = require('erde.parse')
+local resolve = require('erde.resolve')
 
 -- Foward declare rules
 local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
@@ -610,9 +611,9 @@ function Module(node)
     table.insert(compiled, 'local ' .. table.concat(node.hoistedNames, ','))
   end
 
-  if #node.moduleNames > 0 then
+  if #node.exportNames > 0 then
     local moduleTableElements = {}
-    for i, moduleName in ipairs(node.moduleNames) do
+    for i, moduleName in ipairs(node.exportNames) do
       moduleTableElements[i] = moduleName .. '=' .. moduleName
     end
 
@@ -919,7 +920,7 @@ local compile, compileMT = {}, {}
 setmetatable(compile, compileMT)
 
 compileMT.__call = function(self, text)
-  return compile.Block(text)
+  return compile.Module(text)
 end
 
 SUB_COMPILERS = {
@@ -959,9 +960,13 @@ SUB_COMPILERS = {
 }
 
 for name, subCompiler in pairs(SUB_COMPILERS) do
-  compile[name] = function(text, ...)
-    local ast = parse[name](text, ...)
+  compile[name] = function(textOrAst, ...)
+    local ast = type(textOrAst) == 'string' and parse[name](textOrAst, ...)
+      or textOrAst
+
+    resolve[name](ast)
     reset()
+
     return subCompiler(ast)
   end
 end

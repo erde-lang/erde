@@ -1,9 +1,11 @@
 local parse = require('erde.parse')
+local resolve = require('erde.resolve')
 local compile = require('erde.compile')
 
 return {
   tokenize = require('erde.tokenize'),
   parse = parse,
+  resolve = resolve,
   compile = compile,
   run = function(text)
     local source = compile(text)
