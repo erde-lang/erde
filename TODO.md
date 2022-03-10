@@ -8,6 +8,7 @@
     - ex. combining `module` w/ `return`, nested `module`, etc. are _technically_ not parsing errors, just errors that we will not crash at runtime.
     - 1. combining `module` w/ `return` or `main`
     - 1. using `continue` or `break` outside a loop block
+- make functions local by default!
 - Fix String interpolation compilation bug (interpolated Name gets compiled to string content)
 - Fix parens compilation
 

@@ -16,9 +16,17 @@ local blockDepth
 -- nodes when using the 'module' scope.
 local moduleNode = nil
 
+-- Keeps track of the Block body of the closest loop ancestor (ForLoop,
+-- RepeatUntil, WhileLoop). This is used to validate and link Break and
+-- Continue statements.
+local loopBlock = nil
+
 -- =============================================================================
 -- Helpers
 -- =============================================================================
+
+-- Forward declare
+local resolveNode, resolveTree
 
 local function reset(node)
   nodeIdCounter = 1
@@ -26,13 +34,15 @@ local function reset(node)
   moduleNode = nil
 end
 
-local function resolveNode(node)
+function resolveNode(node)
   if type(SUB_RESOLVERS[node.ruleName]) == 'function' then
     SUB_RESOLVERS[node.ruleName](node)
+  else
+    resolveTree(node)
   end
 end
 
-local function resolveTree(tree)
+function resolveTree(tree)
   for key, value in pairs(tree) do
     if type(value) == 'table' then
       if value.ruleName ~= nil then
@@ -56,13 +66,14 @@ end
 -- ArrowFunction
 -- -----------------------------------------------------------------------------
 
-function ArrowFunction(node) end
-
--- -----------------------------------------------------------------------------
--- Assignment
--- -----------------------------------------------------------------------------
-
-function Assignment(node) end
+function ArrowFunction(node)
+  -- Reset loopBlock for function blocks. Break / Continue cannot
+  -- traverse these.
+  local loopBlockBackup = loopBlock
+  loopBlock = nil
+  resolveTree(node)
+  loopBlock = loopBlockBackup
+end
 
 -- -----------------------------------------------------------------------------
 -- Block
@@ -81,13 +92,18 @@ end
 -- Break
 -- -----------------------------------------------------------------------------
 
-function Break(node) end
+function Break(node)
+  assert(loopBlock ~= nil, 'Cannot use `break` outside of loop')
+end
 
 -- -----------------------------------------------------------------------------
 -- Continue
 -- -----------------------------------------------------------------------------
 
-function Continue(node) end
+function Continue(node)
+  assert(loopBlock ~= nil, 'Cannot use `continue` outside of loop')
+  table.insert(loopBlock.continueNodes, node)
+end
 
 -- -----------------------------------------------------------------------------
 -- Declaration
@@ -109,7 +125,7 @@ function Declaration(node)
       error('Cannot have multiple `main` declarations')
     end
 
-    moduleBlock.mainName = node.varList[1]
+    moduleNode.mainName = node.varList[1]
   end
 
   if blockDepth == 0 and node.variant ~= 'global' then
@@ -139,46 +155,27 @@ function Declaration(node)
 end
 
 -- -----------------------------------------------------------------------------
--- Destructure
--- -----------------------------------------------------------------------------
-
-function Destructure(node) end
-
--- -----------------------------------------------------------------------------
--- DoBlock
--- -----------------------------------------------------------------------------
-
-function DoBlock(node) end
-
--- -----------------------------------------------------------------------------
--- Expr
--- -----------------------------------------------------------------------------
-
-function Expr(node) end
-
--- -----------------------------------------------------------------------------
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop(node) end
+function ForLoop(node)
+  loopBlock = node.body
+  node.body.continueNodes = {}
+  resolveTree(node)
+end
 
 -- -----------------------------------------------------------------------------
 -- Function
 -- -----------------------------------------------------------------------------
 
-function Function(node) end
-
--- -----------------------------------------------------------------------------
--- Goto
--- -----------------------------------------------------------------------------
-
-function Goto(node) end
-
--- -----------------------------------------------------------------------------
--- IfElse
--- -----------------------------------------------------------------------------
-
-function IfElse(node) end
+function Function(node)
+  -- Reset loopBlock for function blocks. Break / Continue cannot
+  -- traverse these.
+  local loopBlockBackup = loopBlock
+  loopBlock = nil
+  resolveTree(node)
+  loopBlock = loopBlockBackup
+end
 
 -- -----------------------------------------------------------------------------
 -- Module
@@ -201,64 +198,24 @@ function Module(node)
 end
 
 -- -----------------------------------------------------------------------------
--- OptChain
--- -----------------------------------------------------------------------------
-
-function OptChain(node) end
-
--- -----------------------------------------------------------------------------
--- Params
--- -----------------------------------------------------------------------------
-
-function Params(node) end
-
--- -----------------------------------------------------------------------------
 -- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-function RepeatUntil(node) end
-
--- -----------------------------------------------------------------------------
--- Return
--- -----------------------------------------------------------------------------
-
-function Return(node) end
-
--- -----------------------------------------------------------------------------
--- Self
--- -----------------------------------------------------------------------------
-
-function Self(node) end
-
--- -----------------------------------------------------------------------------
--- Spread
--- -----------------------------------------------------------------------------
-
-function Spread(fields) end
-
--- -----------------------------------------------------------------------------
--- String
--- -----------------------------------------------------------------------------
-
-function String(node) end
-
--- -----------------------------------------------------------------------------
--- Table
--- -----------------------------------------------------------------------------
-
-function Table(node) end
-
--- -----------------------------------------------------------------------------
--- TryCatch
--- -----------------------------------------------------------------------------
-
-function TryCatch(node) end
+function RepeatUntil(node)
+  loopBlock = node.body
+  node.body.continueNodes = {}
+  resolveTree(node)
+end
 
 -- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
-function WhileLoop(node) end
+function WhileLoop(node)
+  loopBlock = node.body
+  node.body.continueNodes = {}
+  resolveTree(node)
+end
 
 -- =============================================================================
 -- Resolve
@@ -268,7 +225,8 @@ local resolve, resolveMT = {}, {}
 setmetatable(resolve, resolveMT)
 
 resolveMT.__call = function(self, ast)
-  return resolve.Module(ast)
+  reset()
+  return resolveNode(ast)
 end
 
 SUB_RESOLVERS = {

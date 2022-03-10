@@ -308,7 +308,7 @@ local function compileBlockStatements(node)
 end
 
 function Block(node)
-  if #node.continueNodes > 0 then
+  if node.continueNodes and #node.continueNodes > 0 then
     local continueGotoLabel = newTmpName()
 
     for i, continueNode in ipairs(node.continueNodes) do
@@ -963,10 +963,8 @@ for name, subCompiler in pairs(SUB_COMPILERS) do
   compile[name] = function(textOrAst, ...)
     local ast = type(textOrAst) == 'string' and parse[name](textOrAst, ...)
       or textOrAst
-
-    resolve[name](ast)
+    resolve(ast)
     reset()
-
     return subCompiler(ast)
   end
 end

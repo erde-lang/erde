@@ -16,11 +16,6 @@ local currentTokenIndex, currentToken
 -- as a method accessor or also consider ternary ':'.
 local isTernaryExpr = false
 
--- Keeps track of the Block body of the closest loop ancestor (ForLoop,
--- RepeatUntil, WhileLoop). This is used to validate and link Break and
--- Continue statements.
-local loopBlock = nil
-
 -- Keeps track of the top level Block. This is used to register module
 -- nodes when using the 'module' scope.
 local moduleBlock = nil
@@ -37,7 +32,6 @@ local function reset(text)
   currentToken = tokens[1]
 
   isTernaryExpr = false
-  loopBlock = nil
   moduleBlock = nil
 end
 
@@ -46,7 +40,6 @@ local function backup()
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
     isTernaryExpr = isTernaryExpr,
-    loopBlock = loopBlock,
     moduleBlock = moduleBlock,
   }
 end
@@ -55,7 +48,6 @@ local function restore(backup)
   currentTokenIndex = backup.currentTokenIndex
   currentToken = backup.currentToken
   isTernaryExpr = backup.isTernaryExpr
-  loopBlock = backup.loopBlock
   moduleBlock = backup.moduleBlock
 end
 
@@ -320,9 +312,7 @@ function ArrowFunction()
   end
 
   if currentToken == '{' then
-    node.body = Surround('{', '}', function()
-      return Block({ isFunctionBlock = true })
-    end)
+    node.body = Surround('{', '}', Block)
   elseif currentToken == '(' then
     node.hasImplicitReturns = true
     node.returns = Parens({
@@ -367,30 +357,10 @@ end
 -- Block
 -- -----------------------------------------------------------------------------
 
-function Block(opts)
-  opts = opts or {}
-
-  -- TODO: remove me
-  moduleBlock = nil
-
-  local node = {
-    ruleName = 'Block',
-
-    -- Table for Continue nodes to register themselves.
-    continueNodes = {},
-  }
+function Block()
+  local node = { ruleName = 'Block' }
 
   repeat
-    -- Run this on ever iteration in case nested blocks change values
-    if opts.isLoopBlock then
-      -- unset? revert nested loop blocks?
-      loopBlock = node
-    elseif opts.isFunctionBlock then
-      -- Reset loopBlock for function blocks. Break / Continue cannot
-      -- traverse these.
-      loopBlock = nil
-    end
-
     local statement = Statement()
     table.insert(node, statement)
   until not statement
@@ -403,7 +373,6 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break()
-  assert(loopBlock ~= nil, 'Cannot use `break` outside of loop')
   expect('break')
   return { ruleName = 'Break' }
 end
@@ -413,12 +382,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue()
-  assert(loopBlock ~= nil, 'Cannot use `continue` outside of loop')
   expect('continue')
-
-  local node = { ruleName = 'Continue' }
-  table.insert(loopBlock.continueNodes, node)
-  return node
+  return { ruleName = 'Continue' }
 end
 
 -- -----------------------------------------------------------------------------
@@ -677,9 +642,7 @@ function Function()
   end
 
   node.params = Params()
-  node.body = Surround('{', '}', function()
-    return Block({ isFunctionBlock = true })
-  end)
+  node.body = Surround('{', '}', Block)
 
   return node
 end
