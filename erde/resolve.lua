@@ -1,3 +1,7 @@
+-- NOTE: When writing resolvers, nodes should be treated as IMMUTABLE before
+-- calling `resolveChildren()`, since mutating the node beforehand may cause
+-- unintentional iterations over newly created values.
+
 local C = require('erde.constants')
 local parse = require('erde.parse')
 
@@ -16,17 +20,20 @@ local blockDepth
 -- nodes when using the 'module' scope.
 local moduleNode = nil
 
--- Keeps track of the Block body of the closest loop ancestor (ForLoop,
--- RepeatUntil, WhileLoop). This is used to validate and link Break and
--- Continue statements.
-local loopBlock = nil
+-- Flag that holds whether the current resolver has an encompassing loop node.
+-- This is used to validate Break and Continue nodes.
+local isLoopBlock = nil
+
+-- Table for Continue nodes to register themselves in. This is used by loop
+-- nodes to link any nested Continue nodes.
+local loopContinueNodes = nil
 
 -- =============================================================================
 -- Helpers
 -- =============================================================================
 
 -- Forward declare
-local resolveNode, resolveTree
+local resolveNode, resolveChildren
 
 local function reset(node)
   nodeIdCounter = 1
@@ -34,22 +41,36 @@ local function reset(node)
   moduleNode = nil
 end
 
+local function backup()
+  return {
+    nodeIdCounter = nodeIdCounter,
+    blockDepth = blockDepth,
+    moduleNode = moduleNode,
+    isLoopBlock = isLoopBlock,
+    loopContinueNodes = loopContinueNodes,
+  }
+end
+
+local function restore(state)
+  nodeIdCounter = state.nodeIdCounter
+  blockDepth = state.blockDepth
+  moduleNode = state.moduleNode
+  isLoopBlock = state.isLoopBlock
+  loopContinueNodes = state.loopContinueNodes
+end
+
 function resolveNode(node)
   if type(SUB_RESOLVERS[node.ruleName]) == 'function' then
     SUB_RESOLVERS[node.ruleName](node)
   else
-    resolveTree(node)
+    resolveChildren(node)
   end
 end
 
-function resolveTree(tree)
-  for key, value in pairs(tree) do
+function resolveChildren(node)
+  for key, value in pairs(node) do
     if type(value) == 'table' then
-      if value.ruleName ~= nil then
-        resolveNode(value)
-      else
-        resolveTree(value)
-      end
+      resolveNode(value)
     end
   end
 end
@@ -67,12 +88,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function ArrowFunction(node)
-  -- Reset loopBlock for function blocks. Break / Continue cannot
-  -- traverse these.
-  local loopBlockBackup = loopBlock
-  loopBlock = nil
-  resolveTree(node)
-  loopBlock = loopBlockBackup
+  local state = backup()
+  -- Reset loopBlock for function blocks. Break / Continue cannot traverse these.
+  isLoopBlock = false
+  resolveChildren(node)
+  restore(state)
 end
 
 -- -----------------------------------------------------------------------------
@@ -81,10 +101,7 @@ end
 
 function Block(node)
   blockDepth = blockDepth + 1
-
-  for _, statement in ipairs(node) do
-  end
-
+  resolveChildren(node)
   blockDepth = blockDepth - 1
 end
 
@@ -93,7 +110,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break(node)
-  assert(loopBlock ~= nil, 'Cannot use `break` outside of loop')
+  assert(isLoopBlock, 'Cannot use `break` outside of loop')
 end
 
 -- -----------------------------------------------------------------------------
@@ -101,8 +118,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue(node)
-  assert(loopBlock ~= nil, 'Cannot use `continue` outside of loop')
-  table.insert(loopBlock.continueNodes, node)
+  assert(isLoopBlock, 'Cannot use `continue` outside of loop')
+  table.insert(loopContinueNodes, node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -152,6 +169,8 @@ function Declaration(node)
       end
     end
   end
+
+  resolveChildren(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -159,9 +178,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function ForLoop(node)
-  loopBlock = node.body
-  node.body.continueNodes = {}
-  resolveTree(node)
+  local state = backup()
+  isLoopBlock = true
+  loopContinueNodes = {}
+  resolveChildren(node)
+  node.body.continueNodes = loopContinueNodes
+  restore(state)
 end
 
 -- -----------------------------------------------------------------------------
@@ -169,12 +191,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function Function(node)
-  -- Reset loopBlock for function blocks. Break / Continue cannot
-  -- traverse these.
-  local loopBlockBackup = loopBlock
-  loopBlock = nil
-  resolveTree(node)
-  loopBlock = loopBlockBackup
+  local state = backup()
+  -- Reset loopBlock for function blocks. Break / Continue cannot traverse these.
+  isLoopBlock = false
+  resolveChildren(node)
+  restore(state)
 end
 
 -- -----------------------------------------------------------------------------
@@ -184,7 +205,7 @@ end
 function Module(node)
   moduleNode = node
 
-  resolveTree(node)
+  resolveChildren(node)
 
   if #node.exportNames > 0 then
     for i, statement in ipairs(node) do
@@ -202,9 +223,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil(node)
-  loopBlock = node.body
-  node.body.continueNodes = {}
-  resolveTree(node)
+  local state = backup()
+  isLoopBlock = true
+  loopContinueNodes = {}
+  resolveChildren(node)
+  node.body.continueNodes = loopContinueNodes
+  restore(state)
 end
 
 -- -----------------------------------------------------------------------------
@@ -212,9 +236,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function WhileLoop(node)
-  loopBlock = node.body
-  node.body.continueNodes = {}
-  resolveTree(node)
+  local state = backup()
+  isLoopBlock = true
+  loopContinueNodes = {}
+  resolveChildren(node)
+  node.body.continueNodes = loopContinueNodes
+  restore(state)
 end
 
 -- =============================================================================

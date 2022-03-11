@@ -44,11 +44,11 @@ local function backup()
   }
 end
 
-local function restore(backup)
-  currentTokenIndex = backup.currentTokenIndex
-  currentToken = backup.currentToken
-  isTernaryExpr = backup.isTernaryExpr
-  moduleBlock = backup.moduleBlock
+local function restore(state)
+  currentTokenIndex = state.currentTokenIndex
+  currentToken = state.currentToken
+  isTernaryExpr = state.isTernaryExpr
+  moduleBlock = state.moduleBlock
 end
 
 local function consume()
