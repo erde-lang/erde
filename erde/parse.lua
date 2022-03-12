@@ -229,10 +229,8 @@ local function Id()
   local node = OptChain()
   local last = node[#node]
 
-  if last then
-    if last.variant == 'functionCall' then
-      error('Unexpected function call')
-    end
+  if last and last.variant == 'functionCall' then
+    error('Unexpected function call')
   end
 
   return node
@@ -481,10 +479,9 @@ end
 
 function Expr(opts)
   local minPrec = opts and opts.minPrec or 1
-  local node
+  local node = { ruleName = 'Expr' }
 
   if C.UNOPS[currentToken] then
-    node = { ruleName = 'Expr' }
     node.variant = 'unop'
     node.op = C.UNOPS[consume()]
     node.operand = Expr({ minPrec = node.op.prec + 1 })
@@ -510,9 +507,9 @@ function Expr(opts)
       expect(':')
     end
 
-    local nextMinPrec = binop.prec
+    local newMinPrec = binop.prec
       + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
-    node.rhs = Expr({ minPrec = nextMinPrec })
+    node.rhs = Expr({ minPrec = newMinPrec })
 
     binop = C.BINOPS[currentToken]
   end
@@ -530,18 +527,10 @@ function ForLoop()
 
   local firstName = Var()
 
-  if branch('=') then
+  if type(firstName) == 'string' and branch('=') then
     node.variant = 'numeric'
     node.name = firstName
     node.parts = List({ parse = Expr })
-
-    if type(firstName) == 'table' then
-      error('Cannot use destructure in numeric for loop')
-    elseif #node.parts < 2 then
-      error('Invalid for loop parameters (missing parameters)')
-    elseif #node.parts > 3 then
-      error('Invalid for loop parameters (too many parameters)')
-    end
   else
     node.variant = 'generic'
     node.varList = { firstName }
@@ -554,10 +543,7 @@ function ForLoop()
     node.exprList = List({ parse = Expr })
   end
 
-  node.body = Surround('{', '}', function()
-    return Block({ isLoopBlock = true })
-  end)
-
+  node.body = Surround('{', '}', Block)
   return node
 end
 
@@ -568,7 +554,6 @@ end
 function Function()
   local node = {
     ruleName = 'Function',
-    isHoisted = false,
     isMethod = false,
   }
 
@@ -584,25 +569,21 @@ function Function()
   expect('function')
   node.names = { Name() }
 
-  while true do
-    if branch('.') then
-      table.insert(node.names, Name())
-    else
-      if branch(':') then
-        node.isMethod = true
-        table.insert(node.names, Name())
-      end
-
-      break
-    end
+  while branch('.') do
+    table.insert(node.names, Name())
   end
 
-  node.params = Params()
-  node.body = Surround('{', '}', Block)
+  if branch(':') then
+    node.isMethod = true
+    table.insert(node.names, Name())
+  end
 
   if not node.variant then
     node.variant = #node.names > 1 and 'global' or 'local'
   end
+
+  node.params = Params()
+  node.body = Surround('{', '}', Block)
 
   return node
 end
@@ -665,20 +646,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Module()
-  local node = {
-    ruleName = 'Module',
-
-    -- Table for Declaration and Function nodes to register `module` scope
-    -- variables.
-    exportNames = {},
-
-    -- Return name for this block. Only valid at the top level.
-    mainName = nil,
-
-    -- Table for all top-level declared names. These are hoisted for convenience
-    -- to have more "module-like" behavior prevalent in other languages.
-    hoistedNames = {},
-  }
+  local node = { ruleName = 'Module' }
 
   if currentToken:match('^#!') then
     node.shebang = consume()
@@ -843,9 +811,7 @@ function RepeatUntil()
 
   local node = {
     ruleName = 'RepeatUntil',
-    body = Surround('{', '}', function()
-      return Block({ isLoopBlock = true })
-    end),
+    body = Surround('{', '}', Block),
   }
 
   expect('until')
@@ -1023,13 +989,10 @@ end
 
 function WhileLoop()
   expect('while')
-
   return {
     ruleName = 'WhileLoop',
     condition = Expr(),
-    body = Surround('{', '}', function()
-      return Block({ isLoopBlock = true })
-    end),
+    body = Surround('{', '}', Block),
   }
 end
 

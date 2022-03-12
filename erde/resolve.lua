@@ -79,6 +79,15 @@ end
 -- Pseudo Rules
 -- =============================================================================
 
+local function Loop(node)
+  local state = backup()
+  isLoopBlock = true
+  loopContinueNodes = {}
+  resolveChildren(node)
+  node.body.continueNodes = loopContinueNodes
+  restore(state)
+end
+
 -- =============================================================================
 -- Rules
 -- =============================================================================
@@ -178,12 +187,15 @@ end
 -- -----------------------------------------------------------------------------
 
 function ForLoop(node)
-  local state = backup()
-  isLoopBlock = true
-  loopContinueNodes = {}
-  resolveChildren(node)
-  node.body.continueNodes = loopContinueNodes
-  restore(state)
+  if node.variant == 'numeric' then
+    if #node.parts < 2 then
+      error('Invalid for loop parameters (missing parameters)')
+    elseif #node.parts > 3 then
+      error('Invalid for loop parameters (too many parameters)')
+    end
+  end
+
+  Loop(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -230,8 +242,18 @@ end
 -- -----------------------------------------------------------------------------
 
 function Module(node)
-  moduleNode = node
+  -- Table for Declaration and Function nodes to register `module` scope
+  -- variables.
+  node.exportNames = {}
 
+  -- Return name for this block. Only valid at the top level.
+  node.mainName = nil
+
+  -- Table for all top-level declared names. These are hoisted for convenience
+  -- to have more "module-like" behavior prevalent in other languages.
+  node.hoistedNames = {}
+
+  moduleNode = node
   resolveChildren(node)
 
   if #node.exportNames > 0 then
@@ -243,32 +265,6 @@ function Module(node)
       end
     end
   end
-end
-
--- -----------------------------------------------------------------------------
--- RepeatUntil
--- -----------------------------------------------------------------------------
-
-function RepeatUntil(node)
-  local state = backup()
-  isLoopBlock = true
-  loopContinueNodes = {}
-  resolveChildren(node)
-  node.body.continueNodes = loopContinueNodes
-  restore(state)
-end
-
--- -----------------------------------------------------------------------------
--- WhileLoop
--- -----------------------------------------------------------------------------
-
-function WhileLoop(node)
-  local state = backup()
-  isLoopBlock = true
-  loopContinueNodes = {}
-  resolveChildren(node)
-  node.body.continueNodes = loopContinueNodes
-  restore(state)
 end
 
 -- =============================================================================
@@ -301,14 +297,14 @@ SUB_RESOLVERS = {
   Module = Module,
   OptChain = OptChain,
   Params = Params,
-  RepeatUntil = RepeatUntil,
+  RepeatUntil = Loop,
   Return = Return,
   Self = Self,
   Spread = Spread,
   String = String,
   Table = Table,
   TryCatch = TryCatch,
-  WhileLoop = WhileLoop,
+  WhileLoop = Loop,
 
   -- Pseudo-Rules
   -- Var = Var,
