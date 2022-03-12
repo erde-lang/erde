@@ -16,10 +16,6 @@ local currentTokenIndex, currentToken
 -- as a method accessor or also consider ternary ':'.
 local isTernaryExpr = false
 
--- Keeps track of the top level Block. This is used to register module
--- nodes when using the 'module' scope.
-local moduleBlock = nil
-
 -- =============================================================================
 -- Helpers
 -- =============================================================================
@@ -32,7 +28,6 @@ local function reset(text)
   currentToken = tokens[1]
 
   isTernaryExpr = false
-  moduleBlock = nil
 end
 
 local function backup()
@@ -40,7 +35,6 @@ local function backup()
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
     isTernaryExpr = isTernaryExpr,
-    moduleBlock = moduleBlock,
   }
 end
 
@@ -48,7 +42,6 @@ local function restore(state)
   currentTokenIndex = state.currentTokenIndex
   currentToken = state.currentToken
   isTernaryExpr = state.isTernaryExpr
-  moduleBlock = state.moduleBlock
 end
 
 local function consume()
@@ -591,17 +584,13 @@ function Function()
     isMethod = false,
   }
 
-  if branch('local') then
-    node.variant = 'local'
-  elseif currentToken == 'module' or currentToken == 'main' then
-    if not moduleBlock then
-      error(currentToken .. ' declarations cannot be nested')
-    end
-
+  if
+    currentToken == 'local'
+    or currentToken == 'global'
+    or currentToken == 'module'
+    or currentToken == 'main'
+  then
     node.variant = consume()
-  else
-    branch('global')
-    node.variant = 'global'
   end
 
   expect('function')
@@ -620,29 +609,12 @@ function Function()
     end
   end
 
-  if node.variant == 'module' or node.variant == 'main' then
-    if #node.names > 1 then
-      error('Cannot declare nested field as ' .. node.variant)
-    end
-
-    if node.variant == 'main' then
-      if moduleBlock.mainName ~= nil then
-        error('Cannot have multiple main declarations')
-      end
-
-      moduleBlock.mainName = node.names[1]
-    else
-      table.insert(moduleBlock.exportNames, node.names[1])
-    end
-  end
-
-  if moduleBlock and node.variant ~= 'global' and #node.names == 1 then
-    node.isHoisted = true
-    table.insert(moduleBlock.hoistedNames, node.names[1])
-  end
-
   node.params = Params()
   node.body = Surround('{', '}', Block)
+
+  if not node.variant then
+    node.variant = #node.names > 1 and 'global' or 'local'
+  end
 
   return node
 end
@@ -725,9 +697,6 @@ function Module()
   end
 
   repeat
-    -- TODO: remove me
-    moduleBlock = node
-
     local statement = Statement()
     table.insert(node, statement)
   until not statement

@@ -196,6 +196,33 @@ function Function(node)
   isLoopBlock = false
   resolveChildren(node)
   restore(state)
+
+  if
+    blockDepth > 0 and (node.variant == 'module' or node.variant == 'main')
+  then
+    error(node.variant .. ' declarations must appear at the top level')
+  end
+
+  if blockDepth == 0 and node.variant ~= 'global' and #node.names == 1 then
+    node.isHoisted = true
+    table.insert(moduleNode.hoistedNames, node.names[1])
+  end
+
+  if node.variant == 'module' or node.variant == 'main' then
+    if #node.names > 1 then
+      error('Cannot declare nested field as ' .. node.variant)
+    end
+
+    if node.variant == 'main' then
+      if moduleNode.mainName ~= nil then
+        error('Cannot have multiple main declarations')
+      end
+
+      moduleNode.mainName = node.names[1]
+    else
+      table.insert(moduleNode.exportNames, node.names[1])
+    end
+  end
 end
 
 -- -----------------------------------------------------------------------------
