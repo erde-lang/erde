@@ -23,10 +23,8 @@ local isTernaryExpr = false
 local function reset(text)
   -- TODO use other tokenize results
   tokens = tokenize(text).tokens
-
   currentTokenIndex = 1
   currentToken = tokens[1]
-
   isTernaryExpr = false
 end
 
@@ -384,31 +382,21 @@ end
 -- -----------------------------------------------------------------------------
 
 function Declaration()
-  local node = {
-    ruleName = 'Declaration',
-    isHoisted = false,
-    varList = {},
-    exprList = {},
-  }
-
   if
-    currentToken == 'local'
-    or currentToken == 'global'
-    or currentToken == 'module'
-    or currentToken == 'main'
+    currentToken ~= 'local'
+    and currentToken ~= 'global'
+    and currentToken ~= 'module'
+    and currentToken ~= 'main'
   then
-    node.variant = consume()
-  else
     error('Missing declaration scope')
   end
 
-  node.varList = List({ parse = Var })
-
-  if branch('=') then
-    node.exprList = List({ parse = Expr })
-  end
-
-  return node
+  return {
+    ruleName = 'Declaration',
+    variant = consume(),
+    varList = List({ parse = Var }),
+    exprList = branch('=') and List({ parse = Expr }) or {},
+  }
 end
 
 -- -----------------------------------------------------------------------------

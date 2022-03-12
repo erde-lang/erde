@@ -1,14 +1,12 @@
 # TODO
 
-- Add separate Module rule
-- move shebang to separate tokenize field
 - more forgiving parser in order to allow for more convenient formatting
   - try to infer common mistakes (ex. missing comma)
   - separate parse errors from bad runtime prevention errors
     - ex. combining `module` w/ `return`, nested `module`, etc. are _technically_ not parsing errors, just errors that we will not crash at runtime.
     - 1. combining `module` w/ `return` or `main`
     - 1. using `continue` or `break` outside a loop block
-- make functions local by default!
+- move shebang to separate tokenize field
 - Fix String interpolation compilation bug (interpolated Name gets compiled to string content)
 - Fix parens compilation
 
@@ -17,21 +15,19 @@
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
-- officially readd lua5.2+ support?
-  - Not supported initially due to ease + not sure if will take advantage of
-    LuaJIT specific optimizations + bitwise operator awkwardness
-  - DO NOT SUPPORT 5.1. In the future we will make heavy use of `goto` in compiled 
-    code in order to avoid closure constructors, which cannot be JIT compiled
 - erde REPL
 - Source maps (for runtime errors when using erde.loader)
 - Bug fixes
 
 # v0.3.0
 
-- TYPES
-- remove closure compilations (ternary, null coalescence, optchain, etc).
-  - analyze usage and inject code. In particular, transform logical operations into if constructs (ex. `local a = b or c ?? d`)
-  - NOTE: cannot simply use functions w/ params (need conditional execution)
+- officially readd 5.1+ support
+  - Not supported initially due to ease + not sure if will take advantage of
+    LuaJIT specific optimizations + bitwise operator awkwardness
+  - default compile to 5.1+ using closure constructors, allow optimizations 
+    depending on compilation target (ex. only LuaJIT)
+    - analyze usage and inject code. In particular, transform logical operations 
+      into if constructs (ex. `local a = b or c ?? d`)
 
 # Long Term TODO
 
@@ -47,6 +43,9 @@
   - do block expr
 - cache unchanged files?
 - rewrite erde in erde
+- completion scripts for libraries / environments?
+  - want to provide LSP benefits of statically typed languages w/o static typing
+  - kind of painful, like documentation needs manual tracking
 
 # Uncertain Proposals (need community input)
 
