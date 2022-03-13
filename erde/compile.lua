@@ -742,6 +742,9 @@ function Spread(fields)
   local tableVar = newTmpName()
   local lenVar = newTmpName()
 
+  local hasVarArgs = false
+  local varArgsName = newTmpName()
+
   local compileParts = {
     'local ' .. tableVar .. ' = {}',
     'local ' .. lenVar .. ' = 0',
@@ -750,10 +753,19 @@ function Spread(fields)
   for i, field in ipairs(fields) do
     if field.ruleName == 'Spread' then
       local spreadTmpName = newTmpName()
+
+      local spreadValue
+      if field.value then
+        spreadValue = compileNode(field.value)
+      else
+        hasVarArgs = true
+        spreadValue = varArgsName
+      end
+
       table.insert(
         compileParts,
         table.concat({
-          'local ' .. spreadTmpName .. ' = ' .. compileNode(field.value),
+          'local ' .. spreadTmpName .. ' = ' .. spreadValue,
           'for key, value in pairs(' .. spreadTmpName .. ') do',
           'if type(key) == "number" then',
           ('%s[%s + key] = value'):format(tableVar, lenVar),

@@ -49,7 +49,11 @@ local function consume()
   return consumedToken
 end
 
-local function peek(n)
+local function lookBehind(n)
+  return tokens[currentTokenIndex - n] or ''
+end
+
+local function lookAhead(n)
   return tokens[currentTokenIndex + n] or ''
 end
 
@@ -137,7 +141,7 @@ local function List(opts)
   assert(opts.allowTrailingComma or not hasTrailingComma)
   assert(opts.allowEmpty or #list > 0)
 
-  return list, hasTrailingComma
+  return list
 end
 
 -- =============================================================================
@@ -265,7 +269,7 @@ local function Statement()
     or currentToken == 'module'
     or currentToken == 'main'
   then
-    if peek(1) == 'function' then
+    if lookAhead(1) == 'function' then
       return Function()
     else
       return Declaration()
@@ -401,7 +405,7 @@ end
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-local function parseDestruct()
+local function Destruct()
   local destruct = { name = Name() }
 
   if branch(':') then
@@ -415,12 +419,12 @@ local function parseDestruct()
   return destruct
 end
 
-local function parseNumberKeyDestructs()
+local function ArrayDestructure()
   return Surround('[', ']', function()
     return List({
       allowTrailingComma = true,
       parse = function()
-        local destruct = parseDestruct()
+        local destruct = Destruct()
         destruct.variant = 'numberDestruct'
         return destruct
       end,
@@ -431,15 +435,15 @@ end
 function Destructure()
   local node = { ruleName = 'Destructure' }
 
-  local destructs = currentToken == '[' and parseNumberKeyDestructs()
+  local destructs = currentToken == '[' and ArrayDestructure()
     or Surround('{', '}', function()
       return List({
         allowTrailingComma = true,
         parse = function()
           if currentToken == '[' then
-            return parseNumberKeyDestructs()
+            return ArrayDestructure()
           else
-            local destruct = parseDestruct()
+            local destruct = Destruct()
             destruct.variant = 'keyDestruct'
             return destruct
           end
@@ -758,6 +762,28 @@ end
 -- Params
 -- -----------------------------------------------------------------------------
 
+local function ParamsList()
+  local paramsList = List({
+    allowEmpty = true,
+    allowTrailingComma = true,
+    parse = function()
+      return {
+        value = Var(),
+        default = branch('=') and Expr(),
+      }
+    end,
+  })
+
+  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
+    table.insert(paramsList, {
+      value = Try(Name),
+      varargs = true,
+    })
+  end
+
+  return paramsList
+end
+
 function Params(opts)
   opts = opts or {}
   local node = { ruleName = 'Params' }
@@ -766,33 +792,7 @@ function Params(opts)
   if currentToken ~= '(' and opts.allowImplicitParams then
     params = { { value = Var() } }
   else
-    params = Parens({
-      demand = true,
-      parse = function()
-        local node, hasTrailingComma = List({
-          allowEmpty = true,
-          allowTrailingComma = true,
-          parse = function()
-            local param = { value = Var() }
-
-            if param and branch('=') then
-              param.default = Expr()
-            end
-
-            return param
-          end,
-        })
-
-        if (#node == 0 or hasTrailingComma) and branch('...') then
-          table.insert(node, {
-            varargs = true,
-            value = Try(Name),
-          })
-        end
-
-        return node
-      end,
-    })
+    params = Parens({ demand = true, parse = ParamsList })
   end
 
   for _, param in pairs(params) do
@@ -870,7 +870,7 @@ end
 
 function Spread()
   expect('...')
-  return { ruleName = 'Spread', value = Expr() }
+  return { ruleName = 'Spread', value = Try(Expr) }
 end
 
 -- -----------------------------------------------------------------------------
@@ -912,34 +912,37 @@ end
 -- Table
 -- -----------------------------------------------------------------------------
 
-local function parseExprKeyField()
-  local field = {
-    variant = 'exprKey',
-    key = Surround('[', ']', Expr),
-  }
+local function TableEntry()
+  local field = {}
 
-  expect('=')
-  field.value = Expr()
+  if currentToken == '[' then
+    field.variant = 'exprKey'
+    field.key = Surround('[', ']', Expr)
+  elseif currentToken == '...' then
+    field.variant = 'spread'
+    field.value = Spread()
+  else
+    local expr = Expr()
+
+    if
+      currentToken == '='
+      and type(expr) == 'string'
+      and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$')
+    then
+      field.variant = 'nameKey'
+      field.key = expr
+    else
+      field.variant = 'numberKey'
+      field.value = expr
+    end
+  end
+
+  if field.variant == 'exprKey' or field.variant == 'nameKey' then
+    expect('=')
+    field.value = Expr()
+  end
+
   return field
-end
-
-local function parseNameKeyField()
-  local field = {
-    variant = 'nameKey',
-    key = Name(),
-  }
-
-  expect('=')
-  field.value = Expr()
-  return field
-end
-
-local function parseNumberKeyField()
-  return { variant = 'numberKey', value = Expr() }
-end
-
-local function parseSpreadField()
-  return { variant = 'spread', value = Spread() }
 end
 
 function Table()
@@ -947,16 +950,7 @@ function Table()
     return List({
       allowEmpty = true,
       allowTrailingComma = true,
-      parse = function()
-        return Switch({
-          parseExprKeyField,
-          parseNameKeyField,
-          -- Parse spread before expr, otherwise we will parse the spread as
-          -- varargs!
-          parseSpreadField,
-          parseNumberKeyField,
-        })
-      end,
+      parse = TableEntry,
     })
   end)
 
@@ -1020,9 +1014,7 @@ local subParsers = {
   Expr = Expr,
   ForLoop = ForLoop,
   Function = Function,
-  FunctionCall = FunctionCall,
   Goto = Goto,
-  Id = Id,
   IfElse = IfElse,
   OptChain = OptChain,
   Module = Module,

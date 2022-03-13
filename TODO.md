@@ -1,12 +1,8 @@
 # TODO
 
-- more forgiving parser in order to allow for more convenient formatting
-  - try to infer common mistakes (ex. missing comma)
-  - separate parse errors from bad runtime prevention errors
-    - ex. combining `module` w/ `return`, nested `module`, etc. are _technically_ not parsing errors, just errors that we will not crash at runtime.
-    - 1. combining `module` w/ `return` or `main`
-    - 1. using `continue` or `break` outside a loop block
+- refactor parse (start stability)
 - move shebang to separate tokenize field
+- Fix arbitrary spread
 - Fix String interpolation compilation bug (interpolated Name gets compiled to string content)
 - Fix parens compilation
 - refactor tests
@@ -44,6 +40,7 @@
   - multi expression assignment
   - standard operators
   - do block expr
+  - breaking varargs change (actually spread in table!)
 - cache unchanged files?
 - rewrite erde in erde
 - completion scripts for libraries / environments?
