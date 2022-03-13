@@ -668,94 +668,93 @@ end
 -- OptChain
 -- -----------------------------------------------------------------------------
 
-function OptChain()
-  local node = { ruleName = 'OptChain' }
-
+local function OptChainBase()
   if currentToken == '(' then
-    node.base = Surround('(', ')', Expr)
-    if type(node.base) == 'table' then
-      node.base.parens = true
+    local base = Surround('(', ')', Expr)
+
+    if type(base) == 'table' then
+      base.parens = true
     end
+
+    return base
   elseif currentToken == '$' then
-    node.base = Self()
+    return Self()
   else
-    node.base = Name()
+    return Name()
   end
+end
+
+local function OptChainDotIndex()
+  local name = Try(Name)
+  return name and { variant = 'dotIndex', value = name }
+end
+
+local function OptChainMethod()
+  local name = Try(Name)
+
+  if name and currentToken == '(' then
+    return { variant = 'method', value = name }
+  elseif not isTernaryExpr then
+    -- Do not throw error here if isTernaryExpr, instead assume ':' is from
+    -- ternary operator.
+    error('Missing parentheses for method call')
+  end
+end
+
+local function OptChainBracket()
+  return {
+    variant = 'bracketIndex',
+    value = Surround('[', ']', Expr),
+  }
+end
+
+local function OptChainFunctionCall()
+  return {
+    variant = 'functionCall',
+    value = Parens({
+      demand = true,
+      parse = function()
+        return List({
+          allowEmpty = true,
+          allowTrailingComma = true,
+          parse = function()
+            return currentToken == '...' and Spread() or Expr()
+          end,
+        })
+      end,
+    }),
+  }
+end
+
+function OptChain()
+  local node = { ruleName = 'OptChain', base = OptChainBase() }
 
   while true do
-    local backup = backup()
-    local chain = { optional = branch('?') }
+    local state = backup()
+    local isOptional = branch('?')
 
+    local chain
     if branch('.') then
-      local name = Try(Name)
-
-      if name then
-        chain.variant = 'dotIndex'
-        chain.value = name
-      else
-        -- Do not throw error here, as '.' may be from an operator! Simply
-        -- revert consumptions and break
-        restore(backup)
-        break
-      end
-    elseif currentToken == '[' then
-      chain.variant = 'bracketIndex'
-      chain.value = Surround('[', ']', Expr)
-    elseif currentToken == '(' then
-      chain.variant = 'functionCall'
-      chain.value = Parens({
-        demand = true,
-        parse = function()
-          return List({
-            allowEmpty = true,
-            allowTrailingComma = true,
-            parse = function()
-              return Switch({
-                -- Spread must be before Expr, otherwise we will parse the
-                -- spread as varargs!
-                Spread,
-                Expr,
-              })
-            end,
-          })
-        end,
-      })
+      chain = OptChainDotIndex()
     elseif branch(':') then
-      local methodName = Try(Name)
+      chain = OptChainMethod()
+    elseif currentToken == '[' then
+      chain = OptChainBracket()
+    elseif currentToken == '(' then
+      chain = OptChainFunctionCall()
+    end
 
-      if methodName and currentToken == '(' then
-        chain.variant = 'method'
-        chain.value = methodName
-      elseif isTernaryExpr then
-        -- Do not throw error here, instead assume ':' is from ternary
-        -- operator. Simply revert consumptions and break
-        restore(backup)
-        break
-      else
-        error('Missing parentheses for method call')
-      end
-    else
-      restore(backup) -- revert consumption from branch('?')
+    if not chain then
+      restore(state)
       break
     end
 
+    chain.optional = isOptional
     table.insert(node, chain)
   end
 
-  if #node == 0 then
-    -- unpack trivial OptChain
-    node = node.base
-
-    if type(node) == 'string' then
-      if not node:match('^[_a-zA-Z][_a-zA-Z0-9]*$') then
-        error('Arbitrary expressions not allowed as OptChains')
-      end
-    elseif node.ruleName ~= 'Self' and node.ruleName ~= 'OptChain' then
-      error('Arbitrary expressions not allowed as OptChains')
-    end
-  end
-
-  return node
+  -- unpack trivial OptChain
+  return #node == 0 and node.base or node
 end
 
 -- -----------------------------------------------------------------------------

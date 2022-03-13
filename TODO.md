@@ -2,9 +2,9 @@
 
 - refactor parse (start stability)
 - move shebang to separate tokenize field
-- Fix arbitrary spread
 - Fix String interpolation compilation bug (interpolated Name gets compiled to string content)
 - Fix parens compilation
+- Fix arbitrary spread
 - refactor tests
   - separate parse and compile tests
   - add resolve tests
@@ -15,11 +15,11 @@
   - Rule.format method
   - cli support `erde format [FILES]`
 - erde REPL
-- Source maps (for runtime errors when using erde.loader)
 - Bug fixes
 
 # v0.3.0
 
+- Source maps (for runtime errors when using erde.loader)
 - officially readd 5.1+ support
   - Not supported initially due to ease + not sure if will take advantage of
     LuaJIT specific optimizations + bitwise operator awkwardness
