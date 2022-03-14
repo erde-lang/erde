@@ -1,6 +1,5 @@
 # TODO
 
-- refactor parse (start stability)
 - move shebang to separate tokenize field
 - Fix String interpolation compilation bug (interpolated Name gets compiled to string content)
 - Fix parens compilation

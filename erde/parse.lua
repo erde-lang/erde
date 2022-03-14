@@ -186,15 +186,9 @@ local function Terminal()
 
   local node
   if currentToken == '(' then
-    node = Switch({
-      ArrowFunction,
-      OptChain,
-      function()
-        local node = Surround('(', ')', Expr)
-        node.parens = true
-        return node
-      end,
-    })
+    -- Also takes care of parenthesized expressions, since OptChain will unpack
+    -- any trivial OptChainBase
+    node = Switch({ ArrowFunction, OptChain })
   elseif currentToken == 'do' then
     node = DoBlock({ isExpr = true })
   elseif currentToken:match('^[.0-9]') then
@@ -202,13 +196,8 @@ local function Terminal()
   elseif currentToken:match('^[\'"]$') or currentToken:match('^%[[[=]') then
     node = String()
   else
-    node = Switch({
-      -- Check ArrowFunction again for implicit params! This must be checked
-      -- before Table for implicit params + destructure
-      ArrowFunction,
-      Table,
-      OptChain,
-    })
+    -- Check ArrowFunction before Table for implicit params + destructure
+    node = Switch({ ArrowFunction, Table, OptChain })
   end
 
   if not node then
@@ -261,7 +250,7 @@ local function Statement()
     return TryCatch()
   elseif currentToken == 'while' then
     return WhileLoop()
-  elseif currentToken == 'function' then
+  elseif currentToken == 'function' or lookAhead(1) == 'function' then
     return Function()
   elseif
     currentToken == 'local'
@@ -269,16 +258,9 @@ local function Statement()
     or currentToken == 'module'
     or currentToken == 'main'
   then
-    if lookAhead(1) == 'function' then
-      return Function()
-    else
-      return Declaration()
-    end
+    return Declaration()
   else
-    return Switch({
-      FunctionCall,
-      Assignment,
-    })
+    return Switch({ FunctionCall, Assignment })
   end
 end
 
