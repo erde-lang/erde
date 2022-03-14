@@ -155,10 +155,7 @@ local function Name()
   )
 
   for i, keyword in pairs(C.KEYWORDS) do
-    assert(
-      currentToken ~= keyword,
-      'Cannot use keyword as name: ' .. currentToken
-    )
+    assert(currentToken ~= keyword, 'Unexpected keyword: ' .. currentToken)
   end
 
   return consume()

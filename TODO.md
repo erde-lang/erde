@@ -1,6 +1,5 @@
 # TODO
 
-- Move Name / Number back to real rules, move Name keyword validation to resolve
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
