@@ -1,6 +1,5 @@
 # TODO
 
-- Fix parens compilation
 - Fix arbitrary spread
 
 # v0.2.0

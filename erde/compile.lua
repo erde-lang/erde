@@ -30,7 +30,8 @@ local function compileNode(node)
     error(('Invalid ruleName: %s'):format(node.ruleName))
   end
 
-  return SUB_COMPILERS[node.ruleName](node)
+  local compiled = SUB_COMPILERS[node.ruleName](node)
+  return node.parens and '(' .. compiled .. ')' or compiled
 end
 
 local function newTmpName()
@@ -480,10 +481,6 @@ function Expr(node)
     else
       compiled = compileBinop(op, lhs, rhs)
     end
-  end
-
-  if node.parens then
-    compiled = '(' .. compiled .. ')'
   end
 
   return compiled
