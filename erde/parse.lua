@@ -879,9 +879,15 @@ function String()
 
   while currentToken ~= terminatingToken do
     if currentToken == '{' then
-      table.insert(node, Surround('{', '}', Expr))
+      table.insert(node, {
+        variant = 'interpolation',
+        value = Surround('{', '}', Expr),
+      })
     else
-      table.insert(node, consume())
+      table.insert(node, {
+        variant = 'content',
+        value = consume(),
+      })
     end
   end
 

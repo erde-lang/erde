@@ -820,15 +820,19 @@ function String(node)
     return openingChar .. closingChar
   end
 
-  local compileParts = {}
+  local compiled = ''
 
   for i, capture in ipairs(node) do
-    compileParts[i] = type(capture) == 'string'
-        and openingChar .. capture .. closingChar
-      or 'tostring(' .. compileNode(capture) .. ')'
+    if capture.variant == 'interpolation' then
+      local interpolation = 'tostring(' .. compileNode(capture.value) .. ')'
+      compiled = compiled
+        .. table.concat({ closingChar, interpolation, openingChar }, '..')
+    else
+      compiled = compiled .. capture.value
+    end
   end
 
-  return table.concat(compileParts, '..')
+  return openingChar .. compiled .. closingChar
 end
 
 -- -----------------------------------------------------------------------------

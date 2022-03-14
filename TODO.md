@@ -1,18 +1,17 @@
 # TODO
 
-- move shebang to separate tokenize field
-- Fix String interpolation compilation bug (interpolated Name gets compiled to string content)
 - Fix parens compilation
 - Fix arbitrary spread
-- refactor tests
-  - separate parse and compile tests
-  - add resolve tests
 
 # v0.2.0
 
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
+- refactor tests
+  - separate parse and compile tests
+  - add resolve tests
+  - add format tests
 - erde REPL
 - Bug fixes
 

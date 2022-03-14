@@ -5,10 +5,13 @@
 describe('String.parse', function()
   spec('short string', function()
     assert.are.equal(0, #parse.String('""'))
-    assert.subtable({ 'hello' }, parse.String('"hello"'))
-    assert.subtable({ 'hello' }, parse.String("'hello'"))
-    assert.subtable({ 'hello\\nworld' }, parse.String("'hello\\nworld'"))
-    assert.subtable({ '\\\\' }, parse.String("'\\\\'"))
+    assert.subtable({ { value = 'hello' } }, parse.String('"hello"'))
+    assert.subtable({ { value = 'hello' } }, parse.String("'hello'"))
+    assert.subtable(
+      { { value = 'hello\\nworld' } },
+      parse.String("'hello\\nworld'")
+    )
+    assert.subtable({ { value = '\\\\' } }, parse.String("'\\\\'"))
     assert.has_error(function()
       parse.String('"hello')
     end)
@@ -18,10 +21,16 @@ describe('String.parse', function()
   end)
 
   spec('long string', function()
-    assert.subtable({ ' hello world ' }, parse.String('[[ hello world ]]'))
-    assert.subtable({ 'hello\nworld' }, parse.String('[[hello\nworld]]'))
-    assert.subtable({ 'a{bc}d' }, parse.String('[[a\\{bc}d]]'))
-    assert.subtable({ 'a[[b' }, parse.String('[=[a[[b]=]'))
+    assert.subtable(
+      { { value = ' hello world ' } },
+      parse.String('[[ hello world ]]')
+    )
+    assert.subtable(
+      { { value = 'hello\nworld' } },
+      parse.String('[[hello\nworld]]')
+    )
+    assert.subtable({ { value = 'a{bc}d' } }, parse.String('[[a\\{bc}d]]'))
+    assert.subtable({ { value = 'a[[b' } }, parse.String('[=[a[[b]=]'))
     assert.has_error(function()
       parse.String('[[hello world')
     end)
@@ -31,9 +40,18 @@ describe('String.parse', function()
   end)
 
   spec('interpolation', function()
-    assert.subtable({ 'hello ', '3' }, parse.String('"hello {3}"'))
-    assert.subtable({ 'hello ', '3' }, parse.String("'hello {3}'"))
-    assert.subtable({ 'hello ', '3' }, parse.String('[[hello {3}]]'))
+    assert.subtable({
+      { value = 'hello ' },
+      { variant = 'interpolation', value = '3' },
+    }, parse.String('"hello {3}"'))
+    assert.subtable({
+      { value = 'hello ' },
+      { variant = 'interpolation', value = '3' },
+    }, parse.String("'hello {3}'"))
+    assert.subtable({
+      { value = 'hello ' },
+      { variant = 'interpolation', value = '3' },
+    }, parse.String('[[hello {3}]]'))
   end)
 end)
 
