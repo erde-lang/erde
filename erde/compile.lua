@@ -738,9 +738,7 @@ end
 function Spread(fields)
   local tableVar = newTmpName()
   local lenVar = newTmpName()
-
   local hasVarArgs = false
-  local varArgsName = newTmpName()
 
   local compileParts = {
     'local ' .. tableVar .. ' = {}',
@@ -756,7 +754,7 @@ function Spread(fields)
         spreadValue = compileNode(field.value)
       else
         hasVarArgs = true
-        spreadValue = varArgsName
+        spreadValue = '{ ... }'
       end
 
       table.insert(
@@ -789,11 +787,12 @@ function Spread(fields)
     end
   end
 
+  -- If varargs are present, proxy it to our iife!
   return table.concat({
-    '(function()',
+    hasVarArgs and '(function(...)' or '(function()',
     table.concat(compileParts, '\n'),
     'return ' .. tableVar,
-    'end)()',
+    hasVarArgs and 'end)(...)' or 'end)()',
   }, '\n')
 end
 

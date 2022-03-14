@@ -1,12 +1,11 @@
 # TODO
 
-- Fix arbitrary spread
-
-# v0.2.0
-
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
+
+# v0.2.0
+
 - refactor tests
   - separate parse and compile tests
   - add resolve tests
