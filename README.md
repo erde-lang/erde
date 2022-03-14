@@ -1,11 +1,18 @@
 # Erde
 
-Erde is an expressive language that compiles to Lua. Syntactically it favors 
-symbols over keywords and adds support for many features commonly found in 
-other programming languages that Lua otherwise sacrifices for simplicity.
+Erde is an expressive programming language that compiles to Lua. Syntactically 
+it favors symbols over keywords and adds support for many features commonly 
+found in other programming languages that Lua otherwise sacrifices for 
+simplicity.
 
 Erde currently only supports [LuaJIT](https://luajit.org/luajit.html), although
-support for other Lua versions may be added in the future.
+it may work on Lua5.2+ as well (not tested). Support for other Lua versions is 
+planned to be added in the future (planned v0.3).
+
+**NOTE:** Erde is still in early development. Some things may be undocumented or 
+the documentation may be out of date. This note will be removed once the project 
+starts to stabilize but feel free to mess around and open issues about any 
+questions or concerns!
 
 ## Features
 
