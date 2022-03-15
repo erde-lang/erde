@@ -45,6 +45,8 @@
 
 # Uncertain Proposals (need community input)
 
+- array destructure skipping
+  - ex) `local [a, ..., c] = {1, 2, 3, 4, 5}`, (a, c) == (1, 5)
 - macros
 - decorators
 - nested break
