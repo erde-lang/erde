@@ -47,8 +47,15 @@
 
 - array destructure skipping
   - ex) `local [a, ..., c] = {1, 2, 3, 4, 5}`, (a, c) == (1, 5)
+  - too seldom used??
+- function return params (similar to golang)
+  - ex) function double(t) (doubled = {}) {
+          for _, n in ipairs(t) {
+            table.insert(doubled, n * 2)
+          }
+        }
 - macros
-- decorators
+- python/js like decorators?
 - nested break
 - pipes
   - included (and even implemented) in original spec. Removed due to awkardness
@@ -56,7 +63,7 @@
   - favor simple `do {}` exprs
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
-  - difficult, maybe impossible? dont know when return will happen?
+  - hard to optimize?
 
 # Design Decisions (need to move to erde website)
 
