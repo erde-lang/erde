@@ -161,14 +161,6 @@ local function Name()
   return consume()
 end
 
-local function Number()
-  if not currentToken:match('^%.?[0-9]') then
-    error('Malformed number: ' .. currentToken)
-  end
-
-  return consume()
-end
-
 local function Var()
   return (currentToken == '{' or currentToken == '[') and Destructure()
     or Name()
@@ -188,8 +180,9 @@ local function Terminal()
     node = Switch({ ArrowFunction, OptChain })
   elseif currentToken == 'do' then
     node = DoBlock({ isExpr = true })
-  elseif currentToken:match('^[.0-9]') then
-    node = Number()
+  elseif currentToken:match('^.?[0-9]') then
+    -- Only need to check first couple chars, rest is token care of by tokenizer
+    node = consume()
   elseif currentToken:match('^[\'"]$') or currentToken:match('^%[[[=]') then
     node = String()
   else

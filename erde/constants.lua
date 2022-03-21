@@ -42,10 +42,6 @@ C.TERMINALS = {
 C.LEFT_ASSOCIATIVE = -1
 C.RIGHT_ASSOCIATIVE = 1
 
-C.OP_BLACKLIST = {
-  '--', -- Do not parse comments as substraction!
-}
-
 C.UNOPS = {
   ['-'] = { prec = 13 },
   ['#'] = { prec = 13 },
@@ -113,68 +109,48 @@ for opToken, op in pairs(C.BINOPS) do
   end
 end
 
--- -----------------------------------------------------------------------------
--- Lookup Tables
--- -----------------------------------------------------------------------------
-
-C.UPPERCASE = {}
 C.ALPHA = {}
+C.DIGIT = {}
+C.HEX = {}
 C.WORD_HEAD = { ['_'] = true }
 C.WORD_BODY = { ['_'] = true }
-C.DIGIT = {}
-C.ALNUM = {}
-C.HEX = {}
-C.WHITESPACE = {
-  ['\n'] = true,
-  ['\t'] = true,
-  [' '] = true,
-}
 
 for byte = string.byte('0'), string.byte('9') do
   local char = string.char(byte)
   C.DIGIT[char] = true
-  C.ALNUM[char] = true
   C.HEX[char] = true
   C.WORD_BODY[char] = true
 end
+
 for byte = string.byte('A'), string.byte('F') do
   local char = string.char(byte)
   C.ALPHA[char] = true
-  C.ALNUM[char] = true
   C.HEX[char] = true
-  C.UPPERCASE[char] = true
   C.WORD_HEAD[char] = true
   C.WORD_BODY[char] = true
 end
+
 for byte = string.byte('G'), string.byte('Z') do
   local char = string.char(byte)
   C.ALPHA[char] = true
-  C.ALNUM[char] = true
-  C.UPPERCASE[char] = true
   C.WORD_HEAD[char] = true
   C.WORD_BODY[char] = true
 end
+
 for byte = string.byte('a'), string.byte('f') do
   local char = string.char(byte)
   C.ALPHA[char] = true
-  C.ALNUM[char] = true
   C.HEX[char] = true
   C.WORD_HEAD[char] = true
   C.WORD_BODY[char] = true
 end
+
 for byte = string.byte('g'), string.byte('z') do
   local char = string.char(byte)
   C.ALPHA[char] = true
-  C.ALNUM[char] = true
   C.WORD_HEAD[char] = true
   C.WORD_BODY[char] = true
 end
-
--- -----------------------------------------------------------------------------
--- Misc
--- -----------------------------------------------------------------------------
-
-C.EOF = -1
 
 -- -----------------------------------------------------------------------------
 -- Return
