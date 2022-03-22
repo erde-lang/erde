@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 
 -- Foward declare rules
 local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
-local SUB_FORMATTER
+local SUB_FORMATTERS
 
 -- =============================================================================
 -- State
@@ -30,6 +30,19 @@ end
 
 local function restore(state)
   blockDepth = state.blockDepth
+end
+
+local function formatNode(node)
+  if type(node) == 'string' then
+    return node
+  elseif type(node) ~= 'table' then
+    error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
+  elseif type(SUB_FORMATTERS[node.ruleName]) ~= 'function' then
+    error(('Invalid ruleName: %s'):format(node.ruleName))
+  end
+
+  local formatted = SUB_FORMATTERS[node.ruleName](node)
+  return node.parens and '(' .. formatted .. ')' or formatted
 end
 
 -- =============================================================================
@@ -69,7 +82,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break(node)
-  return ''
+  return 'break'
 end
 
 -- -----------------------------------------------------------------------------
@@ -77,7 +90,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue(node)
-  return ''
+  return 'continue'
 end
 
 -- -----------------------------------------------------------------------------
@@ -133,7 +146,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function Goto(node)
-  return ''
+  if node.variant == 'jump' then
+    return 'goto ' .. node.name
+  elseif node.variant == 'definition' then
+    return '::' .. node.name .. '::'
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -149,7 +166,17 @@ end
 -- -----------------------------------------------------------------------------
 
 function Module(node)
-  return ''
+  local formatted = {}
+
+  if node.shebang then
+    table.insert(formatted, node.shebang)
+  end
+
+  for _, statement in ipairs(node) do
+    table.insert(formatted, formatNode(statement))
+  end
+
+  return table.concat(formatted, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -181,7 +208,14 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return(node)
-  return ''
+  local returnValues = {}
+
+  for i, returnValue in ipairs(node) do
+    returnValues[i] = formatNode(returnValue)
+  end
+
+  -- TODO: check line limit?
+  return 'return ' .. table.concat(returnValues, ', ')
 end
 
 -- -----------------------------------------------------------------------------
@@ -189,7 +223,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function Self(node)
-  return ''
+  if node.variant == 'self' then
+    return '$'
+  else
+    return '$' .. node.value
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -243,7 +281,7 @@ formatMT.__call = function(self, textOrAst)
   return format.Module(textOrAst)
 end
 
-SUB_FORMATTER = {
+SUB_FORMATTERS = {
   -- Rules
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
@@ -279,7 +317,7 @@ SUB_FORMATTER = {
   Id = OptChain,
 }
 
-for name, subFormatter in pairs(SUB_FORMATTER) do
+for name, subFormatter in pairs(SUB_FORMATTERS) do
   format[name] = function(textOrAst, ...)
     local ast = type(textOrAst) == 'string' and parse[name](textOrAst, ...)
       or textOrAst
