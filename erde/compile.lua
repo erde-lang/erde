@@ -931,8 +931,8 @@ end
 local compile, compileMT = {}, {}
 setmetatable(compile, compileMT)
 
-compileMT.__call = function(self, text)
-  return compile.Module(text)
+compileMT.__call = function(self, textOrAst)
+  return compile.Module(textOrAst)
 end
 
 SUB_COMPILERS = {
