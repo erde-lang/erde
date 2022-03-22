@@ -1,6 +1,6 @@
 local C = require('erde.constants')
 local parse = require('erde.parse')
-local resolve = require('erde.resolve')
+local precompile = require('erde.precompile')
 
 -- Foward declare rules
 local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
@@ -975,7 +975,7 @@ for name, subCompiler in pairs(SUB_COMPILERS) do
   compile[name] = function(textOrAst, ...)
     local ast = type(textOrAst) == 'string' and parse[name](textOrAst, ...)
       or textOrAst
-    resolve(ast)
+    precompile(ast)
     reset()
     return subCompiler(ast)
   end

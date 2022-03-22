@@ -1,13 +1,9 @@
--- NOTE: When writing resolvers, nodes should be treated as IMMUTABLE before
--- calling `resolveChildren()`, since mutating the node beforehand may cause
--- unintentional iterations over newly created values.
-
 local C = require('erde.constants')
 local parse = require('erde.parse')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
-local SUB_RESOLVERS
+local ArrowFunction, Block, Break, Continue, Declaration, ForLoop, Function
+local SUB_PRECOMPILERS
 
 -- =============================================================================
 -- State
@@ -20,20 +16,16 @@ local blockDepth
 -- nodes when using the 'module' scope.
 local moduleNode = nil
 
--- Flag that holds whether the current resolver has an encompassing loop node.
--- This is used to validate Break and Continue nodes.
-local isLoopBlock = nil
-
--- Table for Continue nodes to register themselves in. This is used by loop
--- nodes to link any nested Continue nodes.
-local loopContinueNodes = nil
+-- Keeps track of the closest loop block ancestor. This is used to validate
+-- Break / Continue nodes, as well as register nested Continue nodes.
+local loopBlock = nil
 
 -- =============================================================================
 -- Helpers
 -- =============================================================================
 
 -- Forward declare
-local resolveNode, resolveChildren
+local precompileNode, precompileChildren
 
 local function reset(node)
   nodeIdCounter = 1
@@ -46,8 +38,7 @@ local function backup()
     nodeIdCounter = nodeIdCounter,
     blockDepth = blockDepth,
     moduleNode = moduleNode,
-    isLoopBlock = isLoopBlock,
-    loopContinueNodes = loopContinueNodes,
+    loopBlock = loopBlock,
   }
 end
 
@@ -55,36 +46,34 @@ local function restore(state)
   nodeIdCounter = state.nodeIdCounter
   blockDepth = state.blockDepth
   moduleNode = state.moduleNode
-  isLoopBlock = state.isLoopBlock
-  loopContinueNodes = state.loopContinueNodes
+  loopBlock = state.loopBlock
 end
 
-function resolveNode(node)
-  if type(SUB_RESOLVERS[node.ruleName]) == 'function' then
-    SUB_RESOLVERS[node.ruleName](node)
+function precompileNode(node)
+  if type(SUB_PRECOMPILERS[node.ruleName]) == 'function' then
+    SUB_PRECOMPILERS[node.ruleName](node)
   else
-    resolveChildren(node)
+    precompileChildren(node)
   end
 end
 
-function resolveChildren(node)
+function precompileChildren(node)
   for key, value in pairs(node) do
     if type(value) == 'table' then
-      resolveNode(value)
+      precompileNode(value)
     end
   end
 end
 
 -- =============================================================================
--- Pseudo Rules
+-- Macros
 -- =============================================================================
 
 local function Loop(node)
+  node.body.continueNodes = {}
   local state = backup()
-  isLoopBlock = true
-  loopContinueNodes = {}
-  resolveChildren(node)
-  node.body.continueNodes = loopContinueNodes
+  loopBlock = node.body
+  Block(node.body)
   restore(state)
 end
 
@@ -97,11 +86,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function ArrowFunction(node)
-  local state = backup()
-  -- Reset loopBlock for function blocks. Break / Continue cannot traverse these.
-  isLoopBlock = false
-  resolveChildren(node)
-  restore(state)
+  if not node.hasImplicitReturns then
+    -- Reset loopBlock for function blocks. Break / Continue cannot traverse these.
+    local state = backup()
+    loopBlock = nil
+    Block(node.body)
+    restore(state)
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -110,7 +101,11 @@ end
 
 function Block(node)
   blockDepth = blockDepth + 1
-  resolveChildren(node)
+
+  for _, child in ipairs(node) do
+    precompileNode(child)
+  end
+
   blockDepth = blockDepth - 1
 end
 
@@ -119,7 +114,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break(node)
-  assert(isLoopBlock, 'Cannot use `break` outside of loop')
+  assert(loopBlock ~= nil, 'Cannot use `break` outside of loop')
 end
 
 -- -----------------------------------------------------------------------------
@@ -127,8 +122,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue(node)
-  assert(isLoopBlock, 'Cannot use `continue` outside of loop')
-  table.insert(loopContinueNodes, node)
+  assert(loopBlock ~= nil, 'Cannot use `continue` outside of loop')
+  table.insert(loopBlock.continueNodes, node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -178,8 +173,6 @@ function Declaration(node)
       end
     end
   end
-
-  resolveChildren(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -203,10 +196,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function Function(node)
-  local state = backup()
   -- Reset loopBlock for function blocks. Break / Continue cannot traverse these.
-  isLoopBlock = false
-  resolveChildren(node)
+  local state = backup()
+  loopBlock = nil
+  Block(node.body)
   restore(state)
 
   if
@@ -254,7 +247,10 @@ function Module(node)
   node.hoistedNames = {}
 
   moduleNode = node
-  resolveChildren(node)
+
+  for _, child in ipairs(node) do
+    precompileNode(child)
+  end
 
   if #node.exportNames > 0 then
     for i, statement in ipairs(node) do
@@ -268,58 +264,36 @@ function Module(node)
 end
 
 -- =============================================================================
--- Resolve
+-- Precompile
 -- =============================================================================
 
-local resolve, resolveMT = {}, {}
-setmetatable(resolve, resolveMT)
+local precompile, precompileMT = {}, {}
+setmetatable(precompile, precompileMT)
 
-resolveMT.__call = function(self, ast)
+precompileMT.__call = function(self, ast)
   reset()
-  return resolveNode(ast)
+  return precompileNode(ast)
 end
 
-SUB_RESOLVERS = {
+SUB_PRECOMPILERS = {
   -- Rules
   ArrowFunction = ArrowFunction,
-  Assignment = Assignment,
   Block = Block,
   Break = Break,
   Continue = Continue,
   Declaration = Declaration,
-  Destructure = Destructure,
-  DoBlock = DoBlock,
-  Expr = Expr,
   ForLoop = ForLoop,
   Function = Function,
-  Goto = Goto,
-  IfElse = IfElse,
   Module = Module,
-  OptChain = OptChain,
-  Params = Params,
   RepeatUntil = Loop,
-  Return = Return,
-  Self = Self,
-  Spread = Spread,
-  String = String,
-  Table = Table,
-  TryCatch = TryCatch,
   WhileLoop = Loop,
-
-  -- Pseudo-Rules
-  -- Var = Var,
-  -- Name = Name,
-  -- Number = Number,
-  -- Terminal = Terminal,
-  FunctionCall = OptChain,
-  Id = OptChain,
 }
 
-for name, subResolver in pairs(SUB_RESOLVERS) do
-  resolve[name] = function(ast)
+for name, subPrecompiler in pairs(SUB_PRECOMPILERS) do
+  precompile[name] = function(ast)
     reset()
-    return subResolver(ast)
+    return subPrecompiler(ast)
   end
 end
 
-return resolve
+return precompile
