@@ -10,6 +10,7 @@ local SUB_FORMATTERS
 -- =============================================================================
 
 local blockDepth
+local indentWidth
 
 -- =============================================================================
 -- Helpers
@@ -20,6 +21,7 @@ local precompileNode, precompileChildren
 
 local function reset(node)
   blockDepth = 0
+  indentWidth = 2
 end
 
 local function backup()
@@ -74,7 +76,17 @@ end
 -- -----------------------------------------------------------------------------
 
 function Block(node)
-  return ''
+  blockDepth = blockDepth + 1
+  local leadingSpace = (' '):rep(blockDepth * indentWidth)
+
+  local formatted = {}
+
+  for _, statement in ipairs(node) do
+    table.insert(formatted, leadingSpace .. formatNode(statement))
+  end
+
+  blockDepth = blockDepth - 1
+  return table.concat(formatted, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -114,7 +126,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function DoBlock(node)
-  return ''
+  return table.concat({
+    'do {',
+    formatNode(node.body),
+    '}',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
