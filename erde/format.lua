@@ -146,7 +146,50 @@ end
 -- -----------------------------------------------------------------------------
 
 function ForLoop(node)
-  return ''
+  local formatted = {}
+
+  if node.variant == 'numeric' then
+    local parts = {}
+    for _, part in ipairs(node.parts) do
+      table.insert(parts, formatNode(part))
+    end
+
+    table.insert(
+      formatted,
+      table.concat({
+        'for',
+        node.name,
+        '=',
+        table.concat(parts, ', '),
+        '{',
+      }, ' ')
+    )
+  else
+    local vars = {}
+    for _, var in ipairs(node.varList) do
+      table.insert(vars, formatNode(var))
+    end
+
+    local exprs = {}
+    for _, expr in ipairs(node.exprList) do
+      table.insert(exprs, formatNode(expr))
+    end
+
+    table.insert(
+      formatted,
+      table.concat({
+        'for',
+        table.concat(vars, ', '),
+        'in',
+        table.concat(exprs, ', '),
+        '{',
+      }, ' ')
+    )
+  end
+
+  table.insert(formatted, formatNode(node.body))
+  table.insert(formatted, '}')
+  return table.concat(formatted, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -174,7 +217,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function IfElse(node)
-  return ''
+  local formatted = {
+    'if ' .. formatNode(node.ifNode.condition) .. ' {',
+    formatNode(node.ifNode.body),
+  }
+
+  for _, elseifNode in ipairs(node.elseifNodes) do
+    table.insert(
+      formatted,
+      '} elseif ' .. formatNode(elseifNode.condition) .. ' {'
+    )
+    table.insert(formatted, formatNode(elseifNode.body))
+  end
+
+  if node.elseNode then
+    table.insert(formatted, '} else {')
+    table.insert(formatted, formatNode(node.elseNode.body))
+  end
+
+  table.insert(formatted, '}')
+  return table.concat(formatted, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -216,7 +278,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil(node)
-  return ''
+  return table.concat({
+    'repeat',
+    formatNode(node.body),
+    'until ' .. formatNode(node.condition),
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -251,7 +317,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Spread(node)
-  return ''
+  return '...' .. (node.value and formatNode(node.value) or '')
 end
 
 -- -----------------------------------------------------------------------------
@@ -275,7 +341,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function TryCatch(node)
-  return ''
+  return table.concat({
+    'try {',
+    formatNode(node.try),
+    '} catch (' .. formatNode(node.errorName) .. ') {',
+    formatNode(node.catch),
+    '}',
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -283,7 +355,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function WhileLoop(node)
-  return ''
+  return table.concat({
+    'while ' .. formatNode(node.condition) .. ' {',
+    formatNode(node.body),
+    '}',
+  }, '\n')
 end
 
 -- =============================================================================
