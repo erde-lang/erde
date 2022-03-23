@@ -1,5 +1,7 @@
 # TODO
 
+- Do not allow multiple expressions in declaration / assignment
+- Allow declaration / assignment parenthesized var lists
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`

@@ -240,7 +240,7 @@ local function Statement()
     return TryCatch()
   elseif currentToken == 'while' then
     return WhileLoop()
-  elseif currentToken == 'function' or lookAhead(1) == 'function' then
+  elseif currentToken == 'function' then
     return Function()
   elseif
     currentToken == 'local'
@@ -248,7 +248,7 @@ local function Statement()
     or currentToken == 'module'
     or currentToken == 'main'
   then
-    return Declaration()
+    return lookAhead(1) == 'function' and Function() or Declaration()
   else
     return Switch({ FunctionCall, Assignment })
   end
