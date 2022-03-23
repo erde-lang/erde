@@ -9,7 +9,7 @@ local SUB_FORMATTERS
 -- State
 -- =============================================================================
 
-local blockDepth
+local indentLevel
 local indentWidth
 
 -- =============================================================================
@@ -20,18 +20,18 @@ local indentWidth
 local precompileNode, precompileChildren
 
 local function reset(node)
-  blockDepth = 0
+  indentLevel = 0
   indentWidth = 2
 end
 
 local function backup()
   return {
-    blockDepth = blockDepth,
+    indentLevel = indentLevel,
   }
 end
 
 local function restore(state)
-  blockDepth = state.blockDepth
+  indentLevel = state.indentLevel
 end
 
 local function formatNode(node)
@@ -76,8 +76,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Block(node)
-  blockDepth = blockDepth + 1
-  local leadingSpace = (' '):rep(blockDepth * indentWidth)
+  indentLevel = indentLevel + 1
+  local leadingSpace = (' '):rep(indentLevel * indentWidth)
 
   local formatted = {}
 
@@ -85,7 +85,7 @@ function Block(node)
     table.insert(formatted, leadingSpace .. formatNode(statement))
   end
 
-  blockDepth = blockDepth - 1
+  indentLevel = indentLevel - 1
   return table.concat(formatted, '\n')
 end
 
