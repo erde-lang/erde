@@ -34,6 +34,10 @@ local function restore(state)
   indentLevel = state.indentLevel
 end
 
+local function line(code)
+  return (' '):rep(indentLevel * indentWidth) .. code
+end
+
 local function formatNode(node)
   if type(node) == 'string' then
     return node
@@ -77,12 +81,10 @@ end
 
 function Block(node)
   indentLevel = indentLevel + 1
-  local leadingSpace = (' '):rep(indentLevel * indentWidth)
-
   local formatted = {}
 
   for _, statement in ipairs(node) do
-    table.insert(formatted, leadingSpace .. formatNode(statement))
+    table.insert(formatted, formatNode(statement))
   end
 
   indentLevel = indentLevel - 1
@@ -94,7 +96,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break(node)
-  return 'break'
+  return line('break')
 end
 
 -- -----------------------------------------------------------------------------
@@ -102,7 +104,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue(node)
-  return 'continue'
+  return line('continue')
 end
 
 -- -----------------------------------------------------------------------------
@@ -127,9 +129,9 @@ end
 
 function DoBlock(node)
   return table.concat({
-    'do {',
+    line('do {'),
     formatNode(node.body),
-    '}',
+    line('}'),
   }, '\n')
 end
 
@@ -156,13 +158,13 @@ function ForLoop(node)
 
     table.insert(
       formatted,
-      table.concat({
+      line(table.concat({
         'for',
         node.name,
         '=',
         table.concat(parts, ', '),
         '{',
-      }, ' ')
+      }, ' '))
     )
   else
     local vars = {}
@@ -177,18 +179,18 @@ function ForLoop(node)
 
     table.insert(
       formatted,
-      table.concat({
+      line(table.concat({
         'for',
         table.concat(vars, ', '),
         'in',
         table.concat(exprs, ', '),
         '{',
-      }, ' ')
+      }, ' '))
     )
   end
 
   table.insert(formatted, formatNode(node.body))
-  table.insert(formatted, '}')
+  table.insert(formatted, line('}'))
   return table.concat(formatted, '\n')
 end
 
@@ -206,9 +208,9 @@ end
 
 function Goto(node)
   if node.variant == 'jump' then
-    return 'goto ' .. node.name
+    return line('goto ' .. node.name)
   elseif node.variant == 'definition' then
-    return '::' .. node.name .. '::'
+    return line('::' .. node.name .. '::')
   end
 end
 
@@ -218,24 +220,24 @@ end
 
 function IfElse(node)
   local formatted = {
-    'if ' .. formatNode(node.ifNode.condition) .. ' {',
+    line('if ' .. formatNode(node.ifNode.condition) .. ' {'),
     formatNode(node.ifNode.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
     table.insert(
       formatted,
-      '} elseif ' .. formatNode(elseifNode.condition) .. ' {'
+      line('} elseif ' .. formatNode(elseifNode.condition) .. ' {')
     )
     table.insert(formatted, formatNode(elseifNode.body))
   end
 
   if node.elseNode then
-    table.insert(formatted, '} else {')
+    table.insert(formatted, line('} else {'))
     table.insert(formatted, formatNode(node.elseNode.body))
   end
 
-  table.insert(formatted, '}')
+  table.insert(formatted, line('}'))
   return table.concat(formatted, '\n')
 end
 
@@ -279,9 +281,9 @@ end
 
 function RepeatUntil(node)
   return table.concat({
-    'repeat',
+    line('repeat'),
     formatNode(node.body),
-    'until ' .. formatNode(node.condition),
+    line('until ' .. formatNode(node.condition)),
   }, '\n')
 end
 
@@ -297,7 +299,7 @@ function Return(node)
   end
 
   -- TODO: check line limit?
-  return 'return ' .. table.concat(returnValues, ', ')
+  return line('return ' .. table.concat(returnValues, ', '))
 end
 
 -- -----------------------------------------------------------------------------
@@ -342,11 +344,11 @@ end
 
 function TryCatch(node)
   return table.concat({
-    'try {',
+    line('try {'),
     formatNode(node.try),
-    '} catch (' .. formatNode(node.errorName) .. ') {',
+    line('} catch (' .. formatNode(node.errorName) .. ') {'),
     formatNode(node.catch),
-    '}',
+    line('}'),
   }, '\n')
 end
 
@@ -356,9 +358,9 @@ end
 
 function WhileLoop(node)
   return table.concat({
-    'while ' .. formatNode(node.condition) .. ' {',
+    line('while ' .. formatNode(node.condition) .. ' {'),
     formatNode(node.body),
-    '}',
+    line('}'),
   }, '\n')
 end
 
