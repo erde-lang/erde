@@ -304,7 +304,15 @@ end
 function Assignment()
   local node = {
     ruleName = 'Assignment',
-    idList = List({ parse = Id }),
+    idList = currentToken ~= '(' and List({ parse = Id }) or Parens({
+      allowRecursion = true,
+      parse = function()
+        return List({
+          allowTrailingComma = true,
+          parse = Id,
+        })
+      end,
+    }),
   }
 
   if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
@@ -314,7 +322,18 @@ function Assignment()
   end
 
   expect('=')
-  node.exprList = List({ parse = Expr })
+  node.exprList = currentToken ~= '(' and List({ parse = Expr })
+    or Parens({
+      allowRecursion = true,
+      prioritizeRule = true,
+      parse = function()
+        return List({
+          allowTrailingComma = true,
+          parse = Expr,
+        })
+      end,
+    })
+
   return node
 end
 
@@ -365,12 +384,36 @@ function Declaration()
     error('Missing declaration scope')
   end
 
-  return {
+  local node = {
     ruleName = 'Declaration',
     variant = consume(),
-    varList = List({ parse = Var }),
-    exprList = branch('=') and List({ parse = Expr }) or {},
+    exprList = {},
+    varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
+      allowRecursion = true,
+      parse = function()
+        return List({
+          allowTrailingComma = true,
+          parse = Var,
+        })
+      end,
+    }),
   }
+
+  if branch('=') then
+    node.exprList = currentToken ~= '(' and List({ parse = Expr })
+      or Parens({
+        allowRecursion = true,
+        prioritizeRule = true,
+        parse = function()
+          return List({
+            allowTrailingComma = true,
+            parse = Expr,
+          })
+        end,
+      })
+  end
+
+  return node
 end
 
 -- -----------------------------------------------------------------------------
