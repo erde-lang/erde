@@ -2,13 +2,13 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, Unop, WhileLoop
 
 -- =============================================================================
 -- State
 -- =============================================================================
 
-local tokens
+local tokens, newlines
 local currentTokenIndex, currentToken
 
 -- Used to tell other rules whether the current expression is part of the
@@ -22,7 +22,10 @@ local isTernaryExpr = false
 
 local function reset(text)
   -- TODO use other tokenize results
-  tokens = tokenize(text).tokens
+  local tokenizeResults = tokenize(text)
+  tokens = tokenizeResults.tokens
+  newlines = tokenizeResults.newlines
+
   currentTokenIndex = 1
   currentToken = tokens[1]
   isTernaryExpr = false
@@ -197,6 +200,38 @@ local function Terminal()
   return node
 end
 
+local function Expr(opts)
+  local minPrec = opts and opts.minPrec or 1
+  local node = Switch({ Unop, Terminal })
+
+  local binop = C.BINOPS[currentToken]
+  while binop and binop.prec >= minPrec do
+    consume()
+
+    node = {
+      ruleName = 'Expr',
+      variant = 'binop',
+      op = binop,
+      lhs = node,
+    }
+
+    if binop.token == '?' then
+      isTernaryExpr = true
+      node.ternaryExpr = Expr()
+      isTernaryExpr = false
+      expect(':')
+    end
+
+    local newMinPrec = binop.prec
+      + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
+    node.rhs = Expr({ minPrec = newMinPrec })
+
+    binop = C.BINOPS[currentToken]
+  end
+
+  return node
+end
+
 local function FunctionCall()
   local node = OptChain()
   local last = node[#node]
@@ -335,6 +370,38 @@ function Assignment()
     })
 
   return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Binop
+-- -----------------------------------------------------------------------------
+
+function Binop(opts)
+  local minPrec = opts and opts.minPrec or 1
+  local binop = C.BINOPS[currentToken]
+  assert(binop, 'Invalid unop token: ' .. currentToken)
+  assert(C.BINOPS[currentToken], 'Invalid unop token: ' .. currentToken)
+
+  while binop and binop.prec >= minPrec do
+
+  local node = {
+    ruleName = 'Binop',
+    variant = 'binop',
+    op = binop,
+    lhs = node,
+  }
+
+  if binop.token == '?' then
+    isTernaryExpr = true
+    node.ternaryExpr = Expr()
+    isTernaryExpr = false
+    expect(':')
+  end
+
+  local newMinPrec = binop.prec + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
+  node.rhs = Expr({ minPrec = newMinPrec })
+
+  binop = C.BINOPS[currentToken]
 end
 
 -- -----------------------------------------------------------------------------
@@ -490,50 +557,6 @@ function DoBlock(opts)
     isExpr = opts and opts.isExpr,
     body = Surround('{', '}', Block),
   }
-end
-
--- -----------------------------------------------------------------------------
--- Expr
--- -----------------------------------------------------------------------------
-
-function Expr(opts)
-  local minPrec = opts and opts.minPrec or 1
-  local node = { ruleName = 'Expr' }
-
-  if C.UNOPS[currentToken] then
-    node.variant = 'unop'
-    node.op = C.UNOPS[consume()]
-    node.operand = Expr({ minPrec = node.op.prec + 1 })
-  else
-    node = Terminal()
-  end
-
-  local binop = C.BINOPS[currentToken]
-  while binop and binop.prec >= minPrec do
-    consume()
-
-    node = {
-      ruleName = 'Expr',
-      variant = 'binop',
-      op = binop,
-      lhs = node,
-    }
-
-    if binop.token == '?' then
-      isTernaryExpr = true
-      node.ternaryExpr = Expr()
-      isTernaryExpr = false
-      expect(':')
-    end
-
-    local newMinPrec = binop.prec
-      + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
-    node.rhs = Expr({ minPrec = newMinPrec })
-
-    binop = C.BINOPS[currentToken]
-  end
-
-  return node
 end
 
 -- -----------------------------------------------------------------------------
@@ -756,7 +779,9 @@ function OptChain()
     elseif currentToken == '[' then
       chain = OptChainBracket()
     elseif currentToken == '(' then
-      chain = OptChainFunctionCall()
+      if not newlines[currentTokenIndex - 1] then
+        chain = OptChainFunctionCall()
+      end
     end
 
     if not chain then
@@ -841,17 +866,17 @@ end
 function Return()
   expect('return')
 
-  local node = Parens({
-    allowRecursion = true,
-    prioritizeRule = true,
-    parse = function()
-      return List({
-        allowEmpty = true,
-        allowTrailingComma = true,
-        parse = Expr,
-      })
-    end,
-  })
+  local node = currentToken ~= '(' and List({ parse = Expr })
+    or Parens({
+      allowRecursion = true,
+      prioritizeRule = true,
+      parse = function()
+        return List({
+          allowTrailingComma = true,
+          parse = Expr,
+        })
+      end,
+    })
 
   node.ruleName = 'Return'
   return node
@@ -998,6 +1023,22 @@ function TryCatch()
 end
 
 -- -----------------------------------------------------------------------------
+-- Unop
+-- -----------------------------------------------------------------------------
+
+function Unop()
+  local op = C.UNOPS[currentToken]
+  assert(op, 'Invalid unop token: ' .. currentToken)
+  consume()
+
+  return {
+    ruleName = 'Unop',
+    op = op,
+    operand = Expr({ minPrec = op.prec + 1 }),
+  }
+end
+
+-- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
@@ -1025,6 +1066,7 @@ local subParsers = {
   -- Rules
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
+  Binop = Binop,
   Block = Block,
   Break = Break,
   Continue = Continue,
@@ -1046,6 +1088,7 @@ local subParsers = {
   String = String,
   Table = Table,
   TryCatch = TryCatch,
+  Unop = Unop,
   WhileLoop = WhileLoop,
 
   -- Pseudo-Rules
@@ -1053,6 +1096,7 @@ local subParsers = {
   Name = Name,
   Number = Number,
   Terminal = Terminal,
+  Expr = Expr,
   FunctionCall = FunctionCall,
   Id = Id,
 }
