@@ -45,13 +45,8 @@ local function restore(state)
   indentLevel = state.indentLevel
 end
 
-local function indent()
-  indentLevel = indentLevel + 1
-  linePrefix = (' '):rep(indentLevel * indentWidth)
-end
-
-local function unindent()
-  indentLevel = indentLevel - 1
+local function indent(levelDiff)
+  indentLevel = indentLevel + levelDiff
   linePrefix = (' '):rep(indentLevel * indentWidth)
 end
 
@@ -70,6 +65,16 @@ local function formatNode(node)
 
   local formatted = SUB_FORMATTERS[node.ruleName](node)
   return node.parens and '(' .. formatted .. ')' or formatted
+end
+
+local function list(nodes, sep)
+  local formattedNodes = {}
+
+  for _, node in ipairs(nodes) do
+    table.insert(formattedNodes, formatNode(node))
+  end
+
+  return table.concat(formattedNodes, sep)
 end
 
 -- =============================================================================
@@ -101,15 +106,10 @@ end
 -- -----------------------------------------------------------------------------
 
 function Block(node)
-  local formatted = {}
-  indent()
-
-  for _, statement in ipairs(node) do
-    table.insert(formatted, formatNode(statement))
-  end
-
-  unindent()
-  return table.concat(formatted, '\n')
+  indent(1)
+  local formatted = list(node, '\n')
+  indent(-1)
+  return formatted
 end
 
 -- -----------------------------------------------------------------------------
@@ -133,7 +133,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function Declaration(node)
-  return ''
+  return table.concat({
+    node.variant,
+    list(node.varList, ', '),
+    #node.exprList > 0 and '=' or '',
+    list(node.exprList, ', '),
+  }, ' ')
 end
 
 -- -----------------------------------------------------------------------------
@@ -189,39 +194,24 @@ function ForLoop(node)
   forceSingleLine = true
 
   if node.variant == 'numeric' then
-    local parts = {}
-    for _, part in ipairs(node.parts) do
-      table.insert(parts, formatNode(part))
-    end
-
     table.insert(
       formatted,
       line(table.concat({
         'for',
         node.name,
         '=',
-        table.concat(parts, ', '),
+        list(node.parts, ', '),
         '{',
       }, ' '))
     )
   else
-    local vars = {}
-    for _, var in ipairs(node.varList) do
-      table.insert(vars, formatNode(var))
-    end
-
-    local exprs = {}
-    for _, expr in ipairs(node.exprList) do
-      table.insert(exprs, formatNode(expr))
-    end
-
     table.insert(
       formatted,
       line(table.concat({
         'for',
-        table.concat(vars, ', '),
+        list(node.varList, ', '),
         'in',
-        table.concat(exprs, ', '),
+        list(node.exprList, ', '),
         '{',
       }, ' '))
     )
@@ -331,14 +321,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return(node)
-  local returnValues = {}
-
-  for i, returnValue in ipairs(node) do
-    returnValues[i] = formatNode(returnValue)
-  end
-
   -- TODO: check line limit?
-  return line('return ' .. table.concat(returnValues, ', '))
+  return line('return ' .. list(node, ', '))
 end
 
 -- -----------------------------------------------------------------------------
