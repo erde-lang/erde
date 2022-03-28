@@ -8,7 +8,7 @@ local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructur
 -- State
 -- =============================================================================
 
-local tokens
+local tokens, newlines
 local currentTokenIndex, currentToken
 
 -- Used to tell other rules whether the current expression is part of the
@@ -22,7 +22,10 @@ local isTernaryExpr = false
 
 local function reset(text)
   -- TODO use other tokenize results
-  tokens = tokenize(text).tokens
+  local tokenizeResults = tokenize(text)
+  tokens = tokenizeResults.tokens
+  newlines = tokenizeResults.newlines
+
   currentTokenIndex = 1
   currentToken = tokens[1]
   isTernaryExpr = false
@@ -756,7 +759,9 @@ function OptChain()
     elseif currentToken == '[' then
       chain = OptChainBracket()
     elseif currentToken == '(' then
-      chain = OptChainFunctionCall()
+      if not newlines[currentTokenIndex - 1] then
+        chain = OptChainFunctionCall()
+      end
     end
 
     if not chain then

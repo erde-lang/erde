@@ -9,6 +9,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Allow parenthesized lists for assignment / declarations vars and expressions.
 - Add dedicated rule for Modules (top level block)
 - Add `precompile` step for AST validation and node linking
+- Use newline to differentiate syntax ambiguity
 
 ### Changed
 - Refactor internal structure (step based rather than rule based).

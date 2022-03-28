@@ -175,18 +175,15 @@ function Token()
   elseif C.SYMBOLS[peekTwo] then
     commit(consume(2))
   elseif char == '\n' then
-    Newline()
-    Space()
-
-    if char == '\n' then
-      -- Record 2 or more newlines for formatting
-      newlines[numTokens] = true
-    end
+    local numNewLines = 0
 
     while char == '\n' do
+      numNewLines = numNewLines + 1
       Newline()
       Space()
     end
+
+    newlines[numTokens] = numNewLines
   elseif char == '"' or char == "'" then
     local quote = consume()
     commit(quote)
