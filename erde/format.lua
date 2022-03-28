@@ -12,6 +12,12 @@ local SUB_FORMATTERS
 local indentLevel
 local indentWidth
 
+-- The line prefix
+local linePrefix
+
+-- Used to indicate to rules to format to a single line.
+local forceSingleLine
+
 -- =============================================================================
 -- Helpers
 -- =============================================================================
@@ -22,11 +28,16 @@ local precompileNode, precompileChildren
 local function reset(node)
   indentLevel = 0
   indentWidth = 2
+  linePrefix = ''
+  forceSingleLine = false
 end
 
 local function backup()
   return {
     indentLevel = indentLevel,
+    indentWidth = indentWidth,
+    linePrefix = linePrefix,
+    forceSingleLine = forceSingleLine,
   }
 end
 
@@ -34,8 +45,18 @@ local function restore(state)
   indentLevel = state.indentLevel
 end
 
+local function indent()
+  indentLevel = indentLevel + 1
+  linePrefix = (' '):rep(indentLevel * indentWidth)
+end
+
+local function unindent()
+  indentLevel = indentLevel - 1
+  linePrefix = (' '):rep(indentLevel * indentWidth)
+end
+
 local function line(code)
-  return (' '):rep(indentLevel * indentWidth) .. code
+  return linePrefix .. code
 end
 
 local function formatNode(node)
@@ -80,14 +101,14 @@ end
 -- -----------------------------------------------------------------------------
 
 function Block(node)
-  indentLevel = indentLevel + 1
   local formatted = {}
+  indent()
 
   for _, statement in ipairs(node) do
     table.insert(formatted, formatNode(statement))
   end
 
-  indentLevel = indentLevel - 1
+  unindent()
   return table.concat(formatted, '\n')
 end
 
@@ -140,7 +161,22 @@ end
 -- -----------------------------------------------------------------------------
 
 function Expr(node)
-  return ''
+  -- TODO: wrap
+  if node.variant == 'unop' then
+    return node.op.token .. formatNode(node.operand)
+  elseif node.ternaryExpr then
+    return ('%s ? %s : %s'):format(
+      formatNode(node.lhs),
+      formatNode(node.ternaryExpr),
+      formatNode(node.rhs)
+    )
+  else
+    return table.concat({
+      formatNode(node.lhs),
+      node.op.token,
+      formatNode(node.rhs),
+    }, ' ')
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -149,6 +185,8 @@ end
 
 function ForLoop(node)
   local formatted = {}
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
 
   if node.variant == 'numeric' then
     local parts = {}
@@ -189,6 +227,7 @@ function ForLoop(node)
     )
   end
 
+  forceSingleLine = forceSingleLineBackup
   table.insert(formatted, formatNode(node.body))
   table.insert(formatted, line('}'))
   return table.concat(formatted, '\n')
