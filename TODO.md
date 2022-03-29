@@ -3,6 +3,9 @@
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
+- Fix syntax highlighting
+  - parenthesized declaration / assignment
+  - do expressions `if do { ... } { }`
 
 # v0.2.0
 

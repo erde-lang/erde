@@ -92,7 +92,7 @@ local function List(nodes, sep)
     table.insert(formattedNodes, formatNode(node))
   end
 
-  return table.concat(formattedNodes, sep)
+  return sep and table.concat(formattedNodes, sep) or formattedNodes
 end
 
 -- =============================================================================
@@ -147,10 +147,10 @@ end
 -- -----------------------------------------------------------------------------
 
 local function DeclarationList(nodes, limit)
-  local oldForceSingleLine = forceSingleLine
+  local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
   local list = List(nodes, ', ')
-  forceSingleLine = oldForceSingleLine
+  forceSingleLine = forceSingleLineBackup
 
   if #list <= limit then
     return list
@@ -205,7 +205,7 @@ function DoBlock(node)
     Line('do {'),
     formatNode(node.body),
     Line('}'),
-  }, '\n')
+  }, forceSingleLine and ' ' or '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -295,16 +295,24 @@ end
 -- -----------------------------------------------------------------------------
 
 function IfElse(node)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+
+  local ifCondition = formatNode(node.ifNode.condition)
+  local elseifConditions = {}
+  for _, elseifNode in ipairs(node.elseifNodes) do
+    table.insert(elseifConditions, formatNode(elseifNode.condition))
+  end
+
+  forceSingleLine = forceSingleLineBackup
+
   local formatted = {
-    Line('if ' .. formatNode(node.ifNode.condition) .. ' {'),
+    Line('if ' .. ifCondition .. ' {'),
     formatNode(node.ifNode.body),
   }
 
-  for _, elseifNode in ipairs(node.elseifNodes) do
-    table.insert(
-      formatted,
-      Line('} elseif ' .. formatNode(elseifNode.condition) .. ' {')
-    )
+  for i, elseifNode in ipairs(node.elseifNodes) do
+    table.insert(formatted, Line('} elseif ' .. elseifConditions[i] .. ' {'))
     table.insert(formatted, formatNode(elseifNode.body))
   end
 
@@ -368,8 +376,25 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return(node)
-  -- TODO: check line limit?
-  return Line('return ' .. List(node, ', '))
+  local exprList = List(node)
+  local singleLineReturn = 'return ' .. table.concat(exprList, ', ')
+
+  if forceSingleLine then
+    return singleLineReturn
+  elseif #singleLineReturn <= subColumnLimit() then
+    return Line(singleLineReturn)
+  end
+
+  local lines = { Line('return (') }
+  indent(1)
+
+  for _, expr in ipairs(exprList) do
+    table.insert(lines, Line(expr) .. ',')
+  end
+
+  indent(-1)
+  table.insert(lines, Line(')'))
+  return table.concat(lines, '\n')
 end
 
 -- -----------------------------------------------------------------------------
