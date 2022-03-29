@@ -102,7 +102,7 @@ local function List(nodes, limit)
   forceSingleLine = forceSingleLineBackup
 
   local singleLineList = table.concat(list, ', ')
-  if forceSingleLine or #singleLineList <= limit then
+  if #list < 2 or forceSingleLine or #singleLineList <= limit then
     return singleLineList
   end
 
@@ -175,15 +175,19 @@ function Declaration(node)
     List(node.varList, subColumnLimit(node.variant .. ' ')),
   }
 
-  local exprList = ''
   if #node.exprList > 0 then
     table.insert(formatted, '=')
 
-    local exprListColumnLimit = formatted[2]:sub(1, 1) == '('
-        and subColumnLimit(') = ')
-      or subColumnLimit(table.concat(formatted, ' '))
-
-    table.insert(formatted, List(node.exprList, exprListColumnLimit))
+    if #node.exprList == 1 then
+      indent(1)
+      table.insert(formatted, '\n' .. Line(formatNode(node.exprList[1])))
+      indent(-1)
+    else
+      local exprListColumnLimit = formatted[2]:sub(1, 1) == '('
+          and subColumnLimit(') = ')
+        or subColumnLimit(table.concat(formatted, ' '))
+      table.insert(formatted, List(node.exprList, exprListColumnLimit))
+    end
   end
 
   return table.concat(formatted, ' ')
