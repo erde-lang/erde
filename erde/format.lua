@@ -10,13 +10,19 @@ local SUB_FORMATTERS
 -- =============================================================================
 
 local indentLevel
-local indentWidth
 
 -- The line prefix
 local linePrefix
 
 -- Used to indicate to rules to format to a single line.
 local forceSingleLine
+
+-- =============================================================================
+-- Configuration
+-- =============================================================================
+
+local indentWidth = 2
+local columnLimit = 80
 
 -- =============================================================================
 -- Helpers
@@ -27,7 +33,6 @@ local precompileNode, precompileChildren
 
 local function reset(node)
   indentLevel = 0
-  indentWidth = 2
   linePrefix = ''
   forceSingleLine = false
 end
@@ -35,7 +40,6 @@ end
 local function backup()
   return {
     indentLevel = indentLevel,
-    indentWidth = indentWidth,
     linePrefix = linePrefix,
     forceSingleLine = forceSingleLine,
   }
@@ -50,8 +54,14 @@ local function indent(levelDiff)
   linePrefix = (' '):rep(indentLevel * indentWidth)
 end
 
-local function line(code)
-  return linePrefix .. code
+local function subColumnLimit(...)
+  local limit = columnLimit - #linePrefix
+
+  for _, str in ipairs({ ... }) do
+    limit = limit - #str
+  end
+
+  return limit
 end
 
 local function formatNode(node)
@@ -67,7 +77,15 @@ local function formatNode(node)
   return node.parens and '(' .. formatted .. ')' or formatted
 end
 
-local function list(nodes, sep)
+-- =============================================================================
+-- Macros
+-- =============================================================================
+
+local function Line(code)
+  return linePrefix .. code
+end
+
+local function List(nodes, sep)
   local formattedNodes = {}
 
   for _, node in ipairs(nodes) do
@@ -76,10 +94,6 @@ local function list(nodes, sep)
 
   return table.concat(formattedNodes, sep)
 end
-
--- =============================================================================
--- Macros
--- =============================================================================
 
 -- =============================================================================
 -- Rules
@@ -107,7 +121,7 @@ end
 
 function Block(node)
   indent(1)
-  local formatted = list(node, '\n')
+  local formatted = List(node, '\n')
   indent(-1)
   return formatted
 end
@@ -117,7 +131,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break(node)
-  return line('break')
+  return Line('break')
 end
 
 -- -----------------------------------------------------------------------------
@@ -125,20 +139,53 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue(node)
-  return line('continue')
+  return Line('continue')
 end
 
 -- -----------------------------------------------------------------------------
 -- Declaration
 -- -----------------------------------------------------------------------------
 
+local function DeclarationList(nodes, limit)
+  local oldForceSingleLine = forceSingleLine
+  forceSingleLine = true
+  local list = List(nodes, ', ')
+  forceSingleLine = oldForceSingleLine
+
+  if #list <= limit then
+    return list
+  end
+
+  local lines = { '(' }
+  indent(1)
+
+  for _, node in ipairs(nodes) do
+    table.insert(lines, Line(formatNode(node)) .. ',')
+  end
+
+  table.insert(lines, ')')
+  indent(-1)
+  return table.concat(lines, '\n')
+end
+
 function Declaration(node)
-  return table.concat({
+  local formatted = {
     node.variant,
-    list(node.varList, ', '),
-    #node.exprList > 0 and '=' or '',
-    list(node.exprList, ', '),
-  }, ' ')
+    DeclarationList(node.varList, subColumnLimit(node.variant, ' ')),
+  }
+
+  local exprList = ''
+  if #node.exprList > 0 then
+    table.insert(formatted, '=')
+
+    local exprListColumnLimit = formatted[2]:sub(1, 1) == '('
+        and subColumnLimit(') = ')
+      or subColumnLimit(table.concat(formatted, ' '))
+
+    table.insert(formatted, DeclarationList(node.exprList, exprListColumnLimit))
+  end
+
+  return table.concat(formatted, ' ')
 end
 
 -- -----------------------------------------------------------------------------
@@ -155,9 +202,9 @@ end
 
 function DoBlock(node)
   return table.concat({
-    line('do {'),
+    Line('do {'),
     formatNode(node.body),
-    line('}'),
+    Line('}'),
   }, '\n')
 end
 
@@ -196,22 +243,22 @@ function ForLoop(node)
   if node.variant == 'numeric' then
     table.insert(
       formatted,
-      line(table.concat({
+      Line(table.concat({
         'for',
         node.name,
         '=',
-        list(node.parts, ', '),
+        List(node.parts, ', '),
         '{',
       }, ' '))
     )
   else
     table.insert(
       formatted,
-      line(table.concat({
+      Line(table.concat({
         'for',
-        list(node.varList, ', '),
+        List(node.varList, ', '),
         'in',
-        list(node.exprList, ', '),
+        List(node.exprList, ', '),
         '{',
       }, ' '))
     )
@@ -219,7 +266,7 @@ function ForLoop(node)
 
   forceSingleLine = forceSingleLineBackup
   table.insert(formatted, formatNode(node.body))
-  table.insert(formatted, line('}'))
+  table.insert(formatted, Line('}'))
   return table.concat(formatted, '\n')
 end
 
@@ -237,9 +284,9 @@ end
 
 function Goto(node)
   if node.variant == 'jump' then
-    return line('goto ' .. node.name)
+    return Line('goto ' .. node.name)
   elseif node.variant == 'definition' then
-    return line('::' .. node.name .. '::')
+    return Line('::' .. node.name .. '::')
   end
 end
 
@@ -249,24 +296,24 @@ end
 
 function IfElse(node)
   local formatted = {
-    line('if ' .. formatNode(node.ifNode.condition) .. ' {'),
+    Line('if ' .. formatNode(node.ifNode.condition) .. ' {'),
     formatNode(node.ifNode.body),
   }
 
   for _, elseifNode in ipairs(node.elseifNodes) do
     table.insert(
       formatted,
-      line('} elseif ' .. formatNode(elseifNode.condition) .. ' {')
+      Line('} elseif ' .. formatNode(elseifNode.condition) .. ' {')
     )
     table.insert(formatted, formatNode(elseifNode.body))
   end
 
   if node.elseNode then
-    table.insert(formatted, line('} else {'))
+    table.insert(formatted, Line('} else {'))
     table.insert(formatted, formatNode(node.elseNode.body))
   end
 
-  table.insert(formatted, line('}'))
+  table.insert(formatted, Line('}'))
   return table.concat(formatted, '\n')
 end
 
@@ -310,9 +357,9 @@ end
 
 function RepeatUntil(node)
   return table.concat({
-    line('repeat'),
+    Line('repeat'),
     formatNode(node.body),
-    line('until ' .. formatNode(node.condition)),
+    Line('until ' .. formatNode(node.condition)),
   }, '\n')
 end
 
@@ -322,7 +369,7 @@ end
 
 function Return(node)
   -- TODO: check line limit?
-  return line('return ' .. list(node, ', '))
+  return Line('return ' .. List(node, ', '))
 end
 
 -- -----------------------------------------------------------------------------
@@ -367,11 +414,11 @@ end
 
 function TryCatch(node)
   return table.concat({
-    line('try {'),
+    Line('try {'),
     formatNode(node.try),
-    line('} catch (' .. formatNode(node.errorName) .. ') {'),
+    Line('} catch (' .. formatNode(node.errorName) .. ') {'),
     formatNode(node.catch),
-    line('}'),
+    Line('}'),
   }, '\n')
 end
 
@@ -381,9 +428,9 @@ end
 
 function WhileLoop(node)
   return table.concat({
-    line('while ' .. formatNode(node.condition) .. ' {'),
+    Line('while ' .. formatNode(node.condition) .. ' {'),
     formatNode(node.body),
-    line('}'),
+    Line('}'),
   }, '\n')
 end
 
