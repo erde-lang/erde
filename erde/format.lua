@@ -77,6 +77,16 @@ local function formatNode(node)
   return node.parens and '(' .. formatted .. ')' or formatted
 end
 
+local function formatNodes(nodes, sep)
+  local formattedNodes = {}
+
+  for _, node in ipairs(nodes) do
+    table.insert(formattedNodes, formatNode(node))
+  end
+
+  return sep and table.concat(formattedNodes, sep) or formattedNodes
+end
+
 -- =============================================================================
 -- Macros
 -- =============================================================================
@@ -85,14 +95,27 @@ local function Line(code)
   return linePrefix .. code
 end
 
-local function List(nodes, sep)
-  local formattedNodes = {}
+local function List(nodes, limit)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+  local list = formatNodes(nodes)
+  forceSingleLine = forceSingleLineBackup
 
-  for _, node in ipairs(nodes) do
-    table.insert(formattedNodes, formatNode(node))
+  local singleLineList = table.concat(list, ', ')
+  if forceSingleLine or #singleLineList <= limit then
+    return singleLineList
   end
 
-  return sep and table.concat(formattedNodes, sep) or formattedNodes
+  local lines = { '(' }
+  indent(1)
+
+  for _, item in ipairs(list) do
+    table.insert(lines, Line(item) .. ',')
+  end
+
+  indent(-1)
+  table.insert(lines, Line(')'))
+  return table.concat(lines, '\n')
 end
 
 -- =============================================================================
@@ -121,7 +144,7 @@ end
 
 function Block(node)
   indent(1)
-  local formatted = List(node, '\n')
+  local formatted = formatNodes(node, '\n')
   indent(-1)
   return formatted
 end
@@ -146,32 +169,10 @@ end
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-local function DeclarationList(nodes, limit)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
-  local list = List(nodes, ', ')
-  forceSingleLine = forceSingleLineBackup
-
-  if #list <= limit then
-    return list
-  end
-
-  local lines = { '(' }
-  indent(1)
-
-  for _, node in ipairs(nodes) do
-    table.insert(lines, Line(formatNode(node)) .. ',')
-  end
-
-  table.insert(lines, ')')
-  indent(-1)
-  return table.concat(lines, '\n')
-end
-
 function Declaration(node)
   local formatted = {
     node.variant,
-    DeclarationList(node.varList, subColumnLimit(node.variant, ' ')),
+    List(node.varList, subColumnLimit(node.variant .. ' ')),
   }
 
   local exprList = ''
@@ -182,7 +183,7 @@ function Declaration(node)
         and subColumnLimit(') = ')
       or subColumnLimit(table.concat(formatted, ' '))
 
-    table.insert(formatted, DeclarationList(node.exprList, exprListColumnLimit))
+    table.insert(formatted, List(node.exprList, exprListColumnLimit))
   end
 
   return table.concat(formatted, ' ')
@@ -247,7 +248,7 @@ function ForLoop(node)
         'for',
         node.name,
         '=',
-        List(node.parts, ', '),
+        formatNodes(node.parts, ', '),
         '{',
       }, ' '))
     )
@@ -256,9 +257,9 @@ function ForLoop(node)
       formatted,
       Line(table.concat({
         'for',
-        List(node.varList, ', '),
+        formatNodes(node.varList, ', '),
         'in',
-        List(node.exprList, ', '),
+        formatNodes(node.exprList, ', '),
         '{',
       }, ' '))
     )
@@ -381,25 +382,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return(node)
-  local exprList = List(node)
-  local singleLineReturn = 'return ' .. table.concat(exprList, ', ')
-
-  if forceSingleLine then
-    return singleLineReturn
-  elseif #singleLineReturn <= subColumnLimit() then
-    return Line(singleLineReturn)
-  end
-
-  local lines = { Line('return (') }
-  indent(1)
-
-  for _, expr in ipairs(exprList) do
-    table.insert(lines, Line(expr) .. ',')
-  end
-
-  indent(-1)
-  table.insert(lines, Line(')'))
-  return table.concat(lines, '\n')
+  local formatted = 'return ' .. List(node, subColumnLimit('return '))
+  return forceSingleLine and formatted or Line(formatted)
 end
 
 -- -----------------------------------------------------------------------------
