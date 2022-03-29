@@ -364,10 +364,15 @@ end
 -- -----------------------------------------------------------------------------
 
 function RepeatUntil(node)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+  local condition = formatNode(node.condition)
+  forceSingleLine = forceSingleLineBackup
+
   return table.concat({
     Line('repeat'),
     formatNode(node.body),
-    Line('until ' .. formatNode(node.condition)),
+    Line('until ' .. condition),
   }, '\n')
 end
 
@@ -452,8 +457,13 @@ end
 -- -----------------------------------------------------------------------------
 
 function WhileLoop(node)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+  local condition = formatNode(node.condition)
+  forceSingleLine = forceSingleLineBackup
+
   return table.concat({
-    Line('while ' .. formatNode(node.condition) .. ' {'),
+    Line('while ' .. condition .. ' {'),
     formatNode(node.body),
     Line('}'),
   }, '\n')
