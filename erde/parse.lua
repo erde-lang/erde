@@ -846,17 +846,17 @@ end
 function Return()
   expect('return')
 
-  local node = Parens({
-    allowRecursion = true,
-    prioritizeRule = true,
-    parse = function()
-      return List({
-        allowEmpty = true,
-        allowTrailingComma = true,
-        parse = Expr,
-      })
-    end,
-  })
+  local node = currentToken ~= '(' and List({ parse = Expr })
+    or Parens({
+      allowRecursion = true,
+      prioritizeRule = true,
+      parse = function()
+        return List({
+          allowTrailingComma = true,
+          parse = Expr,
+        })
+      end,
+    })
 
   node.ruleName = 'Return'
   return node

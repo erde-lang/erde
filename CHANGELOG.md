@@ -17,9 +17,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Parsing is much more lenient so we may apply formatting
   - AST validation now happens in `resolve.lua`
 - Varargs now spreads when used as a table or param expression.
+- Do not allow trailing comma in Return exprs unless parens are present
 
 ### Fixed
 - String interpolation w/ names now compiles correctly.
+- Fixed parenthesized Return.
 
 ## [0.1-1] - March 3, 2022
 
