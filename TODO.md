@@ -3,6 +3,10 @@
 - Formatting
   - Rule.format method
   - cli support `erde format [FILES]`
+- add prune operator?
+  - `!somecondition ~> nil`
+  - shorthand for `if !somecondition { return nil }`
+  - extremely common pattern
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - do expressions `if do { ... } { }`

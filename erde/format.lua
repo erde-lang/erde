@@ -327,7 +327,7 @@ function IfElse(node)
   end
 
   table.insert(formatted, Line('}'))
-  return table.concat(formatted, '\n')
+  return table.concat(formatted, forceSingleLine and ' ' or '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -378,7 +378,7 @@ function RepeatUntil(node)
     Line('repeat'),
     formatNode(node.body),
     Line('until ' .. condition),
-  }, '\n')
+  }, forceSingleLine and ' ' or '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -437,7 +437,7 @@ function TryCatch(node)
     Line('} catch (' .. formatNode(node.errorName) .. ') {'),
     formatNode(node.catch),
     Line('}'),
-  }, '\n')
+  }, forceSingleLine and ' ' or '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -454,7 +454,7 @@ function WhileLoop(node)
     Line('while ' .. condition .. ' {'),
     formatNode(node.body),
     Line('}'),
-  }, '\n')
+  }, forceSingleLine and ' ' or '\n')
 end
 
 -- =============================================================================
