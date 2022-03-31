@@ -22,7 +22,6 @@ local forceSingleLine
 
 local indentWidth = 2
 local columnLimit = 80
-local overflowLimit = 10
 
 -- =============================================================================
 -- Helpers
@@ -106,29 +105,6 @@ local function MultiLineList(nodes)
   indent(-1)
   table.insert(formatted, prefix(')'))
   return table.concat(formatted, '\n')
-end
-
-local function List(nodes, limit)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
-  local list = formatNodes(nodes)
-  forceSingleLine = forceSingleLineBackup
-
-  local singleLineList = table.concat(list, ', ')
-  if #list < 2 or forceSingleLine or #singleLineList <= limit then
-    return singleLineList
-  end
-
-  local lines = { '(' }
-  indent(1)
-
-  for _, item in ipairs(list) do
-    table.insert(lines, prefix(item) .. ',')
-  end
-
-  indent(-1)
-  table.insert(lines, prefix(')'))
-  return table.concat(lines, '\n')
 end
 
 -- =============================================================================
@@ -249,7 +225,45 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Destructure(node)
-  return ''
+  local keyDestructs = {}
+  local numberDestructs = {}
+
+  for _, destruct in ipairs(node) do
+    local formatted = destruct.name
+
+    if destruct.alias then
+      formatted = formatted .. ': ' .. destruct.alias
+    end
+
+    if destruct.default then
+      formatted = formatted .. ' = ' .. formatNode(destruct.default)
+    end
+
+    if destruct.variant == 'numberDestruct' then
+      table.insert(numberDestructs, formatted)
+    else
+      table.insert(keyDestructs, formatted)
+    end
+  end
+
+  local formattedNumberDestructs = { '[' }
+  for _, destruct in ipairs(numberDestructs) do
+    table.insert(formattedNumberDestructs, destruct)
+  end
+  table.insert(formattedNumberDestructs, ']')
+
+  if #keyDestructs == 0 then
+    return join(formattedNumberDestructs)
+  end
+
+  local formatted = { '{' }
+  for _, destruct in ipairs(keyDestructs) do
+    table.insert(formatted, destruct)
+  end
+  table.insert(formatted, join(formattedNumberDestructs))
+  table.insert(formatted, '}')
+
+  return join(formatted)
 end
 
 -- -----------------------------------------------------------------------------
