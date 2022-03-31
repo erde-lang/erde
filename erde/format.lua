@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local parse = require('erde.parse')
 
 -- Foward declare
-local SINGLE_LINE_FORMATTERS, MULTI_LINE_FORMATTERS
+local SUB_FORMATTERS
 
 -- =============================================================================
 -- State
@@ -53,6 +53,14 @@ local function indent(levelDiff)
   linePrefix = (' '):rep(indentLevel * indentWidth)
 end
 
+local function prefix(line)
+  return (forceSingleLine and '' or linePrefix) .. line
+end
+
+local function join(lines)
+  return table.concat(lines, forceSingleLine and ' ' or '\n')
+end
+
 local function subColumnLimit(...)
   local limit = columnLimit - #linePrefix
 
@@ -68,16 +76,11 @@ local function formatNode(node)
     return node
   elseif type(node) ~= 'table' then
     error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
-  end
-
-  local formatter = forceSingleLine and SINGLE_LINE_FORMATTERS[node.ruleName]
-    or MULTI_LINE_FORMATTERS[node.ruleName]
-
-  if type(formatter) ~= 'function' then
+  elseif type(SUB_FORMATTERS[node.ruleName]) ~= 'function' then
     error(('Invalid ruleName: %s'):format(node.ruleName))
   end
 
-  local formatted = formatter(node)
+  local formatted = SUB_FORMATTERS[node.ruleName](node)
   return node.parens and '(' .. formatted .. ')' or formatted
 end
 
@@ -95,10 +98,6 @@ end
 -- Macros
 -- =============================================================================
 
-local function Line(code)
-  return linePrefix .. code
-end
-
 local function List(nodes, limit)
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
@@ -114,11 +113,11 @@ local function List(nodes, limit)
   indent(1)
 
   for _, item in ipairs(list) do
-    table.insert(lines, Line(item) .. ',')
+    table.insert(lines, prefix(item) .. ',')
   end
 
   indent(-1)
-  table.insert(lines, Line(')'))
+  table.insert(lines, prefix(')'))
   return table.concat(lines, '\n')
 end
 
@@ -130,7 +129,7 @@ end
 -- ArrowFunction
 -- -----------------------------------------------------------------------------
 
-function ArrowFunction(node)
+local function ArrowFunction(node)
   return ''
 end
 
@@ -138,7 +137,7 @@ end
 -- Assignment
 -- -----------------------------------------------------------------------------
 
-function Assignment(node)
+local function Assignment(node)
   return ''
 end
 
@@ -146,35 +145,23 @@ end
 -- Block
 -- -----------------------------------------------------------------------------
 
-function SingleLineBlock(node)
+local function Block(node)
   local formatted = {}
   indent(1)
 
   for _, statement in ipairs(node) do
-    table.insert(formatted, formatNode(statement))
+    table.insert(formatted, prefix(formatNode(statement)))
   end
 
   indent(-1)
-  return table.concat(formatted, ' ')
-end
-
-function MultiLineBlock(node)
-  local formatted = {}
-  indent(1)
-
-  for _, statement in ipairs(node) do
-    table.insert(formatted, Line(formatNode(statement)))
-  end
-
-  indent(-1)
-  return table.concat(formatted, '\n')
+  return join(formatted)
 end
 
 -- -----------------------------------------------------------------------------
 -- Break
 -- -----------------------------------------------------------------------------
 
-function Break(node)
+local function Break(node)
   return 'break'
 end
 
@@ -182,7 +169,7 @@ end
 -- Continue
 -- -----------------------------------------------------------------------------
 
-function Continue(node)
+local function Continue(node)
   return 'continue'
 end
 
@@ -190,7 +177,7 @@ end
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-function Declaration(node)
+local function Declaration(node)
   local formatted = {
     node.variant,
     List(node.varList, subColumnLimit(node.variant .. ' ')),
@@ -201,7 +188,7 @@ function Declaration(node)
 
     if #node.exprList == 1 then
       indent(1)
-      table.insert(formatted, '\n' .. Line(formatNode(node.exprList[1])))
+      table.insert(formatted, '\n' .. prefix(formatNode(node.exprList[1])))
       indent(-1)
     else
       local exprListColumnLimit = formatted[2]:sub(1, 1) == '('
@@ -218,7 +205,7 @@ end
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-function Destructure(node)
+local function Destructure(node)
   return ''
 end
 
@@ -226,19 +213,15 @@ end
 -- DoBlock
 -- -----------------------------------------------------------------------------
 
-function SingleLineDoBlock(node)
-  return table.concat({ 'do {', formatNode(node.body), '}' }, ' ')
-end
-
-function MultiLineDoBlock(node)
-  return table.concat({ 'do {', formatNode(node.body), Line('}') }, '\n')
+local function DoBlock(node)
+  return join({ 'do {', formatNode(node.body), prefix('}') })
 end
 
 -- -----------------------------------------------------------------------------
 -- Expr
 -- -----------------------------------------------------------------------------
 
-function Expr(node)
+local function Expr(node)
   -- TODO: wrap
   if node.variant == 'unop' then
     return node.op.token .. formatNode(node.operand)
@@ -261,7 +244,7 @@ end
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop(node)
+local function ForLoop(node)
   local formatted = {}
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
@@ -269,38 +252,38 @@ function ForLoop(node)
   if node.variant == 'numeric' then
     table.insert(
       formatted,
-      Line(table.concat({
+      table.concat({
         'for',
         node.name,
         '=',
         formatNodes(node.parts, ', '),
         '{',
-      }, ' '))
+      }, ' ')
     )
   else
     table.insert(
       formatted,
-      Line(table.concat({
+      table.concat({
         'for',
         formatNodes(node.varList, ', '),
         'in',
         formatNodes(node.exprList, ', '),
         '{',
-      }, ' '))
+      }, ' ')
     )
   end
 
   forceSingleLine = forceSingleLineBackup
   table.insert(formatted, formatNode(node.body))
-  table.insert(formatted, Line('}'))
-  return table.concat(formatted, '\n')
+  table.insert(formatted, prefix('}'))
+  return join(formatted)
 end
 
 -- -----------------------------------------------------------------------------
 -- Function
 -- -----------------------------------------------------------------------------
 
-function Function(node)
+local function Function(node)
   return ''
 end
 
@@ -308,7 +291,7 @@ end
 -- Goto
 -- -----------------------------------------------------------------------------
 
-function Goto(node)
+local function Goto(node)
   if node.variant == 'jump' then
     return 'goto ' .. node.name
   elseif node.variant == 'definition' then
@@ -320,7 +303,7 @@ end
 -- IfElse
 -- -----------------------------------------------------------------------------
 
-function IfElse(node)
+local function IfElse(node)
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
 
@@ -333,29 +316,29 @@ function IfElse(node)
   forceSingleLine = forceSingleLineBackup
 
   local formatted = {
-    Line('if ' .. ifCondition .. ' {'),
+    'if ' .. ifCondition .. ' {',
     formatNode(node.ifNode.body),
   }
 
   for i, elseifNode in ipairs(node.elseifNodes) do
-    table.insert(formatted, Line('} elseif ' .. elseifConditions[i] .. ' {'))
+    table.insert(formatted, prefix('} elseif ' .. elseifConditions[i] .. ' {'))
     table.insert(formatted, formatNode(elseifNode.body))
   end
 
   if node.elseNode then
-    table.insert(formatted, Line('} else {'))
+    table.insert(formatted, prefix('} else {'))
     table.insert(formatted, formatNode(node.elseNode.body))
   end
 
-  table.insert(formatted, Line('}'))
-  return table.concat(formatted, forceSingleLine and ' ' or '\n')
+  table.insert(formatted, prefix('}'))
+  return join(formatted)
 end
 
 -- -----------------------------------------------------------------------------
 -- Module
 -- -----------------------------------------------------------------------------
 
-function Module(node)
+local function Module(node)
   local formatted = {}
 
   if node.shebang then
@@ -373,7 +356,7 @@ end
 -- OptChain
 -- -----------------------------------------------------------------------------
 
-function OptChain(node)
+local function OptChain(node)
   return ''
 end
 
@@ -381,7 +364,7 @@ end
 -- Params
 -- -----------------------------------------------------------------------------
 
-function Params(node)
+local function Params(node)
   return ''
 end
 
@@ -389,37 +372,24 @@ end
 -- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-function SingleLineRepeatUntil(node)
+local function RepeatUntil(node)
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
   local condition = formatNode(node.condition)
   forceSingleLine = forceSingleLineBackup
 
-  return table.concat({
+  return join({
     'repeat',
     formatNode(node.body),
-    'until ' .. condition,
-  }, ' ')
-end
-
-function MultiLineRepeatUntil(node)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
-  local condition = formatNode(node.condition)
-  forceSingleLine = forceSingleLineBackup
-
-  return table.concat({
-    'repeat',
-    formatNode(node.body),
-    Line('until ' .. condition),
-  }, '\n')
+    prefix('until ' .. condition),
+  })
 end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-function Return(node)
+local function Return(node)
   return 'return ' .. List(node, subColumnLimit('return '))
 end
 
@@ -427,7 +397,7 @@ end
 -- Self
 -- -----------------------------------------------------------------------------
 
-function Self(node)
+local function Self(node)
   if node.variant == 'self' then
     return '$'
   else
@@ -439,7 +409,7 @@ end
 -- Spread
 -- -----------------------------------------------------------------------------
 
-function Spread(node)
+local function Spread(node)
   return '...' .. (node.value and formatNode(node.value) or '')
 end
 
@@ -447,7 +417,7 @@ end
 -- String
 -- -----------------------------------------------------------------------------
 
-function String(node)
+local function String(node)
   return ''
 end
 
@@ -455,7 +425,7 @@ end
 -- Table
 -- -----------------------------------------------------------------------------
 
-function Table(node)
+local function Table(node)
   return ''
 end
 
@@ -463,69 +433,46 @@ end
 -- TryCatch
 -- -----------------------------------------------------------------------------
 
-function SingleLineTryCatch(node)
-  return table.concat({
+local function TryCatch(node)
+  return join({
     'try {',
     formatNode(node.try),
-    '} catch (' .. formatNode(node.errorName) .. ') {',
+    prefix('} catch (' .. formatNode(node.errorName) .. ') {'),
     formatNode(node.catch),
-    '}',
-  }, ' ')
-end
-
-function MultiLineTryCatch(node)
-  return table.concat({
-    'try {',
-    formatNode(node.try),
-    Line('} catch (' .. formatNode(node.errorName) .. ') {'),
-    formatNode(node.catch),
-    Line('}'),
-  }, '\n')
+    prefix('}'),
+  })
 end
 
 -- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
-function SingleLineWhileLoop(node)
+local function WhileLoop(node)
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
   local condition = formatNode(node.condition)
   forceSingleLine = forceSingleLineBackup
 
-  return table.concat({
+  return join({
     'while ' .. condition .. ' {',
     formatNode(node.body),
-    '}',
-  }, ' ')
-end
-
-function MultiLineWhileLoop(node)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
-  local condition = formatNode(node.condition)
-  forceSingleLine = forceSingleLineBackup
-
-  return table.concat({
-    'while ' .. condition .. ' {',
-    formatNode(node.body),
-    Line('}'),
-  }, '\n')
+    prefix('}'),
+  })
 end
 
 -- =============================================================================
 -- Format
 -- =============================================================================
 
-SINGLE_LINE_FORMATTERS = {
+SUB_FORMATTERS = {
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
-  Block = SingleLineBlock,
+  Block = Block,
   Break = Break,
   Continue = Continue,
   Declaration = Declaration,
   Destructure = Destructure,
-  DoBlock = SingleLineDoBlock,
+  DoBlock = DoBlock,
   Expr = Expr,
   ForLoop = ForLoop,
   Function = Function,
@@ -534,41 +481,14 @@ SINGLE_LINE_FORMATTERS = {
   Module = Module,
   OptChain = OptChain,
   Params = Params,
-  RepeatUntil = SingleLineRepeatUntil,
+  RepeatUntil = RepeatUntil,
   Return = Return,
   Self = Self,
   Spread = Spread,
   String = String,
   Table = Table,
-  TryCatch = SingleLineTryCatch,
-  WhileLoop = SingleLineWhileLoop,
-}
-
-MULTI_LINE_FORMATTERS = {
-  ArrowFunction = ArrowFunction,
-  Assignment = Assignment,
-  Block = MultiLineBlock,
-  Break = Break,
-  Continue = Continue,
-  Declaration = Declaration,
-  Destructure = Destructure,
-  DoBlock = MultiLineDoBlock,
-  Expr = Expr,
-  ForLoop = ForLoop,
-  Function = Function,
-  Goto = Goto,
-  IfElse = IfElse,
-  Module = Module,
-  OptChain = OptChain,
-  Params = Params,
-  RepeatUntil = MultiLineRepeatUntil,
-  Return = Return,
-  Self = Self,
-  Spread = Spread,
-  String = String,
-  Table = Table,
-  TryCatch = MultiLineTryCatch,
-  WhileLoop = MultiLineWhileLoop,
+  TryCatch = TryCatch,
+  WhileLoop = WhileLoop,
 }
 
 return function(textOrAst, ...)
