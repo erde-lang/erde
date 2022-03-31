@@ -470,28 +470,16 @@ end
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-local function Destruct()
-  local destruct = { name = Name() }
-
-  if branch(':') then
-    destruct.alias = Name()
-  end
-
-  if branch('=') then
-    destruct.default = Expr()
-  end
-
-  return destruct
-end
-
 local function ArrayDestructure()
   return Surround('[', ']', function()
     return List({
       allowTrailingComma = true,
       parse = function()
-        local destruct = Destruct()
-        destruct.variant = 'numberDestruct'
-        return destruct
+        return {
+          name = Name(),
+          variant = 'numberDestruct',
+          default = branch('=') and Expr(),
+        }
       end,
     })
   end)
@@ -508,9 +496,12 @@ function Destructure()
           if currentToken == '[' then
             return ArrayDestructure()
           else
-            local destruct = Destruct()
-            destruct.variant = 'keyDestruct'
-            return destruct
+            return {
+              name = Name(),
+              variant = 'keyDestruct',
+              alias = branch(':') and Name(),
+              default = branch('=') and Expr(),
+            }
           end
         end,
       })
