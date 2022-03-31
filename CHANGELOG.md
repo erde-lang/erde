@@ -13,6 +13,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ### Changed
 - Refactor internal structure (step based rather than rule based).
+- Split Expr rule into Binop / Unop rules, use Expr as pseudo rule.
 - AST validation errors no longer throw when parsing
   - Parsing is much more lenient so we may apply formatting
   - AST validation now happens in `resolve.lua`
