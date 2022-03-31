@@ -107,6 +107,27 @@ local function MultiLineList(nodes)
   return table.concat(formatted, '\n')
 end
 
+local function Terminal(nodes)
+  local singleLineExprList = SingleLineList(node.exprList)
+  local singleLineExprListLen = #singleLineExprList
+  local exprListColumnLimit = not hasSingleLineVarList
+      and subColumnLimit(') = ')
+    or subColumnLimit(table.concat(formatted, ' '))
+
+  if singleLineExprListLen <= exprListColumnLimit then
+    table.insert(formatted, singleLineExprList)
+  elseif
+    hasSingleLineVarList
+    and singleLineExprListLen < subColumnLimit() - indentWidth
+  then
+    table.insert(formatted, '\n' .. singleLineExprList)
+  elseif #node.exprList > 1 then
+    table.insert(formatted, MultiLineList(node.exprList))
+  else
+    table.insert(formatted, formatNode(node.exprList[1]))
+  end
+end
+
 -- =============================================================================
 -- Rules
 -- =============================================================================
