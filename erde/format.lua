@@ -22,6 +22,7 @@ local forceSingleLine
 
 local indentWidth = 2
 local columnLimit = 80
+local overflowLimit = 10
 
 -- =============================================================================
 -- Helpers
@@ -34,18 +35,6 @@ local function reset(node)
   indentLevel = 0
   linePrefix = ''
   forceSingleLine = false
-end
-
-local function backup()
-  return {
-    indentLevel = indentLevel,
-    linePrefix = linePrefix,
-    forceSingleLine = forceSingleLine,
-  }
-end
-
-local function restore(state)
-  indentLevel = state.indentLevel
 end
 
 local function indent(levelDiff)
@@ -97,6 +86,27 @@ end
 -- =============================================================================
 -- Macros
 -- =============================================================================
+
+local function SingleLineList(nodes)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+  local formatted = formatNodes(nodes, ', ')
+  forceSingleLine = forceSingleLineBackup
+  return formatted
+end
+
+local function MultiLineList(nodes)
+  local formatted = { '(' }
+  indent(1)
+
+  for _, node in ipairs(nodes) do
+    table.insert(formatted, prefix(node) .. ',')
+  end
+
+  indent(-1)
+  table.insert(formatted, prefix(')'))
+  return table.concat(formatted, '\n')
+end
 
 local function List(nodes, limit)
   local forceSingleLineBackup = forceSingleLine
@@ -177,15 +187,36 @@ end
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-local function Declaration(node)
+local function SingleLineDeclaration(node)
   local formatted = {
     node.variant,
-    List(node.varList, subColumnLimit(node.variant .. ' ')),
+    SingleLineList(node.varList),
   }
 
   if #node.exprList > 0 then
     table.insert(formatted, '=')
+    table.insert(formatted, SingleLineList(node.exprList))
+  end
 
+  return table.concat(formatted, ' ')
+end
+
+local function MultiLineDeclaration(node)
+  local formatted = { node.variant }
+
+  local singleLineVarList = SingleLineList(node.varList)
+  local hasSingleLineVarList = #singleLineVarList
+    <= subColumnLimit(node.variant) - 1
+
+  table.insert(
+    formatted,
+    hasSingleLineVarList and singleLineVarList or MultiLineList(node.varList)
+  )
+
+  if #node.exprList > 0 then
+    table.insert(formatted, '=')
+
+    -- TODO: fix this
     if #node.exprList == 1 then
       indent(1)
       table.insert(formatted, '\n' .. prefix(formatNode(node.exprList[1])))
@@ -199,6 +230,11 @@ local function Declaration(node)
   end
 
   return table.concat(formatted, ' ')
+end
+
+local function Declaration(node)
+  return forceSingleLine and SingleLineDeclaration(node)
+    or MultiLineDeclaration(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -256,7 +292,7 @@ local function ForLoop(node)
         'for',
         node.name,
         '=',
-        formatNodes(node.parts, ', '),
+        SingleLineList(node.parts),
         '{',
       }, ' ')
     )
@@ -265,9 +301,9 @@ local function ForLoop(node)
       formatted,
       table.concat({
         'for',
-        formatNodes(node.varList, ', '),
+        SingleLineList(node.varList),
         'in',
-        formatNodes(node.exprList, ', '),
+        SingleLineList(node.exprList),
         '{',
       }, ' ')
     )
@@ -390,7 +426,10 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Return(node)
-  return 'return ' .. List(node, subColumnLimit('return '))
+  local singleLineReturns = SingleLineList(node)
+  return #singleLineReturns <= subColumnLimit('return ')
+      and 'return ' .. singleLineReturns
+    or 'return ' .. MultiLineList(node)
 end
 
 -- -----------------------------------------------------------------------------
