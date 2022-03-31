@@ -202,29 +202,14 @@ end
 
 local function Expr(opts)
   local minPrec = opts and opts.minPrec or 1
-  local node = Switch({ Unop, Terminal })
+  local node = C.UNOPS[currentToken] and Unop() or Terminal()
 
   local binop = C.BINOPS[currentToken]
   while binop and binop.prec >= minPrec do
-    consume()
-
-    node = {
-      ruleName = 'Expr',
-      variant = 'binop',
-      op = binop,
+    node = Binop({
+      minPrec = minPrec,
       lhs = node,
-    }
-
-    if binop.token == '?' then
-      isTernaryExpr = true
-      node.ternaryExpr = Expr()
-      isTernaryExpr = false
-      expect(':')
-    end
-
-    local newMinPrec = binop.prec
-      + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
-    node.rhs = Expr({ minPrec = newMinPrec })
+    })
 
     binop = C.BINOPS[currentToken]
   end
@@ -378,30 +363,28 @@ end
 
 function Binop(opts)
   local minPrec = opts and opts.minPrec or 1
-  local binop = C.BINOPS[currentToken]
-  assert(binop, 'Invalid unop token: ' .. currentToken)
-  assert(C.BINOPS[currentToken], 'Invalid unop token: ' .. currentToken)
 
-  while binop and binop.prec >= minPrec do
+  local op = C.BINOPS[currentToken]
+  assert(op, 'Invalid binop token: ' .. currentToken)
+  assert(op.prec >= minPrec, 'Binop does not have enough precedence.')
+  consume()
 
   local node = {
     ruleName = 'Binop',
-    variant = 'binop',
-    op = binop,
-    lhs = node,
+    op = op,
+    lhs = opts.lhs,
   }
 
-  if binop.token == '?' then
+  if op.token == '?' then
     isTernaryExpr = true
     node.ternaryExpr = Expr()
     isTernaryExpr = false
     expect(':')
   end
 
-  local newMinPrec = binop.prec + (binop.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
+  local newMinPrec = op.prec + (op.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
   node.rhs = Expr({ minPrec = newMinPrec })
-
-  binop = C.BINOPS[currentToken]
+  return node
 end
 
 -- -----------------------------------------------------------------------------
