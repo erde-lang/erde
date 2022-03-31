@@ -1,9 +1,8 @@
 local C = require('erde.constants')
 local parse = require('erde.parse')
 
--- Foward declare rules
-local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
-local SUB_FORMATTERS
+-- Foward declare
+local SINGLE_LINE_FORMATTERS, MULTI_LINE_FORMATTERS
 
 -- =============================================================================
 -- State
@@ -69,11 +68,16 @@ local function formatNode(node)
     return node
   elseif type(node) ~= 'table' then
     error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
-  elseif type(SUB_FORMATTERS[node.ruleName]) ~= 'function' then
+  end
+
+  local formatter = forceSingleLine and SINGLE_LINE_FORMATTERS[node.ruleName]
+    or MULTI_LINE_FORMATTERS[node.ruleName]
+
+  if type(formatter) ~= 'function' then
     error(('Invalid ruleName: %s'):format(node.ruleName))
   end
 
-  local formatted = SUB_FORMATTERS[node.ruleName](node)
+  local formatted = formatter(node)
   return node.parens and '(' .. formatted .. ')' or formatted
 end
 
@@ -142,11 +146,28 @@ end
 -- Block
 -- -----------------------------------------------------------------------------
 
-function Block(node)
+function SingleLineBlock(node)
+  local formatted = {}
   indent(1)
-  local formatted = formatNodes(node, '\n')
+
+  for _, statement in ipairs(node) do
+    table.insert(formatted, formatNode(statement))
+  end
+
   indent(-1)
-  return formatted
+  return table.concat(formatted, ' ')
+end
+
+function MultiLineBlock(node)
+  local formatted = {}
+  indent(1)
+
+  for _, statement in ipairs(node) do
+    table.insert(formatted, Line(formatNode(statement)))
+  end
+
+  indent(-1)
+  return table.concat(formatted, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -154,7 +175,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Break(node)
-  return Line('break')
+  return 'break'
 end
 
 -- -----------------------------------------------------------------------------
@@ -162,7 +183,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Continue(node)
-  return Line('continue')
+  return 'continue'
 end
 
 -- -----------------------------------------------------------------------------
@@ -205,12 +226,12 @@ end
 -- DoBlock
 -- -----------------------------------------------------------------------------
 
-function DoBlock(node)
-  return table.concat({
-    Line('do {'),
-    formatNode(node.body),
-    Line('}'),
-  }, forceSingleLine and ' ' or '\n')
+function SingleLineDoBlock(node)
+  return table.concat({ 'do {', formatNode(node.body), '}' }, ' ')
+end
+
+function MultiLineDoBlock(node)
+  return table.concat({ 'do {', formatNode(node.body), Line('}') }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -289,9 +310,9 @@ end
 
 function Goto(node)
   if node.variant == 'jump' then
-    return Line('goto ' .. node.name)
+    return 'goto ' .. node.name
   elseif node.variant == 'definition' then
-    return Line('::' .. node.name .. '::')
+    return '::' .. node.name .. '::'
   end
 end
 
@@ -368,17 +389,30 @@ end
 -- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-function RepeatUntil(node)
+function SingleLineRepeatUntil(node)
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
   local condition = formatNode(node.condition)
   forceSingleLine = forceSingleLineBackup
 
   return table.concat({
-    Line('repeat'),
+    'repeat',
+    formatNode(node.body),
+    'until ' .. condition,
+  }, ' ')
+end
+
+function MultiLineRepeatUntil(node)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+  local condition = formatNode(node.condition)
+  forceSingleLine = forceSingleLineBackup
+
+  return table.concat({
+    'repeat',
     formatNode(node.body),
     Line('until ' .. condition),
-  }, forceSingleLine and ' ' or '\n')
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -386,8 +420,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return(node)
-  local formatted = 'return ' .. List(node, subColumnLimit('return '))
-  return forceSingleLine and formatted or Line(formatted)
+  return 'return ' .. List(node, subColumnLimit('return '))
 end
 
 -- -----------------------------------------------------------------------------
@@ -430,54 +463,69 @@ end
 -- TryCatch
 -- -----------------------------------------------------------------------------
 
-function TryCatch(node)
+function SingleLineTryCatch(node)
   return table.concat({
-    Line('try {'),
+    'try {',
+    formatNode(node.try),
+    '} catch (' .. formatNode(node.errorName) .. ') {',
+    formatNode(node.catch),
+    '}',
+  }, ' ')
+end
+
+function MultiLineTryCatch(node)
+  return table.concat({
+    'try {',
     formatNode(node.try),
     Line('} catch (' .. formatNode(node.errorName) .. ') {'),
     formatNode(node.catch),
     Line('}'),
-  }, forceSingleLine and ' ' or '\n')
+  }, '\n')
 end
 
 -- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
-function WhileLoop(node)
+function SingleLineWhileLoop(node)
   local forceSingleLineBackup = forceSingleLine
   forceSingleLine = true
   local condition = formatNode(node.condition)
   forceSingleLine = forceSingleLineBackup
 
   return table.concat({
-    Line('while ' .. condition .. ' {'),
+    'while ' .. condition .. ' {',
+    formatNode(node.body),
+    '}',
+  }, ' ')
+end
+
+function MultiLineWhileLoop(node)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+  local condition = formatNode(node.condition)
+  forceSingleLine = forceSingleLineBackup
+
+  return table.concat({
+    'while ' .. condition .. ' {',
     formatNode(node.body),
     Line('}'),
-  }, forceSingleLine and ' ' or '\n')
+  }, '\n')
 end
 
 -- =============================================================================
 -- Format
 -- =============================================================================
 
-local format, formatMT = {}, {}
-setmetatable(format, formatMT)
-
-formatMT.__call = function(self, textOrAst)
-  return format.Module(textOrAst)
-end
-
-SUB_FORMATTERS = {
-  -- Rules
+SINGLE_LINE_FORMATTERS = {
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
-  Block = Block,
+  Block = SingleLineBlock,
   Break = Break,
   Continue = Continue,
   Declaration = Declaration,
   Destructure = Destructure,
-  DoBlock = DoBlock,
+  DoBlock = SingleLineDoBlock,
   Expr = Expr,
   ForLoop = ForLoop,
   Function = Function,
@@ -486,31 +534,45 @@ SUB_FORMATTERS = {
   Module = Module,
   OptChain = OptChain,
   Params = Params,
-  RepeatUntil = RepeatUntil,
+  RepeatUntil = SingleLineRepeatUntil,
   Return = Return,
   Self = Self,
   Spread = Spread,
   String = String,
   Table = Table,
-  TryCatch = TryCatch,
-  WhileLoop = WhileLoop,
-
-  -- Pseudo-Rules
-  -- Var = Var,
-  -- Name = Name,
-  -- Number = Number,
-  -- Terminal = Terminal,
-  FunctionCall = OptChain,
-  Id = OptChain,
+  TryCatch = SingleLineTryCatch,
+  WhileLoop = SingleLineWhileLoop,
 }
 
-for name, subFormatter in pairs(SUB_FORMATTERS) do
-  format[name] = function(textOrAst, ...)
-    local ast = type(textOrAst) == 'string' and parse[name](textOrAst, ...)
-      or textOrAst
-    reset()
-    return subFormatter(ast)
-  end
-end
+MULTI_LINE_FORMATTERS = {
+  ArrowFunction = ArrowFunction,
+  Assignment = Assignment,
+  Block = MultiLineBlock,
+  Break = Break,
+  Continue = Continue,
+  Declaration = Declaration,
+  Destructure = Destructure,
+  DoBlock = MultiLineDoBlock,
+  Expr = Expr,
+  ForLoop = ForLoop,
+  Function = Function,
+  Goto = Goto,
+  IfElse = IfElse,
+  Module = Module,
+  OptChain = OptChain,
+  Params = Params,
+  RepeatUntil = MultiLineRepeatUntil,
+  Return = Return,
+  Self = Self,
+  Spread = Spread,
+  String = String,
+  Table = Table,
+  TryCatch = MultiLineTryCatch,
+  WhileLoop = MultiLineWhileLoop,
+}
 
-return format
+return function(textOrAst, ...)
+  local ast = type(textOrAst) == 'string' and parse(textOrAst, ...) or textOrAst
+  reset()
+  return formatNode(ast)
+end
