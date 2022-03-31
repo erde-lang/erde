@@ -12,17 +12,21 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Use newline to differentiate syntax ambiguity
 
 ### Changed
-- Refactor internal structure (step based rather than rule based).
-- Split Expr rule into Binop / Unop rules, use Expr as pseudo rule.
+- Varargs now spreads when used as a table or param expression.
+- Do not allow trailing comma in Return exprs unless parens are present
+- No longer parse number destruct aliases as valid syntax
 - AST validation errors no longer throw when parsing
   - Parsing is much more lenient so we may apply formatting
   - AST validation now happens in `resolve.lua`
-- Varargs now spreads when used as a table or param expression.
-- Do not allow trailing comma in Return exprs unless parens are present
+- Refactor internal structure (step based rather than rule based).
+- Split Expr rule into Binop / Unop rules, use Expr as pseudo rule.
+- Steps (`erde.parse`, `erde.compile`, etc) are no longer tables, but pure functions
+  - Can no longer call specific rules / pseudo-rules directly
+  - Leads to cleaner code and less backwards compat
 
 ### Fixed
 - String interpolation w/ names now compiles correctly.
-- Fixed parenthesized Return.
+- Parenthesized Return now parses correctly.
 
 ## [0.1-1] - March 3, 2022
 

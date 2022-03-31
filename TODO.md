@@ -1,27 +1,20 @@
 # TODO
 
-- Formatting
-  - Rule.format method
-  - cli support `erde format [FILES]`
-- add prune operator?
-  - `!somecondition ~> nil`
-  - shorthand for `if !somecondition { return nil }`
-  - extremely common pattern
+- fix bug not allowing keyword props
+- format.lua
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - do expressions `if do { ... } { }`
-
-# v0.2.0
-
 - refactor tests
-  - separate parse and compile tests
-  - add resolve tests
+  - add more compile tests
   - add format tests
-- erde REPL
-- Bug fixes
 
 # v0.3.0
 
+- upgrade cli
+  - refactor
+  - add REPL
+  - official manifest.erde spec
 - Source maps (for runtime errors when using erde.loader)
 - officially readd 5.1+ support
   - Not supported initially due to ease + not sure if will take advantage of
@@ -30,6 +23,10 @@
     depending on compilation target (ex. only LuaJIT)
     - analyze usage and inject code. In particular, transform logical operations 
       into if constructs (ex. `local a = b or c ?? d`)
+
+# v0.4.0
+
+- Auto remove unnecessary parens in expressions
 
 # Long Term TODO
 
@@ -49,31 +46,12 @@
 - completion scripts for libraries / environments?
   - want to provide LSP benefits of statically typed languages w/o static typing
   - kind of painful, like documentation needs manual tracking
+- builtin unit testing?
 
 # Uncertain Proposals (need community input)
 
-- array destructure skipping
-  - ex) `local [a, ..., c] = {1, 2, 3, 4, 5}`, (a, c) == (1, 5)
-  - too seldom used??
-- function return params (similar to golang)
-  - ex) function double(t) (doubled = {}) {
-          for _, n in ipairs(t) {
-            table.insert(doubled, n * 2)
-          }
-        }
 - macros
 - python/js like decorators?
+  - too magical?
+  - hard to read?
 - nested break
-- pipes
-  - included (and even implemented) in original spec. Removed due to awkardness
-    of functional programming style compared to rest of lua.
-  - favor simple `do {}` exprs
-- `defer` keyword
-  - ex) `defer { return myDefaultExport }`
-  - hard to optimize?
-
-# Design Decisions (need to move to erde website)
-
-## Changing negation to `!`
-
-More standard and `~=` conflicts w/ the bitop `~` assignment operator.

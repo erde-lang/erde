@@ -926,18 +926,10 @@ function WhileLoop(node)
 end
 
 -- =============================================================================
--- Compile
+-- Return
 -- =============================================================================
 
-local compile, compileMT = {}, {}
-setmetatable(compile, compileMT)
-
-compileMT.__call = function(self, textOrAst)
-  return compile.Module(textOrAst)
-end
-
 SUB_COMPILERS = {
-  -- Rules
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
   Binop = Binop,
@@ -964,24 +956,11 @@ SUB_COMPILERS = {
   TryCatch = TryCatch,
   Unop = Unop,
   WhileLoop = WhileLoop,
-
-  -- Pseudo-Rules
-  -- Var = Var,
-  -- Name = Name,
-  -- Number = Number,
-  -- Terminal = Terminal,
-  FunctionCall = OptChain,
-  Id = OptChain,
 }
 
-for name, subCompiler in pairs(SUB_COMPILERS) do
-  compile[name] = function(textOrAst, ...)
-    local ast = type(textOrAst) == 'string' and parse[name](textOrAst, ...)
-      or textOrAst
-    precompile(ast)
-    reset()
-    return subCompiler(ast)
-  end
+return function(textOrAst)
+  local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
+  precompile(ast)
+  reset()
+  return compileNode(ast)
 end
-
-return compile

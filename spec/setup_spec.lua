@@ -1,32 +1,13 @@
 local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
+local compile = require('erde.compile')
+local format = require('erde.format')
 
 -- -----------------------------------------------------------------------------
--- Globals
+-- Helpers
 -- -----------------------------------------------------------------------------
 
-compile = require('erde.compile')
-parse = require('erde.parse')
-
-function loadErde(code)
-  local runner = loadstring(code)
-
-  if runner == nil then
-    error('Invalid Lua code: ' .. code)
-  end
-
-  return runner
-end
-
-function evalErde(expr)
-  return loadErde('return ' .. expr)()
-end
-
-function runErde(code)
-  return loadErde(code)()
-end
-
-function deepCompare(a, b)
+local function deepCompare(a, b)
   if type(a) ~= 'table' or type(b) ~= 'table' then
     return a == b
   end
@@ -38,6 +19,26 @@ function deepCompare(a, b)
   end
 
   return true
+end
+
+-- trim6 from http://lua-users.org/wiki/StringTrim
+local function trim(s)
+  return s:match('^()%s*$') and '' or s:match('^%s*(.*%S)')
+end
+
+-- -----------------------------------------------------------------------------
+-- Globals
+-- -----------------------------------------------------------------------------
+
+function runErde(erdeCode)
+  local luaCode = compile(erdeCode)
+  local runner = loadstring(luaCode)
+
+  if runner == nil then
+    error('Invalid Lua code: ' .. luaCode)
+  end
+
+  return runner()
 end
 
 -- -----------------------------------------------------------------------------
@@ -80,7 +81,7 @@ busted.assert:register(
 --
 
 local function eval(state, args)
-  return deepCompare(args[1], evalErde(args[2]))
+  return deepCompare(args[1], runErde('return ' .. args[2]))
 end
 
 say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
@@ -96,3 +97,27 @@ end
 
 say:set('assertion.run.positive', 'Run error. Expected %s, got %s')
 busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
+
+--
+-- formatted
+-- NOTE: Cannot use assert.format, as it's already used internally by busted.
+--
+
+local function formatted(state, args)
+  local got = trim(format(args[1]))
+  local expected = trim(args[2])
+
+  if expected ~= got then
+    print(('\nFormat error.\nExpected\n%s\nGot\n%s'):format(expected, got))
+  end
+
+  return expected == got
+end
+
+say:set('assertion.formatted.positive', 'Format error. Expected %s, got %s')
+busted.assert:register(
+  'assertion',
+  'formatted',
+  formatted,
+  'assertion.formatted.positive'
+)
