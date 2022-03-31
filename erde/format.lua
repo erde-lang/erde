@@ -216,16 +216,23 @@ local function MultiLineDeclaration(node)
   if #node.exprList > 0 then
     table.insert(formatted, '=')
 
-    -- TODO: fix this
-    if #node.exprList == 1 then
-      indent(1)
-      table.insert(formatted, '\n' .. prefix(formatNode(node.exprList[1])))
-      indent(-1)
+    local singleLineExprList = SingleLineList(node.exprList)
+    local singleLineExprListLen = #singleLineExprList
+    local exprListColumnLimit = not hasSingleLineVarList
+        and subColumnLimit(') = ')
+      or subColumnLimit(table.concat(formatted, ' '))
+
+    if singleLineExprListLen <= exprListColumnLimit then
+      table.insert(formatted, singleLineExprList)
+    elseif
+      hasSingleLineVarList
+      and singleLineExprListLen < subColumnLimit() - indentWidth
+    then
+      table.insert(formatted, '\n' .. singleLineExprList)
+    elseif #node.exprList > 1 then
+      table.insert(formatted, MultiLineList(node.exprList))
     else
-      local exprListColumnLimit = formatted[2]:sub(1, 1) == '('
-          and subColumnLimit(') = ')
-        or subColumnLimit(table.concat(formatted, ' '))
-      table.insert(formatted, List(node.exprList, exprListColumnLimit))
+      table.insert(formatted, formatNode(node.exprList[1]))
     end
   end
 
