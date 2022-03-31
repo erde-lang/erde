@@ -3,7 +3,7 @@ local C = require('erde.constants')
 describe('Terminal.parse', function()
   spec('ruleName', function()
     assert.are.equal('true', parse.Terminal('true'))
-    assert.are.equal('Expr', parse.Terminal('(1 + 2)').ruleName)
+    assert.are.equal('Binop', parse.Terminal('(1 + 2)').ruleName)
     assert.are.equal('1', parse.Terminal('1'))
   end)
 
@@ -17,15 +17,11 @@ describe('Terminal.parse', function()
     assert.subtable({
       ruleName = 'String',
       parens = true,
-    }, parse.Terminal(
-      '("")'
-    ))
+    }, parse.Terminal('("")'))
     assert.subtable({
       ruleName = 'ArrowFunction',
       parens = true,
-    }, parse.Terminal(
-      '(() -> {})'
-    ))
+    }, parse.Terminal('(() -> {})'))
     assert.has_error(function()
       parse.Terminal('()')
     end)

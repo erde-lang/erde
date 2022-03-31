@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local precompile = require('erde.precompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -290,6 +290,30 @@ function Assignment(node)
 end
 
 -- -----------------------------------------------------------------------------
+-- Binop
+-- -----------------------------------------------------------------------------
+
+function Binop(node)
+  local op = node.op
+  local lhs = compileNode(node.lhs)
+  local rhs = compileNode(node.rhs)
+
+  if op.token == '?' then
+    return table.concat({
+      '(function()',
+      'if %s then',
+      'return %s',
+      'else',
+      'return %s',
+      'end',
+      'end)()',
+    }, '\n'):format(lhs, compileNode(node.ternaryExpr), rhs)
+  else
+    return compileBinop(op, lhs, rhs)
+  end
+end
+
+-- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
 
@@ -444,46 +468,6 @@ function DoBlock(node)
   else
     return 'do\n' .. compileNode(node.body) .. '\nend'
   end
-end
-
--- -----------------------------------------------------------------------------
--- Expr
--- -----------------------------------------------------------------------------
-
-function Expr(node)
-  local op = node.op
-  local compiled
-
-  if node.variant == 'unop' then
-    local operand = compileNode(node.operand)
-
-    if op.token == '~' then
-      compiled = ('require("bit").bnot(%1)'):format(operand)
-    elseif op.token == '!' then
-      compiled = 'not ' .. operand
-    else
-      compiled = op.token .. operand
-    end
-  elseif node.variant == 'binop' then
-    local lhs = compileNode(node.lhs)
-    local rhs = compileNode(node.rhs)
-
-    if op.token == '?' then
-      compiled = table.concat({
-        '(function()',
-        'if %s then',
-        'return %s',
-        'else',
-        'return %s',
-        'end',
-        'end)()',
-      }, '\n'):format(lhs, compileNode(node.ternaryExpr), rhs)
-    else
-      compiled = compileBinop(op, lhs, rhs)
-    end
-  end
-
-  return compiled
 end
 
 -- -----------------------------------------------------------------------------
@@ -914,6 +898,23 @@ function TryCatch(node)
 end
 
 -- -----------------------------------------------------------------------------
+-- Unop
+-- -----------------------------------------------------------------------------
+
+function Unop(node)
+  local op = node.op
+  local operand = compileNode(node.operand)
+
+  if op.token == '~' then
+    return ('require("bit").bnot(%1)'):format(operand)
+  elseif op.token == '!' then
+    return 'not ' .. operand
+  else
+    return op.token .. operand
+  end
+end
+
+-- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
@@ -939,6 +940,7 @@ SUB_COMPILERS = {
   -- Rules
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
+  Binop = Binop,
   Block = Block,
   Break = Break,
   Continue = Continue,
@@ -960,6 +962,7 @@ SUB_COMPILERS = {
   String = String,
   Table = Table,
   TryCatch = TryCatch,
+  Unop = Unop,
   WhileLoop = WhileLoop,
 
   -- Pseudo-Rules

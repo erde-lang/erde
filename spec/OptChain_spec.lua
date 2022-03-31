@@ -15,7 +15,7 @@ describe('OptChain.parse', function()
       base = 'a',
     }, parse.OptChain('a.b'))
     assert.subtable({
-      base = { ruleName = 'Expr' },
+      base = { ruleName = 'Binop' },
     }, parse.OptChain('(1 + 2).a'))
     assert.has_error(function()
       parse.OptChain('1.b')
