@@ -437,7 +437,7 @@ local function TryCatch(node)
   return join({
     'try {',
     formatNode(node.try),
-    prefix('} catch (' .. formatNode(node.errorName) .. ') {'),
+    prefix('} catch (' .. (node.errorName or '') .. ') {'),
     formatNode(node.catch),
     prefix('}'),
   })
