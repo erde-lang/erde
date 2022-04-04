@@ -16,6 +16,8 @@ local linePrefix
 -- Used to indicate to rules to format to a single line.
 local forceSingleLine
 
+local currentLine, currentColumn
+
 -- =============================================================================
 -- Configuration
 -- =============================================================================
@@ -34,6 +36,21 @@ local function reset(node)
   indentLevel = 0
   linePrefix = ''
   forceSingleLine = false
+  currentLine = ''
+  currentColumn = 0
+end
+
+local function use(state)
+  local forceSingleLineBackup = forceSingleLine
+  local columnStartBackup = columnStart
+
+  forceSingleLine = state.forceSingleLine or forceSingleLineBackup
+  columnStart = state.columnStart or columnStartBackup
+
+  return function()
+    forceSingleLine = forceSingleLineBackup
+    columnStart = columnStartBackup
+  end
 end
 
 local function indent(levelDiff)
@@ -47,6 +64,10 @@ end
 
 local function join(lines)
   return table.concat(lines, forceSingleLine and ' ' or '\n')
+end
+
+local function setColumnStart(prefix)
+  columnStart = indentLevel * indentWidth + #prefix
 end
 
 local function subColumnLimit(...)
@@ -87,10 +108,9 @@ end
 -- =============================================================================
 
 local function SingleLineList(nodes)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
+  local revert = use({ forceSingleLine = true })
   local formatted = formatNodes(nodes, ', ')
-  forceSingleLine = forceSingleLineBackup
+  revert()
   return formatted
 end
 
@@ -149,6 +169,14 @@ local function Assignment(node)
 end
 
 -- -----------------------------------------------------------------------------
+-- Binop
+-- -----------------------------------------------------------------------------
+
+local function Binop(node)
+  return ''
+end
+
+-- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
 
@@ -200,30 +228,32 @@ end
 
 local function MultiLineDeclaration(node)
   local formatted = { node.variant }
-
+  local isMultiLineDeclaration = false
   local singleLineVarList = SingleLineList(node.varList)
-  local hasSingleLineVarList = #singleLineVarList
-    <= subColumnLimit(node.variant) - 1
 
-  table.insert(
-    formatted,
-    hasSingleLineVarList and singleLineVarList or MultiLineList(node.varList)
-  )
+  if #singleLineVarList <= subColumnLimit(node.variant) - 1 then
+    table.insert(formatted, singleLineVarList)
+  elseif #node.varList == 1 then
+    isMultiLineDeclaration = type(node.varList[1]) ~= 'string'
+    table.insert(formatted, formatNode(node.varList[1]))
+  else
+    isMultiLineDeclaration = true
+    table.insert(formatted, MultiLineList(node.varList))
+  end
 
   if #node.exprList > 0 then
     table.insert(formatted, '=')
 
     local singleLineExprList = SingleLineList(node.exprList)
-    local singleLineExprListLen = #singleLineExprList
-    local exprListColumnLimit = not hasSingleLineVarList
-        and subColumnLimit(') = ')
+    local exprListColumnLimit = isMultiLineDeclaration
+        and (subColumnLimit() + 4) -- ') = ' or '} = '
       or subColumnLimit(table.concat(formatted, ' '))
 
-    if singleLineExprListLen <= exprListColumnLimit then
+    if #singleLineExprList <= exprListColumnLimit then
       table.insert(formatted, singleLineExprList)
     elseif
       hasSingleLineVarList
-      and singleLineExprListLen < subColumnLimit() - indentWidth
+      and #singleLineExprList < subColumnLimit() - indentWidth
     then
       table.insert(formatted, '\n' .. singleLineExprList)
     elseif #node.exprList > 1 then
@@ -244,6 +274,48 @@ end
 -- -----------------------------------------------------------------------------
 -- Destructure
 -- -----------------------------------------------------------------------------
+
+local function SingleLineDestructure(keyDestructs, numberDestructs)
+  local formattedNumberDestructs = { '[' }
+  for _, destruct in ipairs(numberDestructs) do
+    table.insert(formattedNumberDestructs, destruct)
+  end
+  table.insert(formattedNumberDestructs, ']')
+
+  if #keyDestructs == 0 then
+    return join(formattedNumberDestructs)
+  end
+
+  local formatted = { '{' }
+  for _, destruct in ipairs(keyDestructs) do
+    table.insert(formatted, destruct)
+  end
+  table.insert(formatted, join(formattedNumberDestructs))
+  table.insert(formatted, '}')
+
+  return join(formatted)
+end
+
+local function MultiLineDestructure(keyDestructs, numberDestructs)
+  local formattedNumberDestructs = { '[' }
+  for _, destruct in ipairs(numberDestructs) do
+    table.insert(formattedNumberDestructs, destruct)
+  end
+  table.insert(formattedNumberDestructs, ']')
+
+  if #keyDestructs == 0 then
+    return join(formattedNumberDestructs)
+  end
+
+  local formatted = { '{' }
+  for _, destruct in ipairs(keyDestructs) do
+    table.insert(formatted, destruct)
+  end
+  table.insert(formatted, join(formattedNumberDestructs))
+  table.insert(formatted, '}')
+
+  return join(formatted)
+end
 
 local function Destructure(node)
   local keyDestructs = {}
@@ -267,24 +339,11 @@ local function Destructure(node)
     end
   end
 
-  local formattedNumberDestructs = { '[' }
-  for _, destruct in ipairs(numberDestructs) do
-    table.insert(formattedNumberDestructs, destruct)
+  if forceSingleLine then
+    return SingleLineDestructure(keyDestructs, numberDestructs)
+  else
+    return MultiLineDestructure(keyDestructs, numberDestructs)
   end
-  table.insert(formattedNumberDestructs, ']')
-
-  if #keyDestructs == 0 then
-    return join(formattedNumberDestructs)
-  end
-
-  local formatted = { '{' }
-  for _, destruct in ipairs(keyDestructs) do
-    table.insert(formatted, destruct)
-  end
-  table.insert(formatted, join(formattedNumberDestructs))
-  table.insert(formatted, '}')
-
-  return join(formatted)
 end
 
 -- -----------------------------------------------------------------------------
@@ -324,8 +383,7 @@ end
 
 local function ForLoop(node)
   local formatted = {}
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
+  local revert = use({ forceSingleLine = true })
 
   if node.variant == 'numeric' then
     table.insert(
@@ -351,7 +409,7 @@ local function ForLoop(node)
     )
   end
 
-  forceSingleLine = forceSingleLineBackup
+  revert()
   table.insert(formatted, formatNode(node.body))
   table.insert(formatted, prefix('}'))
   return join(formatted)
@@ -382,8 +440,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function IfElse(node)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
+  local revert = use({ forceSingleLine = true })
 
   local ifCondition = formatNode(node.ifNode.condition)
   local elseifConditions = {}
@@ -391,7 +448,7 @@ local function IfElse(node)
     table.insert(elseifConditions, formatNode(elseifNode.condition))
   end
 
-  forceSingleLine = forceSingleLineBackup
+  revert()
 
   local formatted = {
     'if ' .. ifCondition .. ' {',
@@ -451,10 +508,9 @@ end
 -- -----------------------------------------------------------------------------
 
 local function RepeatUntil(node)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
+  local revert = use({ forceSingleLine = true })
   local condition = formatNode(node.condition)
-  forceSingleLine = forceSingleLineBackup
+  revert()
 
   return join({
     'repeat',
@@ -525,14 +581,21 @@ local function TryCatch(node)
 end
 
 -- -----------------------------------------------------------------------------
+-- Unop
+-- -----------------------------------------------------------------------------
+
+local function Unop(node)
+  return ''
+end
+
+-- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
 local function WhileLoop(node)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = true
+  local revert = use({ forceSingleLine = true })
   local condition = formatNode(node.condition)
-  forceSingleLine = forceSingleLineBackup
+  revert()
 
   return join({
     'while ' .. condition .. ' {',
@@ -548,6 +611,7 @@ end
 SUB_FORMATTERS = {
   ArrowFunction = ArrowFunction,
   Assignment = Assignment,
+  Binop = Binop,
   Block = Block,
   Break = Break,
   Continue = Continue,
@@ -569,6 +633,7 @@ SUB_FORMATTERS = {
   String = String,
   Table = Table,
   TryCatch = TryCatch,
+  Unop = Unop,
   WhileLoop = WhileLoop,
 }
 
