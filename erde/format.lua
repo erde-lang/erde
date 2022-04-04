@@ -8,15 +8,9 @@ local SUB_FORMATTERS
 -- State
 -- =============================================================================
 
-local indentLevel
-
--- The line prefix
-local linePrefix
-
--- Used to indicate to rules to format to a single line.
+local indentLevel, indentPrefix
 local forceSingleLine
-
-local currentLine, currentColumn
+local columnOffset
 
 -- =============================================================================
 -- Configuration
@@ -29,55 +23,31 @@ local columnLimit = 80
 -- Helpers
 -- =============================================================================
 
--- Forward declare
-local precompileNode, precompileChildren
-
 local function reset(node)
   indentLevel = 0
-  linePrefix = ''
+  indentPrefix = ''
   forceSingleLine = false
-  currentLine = ''
-  currentColumn = 0
+  columnOffset = 0
 end
 
 local function use(state)
   local forceSingleLineBackup = forceSingleLine
-  local columnStartBackup = columnStart
 
   forceSingleLine = state.forceSingleLine or forceSingleLineBackup
-  columnStart = state.columnStart or columnStartBackup
 
   return function()
     forceSingleLine = forceSingleLineBackup
-    columnStart = columnStartBackup
   end
 end
 
 local function indent(levelDiff)
   indentLevel = indentLevel + levelDiff
-  linePrefix = (' '):rep(indentLevel * indentWidth)
+  indentPrefix = (' '):rep(indentLevel * indentWidth)
 end
 
-local function prefix(line)
-  return (forceSingleLine and '' or linePrefix) .. line
-end
-
-local function join(lines)
-  return table.concat(lines, forceSingleLine and ' ' or '\n')
-end
-
-local function setColumnStart(prefix)
-  columnStart = indentLevel * indentWidth + #prefix
-end
-
-local function subColumnLimit(...)
-  local limit = columnLimit - #linePrefix
-
-  for _, str in ipairs({ ... }) do
-    limit = limit - #str
-  end
-
-  return limit
+local function offsetColumn(offset)
+  columnOffset = indentLevel * indentWidth
+    + (type(offset) == 'number' and offset or #offset)
 end
 
 local function formatNode(node)
@@ -107,6 +77,14 @@ end
 -- Macros
 -- =============================================================================
 
+local function Line(line)
+  return (forceSingleLine and '' or indentPrefix) .. line
+end
+
+local function Lines(lines)
+  return table.concat(lines, forceSingleLine and ' ' or '\n')
+end
+
 local function SingleLineList(nodes)
   local revert = use({ forceSingleLine = true })
   local formatted = formatNodes(nodes, ', ')
@@ -119,33 +97,12 @@ local function MultiLineList(nodes)
   indent(1)
 
   for _, node in ipairs(nodes) do
-    table.insert(formatted, prefix(node) .. ',')
+    table.insert(formatted, Line(node) .. ',')
   end
 
   indent(-1)
-  table.insert(formatted, prefix(')'))
-  return table.concat(formatted, '\n')
-end
-
-local function Terminal(nodes)
-  local singleLineExprList = SingleLineList(node.exprList)
-  local singleLineExprListLen = #singleLineExprList
-  local exprListColumnLimit = not hasSingleLineVarList
-      and subColumnLimit(') = ')
-    or subColumnLimit(table.concat(formatted, ' '))
-
-  if singleLineExprListLen <= exprListColumnLimit then
-    table.insert(formatted, singleLineExprList)
-  elseif
-    hasSingleLineVarList
-    and singleLineExprListLen < subColumnLimit() - indentWidth
-  then
-    table.insert(formatted, '\n' .. singleLineExprList)
-  elseif #node.exprList > 1 then
-    table.insert(formatted, MultiLineList(node.exprList))
-  else
-    table.insert(formatted, formatNode(node.exprList[1]))
-  end
+  table.insert(formatted, Line(')'))
+  return Lines(formatted)
 end
 
 -- =============================================================================
@@ -185,11 +142,11 @@ local function Block(node)
   indent(1)
 
   for _, statement in ipairs(node) do
-    table.insert(formatted, prefix(formatNode(statement)))
+    table.insert(formatted, Line(formatNode(statement)))
   end
 
   indent(-1)
-  return join(formatted)
+  return Lines(formatted)
 end
 
 -- -----------------------------------------------------------------------------
@@ -228,16 +185,18 @@ end
 
 local function MultiLineDeclaration(node)
   local formatted = { node.variant }
-  local isMultiLineDeclaration = false
-  local singleLineVarList = SingleLineList(node.varList)
 
-  if #singleLineVarList <= subColumnLimit(node.variant) - 1 then
+  local hasMultiLineVarList = false
+  local singleLineVarList = SingleLineList(node.varList)
+  offsetColumn(#node.variant + 1)
+
+  if #singleLineVarList <= columnOffset then
     table.insert(formatted, singleLineVarList)
   elseif #node.varList == 1 then
-    isMultiLineDeclaration = type(node.varList[1]) ~= 'string'
+    hasMultiLineVarList = type(node.varList[1]) ~= 'string'
     table.insert(formatted, formatNode(node.varList[1]))
   else
-    isMultiLineDeclaration = true
+    hasMultiLineVarList = true
     table.insert(formatted, MultiLineList(node.varList))
   end
 
@@ -245,21 +204,21 @@ local function MultiLineDeclaration(node)
     table.insert(formatted, '=')
 
     local singleLineExprList = SingleLineList(node.exprList)
-    local exprListColumnLimit = isMultiLineDeclaration
-        and (subColumnLimit() + 4) -- ') = ' or '} = '
-      or subColumnLimit(table.concat(formatted, ' '))
+    offsetColumn( -- Use 4 for either ') = ' or '} = '
+      hasMultiLineVarList and 4 or (#table.concat(formatted, ' ') + 1)
+    )
 
-    if #singleLineExprList <= exprListColumnLimit then
+    if #singleLineExprList <= columnOffset then
       table.insert(formatted, singleLineExprList)
     elseif
-      hasSingleLineVarList
-      and #singleLineExprList < subColumnLimit() - indentWidth
+      not hasMultiLineVarList
+      and #singleLineExprList <= indentWidth * (indentLevel + 1)
     then
       table.insert(formatted, '\n' .. singleLineExprList)
-    elseif #node.exprList > 1 then
-      table.insert(formatted, MultiLineList(node.exprList))
-    else
+    elseif #node.exprList == 1 then
       table.insert(formatted, formatNode(node.exprList[1]))
+    else
+      table.insert(formatted, MultiLineList(node.exprList))
     end
   end
 
@@ -283,17 +242,17 @@ local function SingleLineDestructure(keyDestructs, numberDestructs)
   table.insert(formattedNumberDestructs, ']')
 
   if #keyDestructs == 0 then
-    return join(formattedNumberDestructs)
+    return Lines(formattedNumberDestructs)
   end
 
   local formatted = { '{' }
   for _, destruct in ipairs(keyDestructs) do
     table.insert(formatted, destruct)
   end
-  table.insert(formatted, join(formattedNumberDestructs))
+  table.insert(formatted, Lines(formattedNumberDestructs))
   table.insert(formatted, '}')
 
-  return join(formatted)
+  return Lines(formatted)
 end
 
 local function MultiLineDestructure(keyDestructs, numberDestructs)
@@ -304,17 +263,17 @@ local function MultiLineDestructure(keyDestructs, numberDestructs)
   table.insert(formattedNumberDestructs, ']')
 
   if #keyDestructs == 0 then
-    return join(formattedNumberDestructs)
+    return Lines(formattedNumberDestructs)
   end
 
   local formatted = { '{' }
   for _, destruct in ipairs(keyDestructs) do
     table.insert(formatted, destruct)
   end
-  table.insert(formatted, join(formattedNumberDestructs))
+  table.insert(formatted, Lines(formattedNumberDestructs))
   table.insert(formatted, '}')
 
-  return join(formatted)
+  return Lines(formatted)
 end
 
 local function Destructure(node)
@@ -351,7 +310,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function DoBlock(node)
-  return join({ 'do {', formatNode(node.body), prefix('}') })
+  return Lines({ 'do {', formatNode(node.body), Line('}') })
 end
 
 -- -----------------------------------------------------------------------------
@@ -383,7 +342,6 @@ end
 
 local function ForLoop(node)
   local formatted = {}
-  local revert = use({ forceSingleLine = true })
 
   if node.variant == 'numeric' then
     table.insert(
@@ -409,10 +367,9 @@ local function ForLoop(node)
     )
   end
 
-  revert()
   table.insert(formatted, formatNode(node.body))
-  table.insert(formatted, prefix('}'))
-  return join(formatted)
+  table.insert(formatted, Line('}'))
+  return Lines(formatted)
 end
 
 -- -----------------------------------------------------------------------------
@@ -456,17 +413,17 @@ local function IfElse(node)
   }
 
   for i, elseifNode in ipairs(node.elseifNodes) do
-    table.insert(formatted, prefix('} elseif ' .. elseifConditions[i] .. ' {'))
+    table.insert(formatted, Line('} elseif ' .. elseifConditions[i] .. ' {'))
     table.insert(formatted, formatNode(elseifNode.body))
   end
 
   if node.elseNode then
-    table.insert(formatted, prefix('} else {'))
+    table.insert(formatted, Line('} else {'))
     table.insert(formatted, formatNode(node.elseNode.body))
   end
 
-  table.insert(formatted, prefix('}'))
-  return join(formatted)
+  table.insert(formatted, Line('}'))
+  return Lines(formatted)
 end
 
 -- -----------------------------------------------------------------------------
@@ -512,10 +469,10 @@ local function RepeatUntil(node)
   local condition = formatNode(node.condition)
   revert()
 
-  return join({
+  return Lines({
     'repeat',
     formatNode(node.body),
-    prefix('until ' .. condition),
+    Line('until ' .. condition),
   })
 end
 
@@ -525,7 +482,8 @@ end
 
 local function Return(node)
   local singleLineReturns = SingleLineList(node)
-  return #singleLineReturns <= subColumnLimit('return ')
+  offsetColumn('return ')
+  return (forceSingleLine or #singleLineReturns <= columnOffset)
       and 'return ' .. singleLineReturns
     or 'return ' .. MultiLineList(node)
 end
@@ -571,12 +529,12 @@ end
 -- -----------------------------------------------------------------------------
 
 local function TryCatch(node)
-  return join({
+  return Lines({
     'try {',
     formatNode(node.try),
-    prefix('} catch (' .. (node.errorName or '') .. ') {'),
+    Line('} catch (' .. (node.errorName or '') .. ') {'),
     formatNode(node.catch),
-    prefix('}'),
+    Line('}'),
   })
 end
 
@@ -597,10 +555,10 @@ local function WhileLoop(node)
   local condition = formatNode(node.condition)
   revert()
 
-  return join({
+  return Lines({
     'while ' .. condition .. ' {',
     formatNode(node.body),
-    prefix('}'),
+    Line('}'),
   })
 end
 
