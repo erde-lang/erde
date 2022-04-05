@@ -50,6 +50,10 @@ local function offsetColumn(offset)
     + (type(offset) == 'number' and offset or #offset)
 end
 
+local function fits(line)
+  return #line <= columnLimit - columnOffset
+end
+
 local function formatNode(node)
   if type(node) == 'string' then
     return node
@@ -97,7 +101,7 @@ local function MultiLineList(nodes)
   indent(1)
 
   for _, node in ipairs(nodes) do
-    table.insert(formatted, Line(node) .. ',')
+    table.insert(formatted, Line(formatNode(node)) .. ',')
   end
 
   indent(-1)
@@ -190,7 +194,7 @@ local function MultiLineDeclaration(node)
   local singleLineVarList = SingleLineList(node.varList)
   offsetColumn(#node.variant + 1)
 
-  if #singleLineVarList <= columnOffset then
+  if fits(singleLineVarList) then
     table.insert(formatted, singleLineVarList)
   elseif #node.varList == 1 then
     hasMultiLineVarList = type(node.varList[1]) ~= 'string'
@@ -208,7 +212,7 @@ local function MultiLineDeclaration(node)
       hasMultiLineVarList and 4 or (#table.concat(formatted, ' ') + 1)
     )
 
-    if #singleLineExprList <= columnOffset then
+    if fits(singleLineExprList) then
       table.insert(formatted, singleLineExprList)
     elseif
       not hasMultiLineVarList
@@ -234,75 +238,138 @@ end
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-local function SingleLineDestructure(keyDestructs, numberDestructs)
-  local formattedNumberDestructs = { '[' }
-  for _, destruct in ipairs(numberDestructs) do
-    table.insert(formattedNumberDestructs, destruct)
-  end
-  table.insert(formattedNumberDestructs, ']')
+local function SingleLineDestructs(node, variant)
+  local destructs = {}
 
-  if #keyDestructs == 0 then
-    return Lines(formattedNumberDestructs)
+  for _, destruct in ipairs(node) do
+    if destruct.variant == variant then
+      local formatted = destruct.name
+
+      if destruct.alias then
+        formatted = formatted .. ': ' .. destruct.alias
+      end
+
+      if destruct.default then
+        formatted = formatted .. ' = ' .. formatNode(destruct.default)
+      end
+
+      table.insert(destructs, formatted)
+    end
   end
 
-  local formatted = { '{' }
-  for _, destruct in ipairs(keyDestructs) do
-    table.insert(formatted, destruct)
-  end
-  table.insert(formatted, Lines(formattedNumberDestructs))
-  table.insert(formatted, '}')
-
-  return Lines(formatted)
+  return destructs
 end
 
-local function MultiLineDestructure(keyDestructs, numberDestructs)
-  local formattedNumberDestructs = { '[' }
-  for _, destruct in ipairs(numberDestructs) do
-    table.insert(formattedNumberDestructs, destruct)
+local function MultiLineDestructs(node, variant)
+  local destructs = {}
+
+  for _, destruct in ipairs(node) do
+    if destruct.variant == variant then
+      local formatted = destruct.name
+
+      if destruct.alias then
+        formatted = formatted .. ': ' .. destruct.alias
+      end
+
+      if destruct.default then
+        formatted = formatted .. ' = '
+
+        local revert = use({ forceSingleLine = true })
+        offsetColumn(formatted)
+        local singleLineDefault = formatNode(destruct.default)
+        revert()
+
+        if fits(singleLineDefault) then
+          formatted = formatted .. singleLineDefault
+        elseif
+          #singleLineDefault <= columnLimit - indentWidth * (indentLevel + 1)
+        then
+          formatted = formatted .. '\n' .. singleLineDefault
+        else
+          formatted = formatted .. formatNode(destruct.default)
+        end
+      end
+
+      table.insert(destructs, formatted)
+    end
   end
-  table.insert(formattedNumberDestructs, ']')
+
+  return destructs
+end
+
+local function SingleLineDestructure(node)
+  local keyDestructs = SingleLineDestructs(node, 'keyDestruct')
+  local numberDestructs = SingleLineDestructs(node, 'numberDestruct')
 
   if #keyDestructs == 0 then
-    return Lines(formattedNumberDestructs)
+    return '[ ' .. table.concat(numberDestructs, ', ') .. ' ]'
   end
 
-  local formatted = { '{' }
-  for _, destruct in ipairs(keyDestructs) do
-    table.insert(formatted, destruct)
+  local formatted = { '{', table.concat(keyDestructs, ', ') }
+
+  if #numberDestructs > 0 then
+    table.insert(
+      formatted,
+      ', ' .. '[ ' .. table.concat(numberDestructs, ', ') .. ' ]'
+    )
   end
-  table.insert(formatted, Lines(formattedNumberDestructs))
+
   table.insert(formatted, '}')
+  return table.concat(formatted, ' ')
+end
 
-  return Lines(formatted)
+local function MultiLineDestructure(node)
+  local keyDestructs = MultiLineDestructs(node, 'keyDestruct')
+
+  if #keyDestructs == 0 then
+    local formatted = { '[' }
+    indent(1)
+
+    local numberDestructs = MultiLineDestructs(node, 'numberDestruct')
+    for _, numberDestruct in ipairs(numberDestructs) do
+      table.insert(formatted, Line(numberDestruct))
+    end
+
+    indent(-1)
+    table.insert(formatted, ']')
+    return table.concat(formatted, '\n')
+  else
+    local formatted = { '{' }
+    indent(1)
+
+    for _, keyDestruct in ipairs(keyDestructs) do
+      table.insert(formatted, Line(keyDestruct))
+    end
+
+    if #numberDestructs > 0 then
+      local numberDestructs = SingleLineDestructs(node, 'numberDestruct')
+      if #numberDestructs <= columnLimit - indentWidth * (indentLevel + 1) then
+        table.insert(formatted, numberDestructs)
+      else
+        local formatted = { '[' }
+        indent(1)
+
+        local numberDestructs = MultiLineDestructs(node, 'numberDestruct')
+        for _, numberDestruct in ipairs(numberDestructs) do
+          table.insert(formatted, Line(numberDestruct))
+        end
+
+        indent(-1)
+        table.insert(formatted, ']')
+      end
+    end
+
+    indent(-1)
+    table.insert(formatted, '}')
+    return table.concat(formatted, '\n')
+  end
 end
 
 local function Destructure(node)
-  local keyDestructs = {}
-  local numberDestructs = {}
-
-  for _, destruct in ipairs(node) do
-    local formatted = destruct.name
-
-    if destruct.alias then
-      formatted = formatted .. ': ' .. destruct.alias
-    end
-
-    if destruct.default then
-      formatted = formatted .. ' = ' .. formatNode(destruct.default)
-    end
-
-    if destruct.variant == 'numberDestruct' then
-      table.insert(numberDestructs, formatted)
-    else
-      table.insert(keyDestructs, formatted)
-    end
-  end
-
-  if forceSingleLine then
-    return SingleLineDestructure(keyDestructs, numberDestructs)
-  else
-    return MultiLineDestructure(keyDestructs, numberDestructs)
-  end
+  local singleLineDestructure = SingleLineDestructure(node)
+  return (forceSingleLine or fits(singleLineDestructure))
+      and singleLineDestructure
+    or MultiLineDestructure(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -483,7 +550,7 @@ end
 local function Return(node)
   local singleLineReturns = SingleLineList(node)
   offsetColumn('return ')
-  return (forceSingleLine or #singleLineReturns <= columnOffset)
+  return (forceSingleLine or fits(singleLineReturns))
       and 'return ' .. singleLineReturns
     or 'return ' .. MultiLineList(node)
 end
