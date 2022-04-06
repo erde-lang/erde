@@ -8,9 +8,18 @@ local SUB_FORMATTERS
 -- State
 -- =============================================================================
 
-local indentLevel, indentPrefix
+-- The current indent level (depth)
+local indentLevel
+
+-- The precomputed indent whitespace string
+local indentPrefix
+
+-- Flag to force rules from generating newlines
 local forceSingleLine
-local columnOffset
+
+-- The precomputed available columns based on the column limit, current indent
+-- level and line lead.
+local availableColumns
 
 -- =============================================================================
 -- Configuration
@@ -27,12 +36,11 @@ local function reset(node)
   indentLevel = 0
   indentPrefix = ''
   forceSingleLine = false
-  columnOffset = 0
+  availableColumns = columnLimit
 end
 
 local function use(state)
   local forceSingleLineBackup = forceSingleLine
-
   forceSingleLine = state.forceSingleLine or forceSingleLineBackup
 
   return function()
@@ -45,16 +53,13 @@ local function indent(levelDiff)
   indentPrefix = (' '):rep(indentLevel * indentWidth)
 end
 
-local function offsetColumn(offset)
-  columnOffset = indentLevel * indentWidth
-    + (type(offset) == 'number' and offset or #offset)
+local function reserve(reservation)
+  availableColumns = columnLimit
+    - indentLevel * indentWidth
+    - (type(reservation) == 'number' and reservation or #reservation)
 end
 
-local function fits(line)
-  return #line <= columnLimit - columnOffset
-end
-
-local function formatNode(node)
+local function formatNode(node, state)
   if type(node) == 'string' then
     return node
   elseif type(node) ~= 'table' then
@@ -65,16 +70,6 @@ local function formatNode(node)
 
   local formatted = SUB_FORMATTERS[node.ruleName](node)
   return node.parens and '(' .. formatted .. ')' or formatted
-end
-
-local function formatNodes(nodes, sep)
-  local formattedNodes = {}
-
-  for _, node in ipairs(nodes) do
-    table.insert(formattedNodes, formatNode(node))
-  end
-
-  return sep and table.concat(formattedNodes, sep) or formattedNodes
 end
 
 -- =============================================================================
@@ -90,10 +85,15 @@ local function Lines(lines)
 end
 
 local function SingleLineList(nodes)
+  local formatted = {}
   local revert = use({ forceSingleLine = true })
-  local formatted = formatNodes(nodes, ', ')
+
+  for _, node in ipairs(nodes) do
+    table.insert(formatted, formatNode(node))
+  end
+
   revert()
-  return formatted
+  return table.concat(formatted, ', ')
 end
 
 local function MultiLineList(nodes)
@@ -192,13 +192,14 @@ local function MultiLineDeclaration(node)
 
   local hasMultiLineVarList = false
   local singleLineVarList = SingleLineList(node.varList)
-  offsetColumn(#node.variant + 1)
+  reserve(#node.variant + 1)
 
-  if fits(singleLineVarList) then
+  if #singleLineVarList < availableColumns then
     table.insert(formatted, singleLineVarList)
   elseif #node.varList == 1 then
-    hasMultiLineVarList = type(node.varList[1]) ~= 'string'
-    table.insert(formatted, formatNode(node.varList[1]))
+    local formattedVar = formatNode(node.varList[1])
+    hasMultiLineVarList = formattedVar:find('\n')
+    table.insert(formatted, formattedVar)
   else
     hasMultiLineVarList = true
     table.insert(formatted, MultiLineList(node.varList))
@@ -208,16 +209,16 @@ local function MultiLineDeclaration(node)
     table.insert(formatted, '=')
 
     local singleLineExprList = SingleLineList(node.exprList)
-    offsetColumn( -- Use 4 for either ') = ' or '} = '
-      hasMultiLineVarList and 4 or (#table.concat(formatted, ' ') + 1)
-    )
+    -- Use 4 for either ') = ' or '} = '
+    reserve(hasMultiLineVarList and 4 or (#table.concat(formatted, ' ') + 1))
 
-    if fits(singleLineExprList) then
+    if #singleLineExprList <= availableColumns then
       table.insert(formatted, singleLineExprList)
     elseif
       not hasMultiLineVarList
-      and #singleLineExprList <= indentWidth * (indentLevel + 1)
+      and #singleLineExprList <= availableColumns + indentWidth
     then
+      -- TODO: need to prefix singleLineExprList!!
       table.insert(formatted, '\n' .. singleLineExprList)
     elseif #node.exprList == 1 then
       table.insert(formatted, formatNode(node.exprList[1]))
@@ -275,15 +276,13 @@ local function MultiLineDestructs(node, variant)
         formatted = formatted .. ' = '
 
         local revert = use({ forceSingleLine = true })
-        offsetColumn(formatted)
+        reserve(formatted)
         local singleLineDefault = formatNode(destruct.default)
         revert()
 
-        if fits(singleLineDefault) then
+        if #singleLineDefault <= availableColumns then
           formatted = formatted .. singleLineDefault
-        elseif
-          #singleLineDefault <= columnLimit - indentWidth * (indentLevel + 1)
-        then
+        elseif #singleLineDefault <= availableColumns + indentWidth then
           formatted = formatted
             .. '\n'
             .. (' '):rep(indentWidth * (indentLevel + 1))
@@ -354,7 +353,7 @@ local function MultiLineDestructure(node)
   else
     local formatted = { '{' }
     indent(1)
-    offsetColumn(0)
+    reserve(0)
 
     local keyDestructs = MultiLineDestructs(node, 'keyDestruct')
     for _, keyDestruct in ipairs(keyDestructs) do
@@ -366,7 +365,7 @@ local function MultiLineDestructure(node)
         .. table.concat(SingleLineDestructs(node, 'numberDestruct'), ', ')
         .. ' ],'
 
-      if fits(singleLineNumberDestructs) then
+      if #singleLineNumberDestructs <= availableColumns then
         table.insert(formatted, Line(singleLineNumberDestructs))
       else
         table.insert(formatted, '[')
@@ -390,7 +389,7 @@ end
 
 local function Destructure(node)
   local singleLineDestructure = SingleLineDestructure(node)
-  return (forceSingleLine or fits(singleLineDestructure))
+  return (forceSingleLine or #singleLineDestructure <= availableColumns)
       and singleLineDestructure
     or MultiLineDestructure(node)
 end
@@ -572,8 +571,8 @@ end
 
 local function Return(node)
   local singleLineReturns = SingleLineList(node)
-  offsetColumn('return ')
-  return (forceSingleLine or fits(singleLineReturns))
+  reserve('return ')
+  return (forceSingleLine or #singleLineReturns <= availableColumns)
       and 'return ' .. singleLineReturns
     or 'return ' .. MultiLineList(node)
 end
