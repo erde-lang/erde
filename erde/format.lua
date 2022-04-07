@@ -39,15 +39,6 @@ local function reset(node)
   availableColumns = columnLimit
 end
 
-local function use(state)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = state.forceSingleLine or forceSingleLineBackup
-
-  return function()
-    forceSingleLine = forceSingleLineBackup
-  end
-end
-
 local function indent(levelDiff)
   indentLevel = indentLevel + levelDiff
   indentPrefix = (' '):rep(indentLevel * indentWidth)
@@ -57,6 +48,29 @@ local function reserve(reservation)
   availableColumns = columnLimit
     - indentLevel * indentWidth
     - (type(reservation) == 'number' and reservation or #reservation)
+end
+
+local function use(state)
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = state.forceSingleLine or forceSingleLineBackup
+
+  local availableColumnsBackup = availableColumns
+  if state.reserve then
+    reserve(state.reserve)
+  end
+
+  local indentLevelBackup = indentLevel
+  local indentPrefixBackup = indentPrefix
+  if state.indent then
+    indent(state.indent)
+  end
+
+  return function()
+    forceSingleLine = forceSingleLineBackup
+    availableColumns = availableColumnsBackup
+    indentLevel = indentLevelBackup
+    indentPrefix = indentPrefixBackup
+  end
 end
 
 local function formatNode(node, state)
@@ -86,13 +100,13 @@ end
 
 local function SingleLineList(nodes)
   local formatted = {}
-  local revert = use({ forceSingleLine = true })
+  local restore = use({ forceSingleLine = true })
 
   for _, node in ipairs(nodes) do
     table.insert(formatted, formatNode(node))
   end
 
-  revert()
+  restore()
   return table.concat(formatted, ', ')
 end
 
@@ -125,8 +139,58 @@ end
 -- Assignment
 -- -----------------------------------------------------------------------------
 
+local function SingleLineAssignment(node)
+  local formatted = {
+    node.variant,
+    SingleLineList(node.idList),
+  }
+
+  if #node.exprList > 0 then
+    table.insert(formatted, (node.op and node.op.token or '') .. '=')
+    table.insert(formatted, SingleLineList(node.exprList))
+  end
+
+  return table.concat(formatted, ' ')
+end
+
+local function MultiLineAssignment(node)
+  local formatted = {}
+
+  local hasMultiLineIdList = false
+  local singleLineIdList = SingleLineList(node.idList)
+  reserve(0)
+
+  if #singleLineIdList < availableColumns then
+    table.insert(formatted, singleLineIdList)
+  else
+    hasMultiLineIdList = true
+    table.insert(formatted, MultiLineList(node.idList))
+  end
+
+  table.insert(formatted, '=')
+  reserve(hasMultiLineIdList and ') = ' or (#table.concat(formatted, ' ') + 1))
+  local singleLineExprList = SingleLineList(node.exprList)
+
+  if #singleLineExprList <= availableColumns then
+    table.insert(formatted, singleLineExprList)
+  elseif
+    not hasMultiLineIdList
+    and #singleLineExprList <= availableColumns + indentWidth
+  then
+    local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
+    table.insert(formatted, prefix .. singleLineExprList)
+  elseif #node.exprList == 1 then
+    table.insert(formatted, formatNode(node.exprList[1]))
+  else
+    table.insert(formatted, MultiLineList(node.exprList))
+  end
+
+  return table.concat(formatted, ' ')
+end
+
 local function Assignment(node)
-  return ''
+  return forceSingleLine and SingleLineAssignment(node)
+    or MultiLineAssignment(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -207,10 +271,10 @@ local function MultiLineDeclaration(node)
 
   if #node.exprList > 0 then
     table.insert(formatted, '=')
-
-    local singleLineExprList = SingleLineList(node.exprList)
     -- Use 4 for either ') = ' or '} = '
     reserve(hasMultiLineVarList and 4 or (#table.concat(formatted, ' ') + 1))
+
+    local singleLineExprList = SingleLineList(node.exprList)
 
     if #singleLineExprList <= availableColumns then
       table.insert(formatted, singleLineExprList)
@@ -218,8 +282,8 @@ local function MultiLineDeclaration(node)
       not hasMultiLineVarList
       and #singleLineExprList <= availableColumns + indentWidth
     then
-      -- TODO: need to prefix singleLineExprList!!
-      table.insert(formatted, '\n' .. singleLineExprList)
+      local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
+      table.insert(formatted, prefix .. singleLineExprList)
     elseif #node.exprList == 1 then
       table.insert(formatted, formatNode(node.exprList[1]))
     else
@@ -275,28 +339,23 @@ local function MultiLineDestructs(node, variant)
       if destruct.default then
         formatted = formatted .. ' = '
 
-        local revert = use({ forceSingleLine = true })
-        reserve(formatted)
+        local restore = use({ forceSingleLine = true, reserve = formatted })
         local singleLineDefault = formatNode(destruct.default)
-        revert()
+        restore()
 
         if #singleLineDefault <= availableColumns then
           formatted = formatted .. singleLineDefault
         elseif #singleLineDefault <= availableColumns + indentWidth then
-          formatted = formatted
-            .. '\n'
-            .. (' '):rep(indentWidth * (indentLevel + 1))
-            .. singleLineDefault
+          local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
+          formatted = formatted .. prefix .. singleLineDefault
         else
           local multiLineDefault = formatNode(destruct.default)
 
           if multiLineDefault:find('\n') then
             formatted = formatted .. formatNode(destruct.default)
           else
-            formatted = formatted
-              .. '\n'
-              .. (' '):rep(indentWidth * (indentLevel + 1))
-              .. multiLineDefault
+            local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
+            formatted = formatted .. prefix .. multiLineDefault
           end
         end
       end
@@ -486,7 +545,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function IfElse(node)
-  local revert = use({ forceSingleLine = true })
+  local restore = use({ forceSingleLine = true })
 
   local ifCondition = formatNode(node.ifNode.condition)
   local elseifConditions = {}
@@ -494,7 +553,7 @@ local function IfElse(node)
     table.insert(elseifConditions, formatNode(elseifNode.condition))
   end
 
-  revert()
+  restore()
 
   local formatted = {
     'if ' .. ifCondition .. ' {',
@@ -554,9 +613,9 @@ end
 -- -----------------------------------------------------------------------------
 
 local function RepeatUntil(node)
-  local revert = use({ forceSingleLine = true })
+  local restore = use({ forceSingleLine = true })
   local condition = formatNode(node.condition)
-  revert()
+  restore()
 
   return Lines({
     'repeat',
@@ -640,9 +699,9 @@ end
 -- -----------------------------------------------------------------------------
 
 local function WhileLoop(node)
-  local revert = use({ forceSingleLine = true })
+  local restore = use({ forceSingleLine = true })
   local condition = formatNode(node.condition)
-  revert()
+  restore()
 
   return Lines({
     'while ' .. condition .. ' {',
