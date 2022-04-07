@@ -1,19 +1,12 @@
 # TODO
 
-- Formatting
-  - Rule.format method
-  - cli support `erde format [FILES]`
-- add prune operator?
-  - `!somecondition ~> nil`
-  - shorthand for `if !somecondition { return nil }`
-  - extremely common pattern
+- format.lua
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - do expressions `if do { ... } { }`
 - refactor tests
   - add more compile tests
   - add format tests
-- Bug fixes
 
 # v0.3.0
 
@@ -51,6 +44,10 @@
 
 # Uncertain Proposals (need community input)
 
+- add prune operator?
+  - `!somecondition ~> nil`
+  - shorthand for `if !somecondition { return nil }`
+  - extremely common pattern
 - function return params (similar to golang)
   - ex) function double(t) (doubled = {}) {
           for _, n in ipairs(t) {
