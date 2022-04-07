@@ -10,18 +10,17 @@
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - do expressions `if do { ... } { }`
-
-# v0.2.0
-
 - refactor tests
-  - separate parse and compile tests
-  - add resolve tests
+  - add more compile tests
   - add format tests
-- erde REPL
 - Bug fixes
 
 # v0.3.0
 
+- upgrade cli
+  - refactor
+  - add REPL
+  - official manifest.erde spec
 - Source maps (for runtime errors when using erde.loader)
 - officially readd 5.1+ support
   - Not supported initially due to ease + not sure if will take advantage of
@@ -52,9 +51,6 @@
 
 # Uncertain Proposals (need community input)
 
-- array destructure skipping
-  - ex) `local [a, ..., c] = {1, 2, 3, 4, 5}`, (a, c) == (1, 5)
-  - too seldom used??
 - function return params (similar to golang)
   - ex) function double(t) (doubled = {}) {
           for _, n in ipairs(t) {
@@ -71,9 +67,3 @@
 - `defer` keyword
   - ex) `defer { return myDefaultExport }`
   - hard to optimize?
-
-# Design Decisions (need to move to erde website)
-
-## Changing negation to `!`
-
-More standard and `~=` conflicts w/ the bitop `~` assignment operator.
