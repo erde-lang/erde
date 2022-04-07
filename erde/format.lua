@@ -743,8 +743,8 @@ SUB_FORMATTERS = {
   WhileLoop = WhileLoop,
 }
 
-return function(textOrAst, ...)
-  local ast = type(textOrAst) == 'string' and parse(textOrAst, ...) or textOrAst
+return function(textOrAst)
+  local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
   reset()
   return formatNode(ast)
 end

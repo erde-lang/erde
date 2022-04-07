@@ -1026,60 +1026,10 @@ function WhileLoop()
 end
 
 -- =============================================================================
--- Parse
+-- Return
 -- =============================================================================
 
-local parse, parseMT = {}, {}
-setmetatable(parse, parseMT)
-
-parseMT.__call = function(self, text)
-  return parse.Module(text)
+return function(text)
+  reset(text)
+  return Module(text)
 end
-
-local subParsers = {
-  -- Rules
-  ArrowFunction = ArrowFunction,
-  Assignment = Assignment,
-  Binop = Binop,
-  Block = Block,
-  Break = Break,
-  Continue = Continue,
-  Declaration = Declaration,
-  Destructure = Destructure,
-  DoBlock = DoBlock,
-  Expr = Expr,
-  ForLoop = ForLoop,
-  Function = Function,
-  Goto = Goto,
-  IfElse = IfElse,
-  OptChain = OptChain,
-  Module = Module,
-  Params = Params,
-  RepeatUntil = RepeatUntil,
-  Return = Return,
-  Self = Self,
-  Spread = Spread,
-  String = String,
-  Table = Table,
-  TryCatch = TryCatch,
-  Unop = Unop,
-  WhileLoop = WhileLoop,
-
-  -- Pseudo-Rules
-  Var = Var,
-  Name = Name,
-  Number = Number,
-  Terminal = Terminal,
-  Expr = Expr,
-  FunctionCall = FunctionCall,
-  Id = Id,
-}
-
-for name, subParser in pairs(subParsers) do
-  parse[name] = function(text, ...)
-    reset(text)
-    return subParser(...)
-  end
-end
-
-return parse

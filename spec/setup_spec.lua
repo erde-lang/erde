@@ -2,31 +2,10 @@ local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
 
 -- -----------------------------------------------------------------------------
--- Globals
+-- Helpers
 -- -----------------------------------------------------------------------------
 
-compile = require('erde.compile')
-parse = require('erde.parse')
-
-function loadErde(code)
-  local runner = loadstring(code)
-
-  if runner == nil then
-    error('Invalid Lua code: ' .. code)
-  end
-
-  return runner
-end
-
-function evalErde(expr)
-  return loadErde('return ' .. expr)()
-end
-
-function runErde(code)
-  return loadErde(code)()
-end
-
-function deepCompare(a, b)
+local function deepCompare(a, b)
   if type(a) ~= 'table' or type(b) ~= 'table' then
     return a == b
   end
@@ -38,6 +17,25 @@ function deepCompare(a, b)
   end
 
   return true
+end
+
+-- -----------------------------------------------------------------------------
+-- Globals
+-- -----------------------------------------------------------------------------
+
+parse = require('erde.parse')
+compile = require('erde.compile')
+format = require('erde.format')
+
+function runErde(erdeCode)
+  local luaCode = compile(erdeCode)
+  local runner = loadstring(luaCode)
+
+  if runner == nil then
+    error('Invalid Lua code: ' .. luaCode)
+  end
+
+  return runner()
 end
 
 -- -----------------------------------------------------------------------------
@@ -80,7 +78,7 @@ busted.assert:register(
 --
 
 local function eval(state, args)
-  return deepCompare(args[1], evalErde(args[2]))
+  return deepCompare(args[1], runErde('return ' .. args[2]))
 end
 
 say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
