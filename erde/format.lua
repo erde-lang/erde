@@ -525,7 +525,31 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Function(node)
-  return ''
+  local formatted = (node.variant ~= 'local' and #node.names == 1)
+      and node.variant .. ' function'
+    or 'function'
+
+  if #node.names == 1 then
+    formatted = formatted .. ' ' .. node.names[1]
+  else
+    local formattedNames = { node.names[1] }
+
+    for i = 2, #node.names - 1 do
+      table.insert(formattedNames, '.' .. node.names[i])
+    end
+
+    table.insert(
+      formattedNames,
+      (node.isMethod and ':' or '.') .. node.names[#node.names]
+    )
+
+    formatted = formatted .. ' ' .. table.concat(formattedNames)
+  end
+
+  return formatted
+    .. formatNode(node.params)
+    .. ' '
+    .. Lines({ '{', formatNode(node.body), Line('}') })
 end
 
 -- -----------------------------------------------------------------------------
@@ -605,7 +629,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Params(node)
-  return ''
+  return '()'
 end
 
 -- -----------------------------------------------------------------------------
