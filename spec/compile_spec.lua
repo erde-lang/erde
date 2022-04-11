@@ -1,3 +1,5 @@
+local compile = require('erde.compile')
+
 --
 -- TODO: Add separate section for non rule compiles
 -- Ex) Terminals, keyword errors, etc.

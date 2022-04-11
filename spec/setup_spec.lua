@@ -1,5 +1,7 @@
 local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
+local compile = require('erde.compile')
+local format = require('erde.format')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -19,13 +21,14 @@ local function deepCompare(a, b)
   return true
 end
 
+-- trim6 from http://lua-users.org/wiki/StringTrim
+local function trim(s)
+  return s:match('^()%s*$') and '' or s:match('^%s*(.*%S)')
+end
+
 -- -----------------------------------------------------------------------------
 -- Globals
 -- -----------------------------------------------------------------------------
-
-parse = require('erde.parse')
-compile = require('erde.compile')
-format = require('erde.format')
 
 function runErde(erdeCode)
   local luaCode = compile(erdeCode)
@@ -94,3 +97,19 @@ end
 
 say:set('assertion.run.positive', 'Run error. Expected %s, got %s')
 busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
+
+--
+-- format
+--
+
+local function formatted(state, args)
+  return trim(args[1]) == trim(format(args[2]))
+end
+
+say:set('assertion.formatted.positive', 'Format error. Expected %s, got %s')
+busted.assert:register(
+  'assertion',
+  'formatted',
+  formatted,
+  'assertion.formatted.positive'
+)

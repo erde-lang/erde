@@ -8,7 +8,16 @@ describe('ArrowFunction', function() end)
 -- Assignment
 -- -----------------------------------------------------------------------------
 
-describe('Assignment', function() end)
+describe('Assignment', function()
+  spec('single line assignment', function()
+    assert.formatted('local a = 1', 'local a    =     1')
+    assert.formatted('local a, b = 1, 2', 'local  a ,   b = 1 ,  2')
+  end)
+  spec('single expr wrap', function() end)
+  spec('(vars, exprs) = (single, multi)', function() end)
+  spec('(vars, exprs) = (multi, single)', function() end)
+  spec('(vars, exprs) = (multi, multi)', function() end)
+end)
 
 -- -----------------------------------------------------------------------------
 -- Binop
