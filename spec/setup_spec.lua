@@ -99,7 +99,8 @@ say:set('assertion.run.positive', 'Run error. Expected %s, got %s')
 busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
 
 --
--- format
+-- formatted
+-- NOTE: Cannot use assert.format, as it's already used internally by busted.
 --
 
 local function formatted(state, args)
