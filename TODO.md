@@ -56,6 +56,8 @@
         }
 - macros
 - python/js like decorators?
+  - too magical?
+  - hard to read?
 - nested break
 - pipes
   - included (and even implemented) in original spec. Removed due to awkardness

@@ -13,10 +13,58 @@ describe('Assignment', function()
     assert.formatted('local a = 1', 'local a    =     1')
     assert.formatted('local a, b = 1, 2', 'local  a ,   b = 1 ,  2')
   end)
-  spec('single expr wrap', function() end)
-  spec('(vars, exprs) = (single, multi)', function() end)
-  spec('(vars, exprs) = (multi, single)', function() end)
-  spec('(vars, exprs) = (multi, multi)', function() end)
+  spec('single expr wrap', function()
+    assert.formatted(
+      [[
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      ]],
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    )
+    assert.formatted(
+      [[
+aaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = 
+  cccccccccccccccccccccccccccccccccccccccccccc
+      ]],
+      'aaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = cccccccccccccccccccccccccccccccccccccccccccc'
+    )
+  end)
+  spec('(vars, exprs) = (single, multi)', function()
+    assert.formatted(
+      [[
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = (
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+  cccccccccccccccccccccccccccccccccccccccccccccccccc,
+)
+      ]],
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, cccccccccccccccccccccccccccccccccccccccccccccccccc'
+    )
+  end)
+  spec('(vars, exprs) = (multi, single)', function()
+    assert.formatted(
+      [[
+(
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+) = cccccccccccccccccccccccccccccccccccccccccccccccccc
+      ]],
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = cccccccccccccccccccccccccccccccccccccccccccccccccc'
+    )
+  end)
+  spec('(vars, exprs) = (multi, multi)', function()
+    assert.formatted(
+      [[
+(
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+) = (
+  cccccccccccccccccccccccccccccccccc,
+  dddddddddddddddddddddddddddddddddddddddddddddddddd,
+)
+      ]],
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = cccccccccccccccccccccccccccccccccc, dddddddddddddddddddddddddddddddddddddddddddddddddd'
+    )
+  end)
 end)
 
 -- -----------------------------------------------------------------------------

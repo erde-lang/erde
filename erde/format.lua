@@ -173,14 +173,15 @@ local function MultiLineAssignment(node)
 
   if #singleLineExprList <= availableColumns then
     table.insert(formatted, singleLineExprList)
-  elseif
-    not hasMultiLineIdList
-    and #singleLineExprList <= availableColumns + indentWidth
-  then
-    local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
-    table.insert(formatted, prefix .. singleLineExprList)
   elseif #node.exprList == 1 then
-    table.insert(formatted, formatNode(node.exprList[1]))
+    local formattedExpr = formatNode(node.exprList[1])
+
+    if not hasMultiLineIdList and not formattedExpr:find('\n') then
+      local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
+      table.insert(formatted, prefix .. singleLineExprList)
+    else
+      table.insert(formatted, formattedExpr)
+    end
   else
     table.insert(formatted, MultiLineList(node.exprList))
   end
@@ -278,14 +279,15 @@ local function MultiLineDeclaration(node)
 
     if #singleLineExprList <= availableColumns then
       table.insert(formatted, singleLineExprList)
-    elseif
-      not hasMultiLineVarList
-      and #singleLineExprList <= availableColumns + indentWidth
-    then
-      local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
-      table.insert(formatted, prefix .. singleLineExprList)
     elseif #node.exprList == 1 then
-      table.insert(formatted, formatNode(node.exprList[1]))
+      local formattedExpr = formatNode(node.exprList[1])
+
+      if not hasMultiLineVarList and not formattedExpr:find('\n') then
+        local prefix = '\n' .. (' '):rep(indentWidth * (indentLevel + 1))
+        table.insert(formatted, prefix .. singleLineExprList)
+      else
+        table.insert(formatted, formattedExpr)
+      end
     else
       table.insert(formatted, MultiLineList(node.exprList))
     end
