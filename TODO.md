@@ -41,6 +41,7 @@
 - completion scripts for libraries / environments?
   - want to provide LSP benefits of statically typed languages w/o static typing
   - kind of painful, like documentation needs manual tracking
+- builtin unit testing?
 
 # Uncertain Proposals (need community input)
 

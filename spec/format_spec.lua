@@ -10,8 +10,8 @@ describe('ArrowFunction', function() end)
 
 describe('Assignment', function()
   spec('single line assignment', function()
-    assert.formatted('local a = 1', 'local a    =     1')
-    assert.formatted('local a, b = 1, 2', 'local  a ,   b = 1 ,  2')
+    assert.formatted('a = 1', ' a    =     1')
+    assert.formatted('a, b = 1, 2', 'a ,   b = 1 ,  2')
   end)
   spec('single expr wrap', function()
     assert.formatted(
@@ -93,7 +93,64 @@ end)
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-describe('Declaration', function() end)
+describe('Declaration', function()
+  spec('single line assignment', function()
+    assert.formatted('local a = 1', 'local a    =     1')
+    assert.formatted('local a, b = 1, 2', 'local  a ,   b = 1 ,  2')
+  end)
+  spec('single expr wrap', function()
+    assert.formatted(
+      [[
+local aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = 
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      ]],
+      'local aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    )
+    assert.formatted(
+      [[
+local aaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = 
+  cccccccccccccccccccccccccccccccccccccccccccc
+      ]],
+      'local aaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = cccccccccccccccccccccccccccccccccccccccccccc'
+    )
+  end)
+  spec('(vars, exprs) = (single, multi)', function()
+    assert.formatted(
+      [[
+local aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = (
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+  cccccccccccccccccccccccccccccccccccccccccccccccccc,
+)
+      ]],
+      'local aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb, cccccccccccccccccccccccccccccccccccccccccccccccccc'
+    )
+  end)
+  spec('(vars, exprs) = (multi, single)', function()
+    assert.formatted(
+      [[
+local (
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+) = cccccccccccccccccccccccccccccccccccccccccccccccccc
+      ]],
+      'local aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = cccccccccccccccccccccccccccccccccccccccccccccccccc'
+    )
+  end)
+  spec('(vars, exprs) = (multi, multi)', function()
+    assert.formatted(
+      [[
+local (
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+  bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+) = (
+  cccccccccccccccccccccccccccccccccc,
+  dddddddddddddddddddddddddddddddddddddddddddddddddd,
+)
+      ]],
+      'local aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb = cccccccccccccccccccccccccccccccccc, dddddddddddddddddddddddddddddddddddddddddddddddddd'
+    )
+  end)
+end)
 
 -- -----------------------------------------------------------------------------
 -- DoBlock
@@ -105,7 +162,14 @@ describe('DoBlock', function() end)
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-describe('ForLoop', function() end)
+describe('ForLoop', function()
+  spec('numeric for loop', function()
+    assert.formatted('for i = 1, 3 {\n\n}', 'for   i =  1,3  {}')
+  end)
+  spec('generic for loop', function()
+    assert.formatted('for x in a {\n\n}', 'for   x   in   a   {}')
+  end)
+end)
 
 -- -----------------------------------------------------------------------------
 -- Function
