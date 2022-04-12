@@ -132,7 +132,26 @@ end
 -- -----------------------------------------------------------------------------
 
 local function ArrowFunction(node)
-  return ''
+  local formatted = {
+    formatNode(node.params),
+    node.hasFatArrow and '=>' or '->',
+  }
+
+  if not node.hasImplicitReturns then
+    table.insert(formatted, Lines({ '{', formatNode(node.body), '}' }))
+  elseif #node.returns == 1 then
+    table.insert(formatted, formatNode(node.returns[1]))
+  else
+    local singleLineReturns = SingleLineList(node.returns)
+
+    if forceSingleLine or #singleLineReturns <= availableColumns then
+      table.insert(formatted, singleLineReturns)
+    else
+      table.insert(formatted, MultiLineList(node.returns))
+    end
+  end
+
+  return table.concat(formatted, ' ')
 end
 
 -- -----------------------------------------------------------------------------
