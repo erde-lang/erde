@@ -191,7 +191,47 @@ end)
 -- -----------------------------------------------------------------------------
 
 describe('IfElse', function()
-  spec('if', function() end)
+  spec('if', function()
+    assert.formatted('if x  { }', 'if x {\n\n}')
+  end)
+  spec('if-elseif', function()
+    assert.formatted(
+      'if x  { } elseif y {}',
+      [[
+if x {
+
+} elseif y {
+
+}
+]]
+    )
+  end)
+  spec('if-else', function()
+    assert.formatted(
+      'if x  { } else {}',
+      [[
+if x {
+
+} else {
+
+}
+]]
+    )
+  end)
+  spec('if-elseif-else', function()
+    assert.formatted(
+      'if x  { } elseif y {}else {}',
+      [[
+if x {
+
+} elseif y {
+
+} else {
+
+}
+]]
+    )
+  end)
 end)
 
 -- -----------------------------------------------------------------------------
