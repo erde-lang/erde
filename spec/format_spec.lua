@@ -77,13 +77,17 @@ describe('Binop', function() end)
 -- Break
 -- -----------------------------------------------------------------------------
 
-describe('Break', function() end)
+spec('Break', function()
+  assert.formatted('break', '  break ')
+end)
 
 -- -----------------------------------------------------------------------------
 -- Continue
 -- -----------------------------------------------------------------------------
 
-describe('Continue', function() end)
+spec('Continue', function()
+  assert.formatted('continue', '  continue ')
+end)
 
 -- -----------------------------------------------------------------------------
 -- Declaration
