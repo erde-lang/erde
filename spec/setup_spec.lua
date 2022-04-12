@@ -104,8 +104,8 @@ busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
 --
 
 local function formatted(state, args)
-  local expected = trim(args[1])
-  local got = trim(format(args[2]))
+  local got = trim(format(args[1]))
+  local expected = trim(args[2])
 
   if expected ~= got then
     print(('\nFormat error.\nExpected\n%s\nGot\n%s'):format(expected, got))
