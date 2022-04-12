@@ -45,25 +45,8 @@
 
 # Uncertain Proposals (need community input)
 
-- add prune operator?
-  - `!somecondition ~> nil`
-  - shorthand for `if !somecondition { return nil }`
-  - extremely common pattern
-- function return params (similar to golang)
-  - ex) function double(t) (doubled = {}) {
-          for _, n in ipairs(t) {
-            table.insert(doubled, n * 2)
-          }
-        }
 - macros
 - python/js like decorators?
   - too magical?
   - hard to read?
 - nested break
-- pipes
-  - included (and even implemented) in original spec. Removed due to awkardness
-    of functional programming style compared to rest of lua.
-  - favor simple `do {}` exprs
-- `defer` keyword
-  - ex) `defer { return myDefaultExport }`
-  - hard to optimize?
