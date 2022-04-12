@@ -1,0 +1,272 @@
+-- -----------------------------------------------------------------------------
+-- ArrowFunction
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Assignment
+-- -----------------------------------------------------------------------------
+
+yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+  .xxxxxxxxxxxxxxx
+  .yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy = myongfunctioncall()
+(
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+    .xxxxxxxxxxxxxxx
+    .yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+) = mylongfunctioncall()
+
+-- -----------------------------------------------------------------------------
+-- Binop
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Break
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Continue
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Declaration
+-- -----------------------------------------------------------------------------
+
+local (
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+) = (
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+)
+
+local a, b = (
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+)
+
+local (
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+) = a, b
+
+local (
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+) = (
+  {
+    someprop = 4,
+    someprop = 4,
+    someprop = 4,
+    someprop = 4,
+    someprop = 4,
+  },
+  4
+)
+
+
+local (
+  { somevar: scopedanothervar = 32 , somevar: scopedanothervar = 32 },
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+) = (
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx,
+)
+
+local { somevar: scopedanothervar = 32 , somevar: scopedanothervar = 32 } =
+  yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+local {
+  somevar: scopedanothervar =
+    yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+  somevar: scopedanothervar = 32,
+} = yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+local {
+  somevar: scopedanothervar =
+    yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy,
+  somevar: scopedanothervar = 32,
+  [ a, b, c ],
+} = yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+local [
+  a,
+  b,
+  c,
+]
+ = yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+                                      local mylongvar = (someparam = {}, anotherparams = 4, aanextremellongparameter = { somefield = 4 }) -> {
+
+                                      }
+                                      local mylongvar = (
+                                        someparam = {},
+                                        anotherparams = 4,
+                                        aanextremellongparameter = 
+                                          { somefield = 4 }
+                                      ) -> {
+
+                                      }
+
+local a, b, c = 1, 2, 3
+
+-- -----------------------------------------------------------------------------
+-- DoBlock
+-- -----------------------------------------------------------------------------
+
+do {
+continue
+
+for
+i = 1  , 4 {}
+for
+a,cv   in  d, j {}
+
+return 1,    $ x,3,4
+}
+
+if do { return true } {
+  return yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy, xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+}
+
+do {
+  function a.b:c() {
+    -- !mycondition ~> nil
+    local x = 3
+  }
+}
+
+-- -----------------------------------------------------------------------------
+-- ForLoop
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Function
+-- -----------------------------------------------------------------------------
+
+function myfunc() {
+  if true {
+    while true {
+      local myreallylongidentifier = myreallylongcallback(
+        () -> { return 1 + 2 },
+        { myprop = '1', '2' },
+      )
+    }
+  }
+}
+
+
+function somefunc() {
+  -- !mycondition ~> nil
+  local x = 3
+}
+
+module function somefunc(someparam = { mykey = test }) {
+  -- !mycondition ~> nil
+  local x = 3
+}
+
+-- -----------------------------------------------------------------------------
+-- Goto
+-- -----------------------------------------------------------------------------
+
+goto       Test
+:: Test              ::
+
+-- -----------------------------------------------------------------------------
+-- IfElse
+-- -----------------------------------------------------------------------------
+
+if type(textOrAst) == 'string' 
+  && parse[name](textOrAst, ...) == 'some really long string' 
+  || someOtherCondition == variant.x 
+{
+  print('hello world')
+} 
+elseif 
+true {
+}
+
+if 1 + 2 > 4 {
+}
+
+-- -----------------------------------------------------------------------------
+-- Module
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- OptChain
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Params
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- RepeatUntil
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Return
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Self
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Spread
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- String
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Table
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- TryCatch
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- Unop
+-- -----------------------------------------------------------------------------
+
+
+
+-- -----------------------------------------------------------------------------
+-- WhileLoop
+-- -----------------------------------------------------------------------------
+
+
+

@@ -175,7 +175,10 @@ end)
 -- Function
 -- -----------------------------------------------------------------------------
 
-describe('Function', function() end)
+describe('Function', function()
+  spec('implicit scope function', function() end)
+  spec('explicit scope function', function() end)
+end)
 
 -- -----------------------------------------------------------------------------
 -- Goto
