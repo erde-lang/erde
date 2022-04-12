@@ -631,7 +631,25 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Params(node)
-  return '()'
+  local restore = use({ forceSingleLine = true })
+
+  local formatted = {}
+  for _, param in ipairs(node) do
+    local formattedParam = formatNode(param.value)
+
+    if param.default then
+      formattedParam = formattedParam .. ' = ' .. formatNode(param.default)
+    end
+
+    if param.varargs then
+      formattedParam = '...' .. formattedParam
+    end
+
+    table.insert(formatted, formattedParam)
+  end
+
+  restore()
+  return '(' .. table.concat(formatted, ', ') .. ')'
 end
 
 -- -----------------------------------------------------------------------------
