@@ -27,6 +27,7 @@ local availableColumns
 
 local indentWidth = 2
 local columnLimit = 80
+local quotePreference = 'single'
 
 -- =============================================================================
 -- Helpers
@@ -724,7 +725,43 @@ end
 -- -----------------------------------------------------------------------------
 
 local function String(node)
-  return ''
+  local formatted = {}
+  local restore = use({ forceSingleLine = true })
+
+  local quote = quotePreference == 'single' and "'" or "'"
+  local unEscapeQuotes = false
+
+  if node.variant ~= 'long' then
+    local hasSingleQuoteContent = false
+    local hasDoubleQuoteContent = false
+
+    for _, part in ipairs(node) do
+      if part.variant == 'content' then
+        hasSingleQuoteContent = hasSingleQuoteContent or part.value:match("'")
+        hasDoubleQuoteContent = hasDoubleQuoteContent or part.value:match('"')
+      end
+    end
+
+    unEscapeQuotes = not (hasSingleQuoteContent and hasDoubleQuoteContent)
+    print('unescape', unEscapeQuotes)
+    if hasSingleQuoteContent ~= hasDoubleQuoteContent then
+      quote = hasSingleQuoteContent and '"' or "'"
+    end
+  end
+
+  for _, part in ipairs(node) do
+    if part.variant == 'interpolation' then
+      table.insert(formatted, '{' .. formatNode(part.value) .. '}')
+    else
+      table.insert(
+        formatted,
+        unEscapeQuotes and part.value:gsub([[\(['"])]], '%1') or part.value
+      )
+    end
+  end
+
+  restore()
+  return quote .. table.concat(formatted) .. quote
 end
 
 -- -----------------------------------------------------------------------------
