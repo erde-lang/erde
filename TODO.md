@@ -23,6 +23,10 @@
     - analyze usage and inject code. In particular, transform logical operations 
       into if constructs (ex. `local a = b or c ?? d`)
 
+# v0.4.0
+
+- Auto remove unnecessary parens in expressions
+
 # Long Term TODO
 
 - update website
