@@ -743,7 +743,6 @@ local function String(node)
     end
 
     unEscapeQuotes = not (hasSingleQuoteContent and hasDoubleQuoteContent)
-    print('unescape', unEscapeQuotes)
     if hasSingleQuoteContent ~= hasDoubleQuoteContent then
       quote = hasSingleQuoteContent and '"' or "'"
     end
@@ -768,8 +767,84 @@ end
 -- Table
 -- -----------------------------------------------------------------------------
 
+local function TableField(field)
+  if field.variant == 'nameKey' then
+    return field.key .. ' = ' .. formatNode(field.value)
+  elseif field.variant == 'exprKey' then
+    return '[ ' .. formatNode(field.key) .. ' ] = ' .. formatNode(field.value)
+  elseif field.variant == 'numberKey' then
+    return formatNode(field.value)
+  elseif field.variant == 'spread' then
+    return formatNode(field.value)
+  end
+end
+
+local function SingleLineTable(fields)
+  local formatted = {}
+  local restore = use({ forceSingleLine = true })
+
+  for _, field in ipairs(fields) do
+    table.insert(formatted, TableField(field))
+  end
+
+  restore()
+  return '{ ' .. table.concat(formatted, ', ') .. ' }'
+end
+
+local function MultiLineTable(fields)
+  local formatted = { '{' }
+  indent(1)
+
+  for _, field in ipairs(fields) do
+    table.insert(formatted, Line(TableField(field)) .. ',')
+  end
+
+  indent(-1)
+  table.insert(formatted, Line('}'))
+  return Lines(formatted)
+end
+
 local function Table(node)
-  return ''
+  local sortedFields = {}
+  local exprKeyFieldBuffer = {}
+  local numberKeyFieldBuffer = {}
+
+  for _, field in ipairs(node) do
+    if field.variant == 'nameKey' then
+      table.insert(sortedFields, field)
+    elseif field.variant == 'exprKey' then
+      table.insert(exprKeyFieldBuffer, field)
+    elseif field.variant == 'numberKey' then
+      table.insert(numberKeyFieldBuffer, field)
+    elseif field.variant == 'spread' then
+      -- Flush buffers. Do not want to change position of spread, as it may
+      -- change structure of table.
+      for _, bufferField in ipairs(exprKeyFieldBuffer) do
+        table.insert(sortedFields, bufferField)
+      end
+
+      for _, bufferField in ipairs(numberKeyFieldBuffer) do
+        table.insert(sortedFields, bufferField)
+      end
+
+      table.insert(sortedFields, field)
+      exprKeyFieldBuffer = {}
+      numberKeyFieldBuffer = {}
+    end
+  end
+
+  for _, bufferField in ipairs(exprKeyFieldBuffer) do
+    table.insert(sortedFields, bufferField)
+  end
+
+  for _, bufferField in ipairs(numberKeyFieldBuffer) do
+    table.insert(sortedFields, bufferField)
+  end
+
+  local singleLineTable = SingleLineTable(sortedFields)
+  return (forceSingleLine or #singleLineTable <= availableColumns)
+      and singleLineTable
+    or MultiLineTable(sortedFields)
 end
 
 -- -----------------------------------------------------------------------------

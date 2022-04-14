@@ -931,7 +931,7 @@ end
 -- Table
 -- -----------------------------------------------------------------------------
 
-local function TableEntry()
+local function TableField()
   local field = {}
 
   if currentToken == '[' then
@@ -969,7 +969,7 @@ function Table()
     return List({
       allowEmpty = true,
       allowTrailingComma = true,
-      parse = TableEntry,
+      parse = TableField,
     })
   end)
 
