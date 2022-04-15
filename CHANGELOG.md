@@ -27,6 +27,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Fixed
 - String interpolation w/ names now compiles correctly.
 - Parenthesized Return now parses correctly.
+- Keywords are now allowed as names index chains (ex: x.if, y:else())
 
 ## [0.1-1] - March 3, 2022
 
