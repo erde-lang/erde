@@ -151,14 +151,16 @@ end
 -- Pseudo Rules
 -- =============================================================================
 
-local function Name()
+local function Name(opts)
   assert(
     currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
     'Malformed name: ' .. currentToken
   )
 
-  for i, keyword in pairs(C.KEYWORDS) do
-    assert(currentToken ~= keyword, 'Unexpected keyword: ' .. currentToken)
+  if not opts or not opts.allowKeywords then
+    for i, keyword in pairs(C.KEYWORDS) do
+      assert(currentToken ~= keyword, 'Unexpected keyword: ' .. currentToken)
+    end
   end
 
   return consume()
@@ -697,12 +699,17 @@ local function OptChainBase()
 end
 
 local function OptChainDotIndex()
-  local name = Try(Name)
+  local name = Try(function()
+    return Name({ allowKeywords = true })
+  end)
+
   return name and { variant = 'dotIndex', value = name }
 end
 
 local function OptChainMethod()
-  local name = Try(Name)
+  local name = Try(function()
+    return Name({ allowKeywords = true })
+  end)
 
   if name and currentToken == '(' then
     return { variant = 'method', value = name }
