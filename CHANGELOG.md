@@ -23,6 +23,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Steps (`erde.parse`, `erde.compile`, etc) are no longer tables, but pure functions
   - Can no longer call specific rules / pseudo-rules directly
   - Leads to cleaner code and less backwards compat
+- `erde.loader` no longer mutates the global require function, but uses `package.loaders` (as it should)
 
 ### Fixed
 - String interpolation w/ names now compiles correctly.

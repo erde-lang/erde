@@ -1,6 +1,5 @@
 # TODO
 
-- fix bug not allowing keyword props
 - format.lua
 - Fix syntax highlighting
   - parenthesized declaration / assignment
@@ -26,7 +25,7 @@
 
 # v0.4.0
 
-- Auto remove unnecessary parens in expressions
+- Auto remove unnecessary parens in expressions when formatting
 
 # Long Term TODO
 
