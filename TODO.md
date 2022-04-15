@@ -1,5 +1,6 @@
 # TODO
 
+- fix bug not allowing keyword props
 - format.lua
 - Fix syntax highlighting
   - parenthesized declaration / assignment
