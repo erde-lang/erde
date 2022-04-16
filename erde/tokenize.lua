@@ -112,6 +112,7 @@ local function InnerString()
     end
 
     commit(consume()) -- '{'
+    Space()
 
     -- Keep track of brace depth to differentiate end of interpolation from
     -- nested braces
@@ -129,6 +130,8 @@ local function InnerString()
       else
         Token()
       end
+
+      Space()
     end
 
     commit(consume()) -- '}'
