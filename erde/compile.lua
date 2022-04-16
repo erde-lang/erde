@@ -57,6 +57,8 @@ local function compileBinop(op, lhs, rhs)
       'end',
       'end)()',
     }, '\n')
+  elseif op.token == '!=' then
+    return table.concat({ lhs, ' ~= ', rhs })
   elseif op.token == '||' then
     return table.concat({ lhs, ' or ', rhs })
   elseif op.token == '&&' then

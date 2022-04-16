@@ -26,9 +26,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `erde.loader` no longer mutates the global require function, but uses `package.loaders` (as it should)
 
 ### Fixed
+- Tokenizer now correctly consumes whitespace in string interpolation.
 - String interpolation w/ names now compiles correctly.
 - Parenthesized Return now parses correctly.
-- Keywords are now allowed as names index chains (ex: x.if, y:else())
+- Keywords are now allowed as names index chains (ex: x.if, y:else()).
+- `!=` operator is now _actually_ compiled.
 
 ## [0.1-1] - March 3, 2022
 
