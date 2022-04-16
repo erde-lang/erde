@@ -4,6 +4,7 @@
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - do expressions `if do { ... } { }`
+  - do not highlight table in string (other embeds as well)
 - refactor tests
   - add more compile tests
   - add format tests

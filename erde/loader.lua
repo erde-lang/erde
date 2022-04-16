@@ -17,7 +17,7 @@ local function erdeLoader(moduleName)
     end
   end
 
-  return 'Failed to find module'
+  return 'Failed to find erde module'
 end
 
 local loaders = package.loaders or package.searchers
@@ -28,4 +28,5 @@ for loader in ipairs(loaders) do
   end
 end
 
-table.insert(loaders, erdeLoader)
+-- Place erde loader first to prioritize erde files over lua ones.
+table.insert(loaders, 1, erdeLoader)
