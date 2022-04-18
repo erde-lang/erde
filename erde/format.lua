@@ -929,7 +929,6 @@ SUB_FORMATTERS = {
 
 return function(textOrAst)
   local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
-  print(require('inspect')(ast))
   reset()
   return formatNode(ast)
 end
