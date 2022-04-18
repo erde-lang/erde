@@ -1,6 +1,7 @@
 # TODO
 
 - format.lua
+- fix empty file / only comments parsing
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - do expressions `if do { ... } { }`

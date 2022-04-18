@@ -652,7 +652,42 @@ end
 -- -----------------------------------------------------------------------------
 
 local function OptChain(node)
-  return ''
+  local restore = use({ forceSingleLine = true })
+  local formatted = { formatNode(node.base) }
+  indent(1)
+
+  for _, chain in ipairs(node) do
+    local formattedChain = {}
+
+    if chain.isOptional then
+      table.insert(formattedChain, '?')
+    end
+
+    if chain.variant == 'dotIndex' then
+      table.insert(formattedChain, '.' .. chain.value)
+    elseif chain.variant == 'method' then
+      table.insert(formattedChain, ':' .. chain.value)
+    elseif chain.variant == 'bracketIndex' then
+      table.insert(formattedChain, '[' .. formatNode(chain.value) .. ']')
+    elseif chain.variant == 'functionCall' then
+      local formattedArgs = {}
+
+      for _, arg in ipairs(chain.value) do
+        table.insert(formattedArgs, formatNode(arg))
+      end
+
+      table.insert(
+        formattedChain,
+        '(' .. table.concat(formattedArgs, ', ') .. ')'
+      )
+    end
+
+    table.insert(formatted, Line(table.concat(formattedChain)))
+  end
+
+  indent(-1)
+  restore()
+  return table.concat(formatted)
 end
 
 -- -----------------------------------------------------------------------------
