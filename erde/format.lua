@@ -219,6 +219,11 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Binop(node)
+  -- For now, do not attempt to do extensive formatting on binops. This can get
+  -- extremely complicated and even then usually results in hard to follow code.
+  -- Here, we take the Golang approach and say that if a binop needs extensive
+  -- formatting, its probably time to refactor it. The idiomatic 'erde' way to
+  -- do this would be a do expression with locally scoped intermediate variables.
   return formatNode(node.lhs)
     .. ' '
     .. node.op.token
@@ -924,6 +929,7 @@ SUB_FORMATTERS = {
 
 return function(textOrAst)
   local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
+  print(require('inspect')(ast))
   reset()
   return formatNode(ast)
 end
