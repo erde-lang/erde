@@ -27,12 +27,6 @@ local loopBlock = nil
 -- Forward declare
 local precompileNode, precompileChildren
 
-local function reset(node)
-  nodeIdCounter = 1
-  blockDepth = 0
-  moduleNode = nil
-end
-
 local function backup()
   return {
     nodeIdCounter = nodeIdCounter,
@@ -267,16 +261,7 @@ end
 -- Precompile
 -- =============================================================================
 
-local precompile, precompileMT = {}, {}
-setmetatable(precompile, precompileMT)
-
-precompileMT.__call = function(self, ast)
-  reset()
-  return precompileNode(ast)
-end
-
 SUB_PRECOMPILERS = {
-  -- Rules
   ArrowFunction = ArrowFunction,
   Block = Block,
   Break = Break,
@@ -289,11 +274,12 @@ SUB_PRECOMPILERS = {
   WhileLoop = Loop,
 }
 
-for name, subPrecompiler in pairs(SUB_PRECOMPILERS) do
-  precompile[name] = function(ast)
-    reset()
-    return subPrecompiler(ast)
-  end
-end
+return function(textOrAst)
+  local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
 
-return precompile
+  nodeIdCounter = 1
+  blockDepth = 0
+  moduleNode = nil
+
+  return precompileNode(ast)
+end

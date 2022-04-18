@@ -33,13 +33,6 @@ local quotePreference = 'single'
 -- Helpers
 -- =============================================================================
 
-local function reset(node)
-  indentLevel = 0
-  indentPrefix = ''
-  forceSingleLine = false
-  availableColumns = columnLimit
-end
-
 local function indent(levelDiff)
   indentLevel = indentLevel + levelDiff
   indentPrefix = (' '):rep(indentLevel * indentWidth)
@@ -218,17 +211,49 @@ end
 -- Binop
 -- -----------------------------------------------------------------------------
 
-local function Binop(node)
-  -- For now, do not attempt to do extensive formatting on binops. This can get
-  -- extremely complicated and even then usually results in hard to follow code.
-  -- Here, we take the Golang approach and say that if a binop needs extensive
-  -- formatting, its probably time to refactor it. The idiomatic 'erde' way to
-  -- do this would be a do expression with locally scoped intermediate variables.
+local function SingleLineBinop(node)
+  return table.concat({
+    formatNode(node.lhs),
+    node.op.token,
+    formatNode(node.rhs),
+  }, ' ')
+end
+
+local function MultiLineBinop()
+  local precedence = node.op.prec
+  local operand = node
+
+  local topLevelOperands = {}
+  while operand.ruleName == 'Binop' and operand.op.prec == precedence do
+    table.insert(topLevelOperands, operand.rhs)
+    operand = operand.lhs
+  end
+
+  -- Don't forget to insert the final operand!
+  table.insert(topLevelOperands, operand)
+
+  local restore = use({ forceSingleLine = true })
+  local formatted = { formatNode(topLevelOperands[#topLevelOperands]) }
+
+  -- Traverse backwards, since we populated using rhs!
+  indent(1)
+  for i = #topLevelOperands - 1, 1, -1 do
+    table.insert(formatted, formatNode(topLevelOperands[i]))
+  end
+  indent(-1)
+
   return formatNode(node.lhs)
     .. ' '
     .. node.op.token
     .. ' '
     .. formatNode(node.rhs)
+end
+
+local function Binop(node)
+  local singleLineBinop = SingleLineBinop(node)
+  return (forceSingleLine or #singleLineBinop <= availableColumns)
+      and singleLineBinop
+    or MultiLineBinop(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -652,7 +677,56 @@ end
 -- -----------------------------------------------------------------------------
 
 local function OptChain(node)
-  return ''
+  local restore = use({ forceSingleLine = true })
+  local formattedParts = { formatNode(node.base) }
+
+  for _, chain in ipairs(node) do
+    local formattedChain = {}
+
+    if chain.optional then
+      table.insert(formattedChain, '?')
+    end
+
+    if chain.variant == 'dotIndex' then
+      table.insert(formattedChain, '.' .. chain.value)
+    elseif chain.variant == 'method' then
+      table.insert(formattedChain, ':' .. chain.value)
+    elseif chain.variant == 'bracketIndex' then
+      table.insert(formattedChain, '[' .. formatNode(chain.value) .. ']')
+    elseif chain.variant == 'functionCall' then
+      local formattedArgs = {}
+
+      for _, arg in ipairs(chain.value) do
+        table.insert(formattedArgs, formatNode(arg))
+      end
+
+      table.insert(
+        formattedChain,
+        '(' .. table.concat(formattedArgs, ', ') .. ')'
+      )
+    end
+
+    table.insert(formattedParts, table.concat(formattedChain))
+  end
+
+  restore()
+  indent(1)
+
+  local formatted = { formattedParts[1] }
+  for i = 2, #formattedParts do
+    -- Do not place function call chains on their own line, simply append to
+    -- previous line.
+    --
+    -- Use i - 1 since the chain base is not included in ipairs
+    if node[i - 1].variant == 'functionCall' then
+      formatted[#formatted] = formatted[#formatted] .. formattedParts[i]
+    else
+      table.insert(formatted, Line(formattedParts[i]))
+    end
+  end
+
+  indent(-1)
+  return Lines(formatted)
 end
 
 -- -----------------------------------------------------------------------------
@@ -929,6 +1003,11 @@ SUB_FORMATTERS = {
 
 return function(textOrAst)
   local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
-  reset()
+
+  indentLevel = 0
+  indentPrefix = ''
+  forceSingleLine = false
+  availableColumns = columnLimit
+
   return formatNode(ast)
 end

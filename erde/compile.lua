@@ -16,10 +16,6 @@ local tmpNameCounter
 -- Helpers
 -- =============================================================================
 
-local function reset()
-  tmpNameCounter = 1
-end
-
 -- TODO: remove?
 local function compileNode(node)
   if type(node) == 'string' then
@@ -959,6 +955,8 @@ SUB_COMPILERS = {
 return function(textOrAst)
   local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
   precompile(ast)
-  reset()
+
+  tmpNameCounter = 1
+
   return compileNode(ast)
 end
