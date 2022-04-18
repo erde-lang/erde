@@ -31,6 +31,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Parenthesized Return now parses correctly.
 - Keywords are now allowed as names index chains (ex: x.if, y:else()).
 - `!=` operator is now _actually_ compiled.
+- OptChain now correctly parses optional _method_ calls
 
 ## [0.1-1] - March 3, 2022
 

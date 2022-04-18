@@ -711,7 +711,10 @@ local function OptChainMethod()
     return Name({ allowKeywords = true })
   end)
 
-  if name and currentToken == '(' then
+  local isNextChainFunctionCall = currentToken == '('
+    or (currentToken == '?' and lookAhead(1) == '(')
+
+  if name and isNextChainFunctionCall then
     return { variant = 'method', value = name }
   elseif not isTernaryExpr then
     -- Do not throw error here if isTernaryExpr, instead assume ':' is from

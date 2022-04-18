@@ -1,6 +1,8 @@
 # TODO
 
 - format.lua
+  - add comments / newlines
+  - break binop ONLY on lowest precedence level
 - fix empty file / only comments parsing
 - Fix syntax highlighting
   - parenthesized declaration / assignment
