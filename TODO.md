@@ -1,13 +1,13 @@
 # TODO
 
-- format.lua
-  - add comments / newlines
-  - break binop ONLY on lowest precedence level
-- fix empty file / only comments parsing
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - `({ x = 1 })()` parens
   - do expressions `if do { ... } { }`
+- format.lua
+  - add comments / newlines
+  - break binop ONLY on lowest precedence level
+- fix empty file / only comments parsing
 - refactor tests
   - add more compile tests
   - add format tests
@@ -32,6 +32,7 @@ Main Focuses: Error Handling, CLI, 5.1+ Support
   - change throw level. For certain errors we _know_ what the developer was 
     trying to do and should fatal exit
 - Source maps (for runtime errors when using erde.loader)
+  - preserve line numbers when compiling
 - upgrade cli
   - autocompletion
   - refactor
