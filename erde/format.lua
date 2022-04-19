@@ -653,13 +653,12 @@ end
 
 local function OptChain(node)
   local restore = use({ forceSingleLine = true })
-  local formatted = { formatNode(node.base) }
-  indent(1)
+  local formattedParts = { formatNode(node.base) }
 
   for _, chain in ipairs(node) do
     local formattedChain = {}
 
-    if chain.isOptional then
+    if chain.optional then
       table.insert(formattedChain, '?')
     end
 
@@ -682,12 +681,27 @@ local function OptChain(node)
       )
     end
 
-    table.insert(formatted, Line(table.concat(formattedChain)))
+    table.insert(formattedParts, table.concat(formattedChain))
+  end
+
+  restore()
+  indent(1)
+
+  local formatted = { formattedParts[1] }
+  for i = 2, #formattedParts do
+    -- Do not place function call chains on their own line, simply append to
+    -- previous line.
+    --
+    -- Use i - 1 since the chain base is not included in ipairs
+    if node[i - 1].variant == 'functionCall' then
+      formatted[#formatted] = formatted[#formatted] .. formattedParts[i]
+    else
+      table.insert(formatted, Line(formattedParts[i]))
+    end
   end
 
   indent(-1)
-  restore()
-  return table.concat(formatted)
+  return Lines(formatted)
 end
 
 -- -----------------------------------------------------------------------------
