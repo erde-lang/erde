@@ -5,11 +5,14 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [0.2-1] - UNRELEASED
 
+Main Focuses: Internal Restructuring, Formatting, Website
+
 ### Added
 - Allow parenthesized lists for assignment / declarations vars and expressions.
 - Add dedicated rule for Modules (top level block)
 - Add `precompile` step for AST validation and node linking
 - Use newline to differentiate syntax ambiguity
+- Add code formatter
 
 ### Changed
 - Varargs now spreads when used as a table or param expression.
@@ -29,7 +32,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Tokenizer now correctly consumes whitespace in string interpolation.
 - String interpolation w/ names now compiles correctly.
 - Parenthesized Return now parses correctly.
-- Keywords are now allowed as names index chains (ex: x.if, y:else()).
+- Keywords are now allowed as named index chains (ex: x.if, y:else()).
 - `!=` operator is now _actually_ compiled.
 - OptChain now correctly parses optional _method_ calls
 
