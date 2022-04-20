@@ -20,17 +20,6 @@ local isTernaryExpr = false
 -- Helpers
 -- =============================================================================
 
-local function reset(text)
-  -- TODO use other tokenize results
-  local tokenizeResults = tokenize(text)
-  tokens = tokenizeResults.tokens
-  newlines = tokenizeResults.newlines
-
-  currentTokenIndex = 1
-  currentToken = tokens[1]
-  isTernaryExpr = false
-end
-
 local function backup()
   return {
     currentTokenIndex = currentTokenIndex,
@@ -1039,7 +1028,16 @@ end
 -- Return
 -- =============================================================================
 
-return function(text)
-  reset(text)
+return function(textOrTokenData)
+  local tokenData = type(textOrTokenData) == 'string'
+      and tokenize(textOrTokenData)
+    or textOrTokenData
+
+  tokens = tokenData.tokens
+  newlines = tokenData.newlines
+  currentTokenIndex = 1
+  currentToken = tokens[1]
+  isTernaryExpr = false
+
   return Module(text)
 end

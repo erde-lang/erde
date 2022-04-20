@@ -33,13 +33,6 @@ local quotePreference = 'single'
 -- Helpers
 -- =============================================================================
 
-local function reset(node)
-  indentLevel = 0
-  indentPrefix = ''
-  forceSingleLine = false
-  availableColumns = columnLimit
-end
-
 local function indent(levelDiff)
   indentLevel = indentLevel + levelDiff
   indentPrefix = (' '):rep(indentLevel * indentWidth)
@@ -978,6 +971,11 @@ SUB_FORMATTERS = {
 
 return function(textOrAst)
   local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
-  reset()
+
+  indentLevel = 0
+  indentPrefix = ''
+  forceSingleLine = false
+  availableColumns = columnLimit
+
   return formatNode(ast)
 end
