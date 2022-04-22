@@ -211,17 +211,49 @@ end
 -- Binop
 -- -----------------------------------------------------------------------------
 
-local function Binop(node)
-  -- For now, do not attempt to do extensive formatting on binops. This can get
-  -- extremely complicated and even then usually results in hard to follow code.
-  -- Here, we take the Golang approach and say that if a binop needs extensive
-  -- formatting, its probably time to refactor it. The idiomatic 'erde' way to
-  -- do this would be a do expression with locally scoped intermediate variables.
+local function SingleLineBinop(node)
+  return table.concat({
+    formatNode(node.lhs),
+    node.op.token,
+    formatNode(node.rhs),
+  }, ' ')
+end
+
+local function MultiLineBinop()
+  local precedence = node.op.prec
+  local operand = node
+
+  local topLevelOperands = {}
+  while operand.ruleName == 'Binop' and operand.op.prec == precedence do
+    table.insert(topLevelOperands, operand.rhs)
+    operand = operand.lhs
+  end
+
+  -- Don't forget to insert the final operand!
+  table.insert(topLevelOperands, operand)
+
+  local restore = use({ forceSingleLine = true })
+  local formatted = { formatNode(topLevelOperands[#topLevelOperands]) }
+
+  -- Traverse backwards, since we populated using rhs!
+  indent(1)
+  for i = #topLevelOperands - 1, 1, -1 do
+    table.insert(formatted, formatNode(topLevelOperands[i]))
+  end
+  indent(-1)
+
   return formatNode(node.lhs)
     .. ' '
     .. node.op.token
     .. ' '
     .. formatNode(node.rhs)
+end
+
+local function Binop(node)
+  local singleLineBinop = SingleLineBinop(node)
+  return (forceSingleLine or #singleLineBinop <= availableColumns)
+      and singleLineBinop
+    or MultiLineBinop(node)
 end
 
 -- -----------------------------------------------------------------------------
