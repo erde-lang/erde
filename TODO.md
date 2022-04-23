@@ -6,7 +6,7 @@
   - do expressions `if do { ... } { }`
 - format.lua
   - add comments / newlines
-  - break binop ONLY on lowest precedence level
+- do not hardcode version in bin/erde
 - fix empty file / only comments parsing
 - refactor tests
   - add more compile tests
