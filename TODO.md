@@ -1,12 +1,7 @@
 # TODO
 
-- Fix syntax highlighting
-  - parenthesized declaration / assignment
-  - `({ x = 1 })()` parens
-  - do expressions `if do { ... } { }`
 - format.lua
   - add comments / newlines
-  - break binop ONLY on lowest precedence level
 - fix empty file / only comments parsing
 - refactor tests
   - add more compile tests
@@ -66,3 +61,5 @@ Main Focuses: Error Handling, CLI, 5.1+ Support
   - too magical?
   - hard to read?
 - nested break
+- allow expression lists for assignment / return
+  - ex) `local a, b = somecondition ? (1, 2) : (2, 3)`
