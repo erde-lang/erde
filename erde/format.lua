@@ -366,6 +366,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function SingleLineDestructs(node, variant)
+  local restore = use({ forceSingleLine = true })
   local destructs = {}
 
   for _, destruct in ipairs(node) do
@@ -384,6 +385,7 @@ local function SingleLineDestructs(node, variant)
     end
   end
 
+  restore()
   return destructs
 end
 
