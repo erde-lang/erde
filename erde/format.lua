@@ -212,41 +212,47 @@ end
 -- -----------------------------------------------------------------------------
 
 local function SingleLineBinop(node)
-  return table.concat({
+  local restore = use({ forceSingleLine = true })
+
+  local formatted = table.concat({
     formatNode(node.lhs),
     node.op.token,
     formatNode(node.rhs),
   }, ' ')
+
+  restore()
+  return formatted
 end
 
-local function MultiLineBinop()
-  local precedence = node.op.prec
-  local operand = node
+local function MultiLineBinop(node)
+  local lowestPrec = node.op.prec
+  local binop = node
 
-  local topLevelOperands = {}
-  while operand.ruleName == 'Binop' and operand.op.prec == precedence do
-    table.insert(topLevelOperands, operand.rhs)
-    operand = operand.lhs
+  local lowestPrecBinops = {}
+  while binop.ruleName == 'Binop' and binop.op.prec == lowestPrec do
+    table.insert(lowestPrecBinops, binop)
+    binop = binop.lhs
   end
 
-  -- Don't forget to insert the final operand!
-  table.insert(topLevelOperands, operand)
-
   local restore = use({ forceSingleLine = true })
-  local formatted = { formatNode(topLevelOperands[#topLevelOperands]) }
+  local formatted = { formatNode(lowestPrecBinops[#lowestPrecBinops].lhs) }
 
   -- Traverse backwards, since we populated using rhs!
   indent(1)
-  for i = #topLevelOperands - 1, 1, -1 do
-    table.insert(formatted, formatNode(topLevelOperands[i]))
+  for i = #lowestPrecBinops, 1, -1 do
+    table.insert(
+      formatted,
+      table.concat({
+        indentPrefix,
+        lowestPrecBinops[i].op.token,
+        ' ',
+        formatNode(lowestPrecBinops[i].rhs),
+      })
+    )
   end
   indent(-1)
 
-  return formatNode(node.lhs)
-    .. ' '
-    .. node.op.token
-    .. ' '
-    .. formatNode(node.rhs)
+  return table.concat(formatted, '\n')
 end
 
 local function Binop(node)
