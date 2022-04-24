@@ -1,5 +1,6 @@
 # TODO
 
+- destructure vs bracket highlighting
 - format.lua
   - add comments / newlines
 - fix empty file / only comments parsing
