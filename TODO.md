@@ -1,5 +1,7 @@
 # TODO
 
+- allow expr list?
+  - ex) `local a, b = somecondition ? (1, 2) : (2, 3)`
 - Fix syntax highlighting
   - parenthesized declaration / assignment
   - `({ x = 1 })()` parens
