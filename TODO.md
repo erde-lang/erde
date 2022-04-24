@@ -1,15 +1,7 @@
 # TODO
 
-- allow expr list?
-  - ex) `local a, b = somecondition ? (1, 2) : (2, 3)`
-- Fix syntax highlighting
-  - parenthesized declaration / assignment
-  - `({ x = 1 })()` parens
-  - do expressions `if do { ... } { }`
-  - `myvar` vs `myfunc(myvar)`, myvar is highlighted differently
 - format.lua
   - add comments / newlines
-- do not hardcode version in bin/erde
 - fix empty file / only comments parsing
 - refactor tests
   - add more compile tests
@@ -69,3 +61,5 @@ Main Focuses: Error Handling, CLI, 5.1+ Support
   - too magical?
   - hard to read?
 - nested break
+- allow expression lists for assignment / return
+  - ex) `local a, b = somecondition ? (1, 2) : (2, 3)`
