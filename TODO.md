@@ -6,6 +6,7 @@
   - parenthesized declaration / assignment
   - `({ x = 1 })()` parens
   - do expressions `if do { ... } { }`
+  - `myvar` vs `myfunc(myvar)`, myvar is highlighted differently
 - format.lua
   - add comments / newlines
 - do not hardcode version in bin/erde
