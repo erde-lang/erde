@@ -240,7 +240,6 @@ function Token()
     consume(2)
 
     if peek(2):match('%[[[=]') then
-      comment.tokenIndex = numTokens
       consume() -- '['
 
       local strEq, strCloseLen = '', 2
@@ -276,7 +275,12 @@ function Token()
     end
 
     comment.token = token
-    comments[#comments + 1] = comment
+
+    if not comments[numTokens] then
+      comments[numTokens] = { comment }
+    else
+      table.insert(comments[numTokens], comment)
+    end
   else
     commit(consume())
   end

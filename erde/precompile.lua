@@ -274,9 +274,7 @@ SUB_PRECOMPILERS = {
   WhileLoop = Loop,
 }
 
-return function(textOrAst)
-  local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
-
+return function(ast)
   nodeIdCounter = 1
   blockDepth = 0
   moduleNode = nil

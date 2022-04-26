@@ -1,5 +1,6 @@
 # TODO
 
+- Remove block comments...
 - format.lua
   - add comments / newlines
 - fix empty file / only comments parsing
