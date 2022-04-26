@@ -8,6 +8,8 @@ local SUB_FORMATTERS
 -- State
 -- =============================================================================
 
+local ast, tokenData
+
 -- The current indent level (depth)
 local indentLevel
 
@@ -115,6 +117,33 @@ local function MultiLineList(nodes)
   indent(-1)
   table.insert(formatted, Line(')'))
   return Lines(formatted)
+end
+
+local function Statements(node)
+  local formatted = {}
+
+  if forceSingleLine then
+    for _, statement in ipairs(node) do
+      table.insert(formatted, formatNode(statement))
+    end
+  else
+    for _, statement in ipairs(node) do
+      local tokenIndexStart = statement.tokenIndexStart
+
+      if tokenIndexStart then
+        local numPrecedingNewlines = tokenData.newlines[tokenIndexStart - 1]
+          or 0
+
+        if numPrecedingNewlines > 1 then
+          table.insert(formatted, Line(''))
+        end
+      end
+
+      table.insert(formatted, formatNode(statement))
+    end
+  end
+
+  return formatted
 end
 
 -- =============================================================================
@@ -267,13 +296,8 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Block(node)
-  local formatted = {}
   indent(1)
-
-  for _, statement in ipairs(node) do
-    table.insert(formatted, Line(formatNode(statement)))
-  end
-
+  local formatted = Statements(node)
   indent(-1)
   return Lines(formatted)
 end
@@ -673,8 +697,8 @@ local function Module(node)
     table.insert(formatted, node.shebang)
   end
 
-  for _, statement in ipairs(node) do
-    table.insert(formatted, formatNode(statement))
+  for _, statement in ipairs(Statements(node)) do
+    table.insert(formatted, statement)
   end
 
   return table.concat(formatted, '\n')
@@ -1009,9 +1033,8 @@ SUB_FORMATTERS = {
   WhileLoop = WhileLoop,
 }
 
-return function(textOrAst)
-  local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
-
+return function(text)
+  ast, tokenData = parse(text)
   indentLevel = 0
   indentPrefix = ''
   forceSingleLine = false

@@ -952,8 +952,8 @@ SUB_COMPILERS = {
   WhileLoop = WhileLoop,
 }
 
-return function(textOrAst)
-  local ast = type(textOrAst) == 'string' and parse(textOrAst) or textOrAst
+return function(text)
+  local ast = parse(textOrAst)
   precompile(ast)
 
   tmpNameCounter = 1

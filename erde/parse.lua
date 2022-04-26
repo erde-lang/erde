@@ -193,6 +193,7 @@ end
 
 local function Expr(opts)
   local minPrec = opts and opts.minPrec or 1
+  local tokenIndexStart = currentTokenIndex
   local node = C.UNOPS[currentToken] and Unop() or Terminal()
 
   local binop = C.BINOPS[currentToken]
@@ -276,6 +277,7 @@ end
 function ArrowFunction()
   local node = {
     ruleName = 'ArrowFunction',
+    tokenIndexStart = currentTokenIndex,
     hasFatArrow = false,
     hasImplicitReturns = false,
     params = Params({ allowImplicitParams = true }),
@@ -305,6 +307,7 @@ function ArrowFunction()
     node.returns = { Expr() }
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -315,6 +318,7 @@ end
 function Assignment()
   local node = {
     ruleName = 'Assignment',
+    tokenIndexStart = currentTokenIndex,
     idList = currentToken ~= '(' and List({ parse = Id }) or Parens({
       allowRecursion = true,
       parse = function()
@@ -345,6 +349,7 @@ function Assignment()
       end,
     })
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -362,6 +367,7 @@ function Binop(opts)
 
   local node = {
     ruleName = 'Binop',
+    tokenIndexStart = opts.tokenIndexStart,
     op = op,
     lhs = opts.lhs,
   }
@@ -375,6 +381,7 @@ function Binop(opts)
 
   local newMinPrec = op.prec + (op.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
   node.rhs = Expr({ minPrec = newMinPrec })
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -383,13 +390,14 @@ end
 -- -----------------------------------------------------------------------------
 
 function Block()
-  local node = { ruleName = 'Block' }
+  local node = { ruleName = 'Block', tokenIndexStart = currentTokenIndex }
 
   repeat
     local statement = Statement()
     table.insert(node, statement)
   until not statement
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -399,7 +407,11 @@ end
 
 function Break()
   expect('break')
-  return { ruleName = 'Break' }
+  return {
+    ruleName = 'Break',
+    tokenIndexStart = currentTokenIndex - 1,
+    tokenIndexEnd = currentTokenIndex - 1,
+  }
 end
 
 -- -----------------------------------------------------------------------------
@@ -408,7 +420,11 @@ end
 
 function Continue()
   expect('continue')
-  return { ruleName = 'Continue' }
+  return {
+    ruleName = 'Continue',
+    tokenIndexStart = currentTokenIndex - 1,
+    tokenIndexEnd = currentTokenIndex - 1,
+  }
 end
 
 -- -----------------------------------------------------------------------------
@@ -427,6 +443,7 @@ function Declaration()
 
   local node = {
     ruleName = 'Declaration',
+    tokenIndexStart = currentTokenIndex,
     variant = consume(),
     exprList = {},
     varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
@@ -454,6 +471,7 @@ function Declaration()
       })
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -477,7 +495,7 @@ local function ArrayDestructure()
 end
 
 function Destructure()
-  local node = { ruleName = 'Destructure' }
+  local node = { ruleName = 'Destructure', tokenIndexStart = currentTokenIndex }
 
   local destructs = currentToken == '[' and ArrayDestructure()
     or Surround('{', '}', function()
@@ -508,6 +526,7 @@ function Destructure()
     end
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -519,8 +538,10 @@ function DoBlock(opts)
   expect('do')
   return {
     ruleName = 'DoBlock',
+    tokenIndexStart = currentTokenIndex,
     isExpr = opts and opts.isExpr,
     body = Surround('{', '}', Block),
+    tokenIndexEnd = currentTokenIndex - 1,
   }
 end
 
@@ -529,7 +550,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function ForLoop()
-  local node = { ruleName = 'ForLoop' }
+  local node = { ruleName = 'ForLoop', tokenIndexStart = currentTokenIndex }
   expect('for')
 
   local firstName = Var()
@@ -561,6 +582,7 @@ end
 function Function()
   local node = {
     ruleName = 'Function',
+    tokenIndexStart = currentTokenIndex,
     isMethod = false,
   }
 
@@ -592,6 +614,7 @@ function Function()
   node.params = Params()
   node.body = Surround('{', '}', Block)
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -600,7 +623,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Goto()
-  local node = { ruleName = 'Goto' }
+  local node = { ruleName = 'Goto', tokenIndexStart = currentTokenIndex }
 
   if branch('goto') then
     node.variant = 'jump'
@@ -614,6 +637,7 @@ function Goto()
     expect(':')
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -624,6 +648,7 @@ end
 function IfElse()
   local node = {
     ruleName = 'IfElse',
+    tokenIndexStart = currentTokenIndex,
     elseifNodes = {},
   }
 
@@ -645,6 +670,7 @@ function IfElse()
     node.elseNode = { body = Surround('{', '}', Block) }
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -653,7 +679,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Module()
-  local node = { ruleName = 'Module' }
+  local node = { ruleName = 'Module', tokenIndexStart = currentTokenIndex }
 
   if currentToken:match('^#!') then
     node.shebang = consume()
@@ -664,6 +690,7 @@ function Module()
     table.insert(node, statement)
   until not statement
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -738,7 +765,11 @@ local function OptChainFunctionCall()
 end
 
 function OptChain()
-  local node = { ruleName = 'OptChain', base = OptChainBase() }
+  local node = {
+    ruleName = 'OptChain',
+    tokenIndexStart = currentTokenIndex,
+    base = OptChainBase(),
+  }
 
   while true do
     local state = backup()
@@ -766,8 +797,8 @@ function OptChain()
     table.insert(node, chain)
   end
 
-  -- unpack trivial OptChain
-  return #node == 0 and node.base or node
+  node.tokenIndexEnd = currentTokenIndex - 1
+  return #node == 0 and node.base or node -- unpack trivial OptChain
 end
 
 -- -----------------------------------------------------------------------------
@@ -798,7 +829,7 @@ end
 
 function Params(opts)
   opts = opts or {}
-  local node = { ruleName = 'Params' }
+  local node = { ruleName = 'Params', tokenIndexStart = currentTokenIndex }
 
   local params
   if currentToken ~= '(' and opts.allowImplicitParams then
@@ -811,6 +842,7 @@ function Params(opts)
     table.insert(node, param)
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -823,12 +855,14 @@ function RepeatUntil()
 
   local node = {
     ruleName = 'RepeatUntil',
+    tokenIndexStart = currentTokenIndex,
     body = Surround('{', '}', Block),
   }
 
   expect('until')
   node.condition = Expr()
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -837,6 +871,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Return()
+  local tokenIndexStart = currentTokenIndex
   expect('return')
 
   local node = currentToken ~= '(' and List({ parse = Expr })
@@ -852,6 +887,8 @@ function Return()
     })
 
   node.ruleName = 'Return'
+  node.tokenIndexStart = tokenIndexStart
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -860,7 +897,12 @@ end
 -- -----------------------------------------------------------------------------
 
 function Self()
-  local node = { ruleName = 'Self', variant = 'self' }
+  local node = {
+    ruleName = 'Self',
+    tokenIndexStart = currentTokenIndex,
+    variant = 'self',
+  }
+
   expect('$')
 
   if currentToken then
@@ -873,6 +915,7 @@ function Self()
     end
   end
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -882,7 +925,12 @@ end
 
 function Spread()
   expect('...')
-  return { ruleName = 'Spread', value = Try(Expr) }
+  return {
+    ruleName = 'Spread',
+    tokenIndexStart = currentTokenIndex,
+    value = Try(Expr),
+    tokenIndexEnd = currentTokenIndex - 1,
+  }
 end
 
 -- -----------------------------------------------------------------------------
@@ -890,7 +938,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function String()
-  local node = { ruleName = 'String' }
+  local node = { ruleName = 'String', tokenIndexStart = currentTokenIndex }
   local terminatingToken
 
   if currentToken == "'" then
@@ -923,6 +971,7 @@ function String()
   end
 
   consume() -- terminatingToken
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -964,6 +1013,8 @@ local function TableField()
 end
 
 function Table()
+  local tokenIndexStart = currentTokenIndex
+
   local node = Surround('{', '}', function()
     return List({
       allowEmpty = true,
@@ -973,6 +1024,8 @@ function Table()
   end)
 
   node.ruleName = 'Table'
+  node.tokenIndexStart = tokenIndexStart
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -981,7 +1034,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function TryCatch()
-  local node = { ruleName = 'TryCatch' }
+  local node = { ruleName = 'TryCatch', tokenIndexStart = currentTokenIndex }
 
   expect('try')
   node.try = Surround('{', '}', Block)
@@ -992,6 +1045,7 @@ function TryCatch()
   end)
   node.catch = Surround('{', '}', Block)
 
+  node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
 
@@ -1000,14 +1054,17 @@ end
 -- -----------------------------------------------------------------------------
 
 function Unop()
+  local tokenIndexStart = currentTokenIndex
   local op = C.UNOPS[currentToken]
   assert(op, 'Invalid unop token: ' .. currentToken)
   consume()
 
   return {
     ruleName = 'Unop',
+    tokenIndexStart = tokenIndexStart,
     op = op,
     operand = Expr({ minPrec = op.prec + 1 }),
+    tokenIndexEnd = currentTokenIndex - 1,
   }
 end
 
@@ -1019,8 +1076,10 @@ function WhileLoop()
   expect('while')
   return {
     ruleName = 'WhileLoop',
+    tokenIndexStart = currentTokenIndex,
     condition = Expr(),
     body = Surround('{', '}', Block),
+    tokenIndexEnd = currentTokenIndex - 1,
   }
 end
 
@@ -1028,10 +1087,8 @@ end
 -- Return
 -- =============================================================================
 
-return function(textOrTokenData)
-  local tokenData = type(textOrTokenData) == 'string'
-      and tokenize(textOrTokenData)
-    or textOrTokenData
+return function(text)
+  local tokenData = tokenize(text)
 
   tokens = tokenData.tokens
   newlines = tokenData.newlines
@@ -1039,5 +1096,5 @@ return function(textOrTokenData)
   currentToken = tokens[1]
   isTernaryExpr = false
 
-  return Module(text)
+  return Module(text), tokenData
 end
