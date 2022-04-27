@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local parse = require('erde.parse')
 
 -- Foward declare
-local SUB_FORMATTERS
+local Comments, SUB_FORMATTERS
 
 -- =============================================================================
 -- State
@@ -79,12 +79,44 @@ local function formatNode(node, state)
   end
 
   local formatted = SUB_FORMATTERS[node.ruleName](node)
-  return node.parens and '(' .. formatted .. ')' or formatted
+
+  if node.parens then
+    formatted = '(' .. formatted .. ')'
+  end
+
+  formatted = Comments(node) .. formatted
+  return formatted
 end
 
 -- =============================================================================
 -- Macros
 -- =============================================================================
+
+function Comments(node)
+  local formatted = {}
+  local tokenIndexStart = node.tokenIndexStart or 0
+  local precedingComments = tokenData.comments[tokenIndexStart - 1]
+
+  if precedingComments then
+    for i, precedingComment in ipairs(precedingComments) do
+      local comment
+
+      if not precedingComment.eq then
+        comment = '--' .. precedingComment.token .. '\n'
+      else
+        comment = table.concat({
+          '--[' .. precedingComment.eq .. '[',
+          precedingComment.token,
+          ']' .. precedingComment.eq .. ']',
+        })
+      end
+
+      table.insert(formatted, comment)
+    end
+  end
+
+  return table.concat(formatted)
+end
 
 local function Line(line)
   return (forceSingleLine and '' or indentPrefix) .. line
