@@ -174,43 +174,19 @@ describe('tokenize', function()
     end)
   end)
 
-  describe('comments', function()
-    spec('short comment', function()
-      assert.subtable(
-        { { token = 'hello world' } },
-        tokenize('--hello world').comments
-      )
-      assert.subtable(
-        { { token = ' hello world' } },
-        tokenize('-- hello world').comments
-      )
-      assert.subtable(
-        { { token = 'hello' } },
-        tokenize('--hello\nworld').comments
-      )
-    end)
-    spec('long comment', function()
-      assert.subtable(
-        { { token = ' hello world ' } },
-        tokenize('--[[ hello world ]] ').comments
-      )
-      assert.subtable(
-        { { token = 'hello\nworld' } },
-        tokenize('--[[hello\nworld]] ').comments
-      )
-      assert.subtable(
-        { { eq = '', token = 'hello world' } },
-        tokenize('--[[hello world]] ').comments
-      )
-      assert.subtable(
-        { { eq = '=', token = 'hello ]]' } },
-        tokenize('--[=[hello ]]]=] ').comments
-      )
-      assert.subtable(
-        { { tokenIndex = 2 } },
-        tokenize('x + --[[hi]] 4').comments
-      )
-    end)
+  spec('comments', function()
+    assert.subtable(
+      { { token = 'hello world' } },
+      tokenize('--hello world').comments
+    )
+    assert.subtable(
+      { { token = ' hello world' } },
+      tokenize('-- hello world').comments
+    )
+    assert.subtable(
+      { { token = 'hello' } },
+      tokenize('--hello\nworld').comments
+    )
   end)
 
   spec('newlines', function()

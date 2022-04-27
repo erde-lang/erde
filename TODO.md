@@ -1,6 +1,5 @@
 # TODO
 
-- Remove block comments...
 - format.lua
   - add comments / newlines
 - fix empty file / only comments parsing
@@ -18,6 +17,7 @@
   - standard operators
   - do block expr
   - breaking varargs change (actually spread in table!)
+  - remove block comments
 
 # v0.3.0
 

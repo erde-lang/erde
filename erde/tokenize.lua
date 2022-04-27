@@ -239,39 +239,8 @@ function Token()
     local comment = { line = line, column = column }
     consume(2)
 
-    if peek(2):match('%[[[=]') then
-      consume() -- '['
-
-      local strEq, strCloseLen = '', 2
-      while char == '=' do
-        strEq = strEq .. consume()
-        strCloseLen = strCloseLen + 1
-      end
-
-      if char ~= '[' then
-        error('Invalid start of long comment (expected [ got ' .. char .. ')')
-      else
-        consume()
-      end
-
-      strClose = ']' .. strEq .. ']'
-      comment.eq = strEq
-
-      while peek(strCloseLen) ~= strClose do
-        if char == '' then
-          error('Unexpected EOF (unterminated comment)')
-        elseif char == '\n' then
-          token = token .. Newline()
-        else
-          token = token .. consume()
-        end
-      end
-
-      consume(strCloseLen)
-    else
-      while char ~= '' and char ~= '\n' do
-        token = token .. consume()
-      end
+    while char ~= '' and char ~= '\n' do
+      token = token .. consume()
     end
 
     comment.token = token
