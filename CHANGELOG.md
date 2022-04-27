@@ -15,6 +15,11 @@ Main Focuses: Internal Restructuring, Formatting, Website
 - Add code formatter
 
 ### Changed
+- Lua-style block comments are no longer valid
+  - Not used often
+  - Enforce consistency across projects
+  - Completely replaceable w/ single line comments
+  - Very hard to preserve when formatting
 - Varargs now spreads when used as a table or param expression.
 - Do not allow trailing comma in Return exprs unless parens are present
 - No longer parse number destruct aliases as valid syntax

@@ -953,7 +953,7 @@ SUB_COMPILERS = {
 }
 
 return function(text)
-  local ast = parse(textOrAst)
+  local ast = parse(text)
   precompile(ast)
 
   tmpNameCounter = 1
