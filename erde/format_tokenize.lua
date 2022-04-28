@@ -1,5 +1,19 @@
 local C = require('erde.constants')
 
+-- TODO: can do some optimizations by simply committing strings directly and
+-- 'skipping', so we don't have to unnecessarily peek in consume
+--
+-- OLD:
+-- if peek(2) == '--' then
+--  commit(consume(2))
+-- end
+--
+-- NEW:
+-- if peek(2) == '--' then
+--  commit('--')
+--  skip(2)
+-- end
+
 -- Foward declare
 local Token
 
@@ -99,13 +113,7 @@ local function InnerString()
   if char == '' then
     error('Unexpected EOF (unterminated string)')
   elseif char == '\\' then
-    consume()
-    if char == '{' or char == '}' then
-      -- Remove escape for '{', '}' (not allowed in pure lua)
-      token = token .. consume()
-    else
-      token = token .. '\\' .. consume()
-    end
+    token = token .. consume(2)
   elseif char == '{' then
     if #token > 0 then
       commit(token)
@@ -177,11 +185,15 @@ function Token()
   elseif C.SYMBOLS[peekTwo] then
     commit(consume(2))
   elseif char == '\n' then
-    newlines[numTokens] = true
+    local numNewLines = 0
+
     while char == '\n' do
+      numNewLines = numNewLines + 1
       Newline()
       Space()
     end
+
+    newlines[numTokens] = numNewLines
   elseif char == '"' or char == "'" then
     local quote = consume()
     commit(quote)
@@ -231,12 +243,14 @@ function Token()
 
     commit(consume(strCloseLen))
   elseif peekTwo == '--' then
-    local comment = { line = line, column = column }
-    consume(2)
+    commit(consume(2))
+    Space()
 
     while char ~= '' and char ~= '\n' do
-      consume()
+      token = token .. consume()
     end
+
+    commit(token)
   else
     commit(consume())
   end

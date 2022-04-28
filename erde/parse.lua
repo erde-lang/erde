@@ -8,7 +8,7 @@ local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Des
 -- State
 -- =============================================================================
 
-local tokens, newlines
+local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
 
 -- Used to tell other rules whether the current expression is part of the
@@ -1088,13 +1088,9 @@ end
 -- =============================================================================
 
 return function(text)
-  local tokenData = tokenize(text)
-
-  tokens = tokenData.tokens
-  newlines = tokenData.newlines
+  tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
   isTernaryExpr = false
-
-  return Module(text), tokenData
+  return Module(text)
 end

@@ -1,19 +1,24 @@
-local tokenize = require('erde.tokenize')
+local tokenize = require('erde.format_tokenize')
 local C = require('erde.constants')
 
 local function assertToken(token)
-  local tokens, tokenInfo = tokenize(token)
+  local tokens, tokenInfo, newlines = tokenize(token)
   assert.are.equal(token, tokens[1])
 end
 
 local function assertTokens(text, expectedTokens)
-  local tokens, tokenInfo = tokenize(text)
+  local tokens, tokenInfo, newlines = tokenize(text)
   assert.subtable(expectedTokens, tokens)
 end
 
 local function assertTokenInfo(text, expectedTokenInfo)
-  local tokens, tokenInfo = tokenize(text)
+  local tokens, tokenInfo, newlines = tokenize(text)
   assert.subtable(expectedTokenInfo, tokenInfo)
+end
+
+local function assertNewlines(text, expectedNewlines)
+  local tokens, tokenInfo, newlines = tokenize(text)
+  assert.subtable(expectedNewlines, newlines)
 end
 
 describe('tokenize', function()
@@ -171,9 +176,9 @@ describe('tokenize', function()
 
       assertTokens("'a{ bc  }d'", { "'", 'a', '{', 'bc', '}', 'd', "'" })
 
-      assertTokens("'a\\{bc}d'", { "'", 'a{bc}d', "'" })
-      assertTokens('"a\\{bc}d"', { '"', 'a{bc}d', '"' })
-      assertTokens('[[a\\{bc}d]]', { '[[', 'a{bc}d', ']]' })
+      assertTokens("'a\\{bc}d'", { "'", 'a\\{bc}d', "'" })
+      assertTokens('"a\\{bc}d"', { '"', 'a\\{bc}d', '"' })
+      assertTokens('[[a\\{bc}d]]', { '[[', 'a\\{bc}d', ']]' })
 
       assert.has_error(function()
         tokenize('"hello world {2"')
@@ -182,6 +187,21 @@ describe('tokenize', function()
         tokenize('"hello {2 world"')
       end)
     end)
+  end)
+
+  spec('comments', function()
+    assertTokens('--hello world', { '--', 'hello world' })
+    assertTokens('--  hello world', { '--', 'hello world' })
+    assertTokens('--  hello\nworld', { '--', 'hello', 'world' })
+  end)
+
+  spec('newlines', function()
+    assertNewlines('a\nb', { 1 })
+    assertNewlines('a\n\nb', { 2 })
+    assertNewlines('a\nb\n\nc', { 1, 2 })
+
+    assertTokens('a\nb', { 'a', 'b' })
+    assertTokens('a\nb\n\nc', { 'a', 'b', 'c' })
   end)
 
   describe('tokenInfo', function()
