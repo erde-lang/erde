@@ -8,7 +8,7 @@ local Comments, SUB_FORMATTERS
 -- State
 -- =============================================================================
 
-local ast, tokenData
+local newlines, comments
 
 -- The current indent level (depth)
 local indentLevel
@@ -92,32 +92,6 @@ end
 -- Macros
 -- =============================================================================
 
-function Comments(node)
-  local formatted = {}
-  local tokenIndexStart = node.tokenIndexStart or 0
-  local precedingComments = tokenData.comments[tokenIndexStart - 1]
-
-  if precedingComments then
-    for i, precedingComment in ipairs(precedingComments) do
-      local comment
-
-      if not precedingComment.eq then
-        comment = '--' .. precedingComment.token .. '\n'
-      else
-        comment = table.concat({
-          '--[' .. precedingComment.eq .. '[',
-          precedingComment.token,
-          ']' .. precedingComment.eq .. ']',
-        })
-      end
-
-      table.insert(formatted, comment)
-    end
-  end
-
-  return table.concat(formatted)
-end
-
 local function Line(line)
   return (forceSingleLine and '' or indentPrefix) .. line
 end
@@ -151,6 +125,20 @@ local function MultiLineList(nodes)
   return Lines(formatted)
 end
 
+function Comments(node)
+  local formatted = {}
+  local tokenIndexStart = node.tokenIndexStart or 0
+  local precedingComments = comments[tokenIndexStart - 1]
+
+  if precedingComments then
+    for i, precedingComment in ipairs(precedingComments) do
+      table.insert(formatted, '--' .. precedingComment.token .. '\n')
+    end
+  end
+
+  return table.concat(formatted)
+end
+
 local function Statements(node)
   local formatted = {}
 
@@ -163,8 +151,7 @@ local function Statements(node)
       local tokenIndexStart = statement.tokenIndexStart
 
       if tokenIndexStart then
-        local numPrecedingNewlines = tokenData.newlines[tokenIndexStart - 1]
-          or 0
+        local numPrecedingNewlines = newlines[tokenIndexStart - 1] or 0
 
         if numPrecedingNewlines > 1 then
           table.insert(formatted, Line(''))
@@ -1066,7 +1053,9 @@ SUB_FORMATTERS = {
 }
 
 return function(text)
-  ast, tokenData = parse(text)
+  local ast, tokenData = parse(text)
+
+  newlines, comments = tokenData.newlines, tokenData.comments
   indentLevel = 0
   indentPrefix = ''
   forceSingleLine = false
