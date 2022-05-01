@@ -10,7 +10,6 @@ local Token
 local text, char, charIndex
 local line, column
 local tokens, numTokens, tokenInfo
-local newlines, comments
 
 local token
 local numLookup, numExp1, numExp2
@@ -99,13 +98,7 @@ local function InnerString()
   if char == '' then
     error('Unexpected EOF (unterminated string)')
   elseif char == '\\' then
-    consume()
-    if char == '{' or char == '}' then
-      -- Remove escape for '{', '}' (not allowed in pure lua)
-      token = token .. consume()
-    else
-      token = token .. '\\' .. consume()
-    end
+    token = token .. consume(2)
   elseif char == '{' then
     if #token > 0 then
       commit(token)
@@ -185,7 +178,8 @@ function Token()
       Space()
     end
 
-    newlines[numTokens] = numNewLines
+    numTokens = numTokens + 1
+    tokens[numTokens] = numNewLines
   elseif char == '"' or char == "'" then
     local quote = consume()
     commit(quote)
@@ -235,20 +229,13 @@ function Token()
 
     commit(consume(strCloseLen))
   elseif peekTwo == '--' then
-    local comment = { line = line, column = column }
-    consume(2)
+    token = consume(2)
 
     while char ~= '' and char ~= '\n' do
       token = token .. consume()
     end
 
-    comment.token = token
-
-    if not comments[numTokens] then
-      comments[numTokens] = { comment }
-    else
-      table.insert(comments[numTokens], comment)
-    end
+    commit(token)
   else
     commit(consume())
   end
@@ -262,7 +249,6 @@ return function(input)
   text, char, charIndex = input, input:sub(1, 1), 1
   line, column = 1, 1
   tokens, numTokens, tokenInfo = {}, 0, {}
-  newlines, comments = {}, {}
 
   if peek(2) == '#!' then
     token = consume(2)
@@ -286,10 +272,5 @@ return function(input)
     error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
   end
 
-  return {
-    tokens = tokens,
-    tokenInfo = tokenInfo,
-    newlines = newlines,
-    comments = comments,
-  }
+  return tokens, tokenInfo
 end
