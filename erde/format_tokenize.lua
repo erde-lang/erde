@@ -1,5 +1,19 @@
 local C = require('erde.constants')
 
+-- TODO: can do some optimizations by simply committing strings directly and
+-- 'skipping', so we don't have to unnecessarily peek in consume
+--
+-- OLD:
+-- if peek(2) == '--' then
+--  commit(consume(2))
+-- end
+--
+-- NEW:
+-- if peek(2) == '--' then
+--  commit('--')
+--  skip(2)
+-- end
+
 -- Foward declare
 local Token
 
@@ -10,6 +24,7 @@ local Token
 local text, char, charIndex
 local line, column
 local tokens, numTokens, tokenInfo
+local newlines
 
 local token
 local numLookup, numExp1, numExp2
@@ -178,8 +193,7 @@ function Token()
       Space()
     end
 
-    numTokens = numTokens + 1
-    tokens[numTokens] = numNewLines
+    newlines[numTokens] = numNewLines
   elseif char == '"' or char == "'" then
     local quote = consume()
     commit(quote)
@@ -229,7 +243,8 @@ function Token()
 
     commit(consume(strCloseLen))
   elseif peekTwo == '--' then
-    token = consume(2)
+    commit(consume(2))
+    Space()
 
     while char ~= '' and char ~= '\n' do
       token = token .. consume()
@@ -249,6 +264,7 @@ return function(input)
   text, char, charIndex = input, input:sub(1, 1), 1
   line, column = 1, 1
   tokens, numTokens, tokenInfo = {}, 0, {}
+  newlines = {}
 
   if peek(2) == '#!' then
     token = consume(2)
@@ -272,5 +288,5 @@ return function(input)
     error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
   end
 
-  return tokens, tokenInfo
+  return tokens, tokenInfo, newlines
 end

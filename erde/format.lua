@@ -10,6 +10,7 @@ local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Des
 
 local tokens, tokenInfo
 local currentTokenIndex, currentToken
+local commentBuffer
 
 -- Used to tell other rules whether the current expression is part of the
 -- ternary block. Required to know whether ':' should be parsed exclusively
@@ -62,6 +63,14 @@ local function consume()
   return consumedToken
 end
 
+local function expect(token, skipConsume)
+  if token ~= currentToken then
+    error('Expected ' .. token .. ' got ' .. tostring(currentToken))
+  elseif not skipConsume then
+    return consume()
+  end
+end
+
 local function lookBehind(n)
   return tokens[currentTokenIndex - n] or ''
 end
@@ -76,14 +85,6 @@ local function branch(token)
     return true
   else
     return false
-  end
-end
-
-local function expect(token, skipConsume)
-  if token ~= currentToken then
-    error('Expected ' .. token .. ' got ' .. tostring(currentToken))
-  elseif not skipConsume then
-    return consume()
   end
 end
 
@@ -211,10 +212,6 @@ local function SingleLineList(nodes)
   return table.concat(formatted, ', ')
 end
 
-local function Newline()
-  -- Whenever inserting a newline, check if need to add empty lines or comments.
-end
-
 local function MultiLineList(nodes)
   local formatted = { '(' }
   indent(1)
@@ -232,8 +229,29 @@ end
 -- Pseudo Rules
 -- =============================================================================
 
+local function Comments()
+  local formatted = {}
+
+  local prevTokenInfo = tokenInfo[currentTokenIndex - 1]
+  if prevTokenInfo.line ~= tokenInfo[currentTokenIndex].line then
+    table.insert(formatted, '')
+  end
+
+  while currentToken == '--' do
+    table.insert(formatted, '-- ' .. tokens[currentTokenIndex + 1])
+    currentTokenIndex = currentTokenIndex + 2
+    currentToken = tokens[currentTokenIndex]
+  end
+
+  return table.concat(formatted, '\n')
+end
+
 local function BraceBlock()
-  return table.concat({ '{', Block(), '}' }, '\n')
+  return table.concat({
+    expect('{'),
+    Block(),
+    expect('}'),
+  }, '\n')
 end
 
 local function Name(opts)
@@ -328,10 +346,8 @@ local function Id()
 end
 
 local function Statement()
-  if currentToken == 'break' then
-    return Break()
-  elseif currentToken == 'continue' then
-    return Continue()
+  if currentToken == 'break' or currentToken == 'continue' then
+    return consume() .. Comments()
   elseif currentToken == 'goto' or currentToken == ':' then
     return Goto()
   elseif currentToken == 'do' then
@@ -370,38 +386,36 @@ end
 -- ArrowFunction
 -- -----------------------------------------------------------------------------
 
-function ArrowFunction()
-end
+function ArrowFunction() end
 
 -- -----------------------------------------------------------------------------
 -- Assignment
 -- -----------------------------------------------------------------------------
 
-function Assignment()
-end
+function Assignment() end
 
 -- -----------------------------------------------------------------------------
 -- Binop
 -- -----------------------------------------------------------------------------
 
-function Binop(opts)
-end
+function Binop(opts) end
 
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
 
 function Block()
-  local block = {}
+  local formatted = {}
   indent(1)
 
-  repeat
-    local statement = Statement()
-    table.insert(block, statement)
-  until not statement
+  local statement = Statement()
+  while statement do
+    table.insert(formatted, indentPrefix .. statement)
+    statement = Statement()
+  end
 
   indent(-1)
-  return Lines(block)
+  return table.concat(formatted, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -424,15 +438,13 @@ end
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-function Declaration()
-end
+function Declaration() end
 
 -- -----------------------------------------------------------------------------
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-function Destructure()
-end
+function Destructure() end
 
 -- -----------------------------------------------------------------------------
 -- DoBlock
@@ -446,29 +458,25 @@ end
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop()
-end
+function ForLoop() end
 
 -- -----------------------------------------------------------------------------
 -- Function
 -- -----------------------------------------------------------------------------
 
-function Function()
-end
+function Function() end
 
 -- -----------------------------------------------------------------------------
 -- Goto
 -- -----------------------------------------------------------------------------
 
-function Goto()
-end
+function Goto() end
 
 -- -----------------------------------------------------------------------------
 -- IfElse
 -- -----------------------------------------------------------------------------
 
-function IfElse()
-end
+function IfElse() end
 
 -- -----------------------------------------------------------------------------
 -- Module
@@ -493,78 +501,67 @@ end
 -- OptChain
 -- -----------------------------------------------------------------------------
 
-function OptChain()
-end
+function OptChain() end
 
 -- -----------------------------------------------------------------------------
 -- Params
 -- -----------------------------------------------------------------------------
 
-function Params(opts)
-end
+function Params(opts) end
 
 -- -----------------------------------------------------------------------------
 -- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-function RepeatUntil()
-end
+function RepeatUntil() end
 
 -- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
-function Return()
-end
+function Return() end
 
 -- -----------------------------------------------------------------------------
 -- Self
 -- -----------------------------------------------------------------------------
 
-function Self()
-end
+function Self() end
 
 -- -----------------------------------------------------------------------------
 -- Spread
 -- -----------------------------------------------------------------------------
 
-function Spread()
-end
+function Spread() end
 
 -- -----------------------------------------------------------------------------
 -- String
 -- -----------------------------------------------------------------------------
 
-function String()
-end
+function String() end
 
 -- -----------------------------------------------------------------------------
 -- Table
 -- -----------------------------------------------------------------------------
 
-function Table()
-end
+function Table() end
 
 -- -----------------------------------------------------------------------------
 -- TryCatch
 -- -----------------------------------------------------------------------------
 
-function TryCatch()
-end
+function TryCatch() end
 
 -- -----------------------------------------------------------------------------
 -- Unop
 -- -----------------------------------------------------------------------------
 
-function Unop()
-end
+function Unop() end
 
 -- -----------------------------------------------------------------------------
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
-function WhileLoop()
-end
+function WhileLoop() end
 
 -- =============================================================================
 -- Return
@@ -574,6 +571,7 @@ return function(text)
   tokens, tokenInfo = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
+  commentBuffer = {}
 
   isTernaryExpr = false
   indentLevel = 0
