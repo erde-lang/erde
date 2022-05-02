@@ -46,14 +46,24 @@ local function backup()
   return {
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
+    commentBuffer = commentBuffer,
     isTernaryExpr = isTernaryExpr,
+    indentLevel = indentLevel,
+    indentPrefix = indentPrefix,
+    forceSingleLine = forceSingleLine,
+    availableColumns = availableColumns,
   }
 end
 
 local function restore(state)
   currentTokenIndex = state.currentTokenIndex
   currentToken = state.currentToken
+  commentBuffer = state.commentBuffer,
   isTernaryExpr = state.isTernaryExpr
+  indentLevel = state.indentLevel
+  indentPrefix = state.indentPrefix
+  forceSingleLine = state.forceSingleLine
+  availableColumns = state.availableColumns
 end
 
 local function consume()
