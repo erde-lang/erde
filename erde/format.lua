@@ -8,7 +8,7 @@ local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Des
 -- State
 -- =============================================================================
 
-local tokens, tokenInfo
+local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
 local inlineComment, commentBuffer
 
@@ -270,11 +270,14 @@ local function Comments()
 end
 
 local function BraceBlock()
-  return table.concat({
-    Line(expect('{')),
-    Block(),
-    Line(expect('}')),
-  }, '\n')
+  local formatted = { Line(expect('{')) }
+
+  indent(1)
+  table.insert(formatted, Block())
+  indent(-1)
+
+  table.insert(formatted, Line(expect('}')))
+  return table.concat(formatted, '\n')
 end
 
 local function Name(opts)
@@ -310,7 +313,7 @@ local function Terminal()
     -- any trivial OptChainBase
     node = Switch({ ArrowFunction, OptChain })
   elseif currentToken == 'do' then
-    node = DoBlock({ isExpr = true })
+    node = expect('do') .. ' ' .. BraceBlock()
   elseif currentToken:match('^.?[0-9]') then
     -- Only need to check first couple chars, rest is token care of by tokenizer
     node = consume()
@@ -370,7 +373,7 @@ end
 
 local function Statement()
   if currentToken == 'break' or currentToken == 'continue' then
-    return consume() .. Comments()
+    return consume()
   elseif currentToken == 'goto' or currentToken == ':' then
     return Goto()
   elseif currentToken == 'do' then
@@ -429,18 +432,22 @@ function Binop(opts) end
 
 function Block()
   local formatted = {}
-  indent(1)
 
   table.insert(formatted, Comments())
   local statement = Statement()
 
   while statement do
     table.insert(formatted, Line(statement))
-    statement = Statement()
     table.insert(formatted, Comments())
+
+    local needsNewline = (newlines[currentTokenIndex - 1] or 0) > 1
+    statement = Statement()
+
+    if statement and needsNewline then
+      table.insert(formatted, '')
+    end
   end
 
-  indent(-1)
   return table.concat(formatted, '\n')
 end
 
@@ -507,12 +514,7 @@ function Module()
     table.insert(formatted, consume())
   end
 
-  repeat
-    table.insert(formatted, Comments())
-    local statement = Statement()
-    table.insert(formatted, statement)
-  until not statement
-
+  table.insert(formatted, Block())
   return table.concat(formatted, '\n')
 end
 
@@ -587,7 +589,7 @@ function WhileLoop() end
 -- =============================================================================
 
 return function(text)
-  tokens, tokenInfo = tokenize(text)
+  tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
   commentBuffer = {}
