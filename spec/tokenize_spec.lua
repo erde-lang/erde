@@ -1,48 +1,55 @@
 local tokenize = require('erde.tokenize')
 local C = require('erde.constants')
 
-local function getToken(text, i)
-  i = i or 1
-  return tokenize(text).tokens[i]
+local function assertToken(token)
+  local tokens, tokenInfo = tokenize(token)
+  assert.are.equal(token, tokens[1])
 end
 
-local function getTokens(text)
-  return tokenize(text).tokens
+local function assertTokens(text, expectedTokens)
+  local tokens, tokenInfo = tokenize(text)
+  assert.subtable(expectedTokens, tokens)
+end
+
+local function assertTokenInfo(text, expectedTokenInfo)
+  local tokens, tokenInfo = tokenize(text)
+  assert.subtable(expectedTokenInfo, tokenInfo)
 end
 
 describe('tokenize', function()
   spec('symbols', function()
     for symbol in pairs(C.SYMBOLS) do
-      assert.are.equal(symbol, getToken(symbol))
+      assertToken(symbol)
     end
   end)
 
   describe('words', function()
     spec('word head', function()
-      assert.are.equal('lua', getToken('lua'))
-      assert.are.equal('Erde', getToken('Erde'))
-      assert.are.equal('_test', getToken('_test'))
+      assertToken('lua')
+      assertToken('Erde')
+      assertToken('_test')
+
       assert.has_error(function()
         tokenize('1word')
       end)
     end)
 
     spec('word body', function()
-      assert.are.equal('aa1B_', getToken('aa1B_'))
-      assert.are.equal('a', getToken('a-'))
+      assertToken('aa1B_')
+      assertToken('_aa1B')
+      assertTokens('a-', { 'a', '-' })
     end)
   end)
 
   describe('numbers', function()
     describe('hex', function()
       spec('integer', function()
-        assert.are.equal('0x123456789', getToken('0x123456789'))
-        assert.are.equal('0xabcdef', getToken('0xabcdef'))
-        assert.are.equal('0xABCDEF', getToken('0xABCDEF'))
-        assert.are.equal('0xa1B2', getToken('0xa1B2'))
-
-        assert.are.equal('0x1', getToken('0x1'))
-        assert.are.equal('0X1', getToken('0X1'))
+        assertToken('0x123456789')
+        assertToken('0xabcdef')
+        assertToken('0xABCDEF')
+        assertToken('0xa1B2')
+        assertToken('0x1')
+        assertToken('0X1')
 
         assert.has_error(function()
           tokenize('1x3')
@@ -56,12 +63,12 @@ describe('tokenize', function()
       end)
 
       spec('float', function()
-        assert.are.equal('0x.1', getToken('0x.1'))
-        assert.are.equal('0xd.a', getToken('0xd.a'))
-        assert.are.equal('0xfp1', getToken('0xfp1'))
-        assert.are.equal('0xfP1', getToken('0xfP1'))
-        assert.are.equal('0xfp+1', getToken('0xfp+1'))
-        assert.are.equal('0xfp-1', getToken('0xfp-1'))
+        assertToken('0x.1')
+        assertToken('0xd.a')
+        assertToken('0xfp1')
+        assertToken('0xfP1')
+        assertToken('0xfp+1')
+        assertToken('0xfp-1')
 
         assert.has_error(function()
           tokenize('0x.')
@@ -83,18 +90,18 @@ describe('tokenize', function()
 
     describe('decimal', function()
       spec('integer', function()
-        assert.are.equal('9', getToken('9'))
-        assert.are.equal('43', getToken('43'))
+        assertToken('9')
+        assertToken('43')
       end)
 
       spec('float', function()
-        assert.are.equal('.34', getToken('.34'))
-        assert.are.equal('0.3', getToken('0.3'))
-        assert.are.equal('1e2', getToken('1e2'))
-        assert.are.equal('1E2', getToken('1E2'))
-        assert.are.equal('3e+2', getToken('3e+2'))
-        assert.are.equal('3e-2', getToken('3e-2'))
-        assert.are.equal('1.23e29', getToken('1.23e29'))
+        assertToken('.34')
+        assertToken('0.3')
+        assertToken('1e2')
+        assertToken('1E2')
+        assertToken('3e+2')
+        assertToken('3e-2')
+        assertToken('1.23e29')
 
         assert.has_error(function()
           tokenize('4.')
@@ -117,10 +124,10 @@ describe('tokenize', function()
 
   describe('strings', function()
     spec('single quote', function()
-      assert.are.equal(2, #getTokens("''"))
-      assert.subtable({ "'", 'hello', "'" }, getTokens("'hello'"))
-      assert.subtable({ "'", 'a\\nb', "'" }, getTokens("'a\\nb'"))
-      assert.subtable({ "'", '\\\\', "'" }, getTokens("'\\\\'"))
+      assert.are.equal(2, #tokenize("''"))
+      assertTokens("'hello'", { "'", 'hello', "'" })
+      assertTokens("'a\\nb'", { "'", 'a\\nb', "'" })
+      assertTokens("'\\\\'", { "'", '\\\\', "'" })
 
       assert.has_error(function()
         tokenize("'hello")
@@ -131,13 +138,10 @@ describe('tokenize', function()
     end)
 
     spec('double quote', function()
-      assert.are.equal(2, #getTokens('""'))
-      assert.subtable({ '"', 'hello', '"' }, getTokens('"hello"'))
-      assert.subtable(
-        { '"', 'hello\\nworld', '"' },
-        getTokens('"hello\\nworld"')
-      )
-      assert.subtable({ '"', '\\\\', '"' }, getTokens('"\\\\"'))
+      assert.are.equal(2, #tokenize('""'))
+      assertTokens('"hello"', { '"', 'hello', '"' })
+      assertTokens('"hello\\nworld"', { '"', 'hello\\nworld', '"' })
+      assertTokens('"\\\\"', { '"', '\\\\', '"' })
 
       assert.has_error(function()
         tokenize('"hello')
@@ -148,9 +152,9 @@ describe('tokenize', function()
     end)
 
     spec('long string', function()
-      assert.subtable({ '[[', ' a b ', ']]' }, getTokens('[[ a b ]]'))
-      assert.subtable({ '[[', 'a\nb', ']]' }, getTokens('[[a\nb]]'))
-      assert.subtable({ '[=[', 'a[[b', ']=]' }, getTokens('[=[a[[b]=]'))
+      assertTokens('[[ a b ]]', { '[[', ' a b ', ']]' })
+      assertTokens('[[a\nb]]', { '[[', 'a\nb', ']]' })
+      assertTokens('[=[a[[b]=]', { '[=[', 'a[[b', ']=]' })
 
       assert.has_error(function()
         tokenize('[[hello world')
@@ -161,9 +165,15 @@ describe('tokenize', function()
     end)
 
     spec('interpolation', function()
-      assert.subtable({ "'", 'a{bc}d', "'" }, getTokens("'a\\{bc}d'"))
-      assert.subtable({ '"', 'a{bc}d', '"' }, getTokens('"a\\{bc}d"'))
-      assert.subtable({ '[[', 'a{bc}d', ']]' }, getTokens('[[a\\{bc}d]]'))
+      assertTokens("'a{bc}d'", { "'", 'a', '{', 'bc', '}', 'd', "'" })
+      assertTokens('"a{bc}d"', { '"', 'a', '{', 'bc', '}', 'd', '"' })
+      assertTokens('[[a{bc}d]]', { '[[', 'a', '{', 'bc', '}', 'd', ']]' })
+
+      assertTokens("'a{ bc  }d'", { "'", 'a', '{', 'bc', '}', 'd', "'" })
+
+      assertTokens("'a\\{bc}d'", { "'", 'a{bc}d', "'" })
+      assertTokens('"a\\{bc}d"', { '"', 'a{bc}d', '"' })
+      assertTokens('[[a\\{bc}d]]', { '[[', 'a{bc}d', ']]' })
 
       assert.has_error(function()
         tokenize('"hello world {2"')
@@ -176,21 +186,15 @@ describe('tokenize', function()
 
   describe('tokenInfo', function()
     spec('tokenInfo', function()
-      assert.subtable(
-        { { line = 1 }, { line = 2 } },
-        tokenize('a\nb').tokenInfo
+      assertTokenInfo('a\nb', { { line = 1 }, { line = 2 } })
+      assertTokenInfo('a\nb', { { column = 1 }, { column = 1 } })
+      assertTokenInfo(
+        'hello world\ngoodbye world',
+        { { line = 1 }, { line = 1 }, { line = 2 }, { line = 2 } }
       )
-      assert.subtable(
-        { { line = 1 }, { line = 1 }, { line = 2 }, { line = 2 } },
-        tokenize('hello world\ngoodbye world').tokenInfo
-      )
-      assert.subtable(
-        { { column = 1 }, { column = 1 } },
-        tokenize('a\nb').tokenInfo
-      )
-      assert.subtable(
-        { { column = 1 }, { column = 7 }, { column = 1 }, { column = 9 } },
-        tokenize('hello world\ngoodbye world').tokenInfo
+      assertTokenInfo(
+        'hello world\ngoodbye world',
+        { { column = 1 }, { column = 7 }, { column = 1 }, { column = 9 } }
       )
     end)
   end)

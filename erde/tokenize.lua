@@ -10,7 +10,7 @@ local Token
 local text, char, charIndex
 local line, column
 local tokens, numTokens, tokenInfo
-local newlines, comments
+local newlines
 
 local token
 local numLookup, numExp1, numExp2
@@ -177,15 +177,11 @@ function Token()
   elseif C.SYMBOLS[peekTwo] then
     commit(consume(2))
   elseif char == '\n' then
-    local numNewLines = 0
-
+    newlines[numTokens] = true
     while char == '\n' do
-      numNewLines = numNewLines + 1
       Newline()
       Space()
     end
-
-    newlines[numTokens] = numNewLines
   elseif char == '"' or char == "'" then
     local quote = consume()
     commit(quote)
@@ -239,15 +235,7 @@ function Token()
     consume(2)
 
     while char ~= '' and char ~= '\n' do
-      token = token .. consume()
-    end
-
-    comment.token = token
-
-    if not comments[numTokens] then
-      comments[numTokens] = { comment }
-    else
-      table.insert(comments[numTokens], comment)
+      consume()
     end
   else
     commit(consume())
@@ -262,7 +250,7 @@ return function(input)
   text, char, charIndex = input, input:sub(1, 1), 1
   line, column = 1, 1
   tokens, numTokens, tokenInfo = {}, 0, {}
-  newlines, comments = {}, {}
+  newlines = {}
 
   if peek(2) == '#!' then
     token = consume(2)
@@ -286,10 +274,5 @@ return function(input)
     error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
   end
 
-  return {
-    tokens = tokens,
-    tokenInfo = tokenInfo,
-    newlines = newlines,
-    comments = comments,
-  }
+  return tokens, tokenInfo, newlines
 end
