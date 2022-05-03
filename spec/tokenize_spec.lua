@@ -174,28 +174,6 @@ describe('tokenize', function()
     end)
   end)
 
-  spec('comments', function()
-    assert.subtable(
-      { { token = 'hello world' } },
-      tokenize('--hello world').comments
-    )
-    assert.subtable(
-      { { token = ' hello world' } },
-      tokenize('-- hello world').comments
-    )
-    assert.subtable(
-      { { token = 'hello' } },
-      tokenize('--hello\nworld').comments
-    )
-  end)
-
-  spec('newlines', function()
-    assert.are.equal(1, tokenize('a\nb').newlines[1])
-    assert.are.equal(nil, tokenize('a\nb').newlines[2])
-    assert.are.equal(2, tokenize('a\n\nb').newlines[1])
-    assert.subtable({ 'a', 'b' }, getTokens('a\n\nb'))
-  end)
-
   describe('tokenInfo', function()
     spec('tokenInfo', function()
       assert.subtable(
