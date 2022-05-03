@@ -10,7 +10,7 @@ local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Des
 
 local tokens, tokenInfo
 local currentTokenIndex, currentToken
-local commentBuffer
+local inlineComment, commentBuffer
 
 -- Used to tell other rules whether the current expression is part of the
 -- ternary block. Required to know whether ':' should be parsed exclusively
@@ -46,6 +46,7 @@ local function backup()
   return {
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
+    inlineComment = inlineComment,
     commentBuffer = commentBuffer,
     isTernaryExpr = isTernaryExpr,
     indentLevel = indentLevel,
@@ -58,7 +59,8 @@ end
 local function restore(state)
   currentTokenIndex = state.currentTokenIndex
   currentToken = state.currentToken
-  commentBuffer = state.commentBuffer,
+  inlineComment = state.inlineComment
+  commentBuffer = state.commentBuffer
   isTernaryExpr = state.isTernaryExpr
   indentLevel = state.indentLevel
   indentPrefix = state.indentPrefix
@@ -67,9 +69,32 @@ local function restore(state)
 end
 
 local function consume()
+  if inlineComment then
+    table.insert(commentBuffer, 1, inlineComment)
+    inlineComment = nil
+  end
+
   local consumedToken = tokens[currentTokenIndex]
   currentTokenIndex = currentTokenIndex + 1
   currentToken = tokens[currentTokenIndex]
+
+  if currentToken == '--' then
+    local prevTokenInfo = tokenInfo[currentTokenIndex - 1]
+    local currentTokenInfo = tokenInfo[currentTokenIndex]
+
+    if prevTokenInfo.line == currentTokenInfo.line then
+      inlineComment = '-- ' .. tokens[currentTokenIndex + 1]
+      currentTokenIndex = currentTokenIndex + 2
+      currentToken = tokens[currentTokenIndex]
+    end
+
+    while currentToken == '--' do
+      table.insert(commentBuffer, '-- ' .. tokens[currentTokenIndex + 1])
+      currentTokenIndex = currentTokenIndex + 2
+      currentToken = tokens[currentTokenIndex]
+    end
+  end
+
   return consumedToken
 end
 
@@ -107,29 +132,6 @@ local function reserve(reservation)
   availableColumns = columnLimit
     - indentLevel * indentWidth
     - (type(reservation) == 'number' and reservation or #reservation)
-end
-
-local function use(state)
-  local forceSingleLineBackup = forceSingleLine
-  forceSingleLine = state.forceSingleLine or forceSingleLineBackup
-
-  local availableColumnsBackup = availableColumns
-  if state.reserve then
-    reserve(state.reserve)
-  end
-
-  local indentLevelBackup = indentLevel
-  local indentPrefixBackup = indentPrefix
-  if state.indent then
-    indent(state.indent)
-  end
-
-  return function()
-    forceSingleLine = forceSingleLineBackup
-    availableColumns = availableColumnsBackup
-    indentLevel = indentLevelBackup
-    indentPrefix = indentPrefixBackup
-  end
 end
 
 -- =============================================================================
@@ -203,7 +205,14 @@ local function List(opts)
 end
 
 local function Line(line)
-  return (forceSingleLine and '' or indentPrefix) .. line
+  local formatted = (forceSingleLine and '' or indentPrefix) .. line
+
+  if inlineComment then
+    formatted = formatted .. ' ' .. inlineComment
+    inlineComment = nil
+  end
+
+  return formatted
 end
 
 local function Lines(lines)
@@ -212,13 +221,14 @@ end
 
 local function SingleLineList(nodes)
   local formatted = {}
-  local restore = use({ forceSingleLine = true })
+  local state = backup()
+  forceSingleLine = true
 
   for _, node in ipairs(nodes) do
     table.insert(formatted, formatNode(node))
   end
 
-  restore()
+  restore(state)
   return table.concat(formatted, ', ')
 end
 
@@ -240,27 +250,30 @@ end
 -- =============================================================================
 
 local function Comments()
+  if not inlineComment and #commentBuffer == 0 then
+    return nil
+  end
+
   local formatted = {}
 
-  local prevTokenInfo = tokenInfo[currentTokenIndex - 1]
-  if prevTokenInfo.line ~= tokenInfo[currentTokenIndex].line then
-    table.insert(formatted, '')
+  if inlineComment then
+    table.insert(formatted, indentPrefix .. inlineComment)
+    inlineComment = nil
   end
 
-  while currentToken == '--' do
-    table.insert(formatted, '-- ' .. tokens[currentTokenIndex + 1])
-    currentTokenIndex = currentTokenIndex + 2
-    currentToken = tokens[currentTokenIndex]
+  for i, comment in ipairs(commentBuffer) do
+    table.insert(formatted, indentPrefix .. comment)
   end
 
+  commentBuffer = {}
   return table.concat(formatted, '\n')
 end
 
 local function BraceBlock()
   return table.concat({
-    expect('{'),
+    Line(expect('{')),
     Block(),
-    expect('}'),
+    Line(expect('}')),
   }, '\n')
 end
 
@@ -361,7 +374,7 @@ local function Statement()
   elseif currentToken == 'goto' or currentToken == ':' then
     return Goto()
   elseif currentToken == 'do' then
-    return DoBlock()
+    return expect('do') .. ' ' .. BraceBlock()
   elseif currentToken == 'if' then
     return IfElse()
   elseif currentToken == 'for' then
@@ -418,10 +431,13 @@ function Block()
   local formatted = {}
   indent(1)
 
+  table.insert(formatted, Comments())
   local statement = Statement()
+
   while statement do
-    table.insert(formatted, indentPrefix .. statement)
+    table.insert(formatted, Line(statement))
     statement = Statement()
+    table.insert(formatted, Comments())
   end
 
   indent(-1)
@@ -455,14 +471,6 @@ function Declaration() end
 -- -----------------------------------------------------------------------------
 
 function Destructure() end
-
--- -----------------------------------------------------------------------------
--- DoBlock
--- -----------------------------------------------------------------------------
-
-function DoBlock()
-  return expect('do') .. ' ' .. BraceBlock()
-end
 
 -- -----------------------------------------------------------------------------
 -- ForLoop
@@ -500,6 +508,7 @@ function Module()
   end
 
   repeat
+    table.insert(formatted, Comments())
     local statement = Statement()
     table.insert(formatted, statement)
   until not statement
