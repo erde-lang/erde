@@ -10,7 +10,11 @@ local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Des
 
 local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
-local inlineComment, commentBuffer, commentNewline
+
+local inlineComment, lineComments, commentNewline
+
+-- TODO: docs
+local orphanedComments
 
 -- Used to tell other rules whether the current expression is part of the
 -- ternary block. Required to know whether ':' should be parsed exclusively
@@ -47,7 +51,7 @@ local function backup()
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
     inlineComment = inlineComment,
-    commentBuffer = commentBuffer,
+    lineComments = lineComments,
     isTernaryExpr = isTernaryExpr,
     indentLevel = indentLevel,
     indentPrefix = indentPrefix,
@@ -60,7 +64,7 @@ local function restore(state)
   currentTokenIndex = state.currentTokenIndex
   currentToken = state.currentToken
   inlineComment = state.inlineComment
-  commentBuffer = state.commentBuffer
+  lineComments = state.lineComments
   isTernaryExpr = state.isTernaryExpr
   indentLevel = state.indentLevel
   indentPrefix = state.indentPrefix
@@ -70,8 +74,12 @@ end
 
 local function consume()
   if inlineComment then
-    table.insert(commentBuffer, 1, inlineComment)
+    table.insert(orphanedComments, inlineComment)
     inlineComment = nil
+  end
+
+  for i, lineComment in pairs(lineComments) do
+    table.insert(orphanedComments, lineComment)
   end
 
   local consumedToken = tokens[currentTokenIndex]
@@ -91,7 +99,7 @@ local function consume()
     commentNewline = (newlines[currentTokenIndex - 1] or 0) > 1
 
     while currentToken == '--' do
-      table.insert(commentBuffer, '-- ' .. tokens[currentTokenIndex + 1])
+      table.insert(lineComments, '-- ' .. tokens[currentTokenIndex + 1])
       currentTokenIndex = currentTokenIndex + 2
       currentToken = tokens[currentTokenIndex]
     end
@@ -252,7 +260,7 @@ end
 -- =============================================================================
 
 local function Comments()
-  if not inlineComment and #commentBuffer == 0 then
+  if not inlineComment and #lineComments == 0 then
     return nil
   end
 
@@ -267,11 +275,11 @@ local function Comments()
     inlineComment = nil
   end
 
-  for i, comment in ipairs(commentBuffer) do
+  for i, comment in ipairs(lineComments) do
     table.insert(formatted, indentPrefix .. comment)
   end
 
-  commentBuffer = {}
+  lineComments = {}
   return table.concat(formatted, '\n')
 end
 
@@ -378,6 +386,7 @@ local function Id()
 end
 
 local function Statement()
+  -- TODO: order these by usage for speed?
   if currentToken == 'break' or currentToken == 'continue' then
     return consume()
   elseif currentToken == 'goto' or currentToken == ':' then
@@ -437,8 +446,7 @@ function Binop(opts) end
 -- -----------------------------------------------------------------------------
 
 function Block()
-  local formatted = {}
-  table.insert(formatted, Comments())
+  local formatted = { Comments() }
 
   local statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
   local statement = Statement()
@@ -448,30 +456,18 @@ function Block()
       table.insert(formatted, '')
     end
 
-    table.insert(formatted, Line(statement))
-    table.insert(formatted, Comments())
+    if #orphanedComments > 0 then
+      table.insert(formatted, table.concat(orphanedComments, '\n'))
+      orphanedComments = {}
+    end
 
+    table.insert(formatted, Line(statement))
     statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
     statement = Statement()
+    table.insert(formatted, Comments())
   end
 
   return table.concat(formatted, '\n')
-end
-
--- -----------------------------------------------------------------------------
--- Break
--- -----------------------------------------------------------------------------
-
-function Break()
-  return expect('break')
-end
-
--- -----------------------------------------------------------------------------
--- Continue
--- -----------------------------------------------------------------------------
-
-function Continue()
-  return expect('continue')
 end
 
 -- -----------------------------------------------------------------------------
@@ -502,7 +498,18 @@ function Function() end
 -- Goto
 -- -----------------------------------------------------------------------------
 
-function Goto() end
+function Goto()
+  if branch('goto') then
+    return 'goto ' .. Name()
+  else
+    expect(':')
+    expect(':')
+    local name = Name()
+    expect(':')
+    expect(':')
+    return '::' .. name .. '::'
+  end
+end
 
 -- -----------------------------------------------------------------------------
 -- IfElse
@@ -599,7 +606,9 @@ return function(text)
   tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
-  commentBuffer = {}
+
+  lineComments = {}
+  orphanedComments = {}
 
   isTernaryExpr = false
   indentLevel = 0
