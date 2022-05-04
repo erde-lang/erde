@@ -446,12 +446,17 @@ function Binop(opts) end
 -- -----------------------------------------------------------------------------
 
 function Block()
-  local formatted = { Comments() }
+  local formatted = {}
 
+  local comments = Comments()
   local statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
+  local orphanedCommentsBackup = orphanedComments
+  orphanedComments = {}
   local statement = Statement()
 
   while statement do
+    table.insert(formatted, comments)
+
     if statementNewline then
       table.insert(formatted, '')
     end
@@ -462,11 +467,14 @@ function Block()
     end
 
     table.insert(formatted, Line(statement))
+
+    comments = Comments()
     statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
     statement = Statement()
-    table.insert(formatted, Comments())
   end
 
+  table.insert(formatted, comments)
+  orphanedComments = orphanedCommentsBackup
   return table.concat(formatted, '\n')
 end
 
