@@ -10,7 +10,7 @@ local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Des
 
 local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
-local inlineComment, commentBuffer
+local inlineComment, commentBuffer, commentNewline
 
 -- Used to tell other rules whether the current expression is part of the
 -- ternary block. Required to know whether ':' should be parsed exclusively
@@ -87,6 +87,8 @@ local function consume()
       currentTokenIndex = currentTokenIndex + 2
       currentToken = tokens[currentTokenIndex]
     end
+
+    commentNewline = (newlines[currentTokenIndex - 1] or 0) > 1
 
     while currentToken == '--' do
       table.insert(commentBuffer, '-- ' .. tokens[currentTokenIndex + 1])
@@ -255,6 +257,10 @@ local function Comments()
   end
 
   local formatted = {}
+
+  if commentNewline then
+    table.insert(formatted, '')
+  end
 
   if inlineComment then
     table.insert(formatted, indentPrefix .. inlineComment)
@@ -432,20 +438,21 @@ function Binop(opts) end
 
 function Block()
   local formatted = {}
-
   table.insert(formatted, Comments())
+
+  local statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
   local statement = Statement()
 
   while statement do
+    if statementNewline then
+      table.insert(formatted, '')
+    end
+
     table.insert(formatted, Line(statement))
     table.insert(formatted, Comments())
 
-    local needsNewline = (newlines[currentTokenIndex - 1] or 0) > 1
+    statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
     statement = Statement()
-
-    if statement and needsNewline then
-      table.insert(formatted, '')
-    end
   end
 
   return table.concat(formatted, '\n')
