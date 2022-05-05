@@ -54,6 +54,7 @@ local function backup()
     inlineComment = inlineComment,
     lineComments = lineComments,
     commentNewline = commentNewline,
+    orphanedComments = orphanedComments,
     isTernaryExpr = isTernaryExpr,
     indentLevel = indentLevel,
     indentPrefix = indentPrefix,
@@ -68,6 +69,7 @@ local function restore(state)
   inlineComment = state.inlineComment
   lineComments = state.lineComments
   commentNewline = state.commentNewline
+  orphanedComments = state.orphanedComments
   isTernaryExpr = state.isTernaryExpr
   indentLevel = state.indentLevel
   indentPrefix = state.indentPrefix
@@ -226,6 +228,8 @@ local function Line(line)
 end
 
 local function Chunk(formatter)
+  local state = backup()
+
   local formatted = { Comments() }
   local orphanedCommentsBackup = orphanedComments
   orphanedComments = {}
@@ -237,7 +241,7 @@ local function Chunk(formatter)
   local chunk = formatter()
 
   if not chunk then
-    orphanedComments = orphanedCommentsBackup
+    restore(state)
     return nil
   elseif #orphanedComments > 0 then
     table.insert(formatted, table.concat(orphanedComments, '\n'))
@@ -451,6 +455,7 @@ function Block()
     table.insert(formatted, chunk)
   until not chunk
 
+  table.insert(formatted, Comments())
   return table.concat(formatted, '\n')
 end
 
