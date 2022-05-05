@@ -3,6 +3,7 @@ local tokenize = require('erde.format_tokenize')
 
 -- Foward declare rules
 local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, Unop, WhileLoop
+local Comments
 
 -- =============================================================================
 -- State
@@ -19,7 +20,7 @@ local orphanedComments
 -- Used to tell other rules whether the current expression is part of the
 -- ternary block. Required to know whether ':' should be parsed exclusively
 -- as a method accessor or also consider ternary ':'.
-local isTernaryExpr = false
+local isTernaryExpr
 
 -- The current indent level (depth)
 local indentLevel
@@ -52,6 +53,7 @@ local function backup()
     currentToken = currentToken,
     inlineComment = inlineComment,
     lineComments = lineComments,
+    commentNewline = commentNewline,
     isTernaryExpr = isTernaryExpr,
     indentLevel = indentLevel,
     indentPrefix = indentPrefix,
@@ -65,6 +67,7 @@ local function restore(state)
   currentToken = state.currentToken
   inlineComment = state.inlineComment
   lineComments = state.lineComments
+  commentNewline = state.commentNewline
   isTernaryExpr = state.isTernaryExpr
   indentLevel = state.indentLevel
   indentPrefix = state.indentPrefix
@@ -78,8 +81,10 @@ local function consume()
     inlineComment = nil
   end
 
-  for i, lineComment in pairs(lineComments) do
-    table.insert(orphanedComments, lineComment)
+  if lineComments then
+    for i, lineComment in pairs(lineComments) do
+      table.insert(orphanedComments, lineComment)
+    end
   end
 
   local consumedToken = tokens[currentTokenIndex]
@@ -96,12 +101,15 @@ local function consume()
       currentToken = tokens[currentTokenIndex]
     end
 
-    commentNewline = (newlines[currentTokenIndex - 1] or 0) > 1
+    if currentToken == '--' then
+      commentNewline = (newlines[currentTokenIndex - 1] or 0) > 1
+      lineComments = {}
 
-    while currentToken == '--' do
-      table.insert(lineComments, '-- ' .. tokens[currentTokenIndex + 1])
-      currentTokenIndex = currentTokenIndex + 2
-      currentToken = tokens[currentTokenIndex]
+      while currentToken == '--' do
+        table.insert(lineComments, '-- ' .. tokens[currentTokenIndex + 1])
+        currentTokenIndex = currentTokenIndex + 2
+        currentToken = tokens[currentTokenIndex]
+      end
     end
   end
 
@@ -114,14 +122,6 @@ local function expect(token, skipConsume)
   elseif not skipConsume then
     return consume()
   end
-end
-
-local function lookBehind(n)
-  return tokens[currentTokenIndex - n] or ''
-end
-
-local function lookAhead(n)
-  return tokens[currentTokenIndex + n] or ''
 end
 
 local function branch(token)
@@ -225,42 +225,35 @@ local function Line(line)
   return formatted
 end
 
-local function Lines(lines)
-  return table.concat(lines, forceSingleLine and ' ' or '\n')
-end
+local function Chunk(formatter)
+  local formatted = { Comments() }
+  local orphanedCommentsBackup = orphanedComments
+  orphanedComments = {}
 
-local function SingleLineList(nodes)
-  local formatted = {}
-  local state = backup()
-  forceSingleLine = true
-
-  for _, node in ipairs(nodes) do
-    table.insert(formatted, formatNode(node))
+  if (newlines[currentTokenIndex - 1] or 0) > 1 then
+    table.insert(formatted, '')
   end
 
-  restore(state)
-  return table.concat(formatted, ', ')
-end
+  local chunk = formatter()
 
-local function MultiLineList(nodes)
-  local formatted = { '(' }
-  indent(1)
-
-  for _, node in ipairs(nodes) do
-    table.insert(formatted, Line(formatNode(node)) .. ',')
+  if not chunk then
+    return nil
+  elseif #orphanedComments > 0 then
+    table.insert(formatted, table.concat(orphanedComments, '\n'))
+    orphanedComments = {}
   end
 
-  indent(-1)
-  table.insert(formatted, Line(')'))
-  return Lines(formatted)
+  table.insert(formatted, Line(chunk))
+  orphanedComments = orphanedCommentsBackup
+  return table.concat(formatted, '\n')
 end
 
 -- =============================================================================
 -- Pseudo Rules
 -- =============================================================================
 
-local function Comments()
-  if not inlineComment and #lineComments == 0 then
+function Comments()
+  if not inlineComment and not lineComments then
     return nil
   end
 
@@ -268,6 +261,7 @@ local function Comments()
 
   if commentNewline then
     table.insert(formatted, '')
+    commentNewline = false
   end
 
   if inlineComment then
@@ -275,11 +269,14 @@ local function Comments()
     inlineComment = nil
   end
 
-  for i, comment in ipairs(lineComments) do
-    table.insert(formatted, indentPrefix .. comment)
+  if lineComments then
+    for i, comment in ipairs(lineComments) do
+      table.insert(formatted, indentPrefix .. comment)
+    end
+
+    lineComments = nil
   end
 
-  lineComments = {}
   return table.concat(formatted, '\n')
 end
 
@@ -413,7 +410,8 @@ local function Statement()
     or currentToken == 'module'
     or currentToken == 'main'
   then
-    return lookAhead(1) == 'function' and Function() or Declaration()
+    -- TODO: cannot use lookAhead, what about comments?
+    -- return lookAhead(1) == 'function' and Function() or Declaration()
   else
     return Switch({ FunctionCall, Assignment })
   end
@@ -448,33 +446,11 @@ function Binop(opts) end
 function Block()
   local formatted = {}
 
-  local comments = Comments()
-  local statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
-  local orphanedCommentsBackup = orphanedComments
-  orphanedComments = {}
-  local statement = Statement()
+  repeat
+    local chunk = Chunk(Statement)
+    table.insert(formatted, chunk)
+  until not chunk
 
-  while statement do
-    table.insert(formatted, comments)
-
-    if statementNewline then
-      table.insert(formatted, '')
-    end
-
-    if #orphanedComments > 0 then
-      table.insert(formatted, table.concat(orphanedComments, '\n'))
-      orphanedComments = {}
-    end
-
-    table.insert(formatted, Line(statement))
-
-    comments = Comments()
-    statementNewline = (newlines[currentTokenIndex - 1] or 0) > 1
-    statement = Statement()
-  end
-
-  table.insert(formatted, comments)
-  orphanedComments = orphanedCommentsBackup
   return table.concat(formatted, '\n')
 end
 
@@ -614,9 +590,6 @@ return function(text)
   tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
-
-  lineComments = {}
-  orphanedComments = {}
 
   isTernaryExpr = false
   indentLevel = 0
