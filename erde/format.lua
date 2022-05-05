@@ -105,11 +105,11 @@ local function consume()
       commentNewline = (newlines[currentTokenIndex - 1] or 0) > 1
       lineComments = {}
 
-      while currentToken == '--' do
+      repeat
         table.insert(lineComments, '-- ' .. tokens[currentTokenIndex + 1])
         currentTokenIndex = currentTokenIndex + 2
         currentToken = tokens[currentTokenIndex]
-      end
+      until currentToken ~= '--'
     end
   end
 
@@ -237,14 +237,14 @@ local function Chunk(formatter)
   local chunk = formatter()
 
   if not chunk then
+    orphanedComments = orphanedCommentsBackup
     return nil
   elseif #orphanedComments > 0 then
     table.insert(formatted, table.concat(orphanedComments, '\n'))
-    orphanedComments = {}
   end
 
-  table.insert(formatted, Line(chunk))
   orphanedComments = orphanedCommentsBackup
+  table.insert(formatted, Line(chunk))
   return table.concat(formatted, '\n')
 end
 
@@ -510,6 +510,12 @@ function Module()
 
   if currentToken:match('^#!') then
     table.insert(formatted, consume())
+  end
+
+  while currentToken == '--' do
+    table.insert(formatted, '-- ' .. tokens[currentTokenIndex + 1])
+    currentTokenIndex = currentTokenIndex + 2
+    currentToken = tokens[currentTokenIndex]
   end
 
   table.insert(formatted, Block())
