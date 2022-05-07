@@ -216,15 +216,21 @@ local function List(opts)
   return list
 end
 
-local function Line(line)
-  local formatted = (forceSingleLine and '' or indentPrefix) .. line
+local function LinePrefix(formatted)
+  return (forceSingleLine and '' or indentPrefix) .. formatted
+end
 
+local function LineSuffix(formatted)
   if inlineComment then
-    formatted = formatted .. ' ' .. inlineComment
+    line = formatted .. ' ' .. inlineComment
     inlineComment = nil
   end
 
   return formatted
+end
+
+local function Line(formatted)
+  return LineSuffix(LinePrefix(formatted))
 end
 
 local function Chunk(formatter)
@@ -285,7 +291,7 @@ function Comments()
 end
 
 local function BraceBlock()
-  local formatted = { Line(expect('{')) }
+  local formatted = { LineSuffix(expect('{')) }
 
   indent(1)
   table.insert(formatted, Block())
@@ -347,21 +353,8 @@ local function Terminal()
 end
 
 local function Expr(opts)
-  local minPrec = opts and opts.minPrec or 1
-  local tokenIndexStart = currentTokenIndex
-  local node = C.UNOPS[currentToken] and Unop() or Terminal()
-
-  local binop = C.BINOPS[currentToken]
-  while binop and binop.prec >= minPrec do
-    node = Binop({
-      minPrec = minPrec,
-      lhs = node,
-    })
-
-    binop = C.BINOPS[currentToken]
-  end
-
-  return node
+  -- TODO
+  return Name()
 end
 
 local function FunctionCall()
@@ -384,41 +377,6 @@ local function Id()
   end
 
   return node
-end
-
-local function Statement()
-  -- TODO: order these by usage for speed?
-  if currentToken == 'break' or currentToken == 'continue' then
-    return consume()
-  elseif currentToken == 'goto' or currentToken == ':' then
-    return Goto()
-  elseif currentToken == 'do' then
-    return expect('do') .. ' ' .. BraceBlock()
-  elseif currentToken == 'if' then
-    return IfElse()
-  elseif currentToken == 'for' then
-    return ForLoop()
-  elseif currentToken == 'repeat' then
-    return RepeatUntil()
-  elseif currentToken == 'return' then
-    return Return()
-  elseif currentToken == 'try' then
-    return TryCatch()
-  elseif currentToken == 'while' then
-    return WhileLoop()
-  elseif currentToken == 'function' then
-    return Function()
-  elseif
-    currentToken == 'local'
-    or currentToken == 'global'
-    or currentToken == 'module'
-    or currentToken == 'main'
-  then
-    -- TODO: cannot use lookAhead, what about comments?
-    -- return lookAhead(1) == 'function' and Function() or Declaration()
-  else
-    return Switch({ FunctionCall, Assignment })
-  end
 end
 
 -- =============================================================================
@@ -446,6 +404,47 @@ function Binop(opts) end
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
+
+local function Statement()
+  -- Order these by usage as micro-optimization
+  if branch('if') then
+    return IfElse()
+  elseif currentToken == 'for' then
+    return ForLoop()
+  elseif currentToken == 'function' then
+    return Function()
+  elseif currentToken == 'return' then
+    return Return()
+  elseif branch('do') then
+    return 'do ' .. BraceBlock()
+  elseif currentToken == 'break' or currentToken == 'continue' then
+    return consume()
+  elseif currentToken == 'while' then
+    return WhileLoop()
+  elseif currentToken == 'repeat' then
+    return RepeatUntil()
+  elseif currentToken == 'try' then
+    return TryCatch()
+  elseif branch('goto') then
+    return 'goto ' .. Name()
+  elseif branch(':') then
+    expect(':')
+    local name = Name()
+    expect(':')
+    expect(':')
+    return '::' .. name .. '::'
+  elseif
+    currentToken == 'local'
+    or currentToken == 'global'
+    or currentToken == 'module'
+    or currentToken == 'main'
+  then
+    -- TODO: cannot use lookAhead, what about comments?
+    -- return lookAhead(1) == 'function' and Function() or Declaration()
+  else
+    return Switch({ FunctionCall, Assignment })
+  end
+end
 
 function Block()
   local formatted = {}
@@ -484,27 +483,22 @@ function ForLoop() end
 function Function() end
 
 -- -----------------------------------------------------------------------------
--- Goto
--- -----------------------------------------------------------------------------
-
-function Goto()
-  if branch('goto') then
-    return 'goto ' .. Name()
-  else
-    expect(':')
-    expect(':')
-    local name = Name()
-    expect(':')
-    expect(':')
-    return '::' .. name .. '::'
-  end
-end
-
--- -----------------------------------------------------------------------------
 -- IfElse
 -- -----------------------------------------------------------------------------
 
-function IfElse() end
+function IfElse() 
+  local formatted = { LinePrefix('if ' .. Expr() .. ' ' .. BraceBlock()) }
+
+  while branch('elseif') do
+    table.insert(formatted, 'elseif ' .. Expr() .. ' ' .. BraceBlock())
+  end
+
+  if branch('else') then
+    table.insert(formatted, 'else ' .. BraceBlock())
+  end
+
+  return table.concat(formatted, ' ')
+end
 
 -- -----------------------------------------------------------------------------
 -- Module
