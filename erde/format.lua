@@ -474,7 +474,25 @@ function Destructure() end
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop() end
+function ForLoop()
+  local formatted = { 'for', Var() }
+  local firstName = Var()
+
+  if branch('=') then
+    table.insert(formatted, '=')
+    table.insert(formatted, List({ parse = Expr }))
+  else
+    while branch(',') do
+      table.insert(formatted, Var())
+    end
+
+    expect('in')
+    node.exprList = List({ parse = Expr })
+  end
+
+  node.body = Surround('{', '}', Block)
+  return node
+end
 
 -- -----------------------------------------------------------------------------
 -- Function
