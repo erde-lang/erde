@@ -419,9 +419,9 @@ local function Statement()
     return 'do ' .. BraceBlock()
   elseif currentToken == 'break' or currentToken == 'continue' then
     return consume()
-  elseif currentToken == 'while' then
+  elseif branch('while') then
     return WhileLoop()
-  elseif currentToken == 'repeat' then
+  elseif branch('repeat') then
     return RepeatUntil()
   elseif currentToken == 'try' then
     return TryCatch()
@@ -563,7 +563,20 @@ function Params(opts) end
 -- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-function RepeatUntil() end
+function RepeatUntil() 
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+
+  local formatted = {
+    LinePrefix('repeat'),
+    BraceBlock(),
+    expect('until'),
+    Expr(),
+  }
+
+  forceSingleLine = forceSingleLineBackup
+  return table.concat(formatted, ' ')
+end
 
 -- -----------------------------------------------------------------------------
 -- Return
@@ -599,7 +612,23 @@ function Table() end
 -- TryCatch
 -- -----------------------------------------------------------------------------
 
-function TryCatch() end
+function TryCatch() 
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+
+  local formatted = {
+    LinePrefix('try'),
+    BraceBlock(),
+    expect('catch'),
+    Surround('(', ')', function()
+      return Try(Var)
+    end),
+    BraceBlock()
+  }
+
+  forceSingleLine = forceSingleLineBackup
+  return table.concat(formatted, ' ')
+end
 
 -- -----------------------------------------------------------------------------
 -- Unop
@@ -611,7 +640,19 @@ function Unop() end
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
-function WhileLoop() end
+function WhileLoop() 
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+
+  local formatted = {
+    LinePrefix('while'),
+    Expr(),
+    BraceBlock(),
+  }
+
+  forceSingleLine = forceSingleLineBackup
+  return table.concat(formatted, ' ')
+end
 
 -- =============================================================================
 -- Return

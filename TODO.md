@@ -1,8 +1,8 @@
 # TODO
 
 - format.lua
-  - add comments / newlines
 - fix empty file / only comments parsing
+- allow destructure in `catch`
 - refactor tests
   - add more compile tests
   - add format tests
