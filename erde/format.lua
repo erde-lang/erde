@@ -201,7 +201,7 @@ local function List(opts)
   local hasTrailingComma = false
 
   repeat
-    local node = Try(opts.parse)
+    local node = Try(opts.formatter)
     if not node then
       break
     end
@@ -409,7 +409,7 @@ local function Statement()
   -- Order these by usage as micro-optimization
   if branch('if') then
     return IfElse()
-  elseif currentToken == 'for' then
+  elseif branch('for') then
     return ForLoop()
   elseif currentToken == 'function' then
     return Function()
@@ -475,23 +475,31 @@ function Destructure() end
 -- -----------------------------------------------------------------------------
 
 function ForLoop()
-  local formatted = { 'for', Var() }
+  local forceSingleLineBackup = forceSingleLine
+  forceSingleLine = true
+
+  local formatted = { LinePrefix('for') }
   local firstName = Var()
 
   if branch('=') then
+    table.insert(formatted, firstName)
     table.insert(formatted, '=')
-    table.insert(formatted, List({ parse = Expr }))
   else
+    local nameList = { firstName }
+
     while branch(',') do
-      table.insert(formatted, Var())
+      table.insert(nameList, Var())
     end
 
-    expect('in')
-    node.exprList = List({ parse = Expr })
+    table.insert(formatted, table.concat(nameList, ', '))
+    table.insert(formatted, expect('in'))
   end
 
-  node.body = Surround('{', '}', Block)
-  return node
+  table.insert(formatted, table.concat(List({ formatter = Expr }), ', '))
+  table.insert(formatted, BraceBlock())
+
+  forceSingleLine = forceSingleLineBackup
+  return table.concat(formatted, ' ')
 end
 
 -- -----------------------------------------------------------------------------
