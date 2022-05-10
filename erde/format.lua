@@ -150,12 +150,12 @@ end
 -- Macros
 -- =============================================================================
 
-local function Try(rule)
+local function Try(formatter)
   local state = backup()
-  local ok, node = pcall(rule)
+  local ok, formatted = pcall(formatter)
 
   if ok then
-    return node
+    return formatted
   else
     restore(state)
   end
@@ -174,7 +174,7 @@ local function Surround(openChar, closeChar, callback)
   expect(openChar)
   local formatted = callback()
   expect(closeChar)
-  return formatted
+  return openChar .. (formatted or '') .. closeChar
 end
 
 local function Parens(opts)
@@ -423,7 +423,7 @@ local function Statement()
     return WhileLoop()
   elseif branch('repeat') then
     return RepeatUntil()
-  elseif currentToken == 'try' then
+  elseif branch('try') then
     return TryCatch()
   elseif branch('goto') then
     return 'goto ' .. Name()
@@ -619,8 +619,7 @@ function TryCatch()
   local formatted = {
     LinePrefix('try'),
     BraceBlock(),
-    expect('catch'),
-    Surround('(', ')', function()
+    expect('catch') .. Surround('(', ')', function()
       return Try(Var)
     end),
     BraceBlock()

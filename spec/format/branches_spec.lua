@@ -1,16 +1,59 @@
+spec('break / continue', function()
+  assert.formatted(' break ', 'break')
+  assert.formatted(' continue ', 'continue')
+end)
+
+spec('goto', function()
+  assert.formatted(' goto   blah ', 'goto blah')
+  assert.formatted('::   blah ::', ' ::blah:: ')
+end)
+
+spec('try catch', function()
+  assert.formatted(
+    [[
+  try 
+  {} 
+
+  catch ()   {}
+]],
+    [[
+try {
+
+} catch() {
+
+}
+]]
+  )
+  assert.formatted(
+    [[
+  try 
+  {} 
+
+  catch (x)   {}
+]],
+    [[
+try {
+
+} catch(x) {
+
+}
+]]
+  )
+end)
+
 spec('if', function()
-    assert.formatted(
-      [[
+  assert.formatted(
+    [[
    if test 
    { 
 }
 ]],
-      [[
+    [[
 if test {
 
 }
 ]]
-    )
+  )
 end)
 
 spec('if-elseif', function()
