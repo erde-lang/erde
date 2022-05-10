@@ -1,10 +1,11 @@
 return {
-  default = {
-    ROOT = { 'spec' },
+  _all = {
     lpath = './?/init.lua',
     verbose = true,
     helper = 'spec/setup_spec.lua',
   },
+  default = { ROOT = { 'spec' } },
+  format = { ROOT = { 'spec/format' } },
 }
 
 -- vim: filetype=lua:
