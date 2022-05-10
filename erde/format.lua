@@ -222,7 +222,7 @@ end
 
 local function LineSuffix(formatted)
   if inlineComment then
-    line = formatted .. ' ' .. inlineComment
+    formatted = formatted .. ' ' .. inlineComment
     inlineComment = nil
   end
 

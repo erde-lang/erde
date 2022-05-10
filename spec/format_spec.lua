@@ -111,7 +111,7 @@ do { -- c
 end)
 
 -- -----------------------------------------------------------------------------
--- Break / Continue
+-- Break / Continue / Goto
 -- -----------------------------------------------------------------------------
 
 spec('Break / Continue', function()
@@ -119,11 +119,88 @@ spec('Break / Continue', function()
   assert.formatted(' continue ', 'continue')
 end)
 
--- -----------------------------------------------------------------------------
--- Goto
--- -----------------------------------------------------------------------------
-
 spec('Goto', function()
   assert.formatted(' goto   blah ', 'goto blah')
   assert.formatted('::   blah ::', ' ::blah:: ')
+end)
+
+-- -----------------------------------------------------------------------------
+-- IfElse
+-- -----------------------------------------------------------------------------
+
+spec('IfElse', function()
+    assert.formatted(
+      [[
+   if test 
+   { 
+}
+]],
+      [[
+if test {
+
+}
+]]
+    )
+    assert.formatted(
+      [[
+   if test1
+   { 
+} elseif test2 {}
+]],
+      [[
+if test1 {
+
+} elseif test2 {
+
+}
+]]
+    )
+    assert.formatted(
+      [[
+   if test1
+   { 
+} elseif test2 {} elseif
+test3{}
+]],
+      [[
+if test1 {
+
+} elseif test2 {
+
+} elseif test3 {
+
+}
+]]
+    )
+    assert.formatted(
+      [[
+   if test 
+   { 
+} elseif test {}
+else{}
+]],
+      [[
+if test {
+
+} elseif test {
+
+} else {
+
+}
+]]
+    )
+    assert.formatted(
+      [[
+   if test 
+   { }
+else{}
+]],
+      [[
+if test {
+
+} else {
+
+}
+]]
+    )
 end)

@@ -108,7 +108,7 @@ local function formatted(state, args)
   local expected = trim(args[2])
 
   if expected ~= got then
-    error(('\nFormat error.\nExpected\n%s\nGot\n%s'):format(expected, got))
+    error(('Format error.\n\n%s\n\n==================================\n\n%s'):format(expected, got))
   end
 
   return expected == got
