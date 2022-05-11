@@ -14,12 +14,12 @@ spec('try catch', function()
   try 
   {} 
 
-  catch ()   {}
+  catch    {}
 ]],
     [[
 try {
 
-} catch() {
+} catch {
 
 }
 ]]
@@ -29,12 +29,12 @@ try {
   try 
   {} 
 
-  catch (x)   {}
+  catch  x   {}
 ]],
     [[
 try {
 
-} catch(x) {
+} catch x {
 
 }
 ]]

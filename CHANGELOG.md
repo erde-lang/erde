@@ -32,6 +32,8 @@ Main Focuses: Internal Restructuring, Formatting, Website
   - Can no longer call specific rules / pseudo-rules directly
   - Leads to cleaner code and less backwards compat
 - `erde.loader` no longer mutates the global require function, but uses `package.loaders` (as it should)
+- `catch` var no longer uses parentheses (more lua like)
+- `catch` var can now be a destructure
 
 ### Fixed
 - Tokenizer now correctly consumes whitespace in string interpolation.
