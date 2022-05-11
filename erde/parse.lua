@@ -1040,9 +1040,7 @@ function TryCatch()
   node.try = Surround('{', '}', Block)
 
   expect('catch')
-  node.errorName = Surround('(', ')', function()
-    return Try(Name)
-  end)
+  node.error = Try(Var)
   node.catch = Surround('{', '}', Block)
 
   node.tokenIndexEnd = currentTokenIndex - 1

@@ -875,20 +875,34 @@ function TryCatch(node)
   local okName = newTmpName()
   local errorName = newTmpName()
 
-  return table.concat({
+  local compiled = {
     ('local %s, %s = pcall(function() %s end)'):format(
       okName,
       errorName,
       compileNode(node.try)
     ),
     'if ' .. okName .. ' == false then',
-    not node.errorName and '' or ('local %s = %s'):format(
-      node.errorName,
-      errorName
-    ),
-    compileNode(node.catch),
-    'end',
-  }, '\n')
+  }
+
+  if node.error then
+    if type(node.error) == 'string' then
+      table.insert(compiled, ('local %s = %s'):format(
+        node.error,
+        errorName
+      ))
+    else
+      local destructure = compileNode(node.error)
+      table.insert(compiled, ('local %s = %s'):format(
+        destructure.baseName,
+        errorName
+      ))
+      table.insert(compiled, destructure.compiled)
+    end
+  end
+
+  table.insert(compiled, compileNode(node.catch))
+  table.insert(compiled, 'end')
+  return table.concat(compiled, '\n')
 end
 
 -- -----------------------------------------------------------------------------

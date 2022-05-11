@@ -158,6 +158,7 @@ local function Try(formatter)
     return formatted
   else
     restore(state)
+    return nil
   end
 end
 
@@ -619,11 +620,13 @@ function TryCatch()
   local formatted = {
     LinePrefix('try'),
     BraceBlock(),
-    expect('catch') .. Surround('(', ')', function()
-      return Try(Var)
-    end),
-    BraceBlock()
+    expect('catch'),
   }
+
+  -- Separate these from formatted declaration! Otherwise we may accidentally
+  -- inject a nil value in the middle of the table
+  table.insert(formatted, Try(Var))
+  table.insert(formatted, BraceBlock())
 
   forceSingleLine = forceSingleLineBackup
   return table.concat(formatted, ' ')

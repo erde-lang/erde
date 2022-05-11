@@ -925,7 +925,7 @@ describe('TryCatch', function()
       [[
         try {
           error('some error')
-        } catch() {
+        } catch {
           return 1
         }
         return 2
@@ -936,10 +936,30 @@ describe('TryCatch', function()
       [[
         try {
           -- no error
-        } catch() {
+        } catch {
           return 1
         }
         return 2
+      ]]
+    )
+    assert.run(
+      'some error',
+      [[
+        try {
+          error({ value = 'some error' })
+        } catch err {
+          return err.value
+        }
+      ]]
+    )
+    assert.run(
+      'some error',
+      [[
+        try {
+          error({ value = 'some error' })
+        } catch { value } {
+          return value
+        }
       ]]
     )
   end)
