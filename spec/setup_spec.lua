@@ -1,5 +1,6 @@
 local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
+local inspect = require('inspect')
 local compile = require('erde.compile')
 local format = require('erde.format')
 
@@ -81,7 +82,18 @@ busted.assert:register(
 --
 
 local function eval(state, args)
-  return deepCompare(args[1], runErde('return ' .. args[2]))
+  local expected = args[1]
+  local got = runErde('return ' .. args[2])
+  local result = deepCompare(expected, got)
+
+  if not result then
+    error(('Eval error.\n\n%s\n\n==================================\n\n%s'):format(
+      inspect(expected),
+      inspect(got)
+    ))
+  end
+
+  return result
 end
 
 say:set('assertion.eval.positive', 'Eval error. Expected %s, got %s')
@@ -92,7 +104,18 @@ busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 --
 
 local function run(state, args)
-  return deepCompare(args[1], runErde(args[2]))
+  local expected = args[1]
+  local got = runErde(args[2])
+  local result = deepCompare(expected, got)
+
+  if not result then
+    error(('Run error.\n\n%s\n\n==================================\n\n%s'):format(
+      inspect(expected),
+      inspect(got)
+    ))
+  end
+
+  return result
 end
 
 say:set('assertion.run.positive', 'Run error. Expected %s, got %s')
@@ -104,14 +127,18 @@ busted.assert:register('assertion', 'run', run, 'assertion.run.positive')
 --
 
 local function formatted(state, args)
-  local got = trim(format(args[1]))
   local expected = trim(args[2])
+  local got = trim(format(args[1]))
+  local result = expected == got
 
-  if expected ~= got then
-    error(('Format error.\n\n%s\n\n==================================\n\n%s'):format(expected, got))
+  if not result then
+    error(('Format error.\n\n%s\n\n==================================\n\n%s'):format(
+      inspect(expected),
+      inspect(got)
+    ))
   end
 
-  return expected == got
+  return result
 end
 
 say:set('assertion.formatted.positive', 'Format error. Expected %s, got %s')
