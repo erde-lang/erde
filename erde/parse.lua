@@ -874,7 +874,7 @@ function Return()
   local tokenIndexStart = currentTokenIndex
   expect('return')
 
-  local node = currentToken ~= '(' and List({ parse = Expr })
+  local node = currentToken ~= '(' and List({ parse = Expr, allowEmpty = true })
     or Parens({
       allowRecursion = true,
       prioritizeRule = true,
