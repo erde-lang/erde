@@ -6,7 +6,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ## [0.2-1] - UNRELEASED
 
 Main Focuses: Internal Restructuring, Formatting, Website
-
 ### Added
 - Allow parenthesized lists for assignment / declarations vars and expressions.
 - Add dedicated rule for Modules (top level block)
@@ -42,6 +41,7 @@ Main Focuses: Internal Restructuring, Formatting, Website
 - Keywords are now allowed as named index chains (ex: x.if, y:else()).
 - `!=` operator is now _actually_ compiled.
 - OptChain now correctly parses optional _method_ calls
+- Fixed void `return` (i.e. no expressions)
 
 ## [0.1-1] - March 3, 2022
 
