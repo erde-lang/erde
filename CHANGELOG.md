@@ -3,9 +3,7 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [0.2-1] - UNRELEASED
-
-Main Focuses: Internal Restructuring, Debugging, Website
+## [0.1-2] - UNRELEASED
 
 ### Added
 - Allow parenthesized lists for assignment / declarations vars and expressions.
@@ -14,15 +12,14 @@ Main Focuses: Internal Restructuring, Debugging, Website
 - Use newline to differentiate syntax ambiguity
 
 ### Changed
+- Refactor internal structure.
+  - Collapse rules into single files based on steps
+  - AST validation errors no longer throw when parsing
+  - Split Expr rule into Binop / Unop rules, use Expr as pseudo rule.
+  - Steps (`erde.parse`, `erde.compile`, etc) are no longer tables, but pure functions
+- No longer parse number destruct aliases as valid syntax
 - Varargs now spreads when used as a table or param expression.
 - Do not allow trailing comma in Return exprs unless parens are present
-- No longer parse number destruct aliases as valid syntax
-- AST validation errors no longer throw when parsing
-- Refactor internal structure (step based rather than rule based).
-- Split Expr rule into Binop / Unop rules, use Expr as pseudo rule.
-- Steps (`erde.parse`, `erde.compile`, etc) are no longer tables, but pure functions
-  - Can no longer call specific rules / pseudo-rules directly
-  - Leads to cleaner code and less backwards compat
 - `erde.loader` no longer mutates the global require function, but uses `package.loaders` (as it should)
 - `catch` var no longer uses parentheses (more lua like)
 - `catch` var can now be a destructure

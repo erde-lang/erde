@@ -1,6 +1,21 @@
 # TODO
 
+# 0.2-1 (Error Handling)
+
 - fix empty file / only comments parsing
+- throw error if only part of file is parsed
+  - try to diagnose what went wrong?
+  - change throw level. For certain errors we _know_ what the developer was 
+    trying to do and should fatal exit
+- Source maps (for runtime errors when using erde.loader)
+  - preserve line numbers when compiling
+- upgrade cli
+  - autocompletion
+  - refactor
+  - add REPL
+  - official manifest.erde spec
+- officially readd 5.1+ support
+  - support multiple bitwise operator compiles (best effort based on versions)
 - update website
   - remove pipe
   - add `main`
@@ -14,32 +29,12 @@
   - breaking varargs change (actually spread in table!)
   - remove block comments
 
-# v0.3.0
+# 0.3-1 (Optimizations)
 
-Main Focuses: Error Handling, CLI, 5.1+ Support
-
-- throw error if only part of file is parsed
-  - try to diagnose what went wrong?
-  - change throw level. For certain errors we _know_ what the developer was 
-    trying to do and should fatal exit
-- Source maps (for runtime errors when using erde.loader)
-  - preserve line numbers when compiling
-- upgrade cli
-  - autocompletion
-  - refactor
-  - add REPL
-  - official manifest.erde spec
-- officially readd 5.1+ support
-  - Not supported initially due to ease + not sure if will take advantage of
-    LuaJIT specific optimizations + bitwise operator awkwardness
-  - default compile to 5.1+ using closure constructors, allow optimizations 
-    depending on compilation target (ex. only LuaJIT)
-    - analyze usage and inject code. In particular, transform logical operations 
-      into if constructs (ex. `local a = b or c ?? d`)
-
-# v0.4.0
-
-- Auto remove unnecessary parens in expressions when formatting
+- Avoid closure creation (slow, cannot be JITed)
+  - ex) compile assignment / declaration into if statements
+- allow optimizations depending on compilation target
+  - ex) exploit goto when available
 
 # Long Term TODO
 
