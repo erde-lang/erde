@@ -216,39 +216,6 @@ local function processCompileCmd()
 end
 
 -- -----------------------------------------------------------------------------
--- Format
--- -----------------------------------------------------------------------------
-
-local formatCmd = cli:command('format')
-
--- Allow specifying files on command line. If this is present, includeDirs will
--- NOT default to root.
-formatCmd:argument('files', 'Files to format.'):args('*')
-
-local function formatFile(srcFilePath)
-  local srcFile = io.open(srcFilePath, 'r')
-  local moduleContents = srcFile:read('*a')
-  srcFile:close()
-
-  local formattedModule = erde.format(moduleContents)
-
-  -- TODO: write file?
-  print(formattedModule)
-end
-
-local function processFormatCmd()
-  for i, fileName in ipairs(args.files) do
-    if fileName:match('%.erde$') then
-      formatFile(path.join(root, fileName))
-    end
-  end
-
-  for i, includeDir in ipairs(includeDirs) do
-    traverseErdeFiles(includeDir, excludeDirs, formatFile)
-  end
-end
-
--- -----------------------------------------------------------------------------
 -- Clean
 -- -----------------------------------------------------------------------------
 
@@ -331,8 +298,6 @@ elseif args.compile then
   processCompileCmd()
 elseif args.clean then
   processCleanCmd()
-elseif args.format then
-  processFormatCmd()
 else
   print('REPL not yet supported.')
 end
