@@ -2,7 +2,6 @@ local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
 local inspect = require('inspect')
 local compile = require('erde.compile')
-local format = require('erde.format')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
