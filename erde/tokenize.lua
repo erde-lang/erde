@@ -172,10 +172,6 @@ function Token()
     numLookup = C.DIGIT
     numExp1, numExp2 = 'e', 'E'
     Number()
-  elseif C.SYMBOLS[peek(3)] then
-    commit(consume(3))
-  elseif C.SYMBOLS[peekTwo] then
-    commit(consume(2))
   elseif char == '\n' then
     newlines[numTokens] = true
     while char == '\n' do
@@ -231,12 +227,44 @@ function Token()
 
     commit(consume(strCloseLen))
   elseif peekTwo == '--' then
-    local comment = { line = line, column = column }
     consume(2)
 
-    while char ~= '' and char ~= '\n' do
-      consume()
+    if not peek(2):match('%[[[=]') then
+      while char ~= '' and char ~= '\n' do
+        consume()
+      end
+    else
+      consume() -- '['
+
+      local strEq, strCloseLen = '', 2
+      while char == '=' do
+        strEq = strEq .. consume()
+        strCloseLen = strCloseLen + 1
+      end
+      local strClose = ']' .. strEq .. ']'
+
+      if char ~= '[' then
+        error('Invalid start of long comment (expected [ got ' .. char .. ')')
+      else
+        consume()
+      end
+
+      while peek(strCloseLen) ~= strClose do
+        if char == '' then
+          error('Unexpected EOF (unterminated comment)')
+        elseif char == '\n' then
+          Newline()
+        else
+          consume()
+        end
+      end
+
+      consume(strCloseLen)
     end
+  elseif C.SYMBOLS[peek(3)] then
+    commit(consume(3))
+  elseif C.SYMBOLS[peekTwo] then
+    commit(consume(2))
   else
     commit(consume())
   end
@@ -267,6 +295,7 @@ return function(input)
     while char ~= '' do
       Space()
       Token()
+      Space()
     end
   end)
 
