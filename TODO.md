@@ -1,35 +1,25 @@
 # TODO
 
-# 0.2-1 (Error Handling)
+# 0.2-1
 
+- remove `main` keyword
+- remove manifest
+- upgrade cli
+  - allow `erde test.erde`
+  - autocompletion
+  - refactor
+  - add REPL
 - fix empty file / only comments parsing
 - throw error if only part of file is parsed
   - try to diagnose what went wrong?
   - change throw level. For certain errors we _know_ what the developer was 
     trying to do and should fatal exit
-- Source maps (for runtime errors when using erde.loader)
-  - preserve line numbers when compiling
-- upgrade cli
-  - autocompletion
-  - refactor
-  - add REPL
-  - official manifest.erde spec
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
-- update website
-  - remove pipe
-  - add `main`
-  - self shorthand
-  - generic for loop destructuring
-  - goto
-  - hoisting top block vars
-  - multi expression assignment
-  - standard operators
-  - do block expr
-  - breaking varargs change (actually spread in table!)
-  - remove block comments
+- Source maps (for runtime errors when using erde.loader)
+  - preserve line numbers when compiling
 
-# 0.3-1 (Optimizations)
+# 0.3-1
 
 - Avoid closure creation (slow, cannot be JITed)
   - ex) compile assignment / declaration into if statements

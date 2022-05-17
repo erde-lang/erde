@@ -1,5 +1,8 @@
 local C = {}
 
+-- Keep this consistent with bin/erde!
+C.COMPILED_HEADER_COMMENT = '-- __ERDE_COMPILED__'
+
 -- -----------------------------------------------------------------------------
 -- Keywords / Terminals
 -- -----------------------------------------------------------------------------
