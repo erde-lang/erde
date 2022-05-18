@@ -580,7 +580,7 @@ function Module(node)
     table.insert(compiled, node.shebang)
   end
 
-  table.insert(compiled, '-- ERDE_META')
+  table.insert(compiled, C.COMPILED_HEADER_COMMENT)
 
   if #node.hoistedNames > 0 then
     table.insert(compiled, 'local ' .. table.concat(node.hoistedNames, ','))
