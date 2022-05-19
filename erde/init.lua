@@ -10,7 +10,7 @@ return {
 
     local loader, err = loadstring(source)
     if type(loader) == 'function' then
-      -- TODO: provide option to avoid pcall? Maybe disableSourceMap in manifest?
+      -- TODO: provide option to avoid pcall? Maybe disableSourceMap?
       local ok, result = pcall(function()
         return loader()
       end)

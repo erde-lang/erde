@@ -45,50 +45,15 @@ local function contains(t, element)
   return false
 end
 
--- TODO: make this cross platform + error handling?
--- 1) Stopping point (dont use $HOME?)
-local function getManifest()
-  local home = os.getenv('HOME')
-  local restoreDir = lfs.currentdir()
-
-  local manifestRoot = restoreDir
-  local manifestFile = io.open(path.join(manifestRoot, 'manifest.erde'), 'r')
-  while manifestFile == nil and manifestRoot:find(home) do
-    lfs.chdir('..')
-    manifestRoot = lfs.currentdir()
-    manifestFile = io.open(path.join(manifestRoot, 'manifest.erde'), 'r')
-  end
-
-  lfs.chdir(restoreDir)
-
-  if manifestFile == nil then
-    return {}, nil
-  end
-
-  local manifestContents = manifestFile:read('*a')
-  manifestFile:close()
-  local parsedManifest = erde.parse(manifestContents)
-  local compiledManifest = erde.compile(parsedManifest)
-
-  local loadedManifest = (loadstring or load)(compiledManifest)
-  if not loadedManifest then
-    return {}, nil
-  end
-
-  return loadedManifest(), manifestRoot
-end
-
-local function traverseDir(root, excludeDirs, callback)
+local function traverseDir(root, callback)
   for fileName in lfs.dir(root) do
-    if fileName ~= '.' and fileName ~= '..' and fileName ~= 'manifest.erde' then
+    if fileName ~= '.' and fileName ~= '..' then
       local filePath = path.join(root, fileName)
       local attributes = lfs.attributes(filePath)
 
       if attributes ~= nil then
         if attributes.mode == 'directory' then
-          if not contains(excludeDirs, filePath) then
-            traverseDir(filePath, excludeDirs, callback)
-          end
+          traverseDir(filePath, callback)
         elseif attributes.mode == 'file' then
           callback(filePath)
         end
@@ -97,16 +62,16 @@ local function traverseDir(root, excludeDirs, callback)
   end
 end
 
-local function traverseErdeFiles(root, excludeDirs, callback)
-  traverseDir(root, excludeDirs, function(filePath)
+local function traverseErdeFiles(root, callback)
+  traverseDir(root, function(filePath)
     if filePath:match('%.erde$') then
       callback(filePath)
     end
   end)
 end
 
-local function traverseLuaFiles(root, excludeDirs, callback)
-  traverseDir(root, excludeDirs, function(filePath)
+local function traverseLuaFiles(root, callback)
+  traverseDir(root, function(filePath)
     if filePath:match('%.lua$') then
       callback(filePath)
     end
@@ -147,13 +112,9 @@ runCmd:argument('main', 'Main file to run.'):args('*')
 local function processRunCmd()
   local mainModuleNames = #args.main > 0
     and args.main
-    or type(manifest.main) == 'table'
-    and manifest.main
-    or type(manifest.main) == 'string'
-    and { manifest.main }
 
   if not mainModuleNames then
-    error('Need to specify modules either on command line or in manifest.erde')
+    error('Need to specify modules either on command line')
   end
 
   for i, mainModuleName in pairs(mainModuleNames) do
@@ -167,8 +128,7 @@ end
 
 local compileCmd = cli:command('compile')
 
--- Allow specifying files on command line. If this is present, includeDirs will
--- NOT default to root.
+-- Allow specifying files on command line.
 compileCmd:argument('files', 'Files to compile.'):args('*')
 
 -- The directory to write compiled files to.
@@ -184,14 +144,7 @@ local function compileFile(srcFilePath)
   local destFilePath = srcFilePath:gsub('.erde$', '.lua')
   if outDir ~= nil then
     -- Collapse file structure if there is only 1 include dir
-    if #includeDirs == 1 then
-      destFilePath = destFilePath:gsub(
-        includeDirs[1],
-        outDir
-      )
-    else
       destFilePath = destFilePath:gsub(root, outDir)
-    end
   end
 
   local destFile = io.open(destFilePath, 'w')
@@ -210,10 +163,6 @@ local function processCompileCmd()
       compileFile(path.join(root, fileName))
     end
   end
-
-  for i, includeDir in ipairs(includeDirs) do
-    traverseErdeFiles(includeDir, excludeDirs, compileFile)
-  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -222,8 +171,7 @@ end
 
 local cleanCmd = cli:command('clean')
 
--- Allow specifying files on command line. If this is present, includeDirs will
--- NOT default to root.
+-- Allow specifying files on command line.
 cleanCmd:argument('dirs', 'Directories to clean.'):args('*')
 
 -- Clean all Erde generated files from the root. By default only files that are
@@ -242,24 +190,15 @@ end
 
 local function processCleanCmd()
   if args.hard then
-    traverseLuaFiles(root, excludeDirs, cleanFile)
+    traverseLuaFiles(root, cleanFile)
   end
 
   if #args.dirs > 0 then
     for i, cleanDir in ipairs(args.dirs) do
-      traverseLuaFiles(cleanDir, excludeDirs, cleanFile)
-    end
-  elseif #includeDirs > 0 then
-    for i, includeDir in ipairs(includeDirs) do
-      traverseLuaFiles(includeDir, excludeDirs, cleanFile)
-    end
-
-    if outDir ~= nil and fs.exists(outDir) then
-      traverseLuaFiles(outDir, {}, cleanFile)
-      os.remove(outDir)
+      traverseLuaFiles(cleanDir, cleanFile)
     end
   else
-    traverseLuaFiles('.', excludeDirs, cleanFile)
+    traverseLuaFiles('.', cleanFile)
   end
 end
 
@@ -269,27 +208,10 @@ end
 
 args = cli:parse()
 cwd = lfs.currentdir()
-manifest, manifestRoot = getManifest()
-root = args.root or manifestRoot or cwd
+root = cwd
 
-outDir = args.outDir or manifest.outDir
+outDir = args.outDir
 outDir = outDir and path.join(root, outDir) or nil
-
-includeDirs = {}
-excludeDirs = {}
-if manifest then
-  if type(manifest.include) == 'table' then
-    for i, includeDir in ipairs(manifest.include) do
-      includeDirs[i] = path.join(root, includeDir)
-    end
-  end
-
-  if type(manifest.exclude) == 'table' then
-    for i, excludeDir in ipairs(manifest.exclude) do
-      excludeDirs[i] = path.join(root, excludeDir)
-    end
-  end
-end
 
 if args.version then
   print('v0.1.0')

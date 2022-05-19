@@ -3,19 +3,19 @@
 # 0.2-1
 
 - allow global declarations in nested blocks
-- remove manifest
+- fix empty file / only comments parsing
 - upgrade cli
   - allow `erde test.erde`
   - autocompletion
   - refactor
   - add REPL
-- fix empty file / only comments parsing
 - throw error if only part of file is parsed
   - try to diagnose what went wrong?
   - change throw level. For certain errors we _know_ what the developer was 
     trying to do and should fatal exit
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
+- throw errors for undeclared variables
 - Source maps (for runtime errors when using erde.loader)
   - preserve line numbers when compiling
 
