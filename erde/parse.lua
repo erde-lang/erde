@@ -258,7 +258,6 @@ local function Statement()
     currentToken == 'local'
     or currentToken == 'global'
     or currentToken == 'module'
-    or currentToken == 'main'
   then
     return lookAhead(1) == 'function' and Function() or Declaration()
   else
@@ -436,7 +435,6 @@ function Declaration()
     currentToken ~= 'local'
     and currentToken ~= 'global'
     and currentToken ~= 'module'
-    and currentToken ~= 'main'
   then
     error('Missing declaration scope')
   end
@@ -590,7 +588,6 @@ function Function()
     currentToken == 'local'
     or currentToken == 'global'
     or currentToken == 'module'
-    or currentToken == 'main'
   then
     node.variant = consume()
   end
