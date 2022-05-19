@@ -2,7 +2,7 @@
 
 # 0.2-1
 
-- remove `main` keyword
+- allow global declarations in nested blocks
 - remove manifest
 - upgrade cli
   - allow `erde test.erde`

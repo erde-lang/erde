@@ -281,10 +281,6 @@ describe('Declaration', function()
     assert.run({ a = 1 }, 'module a = 1')
   end)
 
-  spec('main declaration', function()
-    assert.run(1, 'main a = 1')
-  end)
-
   spec('multiple declaration', function()
     assert.run(
       3,
@@ -458,18 +454,6 @@ describe('Function', function()
     assert.are.equal(1, testModule.test())
     assert.has_error(function()
       compile('module function a.b() {}')
-    end)
-  end)
-
-  spec('main function', function()
-    local testModule = runErde([[
-      main function test() {
-        return 1
-      }
-    ]])
-    assert.are.equal(1, testModule())
-    assert.has_error(function()
-      compile('main function a.b() {}')
     end)
   end)
 

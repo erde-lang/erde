@@ -7,6 +7,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ### Removed
 - Remove `self` shorthand `$`. Completely unnecessary and confusing.
+- Remove `main` keyword. Completely unnecessary and confusing.
 
 ### Added
 - Allow parenthesized lists for assignment / declarations vars and expressions.

@@ -597,9 +597,6 @@ function Module(node)
       compiled,
       'return { ' .. table.concat(moduleTableElements, ',') .. ' }'
     )
-  elseif node.mainName ~= nil then
-    table.insert(compiled, compileBlockStatements(node))
-    table.insert(compiled, 'return ' .. node.mainName)
   else
     table.insert(compiled, compileBlockStatements(node))
   end

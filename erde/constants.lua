@@ -11,7 +11,6 @@ C.KEYWORDS = {
   'local',
   'global',
   'module',
-  'main',
   'if',
   'elseif',
   'else',
