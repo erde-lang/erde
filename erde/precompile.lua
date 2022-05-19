@@ -125,22 +125,8 @@ end
 -- -----------------------------------------------------------------------------
 
 function Declaration(node)
-  if
-    blockDepth > 0 and (node.variant == 'module' or node.variant == 'main')
-  then
+  if blockDepth > 0 and node.variant == 'module' then
     error(node.variant .. ' declarations must appear at the top level')
-  end
-
-  if node.variant == 'main' then
-    if
-      #node.varList > 1
-      or type(node.varList[1]) ~= 'string'
-      or moduleNode.mainName ~= nil
-    then
-      error('Cannot have multiple `main` declarations')
-    end
-
-    moduleNode.mainName = node.varList[1]
   end
 
   if blockDepth == 0 and node.variant ~= 'global' then
@@ -196,9 +182,7 @@ function Function(node)
   Block(node.body)
   restore(state)
 
-  if
-    blockDepth > 0 and (node.variant == 'module' or node.variant == 'main')
-  then
+  if blockDepth > 0 and node.variant == 'module' then
     error(node.variant .. ' declarations must appear at the top level')
   end
 
@@ -207,20 +191,12 @@ function Function(node)
     table.insert(moduleNode.hoistedNames, node.names[1])
   end
 
-  if node.variant == 'module' or node.variant == 'main' then
+  if node.variant == 'module' then
     if #node.names > 1 then
       error('Cannot declare nested field as ' .. node.variant)
     end
 
-    if node.variant == 'main' then
-      if moduleNode.mainName ~= nil then
-        error('Cannot have multiple main declarations')
-      end
-
-      moduleNode.mainName = node.names[1]
-    else
-      table.insert(moduleNode.exportNames, node.names[1])
-    end
+    table.insert(moduleNode.exportNames, node.names[1])
   end
 end
 
@@ -232,9 +208,6 @@ function Module(node)
   -- Table for Declaration and Function nodes to register `module` scope
   -- variables.
   node.exportNames = {}
-
-  -- Return name for this block. Only valid at the top level.
-  node.mainName = nil
 
   -- Table for all top-level declared names. These are hoisted for convenience
   -- to have more "module-like" behavior prevalent in other languages.
