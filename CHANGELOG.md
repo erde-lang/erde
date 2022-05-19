@@ -5,6 +5,9 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [0.1-2] - UNRELEASED
 
+### Removed
+- Remove `self` shorthand `$`. Completely unnecessary and confusing.
+
 ### Added
 - Allow parenthesized lists for assignment / declarations vars and expressions.
 - Add dedicated rule for Modules (top level block)

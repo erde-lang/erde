@@ -791,80 +791,37 @@ describe('Return', function()
 end)
 
 -- -----------------------------------------------------------------------------
--- Self
+-- Spread
 -- -----------------------------------------------------------------------------
 
-describe('Self', function()
-  spec('dotIndex', function()
+describe('Spread', function()
+  spec('table spread', function()
     assert.run(
-      1,
+      21,
       [[
-        local x = { y = 1 }
-        function x:test() {
-          return $y
+      local a = { 3, 4, 5 }
+      local function sum(t) {
+        local answer = 0
+        for i, value in ipairs(t) {
+          answer += value
         }
-        return x:test()
-      ]]
+        return answer
+      }
+      return sum({ 1, 2, ...a, 6 })
+    ]]
     )
   end)
-  spec('numberIndex', function()
+  spec('function spread', function()
     assert.run(
-      8,
+      12,
       [[
-        local x = { 9, 8, 7 }
-        function x:test() {
-          return $2
-        }
-        return x:test()
-      ]]
+      local a = { 3, 4, 5 }
+      local function sum(x, y, z) {
+        return x + y + z
+      }
+      return sum(...a)
+    ]]
     )
-  end)
-  spec('self', function()
-    assert.run(
-      1,
-      [[
-        local x = { y = 1 }
-        function x:test() {
-          return $.y
-        }
-        return x:test()
-      ]]
-    )
-  end)
-
-  -- -----------------------------------------------------------------------------
-  -- Spread
-  -- -----------------------------------------------------------------------------
-
-  describe('Spread', function()
-    spec('table spread', function()
-      assert.run(
-        21,
-        [[
-        local a = { 3, 4, 5 }
-        local function sum(t) {
-          local answer = 0
-          for i, value in ipairs(t) {
-            answer += value
-          }
-          return answer
-        }
-        return sum({ 1, 2, ...a, 6 })
-      ]]
-      )
-    end)
-    spec('function spread', function()
-      assert.run(
-        12,
-        [[
-        local a = { 3, 4, 5 }
-        local function sum(x, y, z) {
-          return x + y + z
-        }
-        return sum(...a)
-      ]]
-      )
-    end)
   end)
 end)
 
