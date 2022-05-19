@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Self, Spread, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, ForLoop, Function, Goto, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
 
 -- =============================================================================
 -- State
@@ -707,8 +707,6 @@ local function OptChainBase()
     end
 
     return base
-  elseif currentToken == '$' then
-    return Self()
   else
     return Name()
   end
@@ -888,33 +886,6 @@ function Return()
 
   node.ruleName = 'Return'
   node.tokenIndexStart = tokenIndexStart
-  node.tokenIndexEnd = currentTokenIndex - 1
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Self
--- -----------------------------------------------------------------------------
-
-function Self()
-  local node = {
-    ruleName = 'Self',
-    tokenIndexStart = currentTokenIndex,
-    variant = 'self',
-  }
-
-  expect('$')
-
-  if currentToken then
-    if currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$') then
-      node.variant = 'dotIndex'
-      node.value = consume()
-    elseif currentToken:match('^[0-9]+$') then
-      node.variant = 'numberIndex'
-      node.value = consume()
-    end
-  end
-
   node.tokenIndexEnd = currentTokenIndex - 1
   return node
 end
