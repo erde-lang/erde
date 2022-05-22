@@ -1058,5 +1058,11 @@ return function(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
   isTernaryExpr = false
+
+  -- Check for empty file or file w/ only comments
+  if currentToken == nil then
+    return nil
+  end
+
   return Module(text)
 end

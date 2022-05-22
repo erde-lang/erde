@@ -950,6 +950,11 @@ SUB_COMPILERS = {
 
 return function(text)
   local ast = parse(text)
+
+  if ast == nil then
+    return ''
+  end
+
   precompile(ast)
   tmpNameCounter = 1
   return compileNode(ast)
