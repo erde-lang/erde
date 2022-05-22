@@ -12,13 +12,16 @@
   - try to diagnose what went wrong?
   - change throw level. For certain errors we _know_ what the developer was 
     trying to do and should fatal exit
+- throw errors for undeclared variables
+
+# 0.3-1
+
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
-- throw errors for undeclared variables
 - Source maps (for runtime errors when using erde.loader)
   - preserve line numbers when compiling
 
-# 0.3-1
+# 0.4-1
 
 - Avoid closure creation (slow, cannot be JITed)
   - ex) compile assignment / declaration into if statements
@@ -32,7 +35,6 @@
 - completion scripts for libraries / environments?
   - want to provide LSP benefits of statically typed languages w/o static typing
   - kind of painful, like documentation needs manual tracking
-- builtin unit testing?
 
 # Uncertain Proposals (need community input)
 

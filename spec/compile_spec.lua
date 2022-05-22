@@ -300,6 +300,14 @@ describe('Declaration', function()
         return x
       ]]
     )
+    assert.run(
+      'hello',
+      [[
+        local a = { 'hello', 'world' }
+        local [ hello ] = a
+        return hello
+      ]]
+    )
   end)
 end)
 
