@@ -37,6 +37,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `!=` operator is now _actually_ compiled.
 - OptChain now correctly parses optional _method_ calls
 - Fixed void `return` (i.e. no expressions)
+- Parser / compiler no longer crash when the ast is empty
 
 ## [0.1-1] - March 3, 2022
 

@@ -2,7 +2,6 @@
 
 # 0.2-1
 
-- fix empty file / only comments parsing
 - upgrade cli
   - allow `erde test.erde`
   - autocompletion
