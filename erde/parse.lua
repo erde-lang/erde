@@ -492,27 +492,27 @@ local function ArrayDestructure()
   end)
 end
 
+local function MapDestructure()
+  return Surround('{', '}', function()
+    return List({
+      allowTrailingComma = true,
+      parse = function()
+        return {
+          name = Name(),
+          variant = 'keyDestruct',
+          alias = branch(':') and Name(),
+          default = branch('=') and Expr(),
+        }
+      end,
+    })
+  end)
+end
+
 function Destructure()
   local node = { ruleName = 'Destructure', tokenIndexStart = currentTokenIndex }
 
   local destructs = currentToken == '[' and ArrayDestructure()
-    or Surround('{', '}', function()
-      return List({
-        allowTrailingComma = true,
-        parse = function()
-          if currentToken == '[' then
-            return ArrayDestructure()
-          else
-            return {
-              name = Name(),
-              variant = 'keyDestruct',
-              alias = branch(':') and Name(),
-              default = branch('=') and Expr(),
-            }
-          end
-        end,
-      })
-    end)
+    or MapDestructure()
 
   for _, destruct in ipairs(destructs) do
     if destruct.variant ~= nil then

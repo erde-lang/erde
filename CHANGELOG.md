@@ -27,6 +27,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `erde.loader` no longer mutates the global require function, but uses `package.loaders` (as it should)
 - `catch` var no longer uses parentheses (more lua like)
 - `catch` var can now be a destructure
+- Array destructures can no longer be nested inside map destructures
 
 ### Fixed
 - Tokenizer now correctly consumes whitespace in string interpolation.
