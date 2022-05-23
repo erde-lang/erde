@@ -5,7 +5,6 @@
 - upgrade cli
   - allow `erde test.erde`
   - autocompletion
-  - refactor
   - add REPL
 - throw error if only part of file is parsed
   - try to diagnose what went wrong?

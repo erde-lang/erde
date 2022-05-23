@@ -5,50 +5,31 @@ local lfs = require('lfs')
 local erde = require('erde')
 require('erde.loader')
 
+local CWD = lfs.currentdir()
+local PATH_SEPARATOR = _G.package.config:sub(1, 1) 
+
 -- Keep this consistent with erde.constants!
 local COMPILED_HEADER_COMMENT = '-- __ERDE_COMPILED__'
-
--- -----------------------------------------------------------------------------
--- Path Helpers
--- -----------------------------------------------------------------------------
-
-local path = { sep = _G.package.config:sub(1, 1) }
-
-function path.join(...)
-  return table.concat({ ... }, path.sep):gsub(path.sep .. '+', path.sep)
-end
-
-local fs = {}
-
-function fs.exists(filePath)
-  local file = io.open(filePath, 'r')
-
-  if file ~= nil then
-    file:close()
-    return true
-  end
-
-  return false
-end
 
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
 
-local function contains(t, element)
-  for i, value in ipairs(t) do
-    if value == element then
-      return true
-    end
-  end
+local function pathJoin(...)
+  return table.concat({ ... }, PATH_SEPARATOR)
+    :gsub(PATH_SEPARATOR .. '+', PATH_SEPARATOR)
+end
 
-  return false
+local function checkHeader(file)
+  local head1, head2 = file:read('*l'), file:read('*l')
+  return (head1 and head1:find(COMPILED_HEADER_COMMENT)) 
+    or (head2 and head2:find(COMPILED_HEADER_COMMENT))
 end
 
 local function traverseDir(root, callback)
   for fileName in lfs.dir(root) do
     if fileName ~= '.' and fileName ~= '..' then
-      local filePath = path.join(root, fileName)
+      local filePath = pathJoin(root, fileName)
       local attributes = lfs.attributes(filePath)
 
       if attributes ~= nil then
@@ -86,40 +67,22 @@ local cli = argparse('erde')
 cli:require_command(false)
 cli:add_complete()
 
--- The current Erde version.
 cli:flag('-v --version', 'Print version and exit.')
-
--- The Lua version to use.
 cli:option('-l --luaVersion')
 
--- The root directory. All paths (such as those given in --include / --exclude)
--- are assumed to be relative to the root.
-cli:option('--root')
-
--- Directories to traverse when searching for .erde files.
-cli:option('--include')
-
--- Directories to exclude when searching for .erde files.
-cli:option('--exclude')
+local args -- Forward declare
 
 -- -----------------------------------------------------------------------------
 -- Run
 -- -----------------------------------------------------------------------------
 
 local runCmd = cli:command('run')
-runCmd:argument('main', 'Main file to run.'):args('*')
+runCmd:argument('script', 'Script to run'):args('1')
 
-local function processRunCmd()
-  local mainModuleNames = #args.main > 0
-    and args.main
+local function run()
+  -- TODO: error handling
 
-  if not mainModuleNames then
-    error('Need to specify modules either on command line')
-  end
-
-  for i, mainModuleName in pairs(mainModuleNames) do
-    require(mainModuleName:gsub('%.erde$', ''))
-  end
+  require(args.script:gsub('%.erde$', ''))
 end
 
 -- -----------------------------------------------------------------------------
@@ -127,40 +90,48 @@ end
 -- -----------------------------------------------------------------------------
 
 local compileCmd = cli:command('compile')
-
--- Allow specifying files on command line.
 compileCmd:argument('files', 'Files to compile.'):args('*')
-
--- The directory to write compiled files to.
 compileCmd:option('--outDir')
 
 local function compileFile(srcFilePath)
-  local srcFile = io.open(srcFilePath, 'r')
-  local moduleContents = srcFile:read('*a')
-  srcFile:close()
+  local destFilePath = srcFilePath:gsub('%.erde$', '.lua')
 
-  local compiledModule = erde.compile(moduleContents)
-
-  local destFilePath = srcFilePath:gsub('.erde$', '.lua')
-  if outDir ~= nil then
-    -- Collapse file structure if there is only 1 include dir
-      destFilePath = destFilePath:gsub(root, outDir)
+  if args.outDir then
+    destFilePath = destFilePath:gsub(CWD, args.outDir)
   end
 
+  local readOnlyDestFile = io.open(destFilePath, 'r')
+
+  if readOnlyDestFile ~= nil then
+    -- Safety check, do not overwrite files we did not generate!
+
+    if not checkHeader(readOnlyDestFile) then
+      error('Cannot write to ' .. destFilePath .. ': File already exists')
+    end
+
+    readOnlyDestFile:close()
+  end
+
+  local srcFile = io.open(srcFilePath, 'r')
+  local compiled = erde.compile(srcFile:read('*a'))
+  srcFile:close()
+
   local destFile = io.open(destFilePath, 'w')
-  destFile:write(compiledModule)
+  destFile:write(compiled)
 
   print(
-    srcFilePath:gsub(root .. path.sep, '')
+    srcFilePath:gsub(CWD .. PATH_SEPARATOR, '')
     .. ' -> '
-    .. destFilePath:gsub(root .. path.sep, '')
+    .. destFilePath:gsub(CWD .. PATH_SEPARATOR, '')
   )
 end
 
-local function processCompileCmd()
-  for i, fileName in ipairs(args.files) do
-    if fileName:match('%.erde$') then
-      compileFile(path.join(root, fileName))
+local function compile()
+  if #args.files == 0 then
+    traverseErdeFiles('.', compileFile)
+  else
+    for i, fileName in ipairs(args.files) do
+      compileFile(pathJoin(CWD, fileName))
     end
   end
 end
@@ -170,35 +141,29 @@ end
 -- -----------------------------------------------------------------------------
 
 local cleanCmd = cli:command('clean')
-
--- Allow specifying files on command line.
 cleanCmd:argument('dirs', 'Directories to clean.'):args('*')
-
--- Clean all Erde generated files from the root. By default only files that are
--- generated by the current configuration are cleaned.
-cleanCmd:flag('--hard')
 
 local function cleanFile(filePath)
   local file = io.open(filePath, 'r')
-  local head1, head2 = file:read('*l'), file:read('*l')
-  file:close()
-  
-  if (head1 and head1:find(COMPILED_HEADER_COMMENT)) or (head2 and head2:find(COMPILED_HEADER_COMMENT)) then
+
+  if file == nil then
+    return
+  end
+
+  if checkHeader(file) then
     os.remove(filePath)
   end
+
+  file:close()
 end
 
-local function processCleanCmd()
-  if args.hard then
-    traverseLuaFiles(root, cleanFile)
-  end
-
-  if #args.dirs > 0 then
-    for i, cleanDir in ipairs(args.dirs) do
-      traverseLuaFiles(cleanDir, cleanFile)
-    end
-  else
+local function clean()
+  if #args.dirs == 0 then
     traverseLuaFiles('.', cleanFile)
+  else
+    for i, dir in ipairs(args.dirs) do
+      traverseLuaFiles(dir, cleanFile)
+    end
   end
 end
 
@@ -207,20 +172,15 @@ end
 -- -----------------------------------------------------------------------------
 
 args = cli:parse()
-cwd = lfs.currentdir()
-root = cwd
-
-outDir = args.outDir
-outDir = outDir and path.join(root, outDir) or nil
 
 if args.version then
-  print('v0.1.0')
+  print('0.2-1')
 elseif args.run then
-  processRunCmd()
+  run()
 elseif args.compile then
-  processCompileCmd()
+  compile()
 elseif args.clean then
-  processCleanCmd()
+  clean()
 else
   print('REPL not yet supported.')
 end
