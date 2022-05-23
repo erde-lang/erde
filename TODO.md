@@ -2,13 +2,12 @@
 
 # 0.2-1
 
-- upgrade cli
-  - add REPL
+- add CLI REPL
+- throw errors for undeclared variables
 - throw error if only part of file is parsed
   - try to diagnose what went wrong?
   - change throw level. For certain errors we _know_ what the developer was 
     trying to do and should fatal exit
-- throw errors for undeclared variables
 
 # 0.3-1
 
@@ -24,13 +23,9 @@
 - allow optimizations depending on compilation target
   - ex) exploit goto when available
 
-# Long Term TODO
+# 1.0-1
 
-- cache unchanged files?
 - rewrite erde in erde
-- completion scripts for libraries / environments?
-  - want to provide LSP benefits of statically typed languages w/o static typing
-  - kind of painful, like documentation needs manual tracking
 
 # Uncertain Proposals (need community input)
 
