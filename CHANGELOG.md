@@ -28,6 +28,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `catch` var no longer uses parentheses (more lua like)
 - `catch` var can now be a destructure
 - Array destructures can no longer be nested inside map destructures
+- The `erde` executable has been split into `erde` (interpreter) and `erdec` (compiler)
+  - `argparse` does not allow arguments if subcommands are used, which means we
+    could not do: `erde myfile.erde` to run a file. This was very unfriendly to
+    scripts that may want to use a shebang with `erde`.
+  - Use a similar structure as moonscript for familiarity.
 
 ### Fixed
 - Tokenizer now correctly consumes whitespace in string interpolation.
