@@ -103,6 +103,7 @@ C.SYMBOLS = {
   ['->'] = true,
   ['=>'] = true,
   ['...'] = true,
+  ['::'] = true,
 }
 
 for opToken, op in pairs(C.BINOPS) do

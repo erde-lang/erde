@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local precompile = require('erde.precompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -535,11 +535,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function Goto(node)
-  if node.variant == 'jump' then
-    return 'goto ' .. node.name
-  elseif node.variant == 'definition' then
-    return '::' .. node.name .. '::'
-  end
+  return 'goto ' .. node.name
+end
+
+function GotoLabel(node)
+  return '::' .. node.name .. '::'
 end
 
 -- -----------------------------------------------------------------------------
@@ -567,41 +567,6 @@ function IfElse(node)
 
   table.insert(compileParts, 'end')
   return table.concat(compileParts, '\n')
-end
-
--- -----------------------------------------------------------------------------
--- Module
--- -----------------------------------------------------------------------------
-
-function Module(node)
-  local compiled = {}
-
-  if node.shebang then
-    table.insert(compiled, node.shebang)
-  end
-
-  table.insert(compiled, C.COMPILED_HEADER_COMMENT)
-
-  if #node.hoistedNames > 0 then
-    table.insert(compiled, 'local ' .. table.concat(node.hoistedNames, ','))
-  end
-
-  if #node.exportNames > 0 then
-    local moduleTableElements = {}
-    for i, moduleName in ipairs(node.exportNames) do
-      moduleTableElements[i] = moduleName .. '=' .. moduleName
-    end
-
-    table.insert(compiled, compileBlockStatements(node))
-    table.insert(
-      compiled,
-      'return { ' .. table.concat(moduleTableElements, ',') .. ' }'
-    )
-  else
-    table.insert(compiled, compileBlockStatements(node))
-  end
-
-  return table.concat(compiled, '\n')
 end
 
 -- -----------------------------------------------------------------------------
@@ -934,6 +899,7 @@ SUB_COMPILERS = {
   ForLoop = ForLoop,
   Function = Function,
   Goto = Goto,
+  GotoLabel = GotoLabel,
   IfElse = IfElse,
   Module = Module,
   OptChain = OptChain,
@@ -957,5 +923,33 @@ return function(text)
 
   precompile(ast)
   tmpNameCounter = 1
-  return compileNode(ast)
+
+  local compiled = {}
+
+  if ast.shebang then
+    table.insert(compiled, ast.shebang)
+  end
+
+  table.insert(compiled, C.COMPILED_HEADER_COMMENT)
+
+  if #ast.hoistedNames > 0 then
+    table.insert(compiled, 'local ' .. table.concat(ast.hoistedNames, ','))
+  end
+
+  if #ast.exportNames > 0 then
+    local moduleTableElements = {}
+    for i, moduleName in ipairs(ast.exportNames) do
+      moduleTableElements[i] = moduleName .. '=' .. moduleName
+    end
+
+    table.insert(compiled, compileBlockStatements(ast))
+    table.insert(
+      compiled,
+      'return { ' .. table.concat(moduleTableElements, ',') .. ' }'
+    )
+  else
+    table.insert(compiled, compileBlockStatements(ast))
+  end
+
+  return table.concat(compiled, '\n')
 end
