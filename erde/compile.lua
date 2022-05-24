@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local precompile = require('erde.precompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -535,11 +535,11 @@ end
 -- -----------------------------------------------------------------------------
 
 function Goto(node)
-  if node.variant == 'jump' then
-    return 'goto ' .. node.name
-  elseif node.variant == 'definition' then
-    return '::' .. node.name .. '::'
-  end
+  return 'goto ' .. node.name
+end
+
+function GotoLabel(node)
+  return '::' .. node.name .. '::'
 end
 
 -- -----------------------------------------------------------------------------
@@ -934,6 +934,7 @@ SUB_COMPILERS = {
   ForLoop = ForLoop,
   Function = Function,
   Goto = Goto,
+  GotoLabel = GotoLabel,
   IfElse = IfElse,
   Module = Module,
   OptChain = OptChain,
