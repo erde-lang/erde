@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Destructure, Function, OptChain, Params, Spread, String, Table, Unop
+local ArrowFunction, Binop, Block, Destructure, OptChain, Params, Spread, String, Table, Unop
 
 -- =============================================================================
 -- State
@@ -209,17 +209,6 @@ local function Expr(opts)
   return node
 end
 
-local function FunctionCall()
-  local node = OptChain()
-  local last = node[#node]
-
-  if not last or last.variant ~= 'functionCall' then
-    error('Missing function call parentheses')
-  end
-
-  return node
-end
-
 local function Id()
   local node = OptChain()
   local last = node[#node]
@@ -275,10 +264,40 @@ function ArrowFunction()
 end
 
 -- -----------------------------------------------------------------------------
--- Assignment
+-- Binop
 -- -----------------------------------------------------------------------------
 
-function Assignment()
+function Binop(opts)
+  local minPrec = opts and opts.minPrec or 1
+
+  local op = C.BINOPS[currentToken]
+  assert(op, 'Invalid binop token: ' .. currentToken)
+  assert(op.prec >= minPrec, 'Binop does not have enough precedence.')
+  consume()
+
+  local node = {
+    ruleName = 'Binop',
+    op = op,
+    lhs = opts.lhs,
+  }
+
+  if op.token == '?' then
+    isTernaryExpr = true
+    node.ternaryExpr = Expr()
+    isTernaryExpr = false
+    expect(':')
+  end
+
+  local newMinPrec = op.prec + (op.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
+  node.rhs = Expr({ minPrec = newMinPrec })
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Block
+-- -----------------------------------------------------------------------------
+
+local function Assignment()
   local node = {
     ruleName = 'Assignment',
     idList = currentToken ~= '(' and List({ parse = Id }) or Parens({
@@ -314,39 +333,52 @@ function Assignment()
   return node
 end
 
--- -----------------------------------------------------------------------------
--- Binop
--- -----------------------------------------------------------------------------
-
-function Binop(opts)
-  local minPrec = opts and opts.minPrec or 1
-
-  local op = C.BINOPS[currentToken]
-  assert(op, 'Invalid binop token: ' .. currentToken)
-  assert(op.prec >= minPrec, 'Binop does not have enough precedence.')
-  consume()
-
+local function Function()
   local node = {
-    ruleName = 'Binop',
-    op = op,
-    lhs = opts.lhs,
+    ruleName = 'Function',
+    isMethod = false,
   }
 
-  if op.token == '?' then
-    isTernaryExpr = true
-    node.ternaryExpr = Expr()
-    isTernaryExpr = false
-    expect(':')
+  if
+    currentToken == 'local'
+    or currentToken == 'global'
+    or currentToken == 'module'
+  then
+    node.variant = consume()
   end
 
-  local newMinPrec = op.prec + (op.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
-  node.rhs = Expr({ minPrec = newMinPrec })
+  consume() -- 'function'
+  node.names = { Name() }
+
+  while branch('.') do
+    table.insert(node.names, Name())
+  end
+
+  if branch(':') then
+    node.isMethod = true
+    table.insert(node.names, Name())
+  end
+
+  if not node.variant then
+    node.variant = #node.names > 1 and 'global' or 'local'
+  end
+
+  node.params = Params()
+  node.body = Surround('{', '}', Block)
+
   return node
 end
 
--- -----------------------------------------------------------------------------
--- Block
--- -----------------------------------------------------------------------------
+local function FunctionCall()
+  local node = OptChain()
+  local last = node[#node]
+
+  if not last or last.variant ~= 'functionCall' then
+    error('Missing function call parentheses')
+  end
+
+  return node
+end
 
 function Block()
   local node = { ruleName = 'Block' }
@@ -530,46 +562,6 @@ function Destructure()
       end
     end
   end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Function
--- -----------------------------------------------------------------------------
-
-function Function()
-  local node = {
-    ruleName = 'Function',
-    isMethod = false,
-  }
-
-  if
-    currentToken == 'local'
-    or currentToken == 'global'
-    or currentToken == 'module'
-  then
-    node.variant = consume()
-  end
-
-  expect('function')
-  node.names = { Name() }
-
-  while branch('.') do
-    table.insert(node.names, Name())
-  end
-
-  if branch(':') then
-    node.isMethod = true
-    table.insert(node.names, Name())
-  end
-
-  if not node.variant then
-    node.variant = #node.names > 1 and 'global' or 'local'
-  end
-
-  node.params = Params()
-  node.body = Surround('{', '}', Block)
 
   return node
 end

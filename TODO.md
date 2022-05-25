@@ -3,9 +3,13 @@
 # 0.2-1
 
 - simplify / microoptimize parser
+- alternative ternary syntax to avoid ambiguous grammar
+  - `a ? b:c() : d()`
+  - `a ? b : c():d()`
 - change ruleName -> tag
 - remove variants in favor of separate tags
   - ex) `tag = NumericFor`, `tag = GenericFor`
+  - ex) DoBlock -> `isExpr`
 - throw error if only part of file is parsed
 - throw errors for undeclared variables (precompile)
 
