@@ -200,36 +200,6 @@ function Function(node)
   end
 end
 
--- -----------------------------------------------------------------------------
--- Module
--- -----------------------------------------------------------------------------
-
-function Module(node)
-  -- Table for Declaration and Function nodes to register `module` scope
-  -- variables.
-  node.exportNames = {}
-
-  -- Table for all top-level declared names. These are hoisted for convenience
-  -- to have more "module-like" behavior prevalent in other languages.
-  node.hoistedNames = {}
-
-  moduleNode = node
-
-  for _, child in ipairs(node) do
-    precompileNode(child)
-  end
-
-  if #node.exportNames > 0 then
-    for i, statement in ipairs(node) do
-      if statement.ruleName == 'Return' then
-        -- Block cannot use both `return` and `module`
-        -- TODO: not good enough! What about conditional return?
-        error()
-      end
-    end
-  end
-end
-
 -- =============================================================================
 -- Precompile
 -- =============================================================================
@@ -252,5 +222,27 @@ return function(ast)
   blockDepth = 0
   moduleNode = nil
 
-  return precompileNode(ast)
+  -- Table for Declaration and Function nodes to register `module` scope
+  -- variables.
+  ast.exportNames = {}
+
+  -- Table for all top-level declared names. These are hoisted for convenience
+  -- to have more "module-like" behavior prevalent in other languages.
+  ast.hoistedNames = {}
+
+  moduleNode = ast
+
+  for _, child in ipairs(ast) do
+    precompileNode(child)
+  end
+
+  if #ast.exportNames > 0 then
+    for i, statement in ipairs(ast) do
+      if statement.ruleName == 'Return' then
+        -- Block cannot use both `return` and `module`
+        -- TODO: not good enough! What about conditional return?
+        error()
+      end
+    end
+  end
 end

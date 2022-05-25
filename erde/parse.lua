@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, ForLoop, Function, Goto, GotoLabel, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Destructure, Function, OptChain, Params, Spread, String, Table, Unop
 
 -- =============================================================================
 -- State
@@ -53,17 +53,14 @@ local function branch(token)
   if token == currentToken then
     consume()
     return true
-  else
-    return false
   end
 end
 
 local function expect(token, skipConsume)
   if token ~= currentToken then
     error('Expected ' .. token .. ' got ' .. tostring(currentToken))
-  elseif not skipConsume then
-    consume()
   end
+  consume()
 end
 
 -- =============================================================================
@@ -172,8 +169,12 @@ local function Terminal()
     -- Also takes care of parenthesized expressions, since OptChain will unpack
     -- any trivial OptChainBase
     node = Switch({ ArrowFunction, OptChain })
-  elseif currentToken == 'do' then
-    node = DoBlock({ isExpr = true })
+  elseif branch('do') then
+    node = {
+      ruleName = 'DoBlock',
+      isExpr = true,
+      body = Surround('{', '}', Block),
+    }
   elseif currentToken:match('^.?[0-9]') then
     -- Only need to check first couple chars, rest is token care of by tokenizer
     node = consume()
@@ -228,42 +229,6 @@ local function Id()
   end
 
   return node
-end
-
-local function Statement()
-  if branch('break') then
-    return Break()
-  elseif branch('continue') then
-    return Continue()
-  elseif currentToken == 'do' then
-    return DoBlock()
-  elseif currentToken == 'if' then
-    return IfElse()
-  elseif currentToken == 'for' then
-    return ForLoop()
-  elseif currentToken == 'repeat' then
-    return RepeatUntil()
-  elseif currentToken == 'return' then
-    return Return()
-  elseif currentToken == 'try' then
-    return TryCatch()
-  elseif currentToken == 'while' then
-    return WhileLoop()
-  elseif currentToken == 'function' then
-    return Function()
-  elseif
-    currentToken == 'local'
-    or currentToken == 'global'
-    or currentToken == 'module'
-  then
-    return lookAhead(1) == 'function' and Function() or Declaration()
-  elseif branch('goto') then
-    return Goto()
-  elseif branch('::') then
-    return GotoLabel()
-  else
-    return Switch({ FunctionCall, Assignment })
-  end
 end
 
 -- =============================================================================
@@ -387,70 +352,130 @@ function Block()
   local node = { ruleName = 'Block' }
 
   repeat
-    local statement = Statement()
+    local statement
+
+    -- micro-optimization: order by usage
+    if currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+      if lookAhead(1) == 'function' then
+        statement = Function()
+      else
+        statement = {
+          ruleName = 'Declaration',
+          variant = consume(),
+          exprList = {},
+          varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
+            allowRecursion = true,
+            parse = function()
+              return List({
+                allowTrailingComma = true,
+                parse = Var,
+              })
+            end,
+          }),
+        }
+
+        if branch('=') then
+          statement.exprList = currentToken ~= '(' and List({ parse = Expr })
+          or Parens({
+            allowRecursion = true,
+            prioritizeRule = true,
+            parse = function()
+              return List({
+                allowTrailingComma = true,
+                parse = Expr,
+              })
+            end,
+          })
+        end
+      end
+    elseif branch('if') then
+      statement = {
+        ruleName = 'IfElse',
+        ifNode = { condition = Expr(), body = Surround('{', '}', Block) }
+      }
+
+      local elseifNodes = {}
+      while branch('elseif') do
+        table.insert(elseifNodes, {
+          condition = Expr(),
+          body = Surround('{', '}', Block),
+        })
+      end
+      statement.elseifNodes = elseifNodes
+
+      if branch('else') then
+        statement.elseNode = { body = Surround('{', '}', Block) }
+      end
+    elseif branch('return') then
+      statement = currentToken ~= '('
+        and List({ parse = Expr, allowEmpty = true })
+        or Parens({
+          allowRecursion = true,
+          prioritizeRule = true,
+          parse = function()
+            return List({
+              allowTrailingComma = true,
+              parse = Expr,
+            })
+          end,
+        })
+      statement.ruleName = 'Return'
+    elseif currentToken == 'function' then
+      statement = Function()
+    elseif branch('for') then
+      statement = { ruleName = 'ForLoop' }
+      local firstName = Var()
+
+      if type(firstName) == 'string' and branch('=') then
+        statement.variant = 'numeric'
+        statement.name = firstName
+        statement.parts = List({ parse = Expr })
+      else
+        statement.variant = 'generic'
+        local varList = { firstName }
+
+        while branch(',') do
+          table.insert(varList, Var())
+        end
+
+        statement.varList = varList
+        expect('in')
+        statement.exprList = List({ parse = Expr })
+      end
+
+      statement.body = Surround('{', '}', Block)
+    elseif branch('while') then
+      statement = {
+        ruleName = 'WhileLoop',
+        condition = Expr(),
+        body = Surround('{', '}', Block),
+      }
+    elseif branch('do') then
+      statement = { ruleName = 'DoBlock', body = Surround('{', '}', Block) }
+    elseif branch('break') then
+      statement = { ruleName = 'Break' }
+    elseif branch('continue') then
+      statement = { ruleName = 'Continue' }
+    elseif branch('repeat') then
+      statement = { ruleName = 'RepeatUntil', body = Surround('{', '}', Block) }
+      expect('until')
+      statement.condition = Expr()
+    elseif branch('try') then
+      statement = { ruleName = 'TryCatch', try = Surround('{', '}', Block) }
+      expect('catch')
+      statement.error = Try(Var)
+      statement.catch = Surround('{', '}', Block)
+    elseif branch('goto') then
+      statement = { ruleName = 'Goto', name = Name() }
+    elseif branch('::') then
+      statement = { ruleName = 'GotoLabel', name = Name() }
+      expect('::')
+    else
+      statement = Switch({ FunctionCall, Assignment })
+    end
+
     table.insert(node, statement)
   until not statement
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Break
--- -----------------------------------------------------------------------------
-
-function Break()
-  return { ruleName = 'Break' }
-end
-
--- -----------------------------------------------------------------------------
--- Continue
--- -----------------------------------------------------------------------------
-
-function Continue()
-  return { ruleName = 'Continue' }
-end
-
--- -----------------------------------------------------------------------------
--- Declaration
--- -----------------------------------------------------------------------------
-
-function Declaration()
-  if
-    currentToken ~= 'local'
-    and currentToken ~= 'global'
-    and currentToken ~= 'module'
-  then
-    error('Missing declaration scope')
-  end
-
-  local node = {
-    ruleName = 'Declaration',
-    variant = consume(),
-    exprList = {},
-    varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
-      allowRecursion = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Var,
-        })
-      end,
-    }),
-  }
-
-  if branch('=') then
-    node.exprList = currentToken ~= '(' and List({ parse = Expr })
-      or Parens({
-        allowRecursion = true,
-        prioritizeRule = true,
-        parse = function()
-          return List({
-            allowTrailingComma = true,
-            parse = Expr,
-          })
-        end,
-      })
-  end
 
   return node
 end
@@ -510,49 +535,6 @@ function Destructure()
 end
 
 -- -----------------------------------------------------------------------------
--- DoBlock
--- -----------------------------------------------------------------------------
-
-function DoBlock(opts)
-  expect('do')
-  return {
-    ruleName = 'DoBlock',
-    isExpr = opts and opts.isExpr,
-    body = Surround('{', '}', Block),
-  }
-end
-
--- -----------------------------------------------------------------------------
--- ForLoop
--- -----------------------------------------------------------------------------
-
-function ForLoop()
-  local node = { ruleName = 'ForLoop' }
-  expect('for')
-
-  local firstName = Var()
-
-  if type(firstName) == 'string' and branch('=') then
-    node.variant = 'numeric'
-    node.name = firstName
-    node.parts = List({ parse = Expr })
-  else
-    node.variant = 'generic'
-    node.varList = { firstName }
-
-    while branch(',') do
-      table.insert(node.varList, Var())
-    end
-
-    expect('in')
-    node.exprList = List({ parse = Expr })
-  end
-
-  node.body = Surround('{', '}', Block)
-  return node
-end
-
--- -----------------------------------------------------------------------------
 -- Function
 -- -----------------------------------------------------------------------------
 
@@ -588,71 +570,6 @@ function Function()
 
   node.params = Params()
   node.body = Surround('{', '}', Block)
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Goto
--- -----------------------------------------------------------------------------
-
-function Goto()
-  return { ruleName = 'Goto', name = Name() }
-end
-
-function GotoLabel()
-  local node = { ruleName = 'GotoLabel' }
-  node.name = Name()
-  expect('::')
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- IfElse
--- -----------------------------------------------------------------------------
-
-function IfElse()
-  local node = {
-    ruleName = 'IfElse',
-    elseifNodes = {},
-  }
-
-  expect('if')
-
-  node.ifNode = {
-    condition = Expr(),
-    body = Surround('{', '}', Block),
-  }
-
-  while branch('elseif') do
-    table.insert(node.elseifNodes, {
-      condition = Expr(),
-      body = Surround('{', '}', Block),
-    })
-  end
-
-  if branch('else') then
-    node.elseNode = { body = Surround('{', '}', Block) }
-  end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Module
--- -----------------------------------------------------------------------------
-
-function Module()
-  local node = { ruleName = 'Module' }
-
-  if currentToken:match('^#!') then
-    node.shebang = consume()
-  end
-
-  repeat
-    local statement = Statement()
-    table.insert(node, statement)
-  until not statement
 
   return node
 end
@@ -805,47 +722,6 @@ function Params(opts)
 end
 
 -- -----------------------------------------------------------------------------
--- RepeatUntil
--- -----------------------------------------------------------------------------
-
-function RepeatUntil()
-  expect('repeat')
-
-  local node = {
-    ruleName = 'RepeatUntil',
-    body = Surround('{', '}', Block),
-  }
-
-  expect('until')
-  node.condition = Expr()
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Return
--- -----------------------------------------------------------------------------
-
-function Return()
-  expect('return')
-
-  local node = currentToken ~= '(' and List({ parse = Expr, allowEmpty = true })
-    or Parens({
-      allowRecursion = true,
-      prioritizeRule = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Expr,
-        })
-      end,
-    })
-
-  node.ruleName = 'Return'
-  return node
-end
-
--- -----------------------------------------------------------------------------
 -- Spread
 -- -----------------------------------------------------------------------------
 
@@ -946,23 +822,6 @@ function Table()
 end
 
 -- -----------------------------------------------------------------------------
--- TryCatch
--- -----------------------------------------------------------------------------
-
-function TryCatch()
-  local node = { ruleName = 'TryCatch' }
-
-  expect('try')
-  node.try = Surround('{', '}', Block)
-
-  expect('catch')
-  node.error = Try(Var)
-  node.catch = Surround('{', '}', Block)
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
 -- Unop
 -- -----------------------------------------------------------------------------
 
@@ -978,24 +837,13 @@ function Unop()
   }
 end
 
--- -----------------------------------------------------------------------------
--- WhileLoop
--- -----------------------------------------------------------------------------
-
-function WhileLoop()
-  expect('while')
-  return {
-    ruleName = 'WhileLoop',
-    condition = Expr(),
-    body = Surround('{', '}', Block),
-  }
-end
-
 -- =============================================================================
 -- Return
 -- =============================================================================
 
 return function(text)
+  local ast = {}
+
   tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
@@ -1006,5 +854,13 @@ return function(text)
     return nil
   end
 
-  return Module(text)
+  local shebang
+  if currentToken:match('^#!') then
+    shebang = consume()
+  end
+
+  local ast = Block()
+  ast.shebang = shebang
+
+  return ast
 end

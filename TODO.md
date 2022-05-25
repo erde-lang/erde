@@ -2,7 +2,10 @@
 
 # 0.2-1
 
-- simplify parser
+- simplify / microoptimize parser
+- change ruleName -> tag
+- remove variants in favor of separate tags
+  - ex) `tag = NumericFor`, `tag = GenericFor`
 - throw error if only part of file is parsed
 - throw errors for undeclared variables (precompile)
 

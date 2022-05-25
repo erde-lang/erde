@@ -570,41 +570,6 @@ function IfElse(node)
 end
 
 -- -----------------------------------------------------------------------------
--- Module
--- -----------------------------------------------------------------------------
-
-function Module(node)
-  local compiled = {}
-
-  if node.shebang then
-    table.insert(compiled, node.shebang)
-  end
-
-  table.insert(compiled, C.COMPILED_HEADER_COMMENT)
-
-  if #node.hoistedNames > 0 then
-    table.insert(compiled, 'local ' .. table.concat(node.hoistedNames, ','))
-  end
-
-  if #node.exportNames > 0 then
-    local moduleTableElements = {}
-    for i, moduleName in ipairs(node.exportNames) do
-      moduleTableElements[i] = moduleName .. '=' .. moduleName
-    end
-
-    table.insert(compiled, compileBlockStatements(node))
-    table.insert(
-      compiled,
-      'return { ' .. table.concat(moduleTableElements, ',') .. ' }'
-    )
-  else
-    table.insert(compiled, compileBlockStatements(node))
-  end
-
-  return table.concat(compiled, '\n')
-end
-
--- -----------------------------------------------------------------------------
 -- OptChain
 -- -----------------------------------------------------------------------------
 
@@ -958,5 +923,33 @@ return function(text)
 
   precompile(ast)
   tmpNameCounter = 1
-  return compileNode(ast)
+
+  local compiled = {}
+
+  if ast.shebang then
+    table.insert(compiled, ast.shebang)
+  end
+
+  table.insert(compiled, C.COMPILED_HEADER_COMMENT)
+
+  if #ast.hoistedNames > 0 then
+    table.insert(compiled, 'local ' .. table.concat(ast.hoistedNames, ','))
+  end
+
+  if #ast.exportNames > 0 then
+    local moduleTableElements = {}
+    for i, moduleName in ipairs(ast.exportNames) do
+      moduleTableElements[i] = moduleName .. '=' .. moduleName
+    end
+
+    table.insert(compiled, compileBlockStatements(ast))
+    table.insert(
+      compiled,
+      'return { ' .. table.concat(moduleTableElements, ',') .. ' }'
+    )
+  else
+    table.insert(compiled, compileBlockStatements(ast))
+  end
+
+  return table.concat(compiled, '\n')
 end
