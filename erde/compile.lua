@@ -41,19 +41,7 @@ end
 
 -- TODO: rename
 local function compileBinop(op, lhs, rhs)
-  if op.token == '??' then
-    local ncTmpName = newTmpName()
-    return table.concat({
-      '(function()',
-      ('local %s = %s'):format(ncTmpName, lhs),
-      'if ' .. ncTmpName .. ' ~= nil then',
-      'return ' .. ncTmpName,
-      'else',
-      'return ' .. rhs,
-      'end',
-      'end)()',
-    }, '\n')
-  elseif op.token == '!=' then
+  if op.token == '!=' then
     return table.concat({ lhs, ' ~= ', rhs })
   elseif op.token == '||' then
     return table.concat({ lhs, ' or ', rhs })
@@ -288,23 +276,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function Binop(node)
-  local op = node.op
-  local lhs = compileNode(node.lhs)
-  local rhs = compileNode(node.rhs)
-
-  if op.token == '?' then
-    return table.concat({
-      '(function()',
-      'if %s then',
-      'return %s',
-      'else',
-      'return %s',
-      'end',
-      'end)()',
-    }, '\n'):format(lhs, compileNode(node.ternaryExpr), rhs)
-  else
-    return compileBinop(op, lhs, rhs)
-  end
+  return compileBinop(node.op, compileNode(node.lhs), compileNode(node.rhs))
 end
 
 -- -----------------------------------------------------------------------------
