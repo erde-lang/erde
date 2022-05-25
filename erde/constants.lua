@@ -56,8 +56,6 @@ for opToken, op in pairs(C.UNOPS) do
 end
 
 C.BINOPS = {
-  ['?'] = { prec = 1, assoc = C.LEFT_ASSOCIATIVE },
-  ['??'] = { prec = 2, assoc = C.LEFT_ASSOCIATIVE },
   ['||'] = { prec = 3, assoc = C.LEFT_ASSOCIATIVE },
   ['&&'] = { prec = 4, assoc = C.LEFT_ASSOCIATIVE },
   ['=='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
@@ -86,7 +84,6 @@ end
 
 -- These operators cannot be used w/ operator assignment
 C.BINOP_ASSIGNMENT_BLACKLIST = {
-  ['?'] = true,
   ['=='] = true,
   ['~='] = true,
   ['<='] = true,

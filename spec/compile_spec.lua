@@ -148,7 +148,7 @@ describe('Assignment', function()
       [[
         local a, b
         a?.c, b?.d = 1, 2
-        return a?.c ?? b?.d ?? -1
+        return a?.c || b?.d || -1
       ]]
     )
   end)
@@ -199,12 +199,6 @@ describe('Binop', function()
 
   spec('binop parens', function()
     assert.run(25, 'return 5 * (2 + 3)')
-  end)
-
-  spec('ternary operator', function()
-    assert.run(3, 'return false ? 2 : 3')
-    assert.run(2, 'return true ? 2 : 3')
-    assert.run(7, 'return false ? -2 : 3 + 4')
   end)
 end)
 

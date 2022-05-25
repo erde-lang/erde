@@ -11,11 +11,6 @@ local ArrowFunction, Binop, Block, Destructure, OptChain, Params, Spread, String
 local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
 
--- Used to tell other rules whether the current expression is part of the
--- ternary block. Required to know whether ':' should be parsed exclusively
--- as a method accessor or also consider ternary ':'.
-local isTernaryExpr = false
-
 -- =============================================================================
 -- Helpers
 -- =============================================================================
@@ -24,14 +19,12 @@ local function backup()
   return {
     currentTokenIndex = currentTokenIndex,
     currentToken = currentToken,
-    isTernaryExpr = isTernaryExpr,
   }
 end
 
 local function restore(state)
   currentTokenIndex = state.currentTokenIndex
   currentToken = state.currentToken
-  isTernaryExpr = state.isTernaryExpr
 end
 
 local function consume()
@@ -280,13 +273,6 @@ function Binop(opts)
     op = op,
     lhs = opts.lhs,
   }
-
-  if op.token == '?' then
-    isTernaryExpr = true
-    node.ternaryExpr = Expr()
-    isTernaryExpr = false
-    expect(':')
-  end
 
   local newMinPrec = op.prec + (op.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
   node.rhs = Expr({ minPrec = newMinPrec })
@@ -602,9 +588,7 @@ local function OptChainMethod()
 
   if name and isNextChainFunctionCall then
     return { variant = 'method', value = name }
-  elseif not isTernaryExpr then
-    -- Do not throw error here if isTernaryExpr, instead assume ':' is from
-    -- ternary operator.
+  else
     error('Missing parentheses for method call')
   end
 end
@@ -839,7 +823,6 @@ return function(text)
   tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
-  isTernaryExpr = false
 
   -- Check for empty file or file w/ only comments
   if currentToken == nil then

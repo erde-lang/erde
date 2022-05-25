@@ -8,6 +8,9 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Removed
 - Remove `self` shorthand `$`. Completely unnecessary and confusing.
 - Remove `main` keyword. Completely unnecessary and confusing.
+- Remove ternary / null coalescing operator
+  - Ternary created ambiguous syntax (`a ? b:c() : d()` vs `a ? b : c():d()`)
+  - Both difficult to optimize (requires iife)
 
 ### Added
 - Allow parenthesized lists for assignment / declarations vars and expressions.
