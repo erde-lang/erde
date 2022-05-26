@@ -2,22 +2,22 @@
 
 # 0.2-1
 
-- remove variants in favor of separate tags
-  - ex) `tag = NumericFor`, `tag = GenericFor`
-  - ex) DoBlock -> `isExpr`
-- throw error if only part of file is parsed
-- throw errors for undeclared variables (precompile)
+- Optimize internals
+  - remove variants in favor of separate tags
+    - ex) `tag = NumericFor`, `tag = GenericFor`
+    - ex) DoBlock -> `isExpr`
+  - Remove parser `Try` and `Switch`
+  - Remove closure creations
 
 # 0.3-1
 
-- Optimize internals
-  - Remove parser `Try` and `Switch`
-  - Remove closure creations
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
-- vastly improve error messages / diagnosis
 - Source maps (for runtime errors when using erde.loader)
   - preserve line numbers when compiling
+- throw error if only part of file is parsed
+- throw errors for undeclared variables (precompile)
+- vastly improve error messages / diagnosis
 
 # 0.4-1
 
