@@ -701,9 +701,7 @@ end
 function String(node)
   local openingChar, closingChar
 
-  if node.variant == 'single' then
-    openingChar, closingChar = "'", "'"
-  elseif node.variant == 'double' then
+  if node.variant == 'double' then
     openingChar, closingChar = '"', '"'
   elseif node.variant == 'long' then
     openingChar = '[' .. node.equals .. '['

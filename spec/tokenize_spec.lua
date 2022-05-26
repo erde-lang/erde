@@ -124,7 +124,7 @@ describe('tokenize', function()
 
   describe('strings', function()
     spec('single quote', function()
-      assert.are.equal(2, #tokenize("''"))
+      assert.are.equal(3, #tokenize("''"))
       assertTokens("'hello'", { "'", 'hello', "'" })
       assertTokens("'a\\nb'", { "'", 'a\\nb', "'" })
       assertTokens("'\\\\'", { "'", '\\\\', "'" })
@@ -165,13 +165,12 @@ describe('tokenize', function()
     end)
 
     spec('interpolation', function()
-      assertTokens("'a{bc}d'", { "'", 'a', '{', 'bc', '}', 'd', "'" })
+      assertTokens("'a{bc}d'", { "'", 'a{bc}d', "'" })
       assertTokens('"a{bc}d"', { '"', 'a', '{', 'bc', '}', 'd', '"' })
       assertTokens('[[a{bc}d]]', { '[[', 'a', '{', 'bc', '}', 'd', ']]' })
 
-      assertTokens("'a{ bc  }d'", { "'", 'a', '{', 'bc', '}', 'd', "'" })
+      assertTokens('"a{ bc  }d"', { '"', 'a', '{', 'bc', '}', 'd', '"' })
 
-      assertTokens("'a\\{bc}d'", { "'", 'a{bc}d', "'" })
       assertTokens('"a\\{bc}d"', { '"', 'a{bc}d', '"' })
       assertTokens('[[a\\{bc}d]]', { '[[', 'a{bc}d', ']]' })
 

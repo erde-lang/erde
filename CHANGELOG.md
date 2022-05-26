@@ -31,6 +31,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `catch` var no longer uses parentheses (more lua like)
 - `catch` var can now be a destructure
 - Array destructures can no longer be nested inside map destructures
+- String interpolation is no longer supported for single quote strings
 - The `erde` executable has been split into `erde` (interpreter) and `erdec` (compiler)
   - `argparse` does not allow arguments if subcommands are used, which means we
     could not do: `erde myfile.erde` to run a file. This was very unfriendly to

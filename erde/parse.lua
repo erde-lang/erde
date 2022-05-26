@@ -472,14 +472,14 @@ function Expr(minPrec)
       if currentToken:match('^.?[0-9]') then
         -- Only need to check first couple chars, rest is token care of by tokenizer
         node = consume()
-      elseif currentToken == "'" or currentToken == '"' or currentToken:match('^%[[[=]') then
+      elseif branch("'")  then
+        node = "'" .. consume() .. "'"
+        consume() -- ending quote
+      elseif currentToken == '"' or currentToken:match('^%[[[=]') then
         node = { ruleName = 'String' }
         local terminatingToken
 
-        if currentToken == "'" then
-          node.variant = 'single'
-          terminatingToken = consume()
-        elseif currentToken == '"' then
+        if currentToken == '"' then
           node.variant = 'double'
           terminatingToken = consume()
         else
@@ -634,8 +634,85 @@ function Block()
   repeat
     local statement
 
-    -- micro-optimization: order by usage
-    if currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+    if branch('break') then
+      statement = { ruleName = 'Break' }
+    elseif branch('continue') then
+      statement = { ruleName = 'Continue' }
+    elseif branch('do') then
+      statement = { ruleName = 'DoBlock', body = Surround('{', '}', Block) }
+    elseif currentToken == 'function' then
+      statement = Function()
+    elseif branch('goto') then
+      statement = { ruleName = 'Goto', name = Name() }
+    elseif branch('::') then
+      statement = { ruleName = 'GotoLabel', name = Name() }
+      expect('::')
+    elseif branch('while') then
+      statement = { ruleName = 'WhileLoop', condition = Expr(), body = Surround('{', '}', Block) }
+    elseif branch('repeat') then
+      statement = { ruleName = 'RepeatUntil', body = Surround('{', '}', Block) }
+      expect('until')
+      statement.condition = Expr()
+    elseif branch('try') then
+      statement = { ruleName = 'TryCatch', try = Surround('{', '}', Block) }
+      expect('catch')
+      statement.error = Try(Var)
+      statement.catch = Surround('{', '}', Block)
+    elseif branch('return') then
+      statement = currentToken ~= '('
+        and List({ parse = Expr, allowEmpty = true })
+        or Parens({
+          allowRecursion = true,
+          prioritizeRule = true,
+          parse = function()
+            return List({
+              allowTrailingComma = true,
+              parse = Expr,
+            })
+          end,
+        })
+      statement.ruleName = 'Return'
+    elseif branch('if') then
+      statement = {
+        ruleName = 'IfElse',
+        ifNode = { condition = Expr(), body = Surround('{', '}', Block) }
+      }
+
+      local elseifNodes = {}
+      while branch('elseif') do
+        table.insert(elseifNodes, {
+          condition = Expr(),
+          body = Surround('{', '}', Block),
+        })
+      end
+      statement.elseifNodes = elseifNodes
+
+      if branch('else') then
+        statement.elseNode = { body = Surround('{', '}', Block) }
+      end
+    elseif branch('for') then
+      statement = { ruleName = 'ForLoop' }
+      local firstName = Var()
+
+      if type(firstName) == 'string' and branch('=') then
+        statement.variant = 'numeric'
+        statement.name = firstName
+        statement.parts = List({ parse = Expr })
+      else
+        statement.variant = 'generic'
+        local varList = { firstName }
+
+        while branch(',') do
+          table.insert(varList, Var())
+        end
+
+        statement.varList = varList
+        expect('in')
+        statement.exprList = List({ parse = Expr })
+      end
+
+      statement.body = Surround('{', '}', Block)
+    elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
       if lookAhead(1) == 'function' then
         statement = Function()
       else
@@ -668,88 +745,6 @@ function Block()
           })
         end
       end
-    elseif branch('if') then
-      statement = {
-        ruleName = 'IfElse',
-        ifNode = { condition = Expr(), body = Surround('{', '}', Block) }
-      }
-
-      local elseifNodes = {}
-      while branch('elseif') do
-        table.insert(elseifNodes, {
-          condition = Expr(),
-          body = Surround('{', '}', Block),
-        })
-      end
-      statement.elseifNodes = elseifNodes
-
-      if branch('else') then
-        statement.elseNode = { body = Surround('{', '}', Block) }
-      end
-    elseif branch('return') then
-      statement = currentToken ~= '('
-        and List({ parse = Expr, allowEmpty = true })
-        or Parens({
-          allowRecursion = true,
-          prioritizeRule = true,
-          parse = function()
-            return List({
-              allowTrailingComma = true,
-              parse = Expr,
-            })
-          end,
-        })
-      statement.ruleName = 'Return'
-    elseif currentToken == 'function' then
-      statement = Function()
-    elseif branch('for') then
-      statement = { ruleName = 'ForLoop' }
-      local firstName = Var()
-
-      if type(firstName) == 'string' and branch('=') then
-        statement.variant = 'numeric'
-        statement.name = firstName
-        statement.parts = List({ parse = Expr })
-      else
-        statement.variant = 'generic'
-        local varList = { firstName }
-
-        while branch(',') do
-          table.insert(varList, Var())
-        end
-
-        statement.varList = varList
-        expect('in')
-        statement.exprList = List({ parse = Expr })
-      end
-
-      statement.body = Surround('{', '}', Block)
-    elseif branch('while') then
-      statement = {
-        ruleName = 'WhileLoop',
-        condition = Expr(),
-        body = Surround('{', '}', Block),
-      }
-    elseif branch('do') then
-      statement = { ruleName = 'DoBlock', body = Surround('{', '}', Block) }
-    elseif branch('break') then
-      statement = { ruleName = 'Break' }
-    elseif branch('continue') then
-      statement = { ruleName = 'Continue' }
-    elseif branch('repeat') then
-      statement = { ruleName = 'RepeatUntil', body = Surround('{', '}', Block) }
-      expect('until')
-      statement.condition = Expr()
-    elseif branch('try') then
-      statement = { ruleName = 'TryCatch', try = Surround('{', '}', Block) }
-      expect('catch')
-      statement.error = Try(Var)
-      statement.catch = Surround('{', '}', Block)
-    elseif branch('goto') then
-      statement = { ruleName = 'Goto', name = Name() }
-    elseif branch('::') then
-      statement = { ruleName = 'GotoLabel', name = Name() }
-      expect('::')
     else
       statement = Switch({ FunctionCall, Assignment })
     end

@@ -178,7 +178,21 @@ function Token()
       Newline()
       Space()
     end
-  elseif char == '"' or char == "'" then
+  elseif char == "'" then
+    local quote = consume()
+    commit(quote)
+
+    while char ~= quote do
+      if char == '\n' or char == '' then
+        error('Unexpected newline (unterminated string)')
+      else
+        token = token .. consume()
+      end
+    end
+
+    commit(token)
+    commit(consume()) -- quote
+  elseif char == '"' then
     local quote = consume()
     commit(quote)
 
@@ -292,8 +306,8 @@ return function(input)
   end
 
   local ok, errorMsg = pcall(function()
+    Space()
     while char ~= '' do
-      Space()
       Token()
       Space()
     end

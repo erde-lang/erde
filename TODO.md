@@ -2,7 +2,6 @@
 
 # 0.2-1
 
-- do not allow interpolation in single quote strings
 - simplify / microoptimize parser
 - change ruleName -> tag
 - remove variants in favor of separate tags
@@ -23,6 +22,7 @@
 # 0.4-1
 
 - +1 new features? blocks as expressions?
+- Remove parser `Try` and `Switch`
 - Avoid closure creation (slow, cannot be JITed)
   - ex) compile assignment / declaration into if statements
 - allow optimizations depending on compilation target
