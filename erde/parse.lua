@@ -1,8 +1,8 @@
 local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
--- Foward declare rules
-local Block, Destructure, Expr, OptChain, Params, Spread, Table, Unop
+-- Foward declare
+local Expr, Block
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -22,6 +22,18 @@ local function consume()
   return consumedToken
 end
 
+local function branch(token)
+  if token == currentToken then
+    consume()
+    return true
+  end
+end
+
+local function expect(token)
+  assert(token == currentToken, 'Expected ' .. token .. ' got ' .. tostring(currentToken))
+  return consume()
+end
+
 local function lookBehind(n)
   return tokens[currentTokenIndex - n] or ''
 end
@@ -30,43 +42,18 @@ local function lookAhead(n)
   return tokens[currentTokenIndex + n] or ''
 end
 
-local function branch(token)
-  if token == currentToken then
-    consume()
-    return true
-  end
-end
-
-local function expect(token, skipConsume)
-  if token ~= currentToken then
-    error('Expected ' .. token .. ' got ' .. tostring(currentToken))
-  end
-  consume()
-end
-
 -- -----------------------------------------------------------------------------
 -- Macros
 -- -----------------------------------------------------------------------------
 
 local function Try(rule)
   local currentTokenIndexBackup = currentTokenIndex
+
   local ok, node = pcall(rule)
+  if ok then return node end
 
-  if ok then
-    return node
-  else
-    currentTokenIndex = currentTokenIndexBackup
-    currentToken = tokens[currentTokenIndex]
-  end
-end
-
-local function Switch(rules)
-  for i, rule in ipairs(rules) do
-    local node = Try(rule)
-    if node then
-      return node
-    end
-  end
+  currentTokenIndex = currentTokenIndexBackup
+  currentToken = tokens[currentTokenIndex]
 end
 
 local function Surround(openChar, closeChar, parse)
@@ -79,20 +66,18 @@ end
 local function Parens(opts)
   if currentToken ~= '(' and not opts.demand then
     return opts.parse()
-  else
-    opts.demand = false
-
-    if opts.prioritizeRule then
-      local node = Try(opts.parse)
-      if node then
-        return node
-      end
-    end
-
-    return Surround('(', ')', function()
-      return opts.allowRecursion and Parens(opts) or opts.parse()
-    end)
   end
+
+  opts.demand = false
+
+  if opts.prioritizeRule then
+    local node = Try(opts.parse)
+    if node then return node end
+  end
+
+  return Surround('(', ')', function()
+    return opts.allowRecursion and Parens(opts) or opts.parse()
+  end)
 end
 
 local function List(opts)
@@ -101,10 +86,7 @@ local function List(opts)
 
   repeat
     local node = Try(opts.parse)
-    if not node then
-      break
-    end
-
+    if not node then break end
     hasTrailingComma = branch(',')
     table.insert(list, node)
   until not hasTrailingComma
@@ -116,7 +98,7 @@ local function List(opts)
 end
 
 -- -----------------------------------------------------------------------------
--- Pseudo Rules
+-- Partials
 -- -----------------------------------------------------------------------------
 
 local function Name(opts)
@@ -135,146 +117,83 @@ local function Name(opts)
 end
 
 local function Var()
-  return (currentToken == '{' or currentToken == '[') and Destructure()
-    or Name()
-end
-
-local function Id()
-  local node = OptChain()
-  local last = node[#node]
-
-  if last and last.variant == 'functionCall' then
-    error('Unexpected function call')
-  end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Destructure
--- -----------------------------------------------------------------------------
-
-local function ArrayDestructure()
-  return Surround('[', ']', function()
-    return List({
-      allowTrailingComma = true,
-      parse = function()
-        return {
-          name = Name(),
-          variant = 'numberDestruct',
-          default = branch('=') and Expr(),
-        }
-      end,
-    })
-  end)
-end
-
-local function MapDestructure()
-  return Surround('{', '}', function()
-    return List({
-      allowTrailingComma = true,
-      parse = function()
-        return {
-          name = Name(),
-          variant = 'keyDestruct',
-          alias = branch(':') and Name(),
-          default = branch('=') and Expr(),
-        }
-      end,
-    })
-  end)
-end
-
-function Destructure()
-  local node = { ruleName = 'Destructure' }
-
-  local destructs = currentToken == '[' and ArrayDestructure()
-    or MapDestructure()
-
-  for _, destruct in ipairs(destructs) do
-    if destruct.variant ~= nil then
-      table.insert(node, destruct)
-    else
-      for _, numberDestruct in ipairs(destruct) do
-        table.insert(node, numberDestruct)
-      end
-    end
-  end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- OptChain
--- -----------------------------------------------------------------------------
-
-local function OptChainBase()
-  if currentToken == '(' then
-    local base = Surround('(', ')', Expr)
-
-    if type(base) == 'table' then
-      base.parens = true
-    end
-
-    return base
-  else
+  if currentToken ~= '{' and currentToken ~= '[' then
     return Name()
   end
+
+  local node = currentToken == '['
+    and Surround('[', ']', function()
+      return List({
+        allowTrailingComma = true,
+        parse = function()
+          return {
+            name = Name(),
+            variant = 'numberDestruct',
+            default = branch('=') and Expr(),
+          }
+        end,
+      })
+    end)
+    or Surround('{', '}', function()
+      return List({
+        allowTrailingComma = true,
+        parse = function()
+          return {
+            name = Name(),
+            variant = 'keyDestruct',
+            alias = branch(':') and Name(),
+            default = branch('=') and Expr(),
+          }
+        end,
+      })
+    end)
+
+  node.tag = 'Destructure'
+  return node
 end
 
-local function OptChainDotIndex()
-  local name = Try(function()
-    return Name({ allowKeywords = true })
-  end)
-
-  return name and { variant = 'dotIndex', value = name }
-end
-
-local function OptChainMethod()
-  local name = Try(function()
-    return Name({ allowKeywords = true })
-  end)
-
-  local isNextChainFunctionCall = currentToken == '('
-    or (currentToken == '?' and lookAhead(1) == '(')
-
-  if name and isNextChainFunctionCall then
-    return { variant = 'method', value = name }
-  else
-    error('Missing parentheses for method call')
-  end
-end
-
-local function OptChainBracket()
-  return {
-    variant = 'bracketIndex',
-    value = Surround('[', ']', Expr),
-  }
-end
-
-local function OptChainFunctionCall()
-  return {
-    variant = 'functionCall',
-    value = Parens({
+local function Params(allowImplicitParams)
+  local node = allowImplicitParams and currentToken ~= '('
+    and { { value = Var() } }
+    or Parens({
       demand = true,
       parse = function()
-        return List({
+        local paramsList = List({
           allowEmpty = true,
           allowTrailingComma = true,
           parse = function()
-            return currentToken == '...' and Spread() or Expr()
+            return { value = Var(), default = branch('=') and Expr() }
           end,
         })
+
+        if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
+          table.insert(paramsList, { value = Try(Name), varargs = true })
+        end
+
+        return paramsList
       end,
-    }),
-  }
+    })
+
+  node.tag = 'Params'
+  return node
 end
 
-function OptChain()
-  local node = {
-    ruleName = 'OptChain',
-    base = OptChainBase(),
-  }
+-- -----------------------------------------------------------------------------
+-- Expr
+-- -----------------------------------------------------------------------------
+
+local function OptChain()
+  local node = { tag = 'OptChain' }
+
+  if currentToken ~= '(' then
+    node.base = Name()
+  else
+    node.base = Surround('(', ')', Expr)
+    if type(node.base) == 'table' then
+      -- If its just a name, no need to retain braces
+      node.base.parens = true
+    end
+  end
 
   while true do
     local currentTokenIndexBackup = currentTokenIndex
@@ -282,14 +201,37 @@ function OptChain()
 
     local chain
     if branch('.') then
-      chain = OptChainDotIndex()
+      chain = { variant = 'dotIndex', value = Name({ allowKeywords = true }) }
     elseif branch(':') then
-      chain = OptChainMethod()
+      local name = Name({ allowKeywords = true })
+
+      local isNextChainFunctionCall = currentToken == '('
+        or (currentToken == '?' and lookAhead(1) == '(')
+      if not isNextChainFunctionCall then
+        error('Missing parentheses for method call')
+      end
+
+      chain = { variant = 'method', value = name }
     elseif currentToken == '[' then
-      chain = OptChainBracket()
+      chain = { variant = 'bracketIndex', value = Surround('[', ']', Expr) }
     elseif currentToken == '(' then
       if not newlines[currentTokenIndex - 1] then
-        chain = OptChainFunctionCall()
+        chain = {
+          variant = 'functionCall',
+          value = Parens({
+            demand = true,
+            parse = function()
+              return List({
+                allowEmpty = true,
+                allowTrailingComma = true,
+                parse = function()
+                  return not branch('...') and Expr()
+                    or { tag = 'Spread', value = Try(Expr) }
+                end,
+              })
+            end,
+          }),
+        }
       end
     end
 
@@ -306,223 +248,156 @@ function OptChain()
   return #node == 0 and node.base or node -- unpack trivial OptChain
 end
 
--- -----------------------------------------------------------------------------
--- Params
--- -----------------------------------------------------------------------------
-
-local function ParamsList()
-  local paramsList = List({
-    allowEmpty = true,
-    allowTrailingComma = true,
-    parse = function()
-      return {
-        value = Var(),
-        default = branch('=') and Expr(),
-      }
-    end,
-  })
-
-  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
-    table.insert(paramsList, {
-      value = Try(Name),
-      varargs = true,
-    })
-  end
-
-  return paramsList
-end
-
-function Params(opts)
-  opts = opts or {}
-  local node = { ruleName = 'Params' }
-
-  local params
-  if currentToken ~= '(' and opts.allowImplicitParams then
-    params = { { value = Var() } }
-  else
-    params = Parens({ demand = true, parse = ParamsList })
-  end
-
-  for _, param in pairs(params) do
-    table.insert(node, param)
-  end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Spread
--- -----------------------------------------------------------------------------
-
-function Spread()
-  expect('...')
-  return { ruleName = 'Spread', value = Try(Expr) }
-end
-
--- -----------------------------------------------------------------------------
--- Table
--- -----------------------------------------------------------------------------
-
-local function TableField()
-  local field = {}
-
-  if currentToken == '[' then
-    field.variant = 'exprKey'
-    field.key = Surround('[', ']', Expr)
-  elseif currentToken == '...' then
-    field.variant = 'spread'
-    field.value = Spread()
-  else
-    local expr = Expr()
-
-    if
-      currentToken == '='
-      and type(expr) == 'string'
-      and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$')
-    then
-      field.variant = 'nameKey'
-      field.key = expr
-    else
-      field.variant = 'numberKey'
-      field.value = expr
+local function Terminal()
+  for _, terminal in pairs(C.TERMINALS) do
+    if branch(terminal) then
+      return terminal
     end
   end
 
-  if field.variant == 'exprKey' or field.variant == 'nameKey' then
-    expect('=')
-    field.value = Expr()
+  if currentToken:match('^.?[0-9]') then
+    -- Only need to check first couple chars, rest is token care of by tokenizer
+    return consume()
+  elseif branch('do') then
+    return { tag = 'DoBlockExpr', body = Surround('{', '}', Block) }
+  elseif currentToken == "'" then
+    return consume() .. consume() .. consume()
+  elseif currentToken == '"' or currentToken:match('^%[[[=]') then
+    local node = { tag = 'String' }
+    local terminatingToken
+
+    if currentToken == '"' then
+      node.variant = 'double'
+      terminatingToken = consume()
+    else
+      node.variant = 'long'
+      node.equals = ('='):rep(#currentToken - 2)
+      terminatingToken = ']' .. node.equals .. ']'
+      consume()
+    end
+
+    while currentToken ~= terminatingToken do
+      table.insert(node, currentToken == '{'
+        and { variant = 'interpolation', value = Surround('{', '}', Expr) }
+        or { variant = 'content', value = consume() }
+      )
+    end
+
+    consume() -- terminatingToken
+    return node
   end
 
-  return field
-end
+  local nextToken = lookAhead(1)
+  local isArrowFunction = nextToken == '->' or nextToken == '=>' or currentToken == '['
+  local surroundEnd = currentToken == '(' and ')'
+    or currentToken == '{' and '}'
+    or nil
 
-function Table()
-  local node = Surround('{', '}', function()
-    return List({
-      allowEmpty = true,
-      allowTrailingComma = true,
-      parse = TableField,
-    })
-  end)
+  if not isArrowFunction and surroundEnd then
+    local surroundStart = currentToken
+    local surroundDepth = 0
 
-  node.ruleName = 'Table'
-  return node
-end
+    local tokenIndex = currentTokenIndex + 1
+    local token = tokens[tokenIndex]
 
--- -----------------------------------------------------------------------------
--- Expr
--- -----------------------------------------------------------------------------
+    while token ~= surroundEnd or surroundDepth > 0 do
+      if token == nil then
+        error('Unexpected EOF')
+      elseif token == surroundStart then
+        surroundDepth = surroundDepth + 1
+      elseif token == surroundEnd then
+        surroundDepth = surroundDepth - 1
+      end
 
-local function ArrowFunction()
-  local node = {
-    ruleName = 'ArrowFunction',
-    hasFatArrow = false,
-    hasImplicitReturns = false,
-    params = Params({ allowImplicitParams = true }),
-  }
+      tokenIndex = tokenIndex + 1
+      token = tokens[tokenIndex]
+    end
 
-  if branch('=>') then
-    node.hasFatArrow = true
-  elseif not branch('->') then
-    error('Expected arrow (->, =>), got ' .. currentToken)
+    -- Check one past surrounds for arrow
+    tokenIndex = tokenIndex + 1
+    token = tokens[tokenIndex]
+    isArrowFunction = token == '->' or token == '=>'
   end
 
-  if currentToken == '{' then
-    node.body = Surround('{', '}', Block)
-  elseif currentToken == '(' then
-    node.hasImplicitReturns = true
-    node.returns = Parens({
-      allowRecursion = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Expr,
-        })
-      end,
-    })
+  if isArrowFunction then
+    local node = {
+      tag = 'ArrowFunction',
+      params = Params(true),
+      hasFatArrow = consume() == '=>',
+      hasImplicitReturns = false,
+    }
+
+    if currentToken == '{' then
+      node.body = Surround('{', '}', Block)
+    elseif currentToken == '(' then
+      node.hasImplicitReturns = true
+      node.returns = Parens({
+        allowRecursion = true,
+        parse = function()
+          return List({
+            allowTrailingComma = true,
+            parse = Expr,
+          })
+        end,
+      })
+    else
+      node.hasImplicitReturns = true
+      node.returns = { Expr() }
+    end
+
+    return node
+  elseif currentToken == '{' then
+    local node = Surround('{', '}', function()
+      return List({
+        allowEmpty = true,
+        allowTrailingComma = true,
+        parse = function()
+          local field = {}
+
+          if currentToken == '[' then
+            field.variant = 'exprKey'
+            field.key = Surround('[', ']', Expr)
+          elseif branch('...') then
+            field.variant = 'spread'
+            field.value = { tag = 'Spread', value = Try(Expr) }
+          else
+            local expr = Expr()
+
+            if currentToken == '=' and type(expr) == 'string' and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$') then
+              field.variant = 'nameKey'
+              field.key = expr
+            else
+              field.variant = 'numberKey'
+              field.value = expr
+            end
+          end
+
+          if field.variant == 'exprKey' or field.variant == 'nameKey' then
+            expect('=')
+            field.value = Expr()
+          end
+
+          return field
+        end,
+      })
+    end)
+
+    node.tag = 'Table'
+    return node
   else
-    node.hasImplicitReturns = true
-    node.returns = { Expr() }
+    return OptChain()
   end
-
-  return node
 end
 
 function Expr(minPrec)
   minPrec = minPrec or 1
 
   local node
-  local unop = C.UNOPS[currentToken]
-
-  if unop then
-    consume()
-    node = {
-      ruleName = 'Unop',
-      op = unop,
-      operand = Expr(unop.prec + 1),
-    }
+  if C.UNOPS[currentToken] then
+    local unop = C.UNOPS[consume()]
+    node = { tag = 'Unop', op = unop, operand = Expr(unop.prec + 1) }
   else
-    for _, terminal in pairs(C.TERMINALS) do
-      if branch(terminal) then
-        node = terminal
-      end
-    end
-
-    if not node then
-      if currentToken:match('^.?[0-9]') then
-        -- Only need to check first couple chars, rest is token care of by tokenizer
-        node = consume()
-      elseif branch("'")  then
-        node = "'" .. consume() .. "'"
-        consume() -- ending quote
-      elseif currentToken == '"' or currentToken:match('^%[[[=]') then
-        node = { ruleName = 'String' }
-        local terminatingToken
-
-        if currentToken == '"' then
-          node.variant = 'double'
-          terminatingToken = consume()
-        else
-          node.variant = 'long'
-          node.equals = ('='):rep(#currentToken - 2)
-          terminatingToken = ']' .. node.equals .. ']'
-          consume()
-        end
-
-        while currentToken ~= terminatingToken do
-          if currentToken == '{' then
-            table.insert(node, {
-              variant = 'interpolation',
-              value = Surround('{', '}', Expr),
-            })
-          else
-            table.insert(node, {
-              variant = 'content',
-              value = consume(),
-            })
-          end
-        end
-
-        consume() -- terminatingToken
-      elseif branch('do') then
-        node = {
-          ruleName = 'DoBlock',
-          isExpr = true,
-          body = Surround('{', '}', Block),
-        }
-      elseif currentToken == '(' then
-        -- Also takes care of parenthesized expressions, since OptChain will unpack
-        -- any trivial OptChainBase
-        node = Switch({ ArrowFunction, OptChain })
-      else
-        -- Check ArrowFunction before Table for implicit params + destructure
-        node = Switch({ ArrowFunction, Table, OptChain })
-      end
-
-      if not node then
-        error('Unexpected token ' .. currentToken)
-      end
-    end
+    node = Terminal()
   end
 
   local binop = C.BINOPS[currentToken]
@@ -534,7 +409,7 @@ function Expr(minPrec)
       rhsPrec = rhsPrec + 1
     end
 
-    node = { ruleName = 'Binop', op = binop, lhs = node, rhs = Expr(rhsPrec) }
+    node = { tag = 'Binop', op = binop, lhs = node, rhs = Expr(rhsPrec) }
     binop = C.BINOPS[currentToken]
   end
 
@@ -545,116 +420,31 @@ end
 -- Block
 -- -----------------------------------------------------------------------------
 
-local function Assignment()
-  local node = {
-    ruleName = 'Assignment',
-    idList = currentToken ~= '(' and List({ parse = Id }) or Parens({
-      allowRecursion = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Id,
-        })
-      end,
-    }),
-  }
-
-  if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
-    error('Invalid assignment operator: ' .. currentToken)
-  elseif C.BINOPS[currentToken] then
-    node.op = C.BINOPS[consume()]
-  end
-
-  expect('=')
-  node.exprList = currentToken ~= '(' and List({ parse = Expr })
-    or Parens({
-      allowRecursion = true,
-      prioritizeRule = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Expr,
-        })
-      end,
-    })
-
-  return node
-end
-
-local function Function()
-  local node = {
-    ruleName = 'Function',
-    isMethod = false,
-  }
-
-  if
-    currentToken == 'local'
-    or currentToken == 'global'
-    or currentToken == 'module'
-  then
-    node.variant = consume()
-  end
-
-  consume() -- 'function'
-  node.names = { Name() }
-
-  while branch('.') do
-    table.insert(node.names, Name())
-  end
-
-  if branch(':') then
-    node.isMethod = true
-    table.insert(node.names, Name())
-  end
-
-  if not node.variant then
-    node.variant = #node.names > 1 and 'global' or 'local'
-  end
-
-  node.params = Params()
-  node.body = Surround('{', '}', Block)
-
-  return node
-end
-
-local function FunctionCall()
-  local node = OptChain()
-  local last = node[#node]
-
-  if not last or last.variant ~= 'functionCall' then
-    error('Missing function call parentheses')
-  end
-
-  return node
-end
-
 function Block()
-  local node = { ruleName = 'Block' }
+  local node = { tag = 'Block' }
 
   repeat
     local statement
 
     if branch('break') then
-      statement = { ruleName = 'Break' }
+      statement = { tag = 'Break' }
     elseif branch('continue') then
-      statement = { ruleName = 'Continue' }
+      statement = { tag = 'Continue' }
     elseif branch('do') then
-      statement = { ruleName = 'DoBlock', body = Surround('{', '}', Block) }
-    elseif currentToken == 'function' then
-      statement = Function()
+      statement = { tag = 'DoBlockStatement', body = Surround('{', '}', Block) }
     elseif branch('goto') then
-      statement = { ruleName = 'Goto', name = Name() }
+      statement = { tag = 'Goto', name = Name() }
     elseif branch('::') then
-      statement = { ruleName = 'GotoLabel', name = Name() }
+      statement = { tag = 'GotoLabel', name = Name() }
       expect('::')
     elseif branch('while') then
-      statement = { ruleName = 'WhileLoop', condition = Expr(), body = Surround('{', '}', Block) }
+      statement = { tag = 'WhileLoop', condition = Expr(), body = Surround('{', '}', Block) }
     elseif branch('repeat') then
-      statement = { ruleName = 'RepeatUntil', body = Surround('{', '}', Block) }
+      statement = { tag = 'RepeatUntil', body = Surround('{', '}', Block) }
       expect('until')
       statement.condition = Expr()
     elseif branch('try') then
-      statement = { ruleName = 'TryCatch', try = Surround('{', '}', Block) }
+      statement = { tag = 'TryCatch', try = Surround('{', '}', Block) }
       expect('catch')
       statement.error = Try(Var)
       statement.catch = Surround('{', '}', Block)
@@ -671,10 +461,10 @@ function Block()
             })
           end,
         })
-      statement.ruleName = 'Return'
+      statement.tag = 'Return'
     elseif branch('if') then
       statement = {
-        ruleName = 'IfElse',
+        tag = 'IfElse',
         ifNode = { condition = Expr(), body = Surround('{', '}', Block) }
       }
 
@@ -691,15 +481,16 @@ function Block()
         statement.elseNode = { body = Surround('{', '}', Block) }
       end
     elseif branch('for') then
-      statement = { ruleName = 'ForLoop' }
       local firstName = Var()
 
       if type(firstName) == 'string' and branch('=') then
-        statement.variant = 'numeric'
-        statement.name = firstName
-        statement.parts = List({ parse = Expr })
+        statement = {
+          tag = 'NumericFor',
+          name = firstName,
+          parts = List({ parse = Expr }),
+        }
       else
-        statement.variant = 'generic'
+        statement = { tag = 'GenericFor' }
         local varList = { firstName }
 
         while branch(',') do
@@ -712,41 +503,75 @@ function Block()
       end
 
       statement.body = Surround('{', '}', Block)
-    elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
-      if lookAhead(1) == 'function' then
-        statement = Function()
-      else
-        statement = {
-          ruleName = 'Declaration',
-          variant = consume(),
-          exprList = {},
-          varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
-            allowRecursion = true,
-            parse = function()
-              return List({
-                allowTrailingComma = true,
-                parse = Var,
-              })
-            end,
-          }),
-        }
+    elseif currentToken == 'function' or lookAhead(1) == 'function' then
+      statement = { tag = 'Function', isMethod = false }
 
-        if branch('=') then
-          statement.exprList = currentToken ~= '(' and List({ parse = Expr })
-          or Parens({
-            allowRecursion = true,
-            prioritizeRule = true,
+      if currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+        statement.variant = consume()
+      elseif currentToken ~= 'function' then
+        error('Unrecognized scope before function declaration: ' .. currentToken)
+      end
+
+      consume() -- 'function'
+      local names = { Name() }
+
+      while branch('.') do
+        table.insert(names, Name())
+      end
+
+      if branch(':') then
+        statement.isMethod = true
+        table.insert(names, Name())
+      end
+
+      if not statement.variant then
+        -- Default functions to local scope _unless_ they are part of a table.
+        statement.variant = #names > 1 and 'global' or 'local'
+      end
+
+      statement.names = names
+      statement.params = Params()
+      statement.body = Surround('{', '}', Block)
+    elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+      -- This must come after we check for function declaration!
+      statement = {
+        tag = 'Declaration',
+        variant = consume(),
+        varList = List({ parse = Var }),
+        exprList = branch('=') and List({ parse = Expr }) or {},
+      }
+    else
+      local optChain = Try(OptChain)
+
+      if optChain then
+        local optChainLast = optChain[#optChain]
+
+        if optChainLast and optChainLast.variant == 'functionCall' then
+          -- Allow function calls as standalone statements
+          statement = optChain
+        else
+          statement = { tag = 'Assignment' }
+          statement.idList = not branch(',') and {} or List({
             parse = function()
-              return List({
-                allowTrailingComma = true,
-                parse = Expr,
-              })
+              local node = OptChain()
+              local last = node[#node]
+              assert(not last or last.variant ~= 'functionCall')
+              return node
             end,
           })
+
+          table.insert(statement.idList, 1, optChain)
+
+          if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
+            error('Invalid assignment operator: ' .. currentToken)
+          elseif C.BINOPS[currentToken] then
+            statement.op = C.BINOPS[consume()]
+          end
+
+          expect('=')
+          statement.exprList = List({ parse = Expr })
         end
       end
-    else
-      statement = Switch({ FunctionCall, Assignment })
     end
 
     table.insert(node, statement)
@@ -755,9 +580,9 @@ function Block()
   return node
 end
 
--- =============================================================================
+-- -----------------------------------------------------------------------------
 -- Return
--- =============================================================================
+-- -----------------------------------------------------------------------------
 
 return function(text)
   local ast = {}

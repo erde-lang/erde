@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local parse = require('erde.parse')
 
 -- Foward declare rules
-local ArrowFunction, Block, Break, Continue, Declaration, ForLoop, Function
+local ArrowFunction, Block, Break, Continue, Declaration, Function
 local SUB_PRECOMPILERS
 
 -- =============================================================================
@@ -44,8 +44,8 @@ local function restore(state)
 end
 
 function precompileNode(node)
-  if type(SUB_PRECOMPILERS[node.ruleName]) == 'function' then
-    SUB_PRECOMPILERS[node.ruleName](node)
+  if type(SUB_PRECOMPILERS[node.tag]) == 'function' then
+    SUB_PRECOMPILERS[node.tag](node)
   else
     precompileChildren(node)
   end
@@ -159,13 +159,11 @@ end
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop(node)
-  if node.variant == 'numeric' then
-    if #node.parts < 2 then
-      error('Invalid for loop parameters (missing parameters)')
-    elseif #node.parts > 3 then
-      error('Invalid for loop parameters (too many parameters)')
-    end
+function NumericFor(node)
+  if #node.parts < 2 then
+    error('Invalid for loop parameters (missing parameters)')
+  elseif #node.parts > 3 then
+    error('Invalid for loop parameters (too many parameters)')
   end
 
   Loop(node)
@@ -210,9 +208,10 @@ SUB_PRECOMPILERS = {
   Break = Break,
   Continue = Continue,
   Declaration = Declaration,
-  ForLoop = ForLoop,
   Function = Function,
+  GenericFor = Loop,
   Module = Module,
+  NumericFor = NumericFor,
   RepeatUntil = Loop,
   WhileLoop = Loop,
 }
@@ -238,7 +237,7 @@ return function(ast)
 
   if #ast.exportNames > 0 then
     for i, statement in ipairs(ast) do
-      if statement.ruleName == 'Return' then
+      if statement.tag == 'Return' then
         -- Block cannot use both `return` and `module`
         -- TODO: not good enough! What about conditional return?
         error()

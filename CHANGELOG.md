@@ -13,17 +13,10 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Both difficult to optimize (requires iife)
 
 ### Added
-- Allow parenthesized lists for assignment / declarations vars and expressions.
-- Add dedicated rule for Modules (top level block)
-- Add `precompile` step for AST validation and node linking
 - Use newline to differentiate syntax ambiguity
 
 ### Changed
-- Refactor internal structure.
-  - Collapse rules into single files based on steps
-  - AST validation errors no longer throw when parsing
-  - Split Expr rule into Binop / Unop rules, use Expr as pseudo rule.
-  - Steps (`erde.parse`, `erde.compile`, etc) are no longer tables, but pure functions
+- Refactor internal structure (now cleaner / faster)
 - No longer parse number destruct aliases as valid syntax
 - Varargs now spreads when used as a table or param expression.
 - Do not allow trailing comma in Return exprs unless parens are present

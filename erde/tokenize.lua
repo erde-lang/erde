@@ -55,46 +55,6 @@ local function Space()
   end
 end
 
-local function Number()
-  while numLookup[char] do
-    token = token .. consume()
-  end
-
-  if char == '.' then
-    token = token .. consume()
-
-    if not numLookup[char] then
-      error('Missing number after decimal point')
-    end
-
-    while numLookup[char] do
-      token = token .. consume()
-    end
-  end
-
-  if char == numExp1 or char == numExp2 then
-    token = token .. consume()
-
-    if char == '+' or char == '-' then
-      token = token .. consume()
-    end
-
-    if not C.DIGIT[char] then
-      error('Missing number after exponent')
-    end
-
-    while C.DIGIT[char] do
-      token = token .. consume()
-    end
-  end
-
-  if C.ALPHA[char] then
-    error('Words cannot start with a digit')
-  end
-
-  commit(token)
-end
-
 local function InnerString()
   if char == '' then
     error('Unexpected EOF (unterminated string)')
@@ -141,6 +101,10 @@ local function InnerString()
   end
 end
 
+-- -----------------------------------------------------------------------------
+-- Token
+-- -----------------------------------------------------------------------------
+
 function Token()
   local peekTwo = peek(2)
   token = ''
@@ -153,31 +117,12 @@ function Token()
     end
 
     commit(token)
-  elseif C.DIGIT[char] then
-    if peekTwo == '0x' or peekTwo == '0X' then
-      numLookup = C.HEX
-      numExp1, numExp2 = 'p', 'P'
-
-      token = consume(2) -- 0[xX]
-      if not C.HEX[char] and char ~= '.' then
-        error('Missing hex after ' .. token)
-      end
-    else
-      numLookup = C.DIGIT
-      numExp1, numExp2 = 'e', 'E'
-    end
-
-    Number()
-  elseif peekTwo:match('%.[0-9]') then
-    numLookup = C.DIGIT
-    numExp1, numExp2 = 'e', 'E'
-    Number()
   elseif char == '\n' then
     newlines[numTokens] = true
-    while char == '\n' do
+    repeat
       Newline()
       Space()
-    end
+    until char ~= '\n'
   elseif char == "'" then
     local quote = consume()
     commit(quote)
@@ -229,7 +174,8 @@ function Token()
 
     while peek(strCloseLen) ~= strClose do
       if char == '\n' then
-        token = token .. Newline()
+        token = token .. char
+        Newline()
       else
         InnerString()
       end
@@ -239,7 +185,8 @@ function Token()
       commit(token)
     end
 
-    commit(consume(strCloseLen))
+    commit(strClose)
+    consume(strCloseLen)
   elseif peekTwo == '--' then
     consume(2)
 
@@ -275,12 +222,66 @@ function Token()
 
       consume(strCloseLen)
     end
-  elseif C.SYMBOLS[peek(3)] then
-    commit(consume(3))
-  elseif C.SYMBOLS[peekTwo] then
-    commit(consume(2))
+  elseif C.DIGIT[char] or peekTwo:match('%.[0-9]') then
+    if peekTwo == '0x' or peekTwo == '0X' then
+      numLookup = C.HEX
+      numExp1, numExp2 = 'p', 'P'
+
+      token = consume(2) -- 0[xX]
+
+      if not C.HEX[char] and char ~= '.' then
+        error('Missing hex after ' .. token)
+      end
+    else
+      numLookup = C.DIGIT
+      numExp1, numExp2 = 'e', 'E'
+    end
+
+    while numLookup[char] do
+      token = token .. consume()
+    end
+
+    if char == '.' then
+      token = token .. consume()
+
+      if not numLookup[char] then
+        error('Missing number after decimal point')
+      end
+
+      while numLookup[char] do
+        token = token .. consume()
+      end
+    end
+
+    if char == numExp1 or char == numExp2 then
+      token = token .. consume()
+
+      if char == '+' or char == '-' then
+        token = token .. consume()
+      end
+
+      if not C.DIGIT[char] then
+        error('Missing number after exponent')
+      end
+
+      while C.DIGIT[char] do
+        token = token .. consume()
+      end
+    end
+
+    if C.ALPHA[char] then
+      error('Words cannot start with a digit')
+    end
+
+    commit(token)
   else
-    commit(consume())
+    if C.SYMBOLS[peek(3)] then
+      commit(consume(3))
+    elseif C.SYMBOLS[peekTwo] then
+      commit(consume(2))
+    else
+      commit(consume())
+    end
   end
 end
 
