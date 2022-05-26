@@ -2,8 +2,6 @@
 
 # 0.2-1
 
-- simplify / microoptimize parser
-- change ruleName -> tag
 - remove variants in favor of separate tags
   - ex) `tag = NumericFor`, `tag = GenericFor`
   - ex) DoBlock -> `isExpr`
@@ -12,21 +10,24 @@
 
 # 0.3-1
 
+- Optimize internals
+  - Remove parser `Try` and `Switch`
+  - Remove closure creations
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - vastly improve error messages / diagnosis
 - Source maps (for runtime errors when using erde.loader)
   - preserve line numbers when compiling
-- add CLI REPL
 
 # 0.4-1
 
+- add CLI REPL
 - +1 new features? blocks as expressions?
-- Remove parser `Try` and `Switch`
-- Avoid closure creation (slow, cannot be JITed)
-  - ex) compile assignment / declaration into if statements
-- allow optimizations depending on compilation target
-  - ex) exploit goto when available
+- Optimize compiled code
+  - Avoid closure creation (slow, cannot be JITed)
+    - ex) compile assignment / declaration into if statements
+  - allow optimizations depending on compilation target
+    - ex) exploit goto when available
 
 # 1.0-1
 

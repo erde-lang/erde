@@ -44,8 +44,8 @@ local function restore(state)
 end
 
 function precompileNode(node)
-  if type(SUB_PRECOMPILERS[node.ruleName]) == 'function' then
-    SUB_PRECOMPILERS[node.ruleName](node)
+  if type(SUB_PRECOMPILERS[node.tag]) == 'function' then
+    SUB_PRECOMPILERS[node.tag](node)
   else
     precompileChildren(node)
   end
@@ -238,7 +238,7 @@ return function(ast)
 
   if #ast.exportNames > 0 then
     for i, statement in ipairs(ast) do
-      if statement.ruleName == 'Return' then
+      if statement.tag == 'Return' then
         -- Block cannot use both `return` and `module`
         -- TODO: not good enough! What about conditional return?
         error()

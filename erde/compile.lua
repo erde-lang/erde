@@ -22,11 +22,11 @@ local function compileNode(node)
     return node
   elseif type(node) ~= 'table' then
     error(('Invalid node type (%s): %s'):format(type(node), tostring(node)))
-  elseif type(SUB_COMPILERS[node.ruleName]) ~= 'function' then
-    error(('Invalid ruleName: %s'):format(node.ruleName))
+  elseif type(SUB_COMPILERS[node.tag]) ~= 'function' then
+    error(('Invalid tag: %s'):format(node.tag))
   end
 
-  local compiled = SUB_COMPILERS[node.ruleName](node)
+  local compiled = SUB_COMPILERS[node.tag](node)
   return node.parens and '(' .. compiled .. ')' or compiled
 end
 
@@ -82,7 +82,7 @@ local function compileOptChain(node)
     elseif chainNode.variant == 'functionCall' then
       local hasSpread = false
       for i, arg in ipairs(chainNode.value) do
-        if arg.ruleName == 'Spread' then
+        if arg.tag == 'Spread' then
           hasSpread = true
           break
         end
@@ -92,7 +92,7 @@ local function compileOptChain(node)
         local spreadFields = {}
 
         for i, arg in ipairs(chainNode.value) do
-          spreadFields[i] = arg.ruleName == 'Spread' and arg
+          spreadFields[i] = arg.tag == 'Spread' and arg
             or { value = compileNode(expr) }
         end
 
@@ -162,7 +162,7 @@ local function compileRawAssignment(node)
   for _, id in ipairs(node.idList) do
     if type(id) == 'string' then
       table.insert(assignmentNames, id)
-    elseif id.ruleName ~= 'OptChain' then
+    elseif id.tag ~= 'OptChain' then
       table.insert(assignmentNames, compileNode(id))
     else
       local optChain = compileOptChain(id)
@@ -232,7 +232,7 @@ local function compileBinopAssignment(node)
         compiled,
         id .. ' = ' .. compileBinop(node.op, id, assignmentName)
       )
-    elseif id.ruleName ~= 'OptChain' then
+    elseif id.tag ~= 'OptChain' then
       local compiledId = compileNode(id)
       table.insert(
         compiled,
@@ -644,7 +644,7 @@ function Spread(fields)
   }
 
   for i, field in ipairs(fields) do
-    if field.ruleName == 'Spread' then
+    if field.tag == 'Spread' then
       local spreadTmpName = newTmpName()
 
       local spreadValue

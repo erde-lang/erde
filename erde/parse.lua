@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local Block, Destructure, Expr, OptChain, Params, Spread, Table, Unop
+local Block, Destructure, Expr, OptChain
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -150,6 +150,11 @@ local function Id()
   return node
 end
 
+local function Spread()
+  expect('...')
+  return { tag = 'Spread', value = Try(Expr) }
+end
+
 -- -----------------------------------------------------------------------------
 -- Destructure
 -- -----------------------------------------------------------------------------
@@ -186,7 +191,7 @@ local function MapDestructure()
 end
 
 function Destructure()
-  local node = { ruleName = 'Destructure' }
+  local node = { tag = 'Destructure' }
 
   local destructs = currentToken == '[' and ArrayDestructure()
     or MapDestructure()
@@ -199,6 +204,49 @@ function Destructure()
         table.insert(node, numberDestruct)
       end
     end
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Params
+-- -----------------------------------------------------------------------------
+
+local function ParamsList()
+  local paramsList = List({
+    allowEmpty = true,
+    allowTrailingComma = true,
+    parse = function()
+      return {
+        value = Var(),
+        default = branch('=') and Expr(),
+      }
+    end,
+  })
+
+  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
+    table.insert(paramsList, {
+      value = Try(Name),
+      varargs = true,
+    })
+  end
+
+  return paramsList
+end
+
+local function Params(allowImplicitParams)
+  local node = { tag = 'Params' }
+
+  local params
+  if currentToken ~= '(' and allowImplicitParams then
+    params = { { value = Var() } }
+  else
+    params = Parens({ demand = true, parse = ParamsList })
+  end
+
+  for _, param in pairs(params) do
+    table.insert(node, param)
   end
 
   return node
@@ -272,7 +320,7 @@ end
 
 function OptChain()
   local node = {
-    ruleName = 'OptChain',
+    tag = 'OptChain',
     base = OptChainBase(),
   }
 
@@ -307,61 +355,43 @@ function OptChain()
 end
 
 -- -----------------------------------------------------------------------------
--- Params
+-- Expr
 -- -----------------------------------------------------------------------------
 
-local function ParamsList()
-  local paramsList = List({
-    allowEmpty = true,
-    allowTrailingComma = true,
-    parse = function()
-      return {
-        value = Var(),
-        default = branch('=') and Expr(),
-      }
-    end,
-  })
+local function ArrowFunction()
+  local node = {
+    tag = 'ArrowFunction',
+    hasFatArrow = false,
+    hasImplicitReturns = false,
+    params = Params(true),
+  }
 
-  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
-    table.insert(paramsList, {
-      value = Try(Name),
-      varargs = true,
+  if branch('=>') then
+    node.hasFatArrow = true
+  elseif not branch('->') then
+    error('Expected arrow (->, =>), got ' .. currentToken)
+  end
+
+  if currentToken == '{' then
+    node.body = Surround('{', '}', Block)
+  elseif currentToken == '(' then
+    node.hasImplicitReturns = true
+    node.returns = Parens({
+      allowRecursion = true,
+      parse = function()
+        return List({
+          allowTrailingComma = true,
+          parse = Expr,
+        })
+      end,
     })
-  end
-
-  return paramsList
-end
-
-function Params(opts)
-  opts = opts or {}
-  local node = { ruleName = 'Params' }
-
-  local params
-  if currentToken ~= '(' and opts.allowImplicitParams then
-    params = { { value = Var() } }
   else
-    params = Parens({ demand = true, parse = ParamsList })
-  end
-
-  for _, param in pairs(params) do
-    table.insert(node, param)
+    node.hasImplicitReturns = true
+    node.returns = { Expr() }
   end
 
   return node
 end
-
--- -----------------------------------------------------------------------------
--- Spread
--- -----------------------------------------------------------------------------
-
-function Spread()
-  expect('...')
-  return { ruleName = 'Spread', value = Try(Expr) }
-end
-
--- -----------------------------------------------------------------------------
--- Table
--- -----------------------------------------------------------------------------
 
 local function TableField()
   local field = {}
@@ -396,7 +426,7 @@ local function TableField()
   return field
 end
 
-function Table()
+local function Table()
   local node = Surround('{', '}', function()
     return List({
       allowEmpty = true,
@@ -405,46 +435,7 @@ function Table()
     })
   end)
 
-  node.ruleName = 'Table'
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Expr
--- -----------------------------------------------------------------------------
-
-local function ArrowFunction()
-  local node = {
-    ruleName = 'ArrowFunction',
-    hasFatArrow = false,
-    hasImplicitReturns = false,
-    params = Params({ allowImplicitParams = true }),
-  }
-
-  if branch('=>') then
-    node.hasFatArrow = true
-  elseif not branch('->') then
-    error('Expected arrow (->, =>), got ' .. currentToken)
-  end
-
-  if currentToken == '{' then
-    node.body = Surround('{', '}', Block)
-  elseif currentToken == '(' then
-    node.hasImplicitReturns = true
-    node.returns = Parens({
-      allowRecursion = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Expr,
-        })
-      end,
-    })
-  else
-    node.hasImplicitReturns = true
-    node.returns = { Expr() }
-  end
-
+  node.tag = 'Table'
   return node
 end
 
@@ -457,7 +448,7 @@ function Expr(minPrec)
   if unop then
     consume()
     node = {
-      ruleName = 'Unop',
+      tag = 'Unop',
       op = unop,
       operand = Expr(unop.prec + 1),
     }
@@ -476,7 +467,7 @@ function Expr(minPrec)
         node = "'" .. consume() .. "'"
         consume() -- ending quote
       elseif currentToken == '"' or currentToken:match('^%[[[=]') then
-        node = { ruleName = 'String' }
+        node = { tag = 'String' }
         local terminatingToken
 
         if currentToken == '"' then
@@ -506,7 +497,7 @@ function Expr(minPrec)
         consume() -- terminatingToken
       elseif branch('do') then
         node = {
-          ruleName = 'DoBlock',
+          tag = 'DoBlock',
           isExpr = true,
           body = Surround('{', '}', Block),
         }
@@ -534,7 +525,7 @@ function Expr(minPrec)
       rhsPrec = rhsPrec + 1
     end
 
-    node = { ruleName = 'Binop', op = binop, lhs = node, rhs = Expr(rhsPrec) }
+    node = { tag = 'Binop', op = binop, lhs = node, rhs = Expr(rhsPrec) }
     binop = C.BINOPS[currentToken]
   end
 
@@ -547,7 +538,7 @@ end
 
 local function Assignment()
   local node = {
-    ruleName = 'Assignment',
+    tag = 'Assignment',
     idList = currentToken ~= '(' and List({ parse = Id }) or Parens({
       allowRecursion = true,
       parse = function()
@@ -583,7 +574,7 @@ end
 
 local function Function()
   local node = {
-    ruleName = 'Function',
+    tag = 'Function',
     isMethod = false,
   }
 
@@ -629,32 +620,32 @@ local function FunctionCall()
 end
 
 function Block()
-  local node = { ruleName = 'Block' }
+  local node = { tag = 'Block' }
 
   repeat
     local statement
 
     if branch('break') then
-      statement = { ruleName = 'Break' }
+      statement = { tag = 'Break' }
     elseif branch('continue') then
-      statement = { ruleName = 'Continue' }
+      statement = { tag = 'Continue' }
     elseif branch('do') then
-      statement = { ruleName = 'DoBlock', body = Surround('{', '}', Block) }
+      statement = { tag = 'DoBlock', body = Surround('{', '}', Block) }
     elseif currentToken == 'function' then
       statement = Function()
     elseif branch('goto') then
-      statement = { ruleName = 'Goto', name = Name() }
+      statement = { tag = 'Goto', name = Name() }
     elseif branch('::') then
-      statement = { ruleName = 'GotoLabel', name = Name() }
+      statement = { tag = 'GotoLabel', name = Name() }
       expect('::')
     elseif branch('while') then
-      statement = { ruleName = 'WhileLoop', condition = Expr(), body = Surround('{', '}', Block) }
+      statement = { tag = 'WhileLoop', condition = Expr(), body = Surround('{', '}', Block) }
     elseif branch('repeat') then
-      statement = { ruleName = 'RepeatUntil', body = Surround('{', '}', Block) }
+      statement = { tag = 'RepeatUntil', body = Surround('{', '}', Block) }
       expect('until')
       statement.condition = Expr()
     elseif branch('try') then
-      statement = { ruleName = 'TryCatch', try = Surround('{', '}', Block) }
+      statement = { tag = 'TryCatch', try = Surround('{', '}', Block) }
       expect('catch')
       statement.error = Try(Var)
       statement.catch = Surround('{', '}', Block)
@@ -671,10 +662,10 @@ function Block()
             })
           end,
         })
-      statement.ruleName = 'Return'
+      statement.tag = 'Return'
     elseif branch('if') then
       statement = {
-        ruleName = 'IfElse',
+        tag = 'IfElse',
         ifNode = { condition = Expr(), body = Surround('{', '}', Block) }
       }
 
@@ -691,7 +682,7 @@ function Block()
         statement.elseNode = { body = Surround('{', '}', Block) }
       end
     elseif branch('for') then
-      statement = { ruleName = 'ForLoop' }
+      statement = { tag = 'ForLoop' }
       local firstName = Var()
 
       if type(firstName) == 'string' and branch('=') then
@@ -717,7 +708,7 @@ function Block()
         statement = Function()
       else
         statement = {
-          ruleName = 'Declaration',
+          tag = 'Declaration',
           variant = consume(),
           exprList = {},
           varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
