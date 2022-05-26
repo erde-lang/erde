@@ -2,30 +2,18 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local ArrowFunction, Binop, Block, Destructure, OptChain, Params, Spread, String, Table, Unop
+local Block, Destructure, Expr, OptChain, Params, Spread, Table, Unop
 
--- =============================================================================
+-- -----------------------------------------------------------------------------
 -- State
--- =============================================================================
+-- -----------------------------------------------------------------------------
 
 local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
 
--- =============================================================================
+-- -----------------------------------------------------------------------------
 -- Helpers
--- =============================================================================
-
-local function backup()
-  return {
-    currentTokenIndex = currentTokenIndex,
-    currentToken = currentToken,
-  }
-end
-
-local function restore(state)
-  currentTokenIndex = state.currentTokenIndex
-  currentToken = state.currentToken
-end
+-- -----------------------------------------------------------------------------
 
 local function consume()
   local consumedToken = tokens[currentTokenIndex]
@@ -56,18 +44,19 @@ local function expect(token, skipConsume)
   consume()
 end
 
--- =============================================================================
+-- -----------------------------------------------------------------------------
 -- Macros
--- =============================================================================
+-- -----------------------------------------------------------------------------
 
 local function Try(rule)
-  local state = backup()
+  local currentTokenIndexBackup = currentTokenIndex
   local ok, node = pcall(rule)
 
   if ok then
     return node
   else
-    restore(state)
+    currentTokenIndex = currentTokenIndexBackup
+    currentToken = tokens[currentTokenIndex]
   end
 end
 
@@ -126,9 +115,9 @@ local function List(opts)
   return list
 end
 
--- =============================================================================
+-- -----------------------------------------------------------------------------
 -- Pseudo Rules
--- =============================================================================
+-- -----------------------------------------------------------------------------
 
 local function Name(opts)
   assert(
@@ -150,58 +139,6 @@ local function Var()
     or Name()
 end
 
-local function Terminal()
-  for _, terminal in pairs(C.TERMINALS) do
-    if branch(terminal) then
-      return terminal
-    end
-  end
-
-  local node
-  if currentToken == '(' then
-    -- Also takes care of parenthesized expressions, since OptChain will unpack
-    -- any trivial OptChainBase
-    node = Switch({ ArrowFunction, OptChain })
-  elseif branch('do') then
-    node = {
-      ruleName = 'DoBlock',
-      isExpr = true,
-      body = Surround('{', '}', Block),
-    }
-  elseif currentToken:match('^.?[0-9]') then
-    -- Only need to check first couple chars, rest is token care of by tokenizer
-    node = consume()
-  elseif currentToken:match('^[\'"]$') or currentToken:match('^%[[[=]') then
-    node = String()
-  else
-    -- Check ArrowFunction before Table for implicit params + destructure
-    node = Switch({ ArrowFunction, Table, OptChain })
-  end
-
-  if not node then
-    error('Unexpected token ' .. currentToken)
-  end
-
-  return node
-end
-
-local function Expr(opts)
-  local minPrec = opts and opts.minPrec or 1
-  local node = C.UNOPS[currentToken] and Unop() or Terminal()
-
-  local binop = C.BINOPS[currentToken]
-  while binop and binop.prec >= minPrec do
-    node = Binop({
-      minPrec = minPrec,
-      lhs = node,
-    })
-
-    binop = C.BINOPS[currentToken]
-  end
-
-  return node
-end
-
 local function Id()
   local node = OptChain()
   local last = node[#node]
@@ -213,15 +150,270 @@ local function Id()
   return node
 end
 
--- =============================================================================
--- Rules
--- =============================================================================
-
 -- -----------------------------------------------------------------------------
--- ArrowFunction
+-- Destructure
 -- -----------------------------------------------------------------------------
 
-function ArrowFunction()
+local function ArrayDestructure()
+  return Surround('[', ']', function()
+    return List({
+      allowTrailingComma = true,
+      parse = function()
+        return {
+          name = Name(),
+          variant = 'numberDestruct',
+          default = branch('=') and Expr(),
+        }
+      end,
+    })
+  end)
+end
+
+local function MapDestructure()
+  return Surround('{', '}', function()
+    return List({
+      allowTrailingComma = true,
+      parse = function()
+        return {
+          name = Name(),
+          variant = 'keyDestruct',
+          alias = branch(':') and Name(),
+          default = branch('=') and Expr(),
+        }
+      end,
+    })
+  end)
+end
+
+function Destructure()
+  local node = { ruleName = 'Destructure' }
+
+  local destructs = currentToken == '[' and ArrayDestructure()
+    or MapDestructure()
+
+  for _, destruct in ipairs(destructs) do
+    if destruct.variant ~= nil then
+      table.insert(node, destruct)
+    else
+      for _, numberDestruct in ipairs(destruct) do
+        table.insert(node, numberDestruct)
+      end
+    end
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- OptChain
+-- -----------------------------------------------------------------------------
+
+local function OptChainBase()
+  if currentToken == '(' then
+    local base = Surround('(', ')', Expr)
+
+    if type(base) == 'table' then
+      base.parens = true
+    end
+
+    return base
+  else
+    return Name()
+  end
+end
+
+local function OptChainDotIndex()
+  local name = Try(function()
+    return Name({ allowKeywords = true })
+  end)
+
+  return name and { variant = 'dotIndex', value = name }
+end
+
+local function OptChainMethod()
+  local name = Try(function()
+    return Name({ allowKeywords = true })
+  end)
+
+  local isNextChainFunctionCall = currentToken == '('
+    or (currentToken == '?' and lookAhead(1) == '(')
+
+  if name and isNextChainFunctionCall then
+    return { variant = 'method', value = name }
+  else
+    error('Missing parentheses for method call')
+  end
+end
+
+local function OptChainBracket()
+  return {
+    variant = 'bracketIndex',
+    value = Surround('[', ']', Expr),
+  }
+end
+
+local function OptChainFunctionCall()
+  return {
+    variant = 'functionCall',
+    value = Parens({
+      demand = true,
+      parse = function()
+        return List({
+          allowEmpty = true,
+          allowTrailingComma = true,
+          parse = function()
+            return currentToken == '...' and Spread() or Expr()
+          end,
+        })
+      end,
+    }),
+  }
+end
+
+function OptChain()
+  local node = {
+    ruleName = 'OptChain',
+    base = OptChainBase(),
+  }
+
+  while true do
+    local currentTokenIndexBackup = currentTokenIndex
+    local isOptional = branch('?')
+
+    local chain
+    if branch('.') then
+      chain = OptChainDotIndex()
+    elseif branch(':') then
+      chain = OptChainMethod()
+    elseif currentToken == '[' then
+      chain = OptChainBracket()
+    elseif currentToken == '(' then
+      if not newlines[currentTokenIndex - 1] then
+        chain = OptChainFunctionCall()
+      end
+    end
+
+    if not chain then
+      currentTokenIndex = currentTokenIndexBackup
+      currentToken = tokens[currentTokenIndex]
+      break
+    end
+
+    chain.optional = isOptional
+    table.insert(node, chain)
+  end
+
+  return #node == 0 and node.base or node -- unpack trivial OptChain
+end
+
+-- -----------------------------------------------------------------------------
+-- Params
+-- -----------------------------------------------------------------------------
+
+local function ParamsList()
+  local paramsList = List({
+    allowEmpty = true,
+    allowTrailingComma = true,
+    parse = function()
+      return {
+        value = Var(),
+        default = branch('=') and Expr(),
+      }
+    end,
+  })
+
+  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
+    table.insert(paramsList, {
+      value = Try(Name),
+      varargs = true,
+    })
+  end
+
+  return paramsList
+end
+
+function Params(opts)
+  opts = opts or {}
+  local node = { ruleName = 'Params' }
+
+  local params
+  if currentToken ~= '(' and opts.allowImplicitParams then
+    params = { { value = Var() } }
+  else
+    params = Parens({ demand = true, parse = ParamsList })
+  end
+
+  for _, param in pairs(params) do
+    table.insert(node, param)
+  end
+
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Spread
+-- -----------------------------------------------------------------------------
+
+function Spread()
+  expect('...')
+  return { ruleName = 'Spread', value = Try(Expr) }
+end
+
+-- -----------------------------------------------------------------------------
+-- Table
+-- -----------------------------------------------------------------------------
+
+local function TableField()
+  local field = {}
+
+  if currentToken == '[' then
+    field.variant = 'exprKey'
+    field.key = Surround('[', ']', Expr)
+  elseif currentToken == '...' then
+    field.variant = 'spread'
+    field.value = Spread()
+  else
+    local expr = Expr()
+
+    if
+      currentToken == '='
+      and type(expr) == 'string'
+      and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$')
+    then
+      field.variant = 'nameKey'
+      field.key = expr
+    else
+      field.variant = 'numberKey'
+      field.value = expr
+    end
+  end
+
+  if field.variant == 'exprKey' or field.variant == 'nameKey' then
+    expect('=')
+    field.value = Expr()
+  end
+
+  return field
+end
+
+function Table()
+  local node = Surround('{', '}', function()
+    return List({
+      allowEmpty = true,
+      allowTrailingComma = true,
+      parse = TableField,
+    })
+  end)
+
+  node.ruleName = 'Table'
+  return node
+end
+
+-- -----------------------------------------------------------------------------
+-- Expr
+-- -----------------------------------------------------------------------------
+
+local function ArrowFunction()
   local node = {
     ruleName = 'ArrowFunction',
     hasFatArrow = false,
@@ -256,26 +448,96 @@ function ArrowFunction()
   return node
 end
 
--- -----------------------------------------------------------------------------
--- Binop
--- -----------------------------------------------------------------------------
+function Expr(minPrec)
+  minPrec = minPrec or 1
 
-function Binop(opts)
-  local minPrec = opts and opts.minPrec or 1
+  local node
+  local unop = C.UNOPS[currentToken]
 
-  local op = C.BINOPS[currentToken]
-  assert(op, 'Invalid binop token: ' .. currentToken)
-  assert(op.prec >= minPrec, 'Binop does not have enough precedence.')
-  consume()
+  if unop then
+    consume()
+    node = {
+      ruleName = 'Unop',
+      op = unop,
+      operand = Expr(unop.prec + 1),
+    }
+  else
+    for _, terminal in pairs(C.TERMINALS) do
+      if branch(terminal) then
+        node = terminal
+      end
+    end
 
-  local node = {
-    ruleName = 'Binop',
-    op = op,
-    lhs = opts.lhs,
-  }
+    if not node then
+      if currentToken:match('^.?[0-9]') then
+        -- Only need to check first couple chars, rest is token care of by tokenizer
+        node = consume()
+      elseif currentToken == "'" or currentToken == '"' or currentToken:match('^%[[[=]') then
+        node = { ruleName = 'String' }
+        local terminatingToken
 
-  local newMinPrec = op.prec + (op.assoc == C.LEFT_ASSOCIATIVE and 1 or 0)
-  node.rhs = Expr({ minPrec = newMinPrec })
+        if currentToken == "'" then
+          node.variant = 'single'
+          terminatingToken = consume()
+        elseif currentToken == '"' then
+          node.variant = 'double'
+          terminatingToken = consume()
+        else
+          node.variant = 'long'
+          node.equals = ('='):rep(#currentToken - 2)
+          terminatingToken = ']' .. node.equals .. ']'
+          consume()
+        end
+
+        while currentToken ~= terminatingToken do
+          if currentToken == '{' then
+            table.insert(node, {
+              variant = 'interpolation',
+              value = Surround('{', '}', Expr),
+            })
+          else
+            table.insert(node, {
+              variant = 'content',
+              value = consume(),
+            })
+          end
+        end
+
+        consume() -- terminatingToken
+      elseif branch('do') then
+        node = {
+          ruleName = 'DoBlock',
+          isExpr = true,
+          body = Surround('{', '}', Block),
+        }
+      elseif currentToken == '(' then
+        -- Also takes care of parenthesized expressions, since OptChain will unpack
+        -- any trivial OptChainBase
+        node = Switch({ ArrowFunction, OptChain })
+      else
+        -- Check ArrowFunction before Table for implicit params + destructure
+        node = Switch({ ArrowFunction, Table, OptChain })
+      end
+
+      if not node then
+        error('Unexpected token ' .. currentToken)
+      end
+    end
+  end
+
+  local binop = C.BINOPS[currentToken]
+  while binop and binop.prec >= minPrec do
+    consume()
+
+    local rhsPrec = binop.prec
+    if binop.assoc == C.LEFT_ASSOCIATIVE then
+      rhsPrec = rhsPrec + 1
+    end
+
+    node = { ruleName = 'Binop', op = binop, lhs = node, rhs = Expr(rhsPrec) }
+    binop = C.BINOPS[currentToken]
+  end
+
   return node
 end
 
@@ -496,321 +758,6 @@ function Block()
   until not statement
 
   return node
-end
-
--- -----------------------------------------------------------------------------
--- Destructure
--- -----------------------------------------------------------------------------
-
-local function ArrayDestructure()
-  return Surround('[', ']', function()
-    return List({
-      allowTrailingComma = true,
-      parse = function()
-        return {
-          name = Name(),
-          variant = 'numberDestruct',
-          default = branch('=') and Expr(),
-        }
-      end,
-    })
-  end)
-end
-
-local function MapDestructure()
-  return Surround('{', '}', function()
-    return List({
-      allowTrailingComma = true,
-      parse = function()
-        return {
-          name = Name(),
-          variant = 'keyDestruct',
-          alias = branch(':') and Name(),
-          default = branch('=') and Expr(),
-        }
-      end,
-    })
-  end)
-end
-
-function Destructure()
-  local node = { ruleName = 'Destructure' }
-
-  local destructs = currentToken == '[' and ArrayDestructure()
-    or MapDestructure()
-
-  for _, destruct in ipairs(destructs) do
-    if destruct.variant ~= nil then
-      table.insert(node, destruct)
-    else
-      for _, numberDestruct in ipairs(destruct) do
-        table.insert(node, numberDestruct)
-      end
-    end
-  end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- OptChain
--- -----------------------------------------------------------------------------
-
-local function OptChainBase()
-  if currentToken == '(' then
-    local base = Surround('(', ')', Expr)
-
-    if type(base) == 'table' then
-      base.parens = true
-    end
-
-    return base
-  else
-    return Name()
-  end
-end
-
-local function OptChainDotIndex()
-  local name = Try(function()
-    return Name({ allowKeywords = true })
-  end)
-
-  return name and { variant = 'dotIndex', value = name }
-end
-
-local function OptChainMethod()
-  local name = Try(function()
-    return Name({ allowKeywords = true })
-  end)
-
-  local isNextChainFunctionCall = currentToken == '('
-    or (currentToken == '?' and lookAhead(1) == '(')
-
-  if name and isNextChainFunctionCall then
-    return { variant = 'method', value = name }
-  else
-    error('Missing parentheses for method call')
-  end
-end
-
-local function OptChainBracket()
-  return {
-    variant = 'bracketIndex',
-    value = Surround('[', ']', Expr),
-  }
-end
-
-local function OptChainFunctionCall()
-  return {
-    variant = 'functionCall',
-    value = Parens({
-      demand = true,
-      parse = function()
-        return List({
-          allowEmpty = true,
-          allowTrailingComma = true,
-          parse = function()
-            return currentToken == '...' and Spread() or Expr()
-          end,
-        })
-      end,
-    }),
-  }
-end
-
-function OptChain()
-  local node = {
-    ruleName = 'OptChain',
-    base = OptChainBase(),
-  }
-
-  while true do
-    local state = backup()
-    local isOptional = branch('?')
-
-    local chain
-    if branch('.') then
-      chain = OptChainDotIndex()
-    elseif branch(':') then
-      chain = OptChainMethod()
-    elseif currentToken == '[' then
-      chain = OptChainBracket()
-    elseif currentToken == '(' then
-      if not newlines[currentTokenIndex - 1] then
-        chain = OptChainFunctionCall()
-      end
-    end
-
-    if not chain then
-      restore(state)
-      break
-    end
-
-    chain.optional = isOptional
-    table.insert(node, chain)
-  end
-
-  return #node == 0 and node.base or node -- unpack trivial OptChain
-end
-
--- -----------------------------------------------------------------------------
--- Params
--- -----------------------------------------------------------------------------
-
-local function ParamsList()
-  local paramsList = List({
-    allowEmpty = true,
-    allowTrailingComma = true,
-    parse = function()
-      return {
-        value = Var(),
-        default = branch('=') and Expr(),
-      }
-    end,
-  })
-
-  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
-    table.insert(paramsList, {
-      value = Try(Name),
-      varargs = true,
-    })
-  end
-
-  return paramsList
-end
-
-function Params(opts)
-  opts = opts or {}
-  local node = { ruleName = 'Params' }
-
-  local params
-  if currentToken ~= '(' and opts.allowImplicitParams then
-    params = { { value = Var() } }
-  else
-    params = Parens({ demand = true, parse = ParamsList })
-  end
-
-  for _, param in pairs(params) do
-    table.insert(node, param)
-  end
-
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Spread
--- -----------------------------------------------------------------------------
-
-function Spread()
-  expect('...')
-  return { ruleName = 'Spread', value = Try(Expr) }
-end
-
--- -----------------------------------------------------------------------------
--- String
--- -----------------------------------------------------------------------------
-
-function String()
-  local node = { ruleName = 'String' }
-  local terminatingToken
-
-  if currentToken == "'" then
-    node.variant = 'single'
-    terminatingToken = consume()
-  elseif currentToken == '"' then
-    node.variant = 'double'
-    terminatingToken = consume()
-  elseif currentToken:match('^%[=*%[$') then
-    node.variant = 'long'
-    node.equals = ('='):rep(#currentToken - 2)
-    terminatingToken = ']' .. node.equals .. ']'
-    consume()
-  else
-    error('Unexpected token: ' .. currentToken)
-  end
-
-  while currentToken ~= terminatingToken do
-    if currentToken == '{' then
-      table.insert(node, {
-        variant = 'interpolation',
-        value = Surround('{', '}', Expr),
-      })
-    else
-      table.insert(node, {
-        variant = 'content',
-        value = consume(),
-      })
-    end
-  end
-
-  consume() -- terminatingToken
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Table
--- -----------------------------------------------------------------------------
-
-local function TableField()
-  local field = {}
-
-  if currentToken == '[' then
-    field.variant = 'exprKey'
-    field.key = Surround('[', ']', Expr)
-  elseif currentToken == '...' then
-    field.variant = 'spread'
-    field.value = Spread()
-  else
-    local expr = Expr()
-
-    if
-      currentToken == '='
-      and type(expr) == 'string'
-      and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$')
-    then
-      field.variant = 'nameKey'
-      field.key = expr
-    else
-      field.variant = 'numberKey'
-      field.value = expr
-    end
-  end
-
-  if field.variant == 'exprKey' or field.variant == 'nameKey' then
-    expect('=')
-    field.value = Expr()
-  end
-
-  return field
-end
-
-function Table()
-  local node = Surround('{', '}', function()
-    return List({
-      allowEmpty = true,
-      allowTrailingComma = true,
-      parse = TableField,
-    })
-  end)
-
-  node.ruleName = 'Table'
-  return node
-end
-
--- -----------------------------------------------------------------------------
--- Unop
--- -----------------------------------------------------------------------------
-
-function Unop()
-  local op = C.UNOPS[currentToken]
-  assert(op, 'Invalid unop token: ' .. currentToken)
-  consume()
-
-  return {
-    ruleName = 'Unop',
-    op = op,
-    operand = Expr({ minPrec = op.prec + 1 }),
-  }
 end
 
 -- =============================================================================
