@@ -2,6 +2,7 @@
 
 # 0.2-1
 
+- do not allow interpolation in single quote strings
 - simplify / microoptimize parser
 - change ruleName -> tag
 - remove variants in favor of separate tags
@@ -14,16 +15,18 @@
 
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
+- vastly improve error messages / diagnosis
 - Source maps (for runtime errors when using erde.loader)
   - preserve line numbers when compiling
+- add CLI REPL
+
+# 0.4-1
+
+- +1 new features? blocks as expressions?
 - Avoid closure creation (slow, cannot be JITed)
   - ex) compile assignment / declaration into if statements
 - allow optimizations depending on compilation target
   - ex) exploit goto when available
-
-# 0.4-1
-
-- add CLI REPL
 
 # 1.0-1
 
