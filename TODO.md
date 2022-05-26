@@ -32,9 +32,7 @@
 # Uncertain Proposals (need community input)
 
 - macros
-- python/js like decorators?
-  - too magical?
-  - hard to read?
+- decorators (like python / js)
+- if assignments (`if x = myfunc() { ... }`)
+- Allow all blocks as expressions (`local x = if x { return y }`)
 - nested break
-- allow expression lists for assignment / return
-  - ex) `local a, b = somecondition ? (1, 2) : (2, 3)`
