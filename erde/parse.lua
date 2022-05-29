@@ -520,53 +520,6 @@ end
 -- Block
 -- -----------------------------------------------------------------------------
 
-local function Assignment()
-  local node = {
-    tag = 'Assignment',
-    idList = currentToken ~= '(' and List({ parse = Id }) or Parens({
-      allowRecursion = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Id,
-        })
-      end,
-    }),
-  }
-
-  if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
-    error('Invalid assignment operator: ' .. currentToken)
-  elseif C.BINOPS[currentToken] then
-    node.op = C.BINOPS[consume()]
-  end
-
-  expect('=')
-  node.exprList = currentToken ~= '(' and List({ parse = Expr })
-    or Parens({
-      allowRecursion = true,
-      prioritizeRule = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Expr,
-        })
-      end,
-    })
-
-  return node
-end
-
-local function FunctionCall()
-  local node = OptChain()
-  local last = node[#node]
-
-  if not last or last.variant ~= 'functionCall' then
-    error('Missing function call parentheses')
-  end
-
-  return node
-end
-
 function Block()
   local node = { tag = 'Block' }
 
@@ -709,7 +662,55 @@ function Block()
         })
       end
     else
-      statement = Switch({ FunctionCall, Assignment })
+      local optChain = Try(OptChain)
+      local optChainLast = optChain and optChain[#optChain]
+
+      if optChainLast and optChainLast.variant == 'functionCall' then
+        -- Allow function calls as standalone statements
+        statement = optChain
+      elseif optChain or currentToken == '(' then
+        statement = { tag = 'Assignment' }
+
+        local idList
+        if optChain then
+          if branch(',') then
+            idList = List({ parse = Id })
+            table.insert(idList, 1, optChain)
+          else
+            idList = { optChain }
+          end
+        else
+          idList = Parens({
+            allowRecursion = true,
+            parse = function()
+              return List({
+                allowTrailingComma = true,
+                parse = Id,
+              })
+            end,
+          })
+        end
+        statement.idList = idList
+
+        if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
+          error('Invalid assignment operator: ' .. currentToken)
+        elseif C.BINOPS[currentToken] then
+          statement.op = C.BINOPS[consume()]
+        end
+
+        expect('=')
+        statement.exprList = currentToken ~= '(' and List({ parse = Expr })
+        or Parens({
+          allowRecursion = true,
+          prioritizeRule = true,
+          parse = function()
+            return List({
+              allowTrailingComma = true,
+              parse = Expr,
+            })
+          end,
+        })
+      end
     end
 
     table.insert(node, statement)
