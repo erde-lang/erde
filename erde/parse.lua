@@ -60,15 +60,6 @@ local function Try(rule)
   end
 end
 
-local function Switch(rules)
-  for i, rule in ipairs(rules) do
-    local node = Try(rule)
-    if node then
-      return node
-    end
-  end
-end
-
 local function Surround(openChar, closeChar, parse)
   expect(openChar)
   local node = parse()
@@ -224,19 +215,14 @@ local function ParamsList()
 end
 
 local function Params(allowImplicitParams)
-  local node = { tag = 'Params' }
-
-  local params
+  local node
   if currentToken ~= '(' and allowImplicitParams then
-    params = { { value = Var() } }
+    node = { { value = Var() } }
   else
-    params = Parens({ demand = true, parse = ParamsList })
+    node = Parens({ demand = true, parse = ParamsList })
   end
 
-  for _, param in pairs(params) do
-    table.insert(node, param)
-  end
-
+  node.tag = 'Params'
   return node
 end
 
@@ -349,16 +335,10 @@ end
 local function ArrowFunction()
   local node = {
     tag = 'ArrowFunction',
-    hasFatArrow = false,
-    hasImplicitReturns = false,
     params = Params(true),
+    hasFatArrow = consume() == '=>',
+    hasImplicitReturns = false,
   }
-
-  if branch('=>') then
-    node.hasFatArrow = true
-  elseif not branch('->') then
-    error('Expected arrow (->, =>), got ' .. currentToken)
-  end
 
   if currentToken == '{' then
     node.body = Surround('{', '}', Block)
@@ -427,77 +407,95 @@ local function Table()
   return node
 end
 
+local function Terminal()
+  for _, terminal in pairs(C.TERMINALS) do
+    if branch(terminal) then
+      return terminal
+    end
+  end
+
+  if currentToken:match('^.?[0-9]') then
+    -- Only need to check first couple chars, rest is token care of by tokenizer
+    return consume()
+  elseif branch('do') then
+    return { tag = 'DoBlockExpr', body = Surround('{', '}', Block) }
+  elseif currentToken == "'" then
+    return consume() .. consume() .. consume()
+  elseif currentToken == '"' or currentToken:match('^%[[[=]') then
+    local node = { tag = 'String' }
+    local terminatingToken
+
+    if currentToken == '"' then
+      node.variant = 'double'
+      terminatingToken = consume()
+    else
+      node.variant = 'long'
+      node.equals = ('='):rep(#currentToken - 2)
+      terminatingToken = ']' .. node.equals .. ']'
+      consume()
+    end
+
+    while currentToken ~= terminatingToken do
+      table.insert(node, currentToken == '{'
+        and { variant = 'interpolation', value = Surround('{', '}', Expr) }
+        or { variant = 'content', value = consume() }
+      )
+    end
+
+    consume() -- terminatingToken
+    return node
+  end
+
+  local nextToken = lookAhead(1)
+  local isArrowFunction = nextToken == '->' or nextToken == '=>' or currentToken == '['
+  local surroundEnd = currentToken == '(' and ')'
+    or currentToken == '{' and '}'
+    or nil
+
+  if not isArrowFunction and surroundEnd then
+    local surroundStart = currentToken
+    local surroundDepth = 0
+
+    local tokenIndex = currentTokenIndex + 1
+    local token = tokens[tokenIndex]
+
+    while token ~= surroundEnd or surroundDepth > 0 do
+      if token == nil then
+        error('Unexpected EOF')
+      elseif token == surroundStart then
+        surroundDepth = surroundDepth + 1
+      elseif token == surroundEnd then
+        surroundDepth = surroundDepth - 1
+      end
+
+      tokenIndex = tokenIndex + 1
+      token = tokens[tokenIndex]
+    end
+
+    -- Check one past surrounds for arrow
+    tokenIndex = tokenIndex + 1
+    token = tokens[tokenIndex]
+    isArrowFunction = token == '->' or token == '=>'
+  end
+
+  if isArrowFunction then
+    return ArrowFunction()
+  elseif currentToken == '{' then
+    return Table()
+  else
+    return OptChain()
+  end
+end
+
 function Expr(minPrec)
   minPrec = minPrec or 1
 
   local node
-  local unop = C.UNOPS[currentToken]
-
-  if unop then
-    consume()
-    node = {
-      tag = 'Unop',
-      op = unop,
-      operand = Expr(unop.prec + 1),
-    }
+  if C.UNOPS[currentToken] then
+    local unop = C.UNOPS[consume()]
+    node = { tag = 'Unop', op = unop, operand = Expr(unop.prec + 1) }
   else
-    for _, terminal in pairs(C.TERMINALS) do
-      if branch(terminal) then
-        node = terminal
-      end
-    end
-
-    if not node then
-      if currentToken:match('^.?[0-9]') then
-        -- Only need to check first couple chars, rest is token care of by tokenizer
-        node = consume()
-      elseif branch("'")  then
-        node = "'" .. consume() .. "'"
-        consume() -- ending quote
-      elseif currentToken == '"' or currentToken:match('^%[[[=]') then
-        node = { tag = 'String' }
-        local terminatingToken
-
-        if currentToken == '"' then
-          node.variant = 'double'
-          terminatingToken = consume()
-        else
-          node.variant = 'long'
-          node.equals = ('='):rep(#currentToken - 2)
-          terminatingToken = ']' .. node.equals .. ']'
-          consume()
-        end
-
-        while currentToken ~= terminatingToken do
-          if currentToken == '{' then
-            table.insert(node, {
-              variant = 'interpolation',
-              value = Surround('{', '}', Expr),
-            })
-          else
-            table.insert(node, {
-              variant = 'content',
-              value = consume(),
-            })
-          end
-        end
-
-        consume() -- terminatingToken
-      elseif branch('do') then
-        node = { tag = 'DoBlockExpr', body = Surround('{', '}', Block) }
-      elseif currentToken == '(' then
-        -- Also takes care of parenthesized expressions, since OptChain will unpack
-        -- any trivial OptChainBase
-        node = Switch({ ArrowFunction, OptChain })
-      else
-        -- Check ArrowFunction before Table for implicit params + destructure
-        node = Switch({ ArrowFunction, Table, OptChain })
-      end
-
-      if not node then
-        error('Unexpected token ' .. currentToken)
-      end
-    end
+    node = Terminal()
   end
 
   local binop = C.BINOPS[currentToken]
