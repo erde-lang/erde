@@ -13,7 +13,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Both difficult to optimize (requires iife)
 
 ### Added
-- Allow parenthesized lists for assignment / declarations vars and expressions.
 - Use newline to differentiate syntax ambiguity
 
 ### Changed

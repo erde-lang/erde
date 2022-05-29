@@ -550,17 +550,17 @@ function Block()
       statement.catch = Surround('{', '}', Block)
     elseif branch('return') then
       statement = currentToken ~= '('
-      and List({ parse = Expr, allowEmpty = true })
-      or Parens({
-        allowRecursion = true,
-        prioritizeRule = true,
-        parse = function()
-          return List({
-            allowTrailingComma = true,
-            parse = Expr,
-          })
-        end,
-      })
+        and List({ parse = Expr, allowEmpty = true })
+        or Parens({
+          allowRecursion = true,
+          prioritizeRule = true,
+          parse = function()
+            return List({
+              allowTrailingComma = true,
+              parse = Expr,
+            })
+          end,
+        })
       statement.tag = 'Return'
     elseif branch('if') then
       statement = {
@@ -633,83 +633,36 @@ function Block()
       statement.params = Params()
       statement.body = Surround('{', '}', Block)
     elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+      -- This must come after we check for function declaration!
       statement = {
         tag = 'Declaration',
         variant = consume(),
-        exprList = {},
-        varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
-          allowRecursion = true,
-          parse = function()
-            return List({
-              allowTrailingComma = true,
-              parse = Var,
-            })
-          end,
-        }),
+        varList = List({ parse = Var }),
+        exprList = branch('=') and List({ parse = Expr }) or {},
       }
-
-      if branch('=') then
-        statement.exprList = currentToken ~= '(' and List({ parse = Expr })
-        or Parens({
-          allowRecursion = true,
-          prioritizeRule = true,
-          parse = function()
-            return List({
-              allowTrailingComma = true,
-              parse = Expr,
-            })
-          end,
-        })
-      end
     else
       local optChain = Try(OptChain)
-      local optChainLast = optChain and optChain[#optChain]
 
-      if optChainLast and optChainLast.variant == 'functionCall' then
-        -- Allow function calls as standalone statements
-        statement = optChain
-      elseif optChain or currentToken == '(' then
-        statement = { tag = 'Assignment' }
+      if optChain then
+        local optChainLast = optChain[#optChain]
 
-        local idList
-        if optChain then
-          if branch(',') then
-            idList = List({ parse = Id })
-            table.insert(idList, 1, optChain)
-          else
-            idList = { optChain }
-          end
+        if optChainLast and optChainLast.variant == 'functionCall' then
+          -- Allow function calls as standalone statements
+          statement = optChain
         else
-          idList = Parens({
-            allowRecursion = true,
-            parse = function()
-              return List({
-                allowTrailingComma = true,
-                parse = Id,
-              })
-            end,
-          })
-        end
-        statement.idList = idList
+          statement = { tag = 'Assignment' }
+          statement.idList = branch(',') and List({ parse = Id }) or {}
+          table.insert(statement.idList, 1, optChain)
 
-        if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
-          error('Invalid assignment operator: ' .. currentToken)
-        elseif C.BINOPS[currentToken] then
-          statement.op = C.BINOPS[consume()]
-        end
+          if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
+            error('Invalid assignment operator: ' .. currentToken)
+          elseif C.BINOPS[currentToken] then
+            statement.op = C.BINOPS[consume()]
+          end
 
-        expect('=')
-        statement.exprList = currentToken ~= '(' and List({ parse = Expr })
-        or Parens({
-          allowRecursion = true,
-          prioritizeRule = true,
-          parse = function()
-            return List({
-              allowTrailingComma = true,
-              parse = Expr,
-            })
-          end,
-        })
+          expect('=')
+          statement.exprList = List({ parse = Expr })
+        end
       end
     end
 
