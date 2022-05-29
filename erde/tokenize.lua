@@ -17,8 +17,6 @@ local numLookup, numExp1, numExp2
 
 -- -----------------------------------------------------------------------------
 -- Helpers
---
--- TODO: use macros?
 -- -----------------------------------------------------------------------------
 
 local function commit(token)
@@ -32,15 +30,11 @@ local function peek(n)
   return text:sub(charIndex, charIndex + n - 1)
 end
 
-local function jump(n)
+local function consume(n)
   n = n or 1
+  local consumed = n == 1 and char or peek(n)
   charIndex = charIndex + n
   char = text:sub(charIndex, charIndex)
-end
-
-local function consume()
-  local consumed = char
-  jump()
   return consumed
 end
 
@@ -51,12 +45,12 @@ end
 local function Newline()
   column = 1
   line = line + 1
-  jump()
+  return consume()
 end
 
 local function Space()
   while char == ' ' or char == '\t' do
-    jump()
+    consume()
     column = column + 1
   end
 end
@@ -65,7 +59,7 @@ local function InnerString()
   if char == '' then
     error('Unexpected EOF (unterminated string)')
   elseif char == '\\' then
-    jump()
+    consume()
     if char == '{' or char == '}' then
       -- Remove escape for '{', '}' (not allowed in pure lua)
       token = token .. consume()
@@ -157,7 +151,7 @@ function Token()
 
     commit(consume()) -- quote
   elseif peekTwo:match('%[[[=]') then
-    jump() -- '['
+    consume() -- '['
 
     local strEq, strCloseLen = '', 2
     while char == '=' do
@@ -168,7 +162,7 @@ function Token()
     if char ~= '[' then
       error('Invalid start of long string (expected [ got ' .. char .. ')')
     else
-      jump()
+      consume()
     end
 
     commit('[' .. strEq .. '[')
@@ -188,16 +182,16 @@ function Token()
     end
 
     commit(strClose)
-    jump(strCloseLen)
+    consume(strCloseLen)
   elseif peekTwo == '--' then
-    jump(2)
+    consume(2)
 
     if not peek(2):match('%[[[=]') then
       while char ~= '' and char ~= '\n' do
-        jump()
+        consume()
       end
     else
-      jump() -- '['
+      consume() -- '['
 
       local strEq, strCloseLen = '', 2
       while char == '=' do
@@ -209,7 +203,7 @@ function Token()
       if char ~= '[' then
         error('Invalid start of long comment (expected [ got ' .. char .. ')')
       else
-        jump()
+        consume()
       end
 
       while peek(strCloseLen) ~= strClose do
@@ -218,19 +212,18 @@ function Token()
         elseif char == '\n' then
           Newline()
         else
-          jump()
+          consume()
         end
       end
 
-      jump(strCloseLen)
+      consume(strCloseLen)
     end
   elseif C.DIGIT[char] or peekTwo:match('%.[0-9]') then
     if peekTwo == '0x' or peekTwo == '0X' then
       numLookup = C.HEX
       numExp1, numExp2 = 'p', 'P'
 
-      token = peekTwo -- 0[xX]
-      jump(2)
+      token = consume(2) -- 0[xX]
 
       if not C.HEX[char] and char ~= '.' then
         error('Missing hex after ' .. token)
@@ -278,13 +271,10 @@ function Token()
 
     commit(token)
   else
-    local peekThree = peek(3)
-    if C.SYMBOLS[peekThree] then
-      commit(peekThree)
-      jump(3)
+    if C.SYMBOLS[peek(3)] then
+      commit(consume(3))
     elseif C.SYMBOLS[peekTwo] then
-      commit(peekTwo)
-      jump(2)
+      commit(consume(2))
     else
       commit(consume())
     end
@@ -302,8 +292,7 @@ return function(input)
   newlines = {}
 
   if peek(2) == '#!' then
-    token = '#!'
-    jump(2)
+    token = consume(2)
 
     while char ~= '\n' do
       token = token .. consume()
