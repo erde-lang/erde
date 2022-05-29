@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local parse = require('erde.parse')
 
 -- Foward declare rules
-local ArrowFunction, Block, Break, Continue, Declaration, ForLoop, Function
+local ArrowFunction, Block, Break, Continue, Declaration, Function
 local SUB_PRECOMPILERS
 
 -- =============================================================================
@@ -159,13 +159,11 @@ end
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop(node)
-  if node.variant == 'numeric' then
-    if #node.parts < 2 then
-      error('Invalid for loop parameters (missing parameters)')
-    elseif #node.parts > 3 then
-      error('Invalid for loop parameters (too many parameters)')
-    end
+function NumericFor(node)
+  if #node.parts < 2 then
+    error('Invalid for loop parameters (missing parameters)')
+  elseif #node.parts > 3 then
+    error('Invalid for loop parameters (too many parameters)')
   end
 
   Loop(node)
@@ -210,9 +208,10 @@ SUB_PRECOMPILERS = {
   Break = Break,
   Continue = Continue,
   Declaration = Declaration,
-  ForLoop = ForLoop,
   Function = Function,
+  GenericFor = Loop,
   Module = Module,
+  NumericFor = NumericFor,
   RepeatUntil = Loop,
   WhileLoop = Loop,
 }

@@ -37,7 +37,7 @@ local function branch(token)
   end
 end
 
-local function expect(token, skipConsume)
+local function expect(token)
   if token ~= currentToken then
     error('Expected ' .. token .. ' got ' .. tostring(currentToken))
   end
@@ -191,21 +191,9 @@ local function MapDestructure()
 end
 
 function Destructure()
-  local node = { tag = 'Destructure' }
-
-  local destructs = currentToken == '[' and ArrayDestructure()
+  local node = currentToken == '[' and ArrayDestructure()
     or MapDestructure()
-
-  for _, destruct in ipairs(destructs) do
-    if destruct.variant ~= nil then
-      table.insert(node, destruct)
-    else
-      for _, numberDestruct in ipairs(destruct) do
-        table.insert(node, numberDestruct)
-      end
-    end
-  end
-
+  node.tag = 'Destructure'
   return node
 end
 
@@ -496,11 +484,7 @@ function Expr(minPrec)
 
         consume() -- terminatingToken
       elseif branch('do') then
-        node = {
-          tag = 'DoBlock',
-          isExpr = true,
-          body = Surround('{', '}', Block),
-        }
+        node = { tag = 'DoBlockExpr', body = Surround('{', '}', Block) }
       elseif currentToken == '(' then
         -- Also takes care of parenthesized expressions, since OptChain will unpack
         -- any trivial OptChainBase
@@ -572,42 +556,6 @@ local function Assignment()
   return node
 end
 
-local function Function()
-  local node = {
-    tag = 'Function',
-    isMethod = false,
-  }
-
-  if
-    currentToken == 'local'
-    or currentToken == 'global'
-    or currentToken == 'module'
-  then
-    node.variant = consume()
-  end
-
-  consume() -- 'function'
-  node.names = { Name() }
-
-  while branch('.') do
-    table.insert(node.names, Name())
-  end
-
-  if branch(':') then
-    node.isMethod = true
-    table.insert(node.names, Name())
-  end
-
-  if not node.variant then
-    node.variant = #node.names > 1 and 'global' or 'local'
-  end
-
-  node.params = Params()
-  node.body = Surround('{', '}', Block)
-
-  return node
-end
-
 local function FunctionCall()
   local node = OptChain()
   local last = node[#node]
@@ -630,9 +578,7 @@ function Block()
     elseif branch('continue') then
       statement = { tag = 'Continue' }
     elseif branch('do') then
-      statement = { tag = 'DoBlock', body = Surround('{', '}', Block) }
-    elseif currentToken == 'function' then
-      statement = Function()
+      statement = { tag = 'DoBlockStatement', body = Surround('{', '}', Block) }
     elseif branch('goto') then
       statement = { tag = 'Goto', name = Name() }
     elseif branch('::') then
@@ -651,17 +597,17 @@ function Block()
       statement.catch = Surround('{', '}', Block)
     elseif branch('return') then
       statement = currentToken ~= '('
-        and List({ parse = Expr, allowEmpty = true })
-        or Parens({
-          allowRecursion = true,
-          prioritizeRule = true,
-          parse = function()
-            return List({
-              allowTrailingComma = true,
-              parse = Expr,
-            })
-          end,
-        })
+      and List({ parse = Expr, allowEmpty = true })
+      or Parens({
+        allowRecursion = true,
+        prioritizeRule = true,
+        parse = function()
+          return List({
+            allowTrailingComma = true,
+            parse = Expr,
+          })
+        end,
+      })
       statement.tag = 'Return'
     elseif branch('if') then
       statement = {
@@ -682,15 +628,16 @@ function Block()
         statement.elseNode = { body = Surround('{', '}', Block) }
       end
     elseif branch('for') then
-      statement = { tag = 'ForLoop' }
       local firstName = Var()
 
       if type(firstName) == 'string' and branch('=') then
-        statement.variant = 'numeric'
-        statement.name = firstName
-        statement.parts = List({ parse = Expr })
+        statement = {
+          tag = 'NumericFor',
+          name = firstName,
+          parts = List({ parse = Expr }),
+        }
       else
-        statement.variant = 'generic'
+        statement = { tag = 'GenericFor' }
         local varList = { firstName }
 
         while branch(',') do
@@ -703,38 +650,63 @@ function Block()
       end
 
       statement.body = Surround('{', '}', Block)
-    elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
-      if lookAhead(1) == 'function' then
-        statement = Function()
-      else
-        statement = {
-          tag = 'Declaration',
-          variant = consume(),
-          exprList = {},
-          varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
-            allowRecursion = true,
-            parse = function()
-              return List({
-                allowTrailingComma = true,
-                parse = Var,
-              })
-            end,
-          }),
-        }
+    elseif currentToken == 'function' or lookAhead(1) == 'function' then
+      statement = { tag = 'Function', isMethod = false }
 
-        if branch('=') then
-          statement.exprList = currentToken ~= '(' and List({ parse = Expr })
-          or Parens({
-            allowRecursion = true,
-            prioritizeRule = true,
-            parse = function()
-              return List({
-                allowTrailingComma = true,
-                parse = Expr,
-              })
-            end,
-          })
-        end
+      if currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+        statement.variant = consume()
+      elseif currentToken ~= 'function' then
+        error('Unrecognized scope before function declaration: ' .. currentToken)
+      end
+
+      consume() -- 'function'
+      local names = { Name() }
+
+      while branch('.') do
+        table.insert(names, Name())
+      end
+
+      if branch(':') then
+        statement.isMethod = true
+        table.insert(names, Name())
+      end
+
+      if not statement.variant then
+        -- Default functions to local scope _unless_ they are part of a table.
+        statement.variant = #names > 1 and 'global' or 'local'
+      end
+
+      statement.names = names
+      statement.params = Params()
+      statement.body = Surround('{', '}', Block)
+    elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+      statement = {
+        tag = 'Declaration',
+        variant = consume(),
+        exprList = {},
+        varList = currentToken ~= '(' and List({ parse = Var }) or Parens({
+          allowRecursion = true,
+          parse = function()
+            return List({
+              allowTrailingComma = true,
+              parse = Var,
+            })
+          end,
+        }),
+      }
+
+      if branch('=') then
+        statement.exprList = currentToken ~= '(' and List({ parse = Expr })
+        or Parens({
+          allowRecursion = true,
+          prioritizeRule = true,
+          parse = function()
+            return List({
+              allowTrailingComma = true,
+              parse = Expr,
+            })
+          end,
+        })
       end
     else
       statement = Switch({ FunctionCall, Assignment })

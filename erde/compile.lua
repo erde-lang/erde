@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local precompile = require('erde.precompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, ForLoop, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlockExpr, DoBlockStatement, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -428,56 +428,56 @@ end
 -- DoBlock
 -- -----------------------------------------------------------------------------
 
-function DoBlock(node)
-  if node.isExpr then
-    return '(function() ' .. compileNode(node.body) .. ' end)()'
-  else
-    return 'do\n' .. compileNode(node.body) .. '\nend'
-  end
+function DoBlockExpr(node)
+  return '(function() ' .. compileNode(node.body) .. ' end)()'
+end
+
+function DoBlockStatement(node)
+  return 'do\n' .. compileNode(node.body) .. '\nend'
 end
 
 -- -----------------------------------------------------------------------------
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-function ForLoop(node)
-  if node.variant == 'numeric' then
-    local parts = {}
-    for i, part in ipairs(node.parts) do
-      table.insert(parts, compileNode(part))
-    end
-
-    return ('for %s=%s do\n%s\nend'):format(
-      compileNode(node.name),
-      table.concat(parts, ','),
-      compileNode(node.body)
-    )
-  else
-    local prebody = {}
-
-    local nameList = {}
-    for i, var in ipairs(node.varList) do
-      if type(var) == 'table' then
-        local destructure = compileNode(var)
-        nameList[i] = destructure.baseName
-        table.insert(prebody, destructure.compiled)
-      else
-        nameList[i] = compileNode(var)
-      end
-    end
-
-    local exprList = {}
-    for i, expr in ipairs(node.exprList) do
-      exprList[i] = compileNode(expr)
-    end
-
-    return ('for %s in %s do\n%s\n%s\nend'):format(
-      table.concat(nameList, ','),
-      table.concat(exprList, ','),
-      table.concat(prebody, '\n'),
-      compileNode(node.body)
-    )
+function NumericFor(node)
+  local parts = {}
+  for i, part in ipairs(node.parts) do
+    table.insert(parts, compileNode(part))
   end
+
+  return ('for %s=%s do\n%s\nend'):format(
+    compileNode(node.name),
+    table.concat(parts, ','),
+    compileNode(node.body)
+  )
+end
+
+function GenericFor(node)
+  local prebody = {}
+
+  local nameList = {}
+  for i, var in ipairs(node.varList) do
+    if type(var) == 'table' then
+      local destructure = compileNode(var)
+      nameList[i] = destructure.baseName
+      table.insert(prebody, destructure.compiled)
+    else
+      nameList[i] = compileNode(var)
+    end
+  end
+
+  local exprList = {}
+  for i, expr in ipairs(node.exprList) do
+    exprList[i] = compileNode(expr)
+  end
+
+  return ('for %s in %s do\n%s\n%s\nend'):format(
+    table.concat(nameList, ','),
+    table.concat(exprList, ','),
+    table.concat(prebody, '\n'),
+    compileNode(node.body)
+  )
 end
 
 -- -----------------------------------------------------------------------------
@@ -864,14 +864,16 @@ SUB_COMPILERS = {
   Continue = Continue,
   Declaration = Declaration,
   Destructure = Destructure,
-  DoBlock = DoBlock,
+  DoBlockExpr = DoBlockExpr,
+  DoBlockStatement = DoBlockStatement,
   Expr = Expr,
-  ForLoop = ForLoop,
   Function = Function,
+  GenericFor = GenericFor,
   Goto = Goto,
   GotoLabel = GotoLabel,
   IfElse = IfElse,
   Module = Module,
+  NumericFor = NumericFor,
   OptChain = OptChain,
   Params = Params,
   RepeatUntil = RepeatUntil,
