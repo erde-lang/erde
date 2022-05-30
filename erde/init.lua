@@ -5,7 +5,7 @@ return {
   run = function(text)
     local source = compile(text)
 
-    local loader, err = loadstring(source)
+    local loader, err = (loadstring or load)(source)
     if type(loader) == 'function' then
       -- TODO: provide option to avoid pcall? Maybe disableSourceMap?
       local ok, result = pcall(function()
