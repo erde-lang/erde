@@ -1,8 +1,6 @@
 local erde = require('erde')
 local pathSep = package.config:sub(1, 1)
 
--- TODO: use package.erdepath? similar to moonscript
-
 local function erdeLoader(moduleName)
   moduleName = moduleName:gsub('%.', pathSep)
 
