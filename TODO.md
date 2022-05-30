@@ -25,6 +25,7 @@
 
 # 0.5-1
 
+- +1 new features? macros?
 - add CLI REPL
 
 # 1.0-1
@@ -34,7 +35,5 @@
 # Uncertain Proposals (need community input)
 
 - macros
-- decorators (like python / js)
-- if assignments (`if x = myfunc() { ... }`)
 - Allow all blocks as expressions (`local x = if x { return y }`)
 - nested break
