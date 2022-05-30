@@ -22,14 +22,6 @@ local function consume()
   return consumedToken
 end
 
-local function lookBehind(n)
-  return tokens[currentTokenIndex - n] or ''
-end
-
-local function lookAhead(n)
-  return tokens[currentTokenIndex + n] or ''
-end
-
 local function branch(token)
   if token == currentToken then
     consume()
@@ -42,6 +34,14 @@ local function expect(token)
     error('Expected ' .. token .. ' got ' .. tostring(currentToken))
   end
   consume()
+end
+
+local function lookBehind(n)
+  return tokens[currentTokenIndex - n] or ''
+end
+
+local function lookAhead(n)
+  return tokens[currentTokenIndex + n] or ''
 end
 
 -- -----------------------------------------------------------------------------
@@ -130,17 +130,6 @@ local function Var()
     or Name()
 end
 
-local function Id()
-  local node = OptChain()
-  local last = node[#node]
-
-  if last and last.variant == 'functionCall' then
-    error('Unexpected function call')
-  end
-
-  return node
-end
-
 local function Spread()
   expect('...')
   return { tag = 'Spread', value = Try(Expr) }
@@ -150,40 +139,34 @@ end
 -- Destructure
 -- -----------------------------------------------------------------------------
 
-local function ArrayDestructure()
-  return Surround('[', ']', function()
-    return List({
-      allowTrailingComma = true,
-      parse = function()
-        return {
-          name = Name(),
-          variant = 'numberDestruct',
-          default = branch('=') and Expr(),
-        }
-      end,
-    })
-  end)
-end
-
-local function MapDestructure()
-  return Surround('{', '}', function()
-    return List({
-      allowTrailingComma = true,
-      parse = function()
-        return {
-          name = Name(),
-          variant = 'keyDestruct',
-          alias = branch(':') and Name(),
-          default = branch('=') and Expr(),
-        }
-      end,
-    })
-  end)
-end
-
 function Destructure()
-  local node = currentToken == '[' and ArrayDestructure()
-    or MapDestructure()
+  local node = currentToken == '['
+    and Surround('[', ']', function()
+      return List({
+        allowTrailingComma = true,
+        parse = function()
+          return {
+            name = Name(),
+            variant = 'numberDestruct',
+            default = branch('=') and Expr(),
+          }
+        end,
+      })
+    end)
+    or Surround('{', '}', function()
+      return List({
+        allowTrailingComma = true,
+        parse = function()
+          return {
+            name = Name(),
+            variant = 'keyDestruct',
+            alias = branch(':') and Name(),
+            default = branch('=') and Expr(),
+          }
+        end,
+      })
+    end)
+
   node.tag = 'Destructure'
   return node
 end
@@ -332,81 +315,6 @@ end
 -- Expr
 -- -----------------------------------------------------------------------------
 
-local function ArrowFunction()
-  local node = {
-    tag = 'ArrowFunction',
-    params = Params(true),
-    hasFatArrow = consume() == '=>',
-    hasImplicitReturns = false,
-  }
-
-  if currentToken == '{' then
-    node.body = Surround('{', '}', Block)
-  elseif currentToken == '(' then
-    node.hasImplicitReturns = true
-    node.returns = Parens({
-      allowRecursion = true,
-      parse = function()
-        return List({
-          allowTrailingComma = true,
-          parse = Expr,
-        })
-      end,
-    })
-  else
-    node.hasImplicitReturns = true
-    node.returns = { Expr() }
-  end
-
-  return node
-end
-
-local function TableField()
-  local field = {}
-
-  if currentToken == '[' then
-    field.variant = 'exprKey'
-    field.key = Surround('[', ']', Expr)
-  elseif currentToken == '...' then
-    field.variant = 'spread'
-    field.value = Spread()
-  else
-    local expr = Expr()
-
-    if
-      currentToken == '='
-      and type(expr) == 'string'
-      and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$')
-    then
-      field.variant = 'nameKey'
-      field.key = expr
-    else
-      field.variant = 'numberKey'
-      field.value = expr
-    end
-  end
-
-  if field.variant == 'exprKey' or field.variant == 'nameKey' then
-    expect('=')
-    field.value = Expr()
-  end
-
-  return field
-end
-
-local function Table()
-  local node = Surround('{', '}', function()
-    return List({
-      allowEmpty = true,
-      allowTrailingComma = true,
-      parse = TableField,
-    })
-  end)
-
-  node.tag = 'Table'
-  return node
-end
-
 local function Terminal()
   for _, terminal in pairs(C.TERMINALS) do
     if branch(terminal) then
@@ -479,9 +387,70 @@ local function Terminal()
   end
 
   if isArrowFunction then
-    return ArrowFunction()
+    local node = {
+      tag = 'ArrowFunction',
+      params = Params(true),
+      hasFatArrow = consume() == '=>',
+      hasImplicitReturns = false,
+    }
+
+    if currentToken == '{' then
+      node.body = Surround('{', '}', Block)
+    elseif currentToken == '(' then
+      node.hasImplicitReturns = true
+      node.returns = Parens({
+        allowRecursion = true,
+        parse = function()
+          return List({
+            allowTrailingComma = true,
+            parse = Expr,
+          })
+        end,
+      })
+    else
+      node.hasImplicitReturns = true
+      node.returns = { Expr() }
+    end
+
+    return node
   elseif currentToken == '{' then
-    return Table()
+    local node = Surround('{', '}', function()
+      return List({
+        allowEmpty = true,
+        allowTrailingComma = true,
+        parse = function()
+          local field = {}
+
+          if currentToken == '[' then
+            field.variant = 'exprKey'
+            field.key = Surround('[', ']', Expr)
+          elseif currentToken == '...' then
+            field.variant = 'spread'
+            field.value = Spread()
+          else
+            local expr = Expr()
+
+            if currentToken == '=' and type(expr) == 'string' and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$') then
+              field.variant = 'nameKey'
+              field.key = expr
+            else
+              field.variant = 'numberKey'
+              field.value = expr
+            end
+          end
+
+          if field.variant == 'exprKey' or field.variant == 'nameKey' then
+            expect('=')
+            field.value = Expr()
+          end
+
+          return field
+        end,
+      })
+    end)
+
+    node.tag = 'Table'
+    return node
   else
     return OptChain()
   end
@@ -649,7 +618,15 @@ function Block()
           statement = optChain
         else
           statement = { tag = 'Assignment' }
-          statement.idList = branch(',') and List({ parse = Id }) or {}
+          statement.idList = not branch(',') and {} or List({
+            parse = function()
+              local node = OptChain()
+              local last = node[#node]
+              assert(not last or last.variant ~= 'functionCall')
+              return node
+            end,
+          })
+
           table.insert(statement.idList, 1, optChain)
 
           if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
