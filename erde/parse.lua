@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare rules
-local Block, Destructure, Expr, OptChain
+local Block, Destructure, Expr
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -188,98 +188,37 @@ local function ParamsList()
   })
 
   if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
-    table.insert(paramsList, {
-      value = Try(Name),
-      varargs = true,
-    })
+    table.insert(paramsList, { value = Try(Name), varargs = true })
   end
 
   return paramsList
 end
 
 local function Params(allowImplicitParams)
-  local node
-  if currentToken ~= '(' and allowImplicitParams then
-    node = { { value = Var() } }
-  else
-    node = Parens({ demand = true, parse = ParamsList })
-  end
+  local node = currentToken ~= '(' and allowImplicitParams
+    and { { value = Var() } }
+    or Parens({ demand = true, parse = ParamsList })
 
   node.tag = 'Params'
   return node
 end
 
 -- -----------------------------------------------------------------------------
--- OptChain
+-- Expr
 -- -----------------------------------------------------------------------------
 
-local function OptChainBase()
-  if currentToken == '(' then
-    local base = Surround('(', ')', Expr)
+local function OptChain()
+  local node = { tag = 'OptChain' }
 
-    if type(base) == 'table' then
-      base.parens = true
+  if currentToken ~= '(' then
+    node.base = Name()
+  else
+    node.base = Surround('(', ')', Expr)
+    if type(node.base) == 'table' then
+      -- If its just a name, no need to retain braces
+      node.base.parens = true
     end
-
-    return base
-  else
-    return Name()
   end
-end
-
-local function OptChainDotIndex()
-  local name = Try(function()
-    return Name({ allowKeywords = true })
-  end)
-
-  return name and { variant = 'dotIndex', value = name }
-end
-
-local function OptChainMethod()
-  local name = Try(function()
-    return Name({ allowKeywords = true })
-  end)
-
-  local isNextChainFunctionCall = currentToken == '('
-    or (currentToken == '?' and lookAhead(1) == '(')
-
-  if name and isNextChainFunctionCall then
-    return { variant = 'method', value = name }
-  else
-    error('Missing parentheses for method call')
-  end
-end
-
-local function OptChainBracket()
-  return {
-    variant = 'bracketIndex',
-    value = Surround('[', ']', Expr),
-  }
-end
-
-local function OptChainFunctionCall()
-  return {
-    variant = 'functionCall',
-    value = Parens({
-      demand = true,
-      parse = function()
-        return List({
-          allowEmpty = true,
-          allowTrailingComma = true,
-          parse = function()
-            return currentToken == '...' and Spread() or Expr()
-          end,
-        })
-      end,
-    }),
-  }
-end
-
-function OptChain()
-  local node = {
-    tag = 'OptChain',
-    base = OptChainBase(),
-  }
 
   while true do
     local currentTokenIndexBackup = currentTokenIndex
@@ -287,14 +226,36 @@ function OptChain()
 
     local chain
     if branch('.') then
-      chain = OptChainDotIndex()
+      chain = { variant = 'dotIndex', value = Name({ allowKeywords = true }) }
     elseif branch(':') then
-      chain = OptChainMethod()
+      local name = Name({ allowKeywords = true })
+
+      local isNextChainFunctionCall = currentToken == '('
+        or (currentToken == '?' and lookAhead(1) == '(')
+      if not isNextChainFunctionCall then
+        error('Missing parentheses for method call')
+      end
+
+      chain = { variant = 'method', value = name }
     elseif currentToken == '[' then
-      chain = OptChainBracket()
+      chain = { variant = 'bracketIndex', value = Surround('[', ']', Expr) }
     elseif currentToken == '(' then
       if not newlines[currentTokenIndex - 1] then
-        chain = OptChainFunctionCall()
+        chain = {
+          variant = 'functionCall',
+          value = Parens({
+            demand = true,
+            parse = function()
+              return List({
+                allowEmpty = true,
+                allowTrailingComma = true,
+                parse = function()
+                  return currentToken == '...' and Spread() or Expr()
+                end,
+              })
+            end,
+          }),
+        }
       end
     end
 
@@ -310,10 +271,6 @@ function OptChain()
 
   return #node == 0 and node.base or node -- unpack trivial OptChain
 end
-
--- -----------------------------------------------------------------------------
--- Expr
--- -----------------------------------------------------------------------------
 
 local function Terminal()
   for _, terminal in pairs(C.TERMINALS) do
