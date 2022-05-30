@@ -1,8 +1,8 @@
 local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
 
--- Foward declare rules
-local Block, Destructure, Expr
+-- Foward declare
+local Expr, Block
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -30,10 +30,8 @@ local function branch(token)
 end
 
 local function expect(token)
-  if token ~= currentToken then
-    error('Expected ' .. token .. ' got ' .. tostring(currentToken))
-  end
-  consume()
+  assert(token == currentToken, 'Expected ' .. token .. ' got ' .. tostring(currentToken))
+  return consume()
 end
 
 local function lookBehind(n)
@@ -50,14 +48,12 @@ end
 
 local function Try(rule)
   local currentTokenIndexBackup = currentTokenIndex
-  local ok, node = pcall(rule)
 
-  if ok then
-    return node
-  else
-    currentTokenIndex = currentTokenIndexBackup
-    currentToken = tokens[currentTokenIndex]
-  end
+  local ok, node = pcall(rule)
+  if ok then return node end
+
+  currentTokenIndex = currentTokenIndexBackup
+  currentToken = tokens[currentTokenIndex]
 end
 
 local function Surround(openChar, closeChar, parse)
@@ -70,20 +66,18 @@ end
 local function Parens(opts)
   if currentToken ~= '(' and not opts.demand then
     return opts.parse()
-  else
-    opts.demand = false
-
-    if opts.prioritizeRule then
-      local node = Try(opts.parse)
-      if node then
-        return node
-      end
-    end
-
-    return Surround('(', ')', function()
-      return opts.allowRecursion and Parens(opts) or opts.parse()
-    end)
   end
+
+  opts.demand = false
+
+  if opts.prioritizeRule then
+    local node = Try(opts.parse)
+    if node then return node end
+  end
+
+  return Surround('(', ')', function()
+    return opts.allowRecursion and Parens(opts) or opts.parse()
+  end)
 end
 
 local function List(opts)
@@ -92,10 +86,7 @@ local function List(opts)
 
   repeat
     local node = Try(opts.parse)
-    if not node then
-      break
-    end
-
+    if not node then break end
     hasTrailingComma = branch(',')
     table.insert(list, node)
   until not hasTrailingComma
@@ -107,7 +98,7 @@ local function List(opts)
 end
 
 -- -----------------------------------------------------------------------------
--- Pseudo Rules
+-- Partials
 -- -----------------------------------------------------------------------------
 
 local function Name(opts)
@@ -126,20 +117,10 @@ local function Name(opts)
 end
 
 local function Var()
-  return (currentToken == '{' or currentToken == '[') and Destructure()
-    or Name()
-end
+  if currentToken ~= '{' and currentToken ~= '[' then
+    return Name()
+  end
 
-local function Spread()
-  expect('...')
-  return { tag = 'Spread', value = Try(Expr) }
-end
-
--- -----------------------------------------------------------------------------
--- Destructure
--- -----------------------------------------------------------------------------
-
-function Destructure()
   local node = currentToken == '['
     and Surround('[', ']', function()
       return List({
@@ -171,33 +152,27 @@ function Destructure()
   return node
 end
 
--- -----------------------------------------------------------------------------
--- Params
--- -----------------------------------------------------------------------------
-
-local function ParamsList()
-  local paramsList = List({
-    allowEmpty = true,
-    allowTrailingComma = true,
-    parse = function()
-      return {
-        value = Var(),
-        default = branch('=') and Expr(),
-      }
-    end,
-  })
-
-  if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
-    table.insert(paramsList, { value = Try(Name), varargs = true })
-  end
-
-  return paramsList
-end
-
 local function Params(allowImplicitParams)
-  local node = currentToken ~= '(' and allowImplicitParams
+  local node = allowImplicitParams and currentToken ~= '('
     and { { value = Var() } }
-    or Parens({ demand = true, parse = ParamsList })
+    or Parens({
+      demand = true,
+      parse = function()
+        local paramsList = List({
+          allowEmpty = true,
+          allowTrailingComma = true,
+          parse = function()
+            return { value = Var(), default = branch('=') and Expr() }
+          end,
+        })
+
+        if (#paramsList == 0 or lookBehind(1) == ',') and branch('...') then
+          table.insert(paramsList, { value = Try(Name), varargs = true })
+        end
+
+        return paramsList
+      end,
+    })
 
   node.tag = 'Params'
   return node
@@ -250,7 +225,8 @@ local function OptChain()
                 allowEmpty = true,
                 allowTrailingComma = true,
                 parse = function()
-                  return currentToken == '...' and Spread() or Expr()
+                  return not branch('...') and Expr()
+                    or { tag = 'Spread', value = Try(Expr) }
                 end,
               })
             end,
@@ -381,9 +357,9 @@ local function Terminal()
           if currentToken == '[' then
             field.variant = 'exprKey'
             field.key = Surround('[', ']', Expr)
-          elseif currentToken == '...' then
+          elseif branch('...') then
             field.variant = 'spread'
-            field.value = Spread()
+            field.value = { tag = 'Spread', value = Try(Expr) }
           else
             local expr = Expr()
 
@@ -604,9 +580,9 @@ function Block()
   return node
 end
 
--- =============================================================================
+-- -----------------------------------------------------------------------------
 -- Return
--- =============================================================================
+-- -----------------------------------------------------------------------------
 
 return function(text)
   local ast = {}
