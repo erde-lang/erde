@@ -14,8 +14,6 @@ local function erdeLoader(moduleName)
       end
     end
   end
-
-  return 'Failed to find erde module'
 end
 
 local loaders = package.loaders or package.searchers

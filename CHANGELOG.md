@@ -12,11 +12,9 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Ternary created ambiguous syntax (`a ? b:c() : d()` vs `a ? b : c():d()`)
   - Both difficult to optimize (requires iife)
 
-### Added
-- Use newline to differentiate syntax ambiguity
-
 ### Changed
 - Refactor internal structure (now cleaner / faster)
+- Use newline to differentiate syntax ambiguity
 - No longer parse number destruct aliases as valid syntax
 - Varargs now spreads when used as a table or param expression.
 - Do not allow trailing comma in Return exprs unless parens are present
