@@ -4,6 +4,7 @@
 
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
+  - support compilation options using cli flags
 - throw error if only part of file is parsed
 - throw errors for undeclared variables (precompile)
 - throw version errors for number forms
@@ -36,4 +37,4 @@
 
 - macros
 - Allow all blocks as expressions (`local x = if x { return y }`)
-- nested break
+- Destructure "rest" spread (`local { x, ...rest }  = y`)
