@@ -3,7 +3,9 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [0.2-1] - UNRELEASED
+## [0.3-1] - UNRELEASED
+
+## [0.2-1] - June 03, 2022
 
 ### Removed
 - Remove `self` shorthand `$`. Completely unnecessary and confusing.
