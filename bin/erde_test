@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+
+function test {
+  echo "Testing $1"
+  echo
+  busted --run=$1
+  echo
+}
+
+test "luajit"
+test "lua5.1"
+test "lua5.2"
+test "lua5.3"
+test "lua5.4"

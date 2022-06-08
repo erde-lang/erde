@@ -1,11 +1,15 @@
 return {
   _all = {
+    ROOT = { 'spec' },
     lpath = './?/init.lua',
     verbose = true,
     helper = 'spec/setup_spec.lua',
   },
-  default = { ROOT = { 'spec' } },
-  format = { ROOT = { 'spec/format' } },
+  luajit = { lua = '/usr/bin/luajit' },
+  ['lua5.1'] = { lua = '/usr/bin/lua5.1' },
+  ['lua5.2'] = { lua = '/usr/bin/lua5.2' },
+  ['lua5.3'] = { lua = '/usr/bin/lua5.3' },
+  ['lua5.4'] = { lua = '/usr/bin/lua5.4' },
 }
 
 -- vim: filetype=lua:
