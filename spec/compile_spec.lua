@@ -9,7 +9,7 @@ local compile = require('erde.compile')
 -- ArrowFunction
 -- -----------------------------------------------------------------------------
 
-describe('ArrowFunction', function()
+describe('ArrowFunction #5.1+', function()
   spec('skinny arrow function', function()
     assert.eval('function', 'type(() -> {})')
     assert.run(
@@ -92,7 +92,7 @@ end)
 -- Assignment
 -- -----------------------------------------------------------------------------
 
-describe('Assignment', function()
+describe('Assignment #5.1+', function()
   spec('name assignment', function()
     assert.run(
       1,
@@ -185,7 +185,7 @@ end)
 -- Binop
 -- -----------------------------------------------------------------------------
 
-describe('Binop', function()
+describe('Binop #5.1+', function()
   spec('left associative binop precedence', function()
     assert.run(5, 'return 1 * 2 + 3')
     assert.run(7, 'return 1 + 2 * 3')
@@ -206,7 +206,7 @@ end)
 -- Break
 -- -----------------------------------------------------------------------------
 
-describe('Break', function()
+describe('Break #5.1+', function()
   spec('break', function()
     assert.run(
       6,
@@ -228,7 +228,7 @@ end)
 -- Continue
 -- -----------------------------------------------------------------------------
 
-describe('Continue', function()
+describe('Continue #5.1+', function()
   spec('continue', function()
     assert.run(
       30,
@@ -250,7 +250,7 @@ end)
 -- Declaration
 -- -----------------------------------------------------------------------------
 
-describe('Declaration', function()
+describe('Declaration #5.1+', function()
   spec('local declaration', function()
     assert.run(
       1,
@@ -309,7 +309,7 @@ end)
 -- DoBlock
 -- -----------------------------------------------------------------------------
 
-describe('DoBlock', function()
+describe('DoBlock #5.1+', function()
   spec('do block', function()
     assert.run(
       1,
@@ -347,7 +347,7 @@ end)
 -- ForLoop
 -- -----------------------------------------------------------------------------
 
-describe('ForLoop', function()
+describe('ForLoop #5.1+', function()
   spec('numeric for', function()
     assert.run(
       10,
@@ -408,7 +408,7 @@ end)
 -- Function
 -- -----------------------------------------------------------------------------
 
-describe('Function', function()
+describe('Function #5.1+', function()
   spec('local function', function()
     assert.run(
       2,
@@ -479,7 +479,7 @@ end)
 -- Goto
 -- -----------------------------------------------------------------------------
 
-describe('Goto', function()
+describe('Goto #JIT #5.2+', function()
   spec('goto', function()
     assert.run(
       1,
@@ -499,7 +499,7 @@ end)
 -- IfElse
 -- -----------------------------------------------------------------------------
 
-describe('IfElse', function()
+describe('IfElse #5.1+', function()
   spec('if', function()
     assert.run(1, 'if true { return 1 }')
     assert.run(nil, 'if false { return 1 }')
@@ -563,7 +563,7 @@ end)
 -- Module
 -- -----------------------------------------------------------------------------
 
-describe('Module', function()
+describe('Module #5.1+', function()
   spec('hoisted declarations', function()
     assert.run(
       4,
@@ -599,7 +599,7 @@ end)
 -- OptChain
 -- -----------------------------------------------------------------------------
 
-describe('OptChain', function()
+describe('OptChain #5.1+', function()
   spec('optchain base', function()
     assert.eval(1, '({ x = 1 }).x')
   end)
@@ -680,7 +680,7 @@ end)
 -- Params
 -- -----------------------------------------------------------------------------
 
-describe('Params', function()
+describe('Params #5.1+', function()
   spec('params', function()
     assert.run(
       3,
@@ -745,7 +745,7 @@ end)
 -- RepeatUntil
 -- -----------------------------------------------------------------------------
 
-describe('RepeatUntil', function()
+describe('RepeatUntil #5.1+', function()
   spec('repeat until', function()
     assert.run(
       12,
@@ -764,7 +764,7 @@ end)
 -- Return
 -- -----------------------------------------------------------------------------
 
-describe('Return', function()
+describe('Return #5.1+', function()
   spec('void return', function()
     assert.run(nil, 'return')
   end)
@@ -780,7 +780,7 @@ end)
 -- Spread
 -- -----------------------------------------------------------------------------
 
-describe('Spread', function()
+describe('Spread #5.1+', function()
   spec('table spread', function()
     assert.run(
       21,
@@ -815,7 +815,7 @@ end)
 -- String
 -- -----------------------------------------------------------------------------
 
-describe('String', function()
+describe('String #5.1+', function()
   spec('compile short string', function()
     assert.are.equal('""', '""')
     assert.are.equal('"hello"', '"hello"')
@@ -842,7 +842,7 @@ end)
 -- Table
 -- -----------------------------------------------------------------------------
 
-describe('Table', function()
+describe('Table #5.1+', function()
   spec('table numberKey', function()
     assert.eval({ 10 }, '{ 10 }')
   end)
@@ -864,7 +864,7 @@ end)
 -- TryCatch
 -- -----------------------------------------------------------------------------
 
-describe('TryCatch', function()
+describe('TryCatch #5.1+', function()
   spec('try catch', function()
     assert.run(
       1,
@@ -915,7 +915,7 @@ end)
 -- Unop
 -- -----------------------------------------------------------------------------
 
-describe('Unop', function()
+describe('Unop #5.1+', function()
   spec('unops', function()
     assert.run(-6, 'return 2 * -3')
     assert.run(-6, 'return -2 * 3')
@@ -927,7 +927,7 @@ end)
 -- WhileLoop
 -- -----------------------------------------------------------------------------
 
-describe('WhileLoop', function()
+describe('WhileLoop #5.1+', function()
   spec('while loop', function()
     assert.run(
       10,

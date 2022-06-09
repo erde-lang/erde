@@ -16,7 +16,7 @@ local function assertTokenInfo(text, expectedTokenInfo)
   assert.subtable(expectedTokenInfo, tokenInfo)
 end
 
-describe('tokenize', function()
+describe('tokenize #5.1+', function()
   spec('symbols', function()
     for symbol in pairs(C.SYMBOLS) do
       assertToken(symbol)
