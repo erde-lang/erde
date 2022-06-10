@@ -298,20 +298,42 @@ local function compileBlockStatements(node)
   return table.concat(compiledStatements, '\n')
 end
 
+-- TODO: compile GOTO `continue` version when possible
+-- function Block(node)
+--   if node.continueNodes and #node.continueNodes > 0 then
+--     local continueGotoLabel = newTmpName()
+
+--     for i, continueNode in ipairs(node.continueNodes) do
+--       continueNode.gotoLabel = continueGotoLabel
+--     end
+
+--     return ('%s\n::%s::'):format(
+--       compileBlockStatements(node),
+--       continueGotoLabel
+--     )
+--   else
+--     return compileBlockStatements(node)
+--   end
+-- end
+
 function Block(node)
-  if node.continueNodes and #node.continueNodes > 0 then
-    local continueGotoLabel = newTmpName()
+  if not node.continueNodes or #node.continueNodes == 0 then
+    return compileBlockStatements(node)
+  else
+    local breakName = newTmpName()
 
     for i, continueNode in ipairs(node.continueNodes) do
-      continueNode.gotoLabel = continueGotoLabel
+      continueNode.breakName = breakName
     end
 
-    return ('%s\n::%s::'):format(
+    return table.concat({
+      'local ' .. breakName .. ' = false',
+      'repeat',
       compileBlockStatements(node),
-      continueGotoLabel
-    )
-  else
-    return compileBlockStatements(node)
+      breakName .. ' = true',
+      'until true',
+      'if not ' .. breakName .. ' then break end',
+    }, '\n')
   end
 end
 
@@ -327,8 +349,13 @@ end
 -- Continue
 -- -----------------------------------------------------------------------------
 
+-- TODO: compile GOTO `continue` version when possible
+-- function Continue(node)
+--   return 'goto ' .. node.gotoLabel
+-- end
+
 function Continue(node)
-  return 'goto ' .. node.gotoLabel
+  return node.breakName .. ' = true break'
 end
 
 -- -----------------------------------------------------------------------------
