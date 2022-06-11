@@ -1,5 +1,11 @@
 local C = {}
 
+-- Get the current platform path separator. Note that while this is undocumented
+-- in the Lua 5.1 manual, it is indeed supported in 5.1+.
+--
+-- https://www.lua.org/manual/5.3/manual.html#pdf-package.config
+C.PATH_SEPARATOR = package.config:sub(1, 1)
+
 -- Keep this consistent with bin/erde!
 C.COMPILED_HEADER_COMMENT = '-- __ERDE_COMPILED__'
 
