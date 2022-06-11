@@ -1,8 +1,36 @@
-local erde = require('erde')
-local pathSep = package.config:sub(1, 1)
+-- This module allows loading `.erde` modules directly from Lua scripts by
+-- injecting a custom package searcher. This searcher may be removed later if
+-- required.
+--
+-- Usage: Adding the loader (default targets Lua 5.1+)
+--    require('erde.loader').load()
+--
+-- Usage: Adding the loader for a specific target
+--    require('erde.loader').load('5.3+')
+--
+-- Usage: Adding the loader for multiple targets
+--    require('erde.loader').load('5.1', '5.3')
+--
+-- Usage: Removing the loader
+--    require('erde.loader').unload()
 
-local function erdeSearcher(moduleName)
-  modulePath = moduleName:gsub('%.', pathSep)
+local C = require('erde.constants')
+local erde = require('erde')
+local targets = require('erde.targets')
+
+-- The package searchers. In Lua 5.1, this is `package.loaders` and in Lua 5.2+
+-- this is `package.searchers`.
+--
+-- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
+-- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
+local searchers = package.loaders or package.searchers
+
+-- The package searcher for `.erde` modules.
+--
+-- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
+-- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
+local function erdeSearcher()
+  modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') do
     local fullModulePath = path:gsub('%.lua', '.erde'):gsub('?', modulePath)
@@ -26,15 +54,42 @@ local function erdeSearcher(moduleName)
   end
 end
 
--- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
--- https://www.lua.org/manual/5.3/manual.html#pdf-package.searchers
-local searchers = package.loaders or package.searchers
+-- Load the `.erde` searcher for the given Lua targets.
+--
+-- While it is _technically_ possible to dynamically change the Lua targets at 
+-- runtime, doing so may be dangerous. For example, if the user loads an Erde 
+-- module targeting 5.2 then changes the target to 5.1, the previously loaded 
+-- Erde module will NOT be rerun and may potentially contain 5.1 incompatible 
+-- code. It is the job of the developer to ensure that such a situation does not 
+-- arise or to reload modules appropriately. We do not do any reloading on our 
+-- side, as loading a module may contain side effects.
+local function load(...)
+  targets:set(...)
 
-for searcher in ipairs(searchers) do
-  if searcher == erdeSearcher then
-    return
+  for i, searcher in ipairs(searchers) do
+    if searcher == erdeSearcher then
+      return
+    end
+  end
+
+  -- We need to place the searcher before the `.lua` searcher to prioritize Erde 
+  -- modules over Lua modules. If the user has compiled an Erde project before 
+  -- but the compiled files are out of date, we need to avoid loading the 
+  -- outdated modules.
+  table.insert(searchers, 2, erdeSearcher)
+end
+
+-- Unload the `.erde` searcher.
+--
+-- Note that this only removes the searcher from the searchers table and does
+-- not remove any modules that may have been loaded w/ the `.erde` searcher.
+local function unload()
+  for i, searcher in ipairs(searchers) do
+    if searcher == erdeSearcher then
+      table.remove(searchers, i)
+      return
+    end
   end
 end
 
--- Place erde loader directly after preloader to prioritize erde files over lua.
-table.insert(searchers, 2, erdeSearcher)
+return { load = load, unload = unload }

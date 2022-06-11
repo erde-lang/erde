@@ -1,3 +1,4 @@
+local targets = require('erde.targets')
 local compile = require('erde.compile')
 
 return {
