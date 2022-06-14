@@ -5,6 +5,15 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [0.3-1] - UNRELEASED
 
+### Added
+- `erde.loader` can now be used programatically.
+- `erde` and `erde.loader` now both accept Lua targets to compile with specific
+  Lua version compatabilities.
+
+### Changed
+- Revert split of `erde` and `erdec` in favor of more `pacman` like "main flags".
+- `erde.loader` no longer has `require` side effects and must be used programatically.
+
 ## [0.2-1] - June 03, 2022
 
 ### Removed

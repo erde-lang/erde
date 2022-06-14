@@ -9,6 +9,7 @@ local targets = setmetatable({}, targetsMT)
 -- The valid Lua targets. JIT is provided as a separate option as it assumes
 -- the Lua 5.1 language spec (i.e. number syntax is limited to Lua 5.1) but has
 -- extensions such as the support for `goto` statements.
+-- IMPORTANT: Keep these targets in sync with the CLI target choices!
 local VALID_LUA_TARGETS = {
   ['JIT'] = true,
   ['5.1'] = true,
