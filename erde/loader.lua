@@ -8,9 +8,6 @@
 -- Usage: Adding the loader for a specific target
 --    require('erde.loader').load('5.3+')
 --
--- Usage: Adding the loader for multiple targets
---    require('erde.loader').load('5.1', '5.3')
---
 -- Usage: Removing the loader
 --    require('erde.loader').unload()
 
@@ -29,7 +26,7 @@ local searchers = package.loaders or package.searchers
 --
 -- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
 -- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
-local function erdeSearcher()
+local function erdeSearcher(moduleName)
   modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') do
@@ -48,23 +45,25 @@ local function erdeSearcher()
 
         local moduleContents = moduleFile:read('*a')
         moduleFile:close()
-        return erde.run(moduleContents)
+        return erde.run(moduleContents, targets.current)
       end
     end
   end
 end
 
--- Load the `.erde` searcher for the given Lua targets.
+-- Load the `.erde` searcher for the given Lua target.
 --
--- While it is _technically_ possible to dynamically change the Lua targets at 
--- runtime, doing so may be dangerous. For example, if the user loads an Erde 
--- module targeting 5.2 then changes the target to 5.1, the previously loaded 
--- Erde module will NOT be rerun and may potentially contain 5.1 incompatible 
--- code. It is the job of the developer to ensure that such a situation does not 
--- arise or to reload modules appropriately. We do not do any reloading on our 
+-- While it is _technically_ possible to dynamically change the Lua target at
+-- runtime, doing so may be dangerous. For example, if the user loads an Erde
+-- module targeting 5.2, then changes the target to 5.1, the previously loaded
+-- Erde module will NOT be rerun and may potentially contain 5.1 incompatible
+-- code. It is the job of the developer to ensure that such a situation does not
+-- arise or to reload modules appropriately. We do not do any reloading on our
 -- side, as loading a module may contain side effects.
-local function load(...)
-  targets:set(...)
+local function load(newLuaTarget)
+  if newLuaTarget ~= nil then
+    targets.current = newLuaTarget
+  end
 
   for i, searcher in ipairs(searchers) do
     if searcher == erdeSearcher then
@@ -72,9 +71,9 @@ local function load(...)
     end
   end
 
-  -- We need to place the searcher before the `.lua` searcher to prioritize Erde 
-  -- modules over Lua modules. If the user has compiled an Erde project before 
-  -- but the compiled files are out of date, we need to avoid loading the 
+  -- We need to place the searcher before the `.lua` searcher to prioritize Erde
+  -- modules over Lua modules. If the user has compiled an Erde project before
+  -- but the compiled files are out of date, we need to avoid loading the
   -- outdated modules.
   table.insert(searchers, 2, erdeSearcher)
 end
