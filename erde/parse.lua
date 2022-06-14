@@ -585,8 +585,6 @@ end
 -- -----------------------------------------------------------------------------
 
 return function(text)
-  local ast = {}
-
   tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
@@ -603,6 +601,5 @@ return function(text)
 
   local ast = Block()
   ast.shebang = shebang
-
   return ast
 end

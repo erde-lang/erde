@@ -1,5 +1,6 @@
 local C = require('erde.constants')
 local parse = require('erde.parse')
+local targets = require('erde.targets')
 
 -- Foward declare rules
 local ArrowFunction, Block, Break, Continue, Declaration, Function
