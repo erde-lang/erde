@@ -5,12 +5,22 @@ local lfs = require('lfs')
 local erde = require('erde')
 local C = require('erde.constants')
 
--- The current working directory of the script.
 local CWD = lfs.currentdir()
 
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
+
+local function split(str, separator)
+  separator = separator or '%s'
+  local result = {}
+
+  for match in string.gmatch(str, '([^'..separator..']+)') do
+    table.insert(result, match)
+  end
+
+  return result
+end
 
 local function fileExists(filePath)
   local file = io.open(filePath, 'r')
@@ -48,7 +58,6 @@ local function isCompiledFile(filePath)
     or (head2 and head2:find(C.COMPILED_HEADER_COMMENT))
 end
 
--- Recursively traverse a directory and run a callback for every file.
 local function traverseDir(root, callback)
   for fileName in lfs.dir(root) do
     if fileName ~= '.' and fileName ~= '..' then
@@ -66,7 +75,6 @@ local function traverseDir(root, callback)
   end
 end
 
--- Recursively traverse a directory and run a callback for every `.erde` file.
 local function traverseErdeFiles(root, callback)
   traverseDir(root, function(filePath)
     if filePath:match('%.erde$') then
@@ -75,7 +83,6 @@ local function traverseErdeFiles(root, callback)
   end)
 end
 
--- Recursively traverse a directory and run a callback for every `.lua` file.
 local function traverseLuaFiles(root, callback)
   traverseDir(root, function(filePath)
     if filePath:match('%.lua$') then
@@ -114,7 +121,7 @@ local function compileFile(srcFilePath, outDir)
 end
 
 local function compile(args)
-  local files = #args.ARGS > 0 and args.ARGS or {'.'}
+  local files = #args.paths > 0 and args.paths or {'.'}
 
   for i, filePath in ipairs(files) do
     local attributes = lfs.attributes(filePath)
@@ -140,7 +147,7 @@ local function cleanFile(filePath)
 end
 
 local function clean(args)
-  local files = #args.ARGS > 0 and args.ARGS or {'.'}
+  local files = #args.paths > 0 and args.paths or {'.'}
 
   for i, filePath in ipairs(files) do
     local attributes = lfs.attributes(filePath)
@@ -157,11 +164,11 @@ end
 -- -----------------------------------------------------------------------------
 
 local function run(args)
-  local modulePath = pathJoin(CWD, args.ARGS[1])
+  local modulePath = pathJoin(CWD, args.paths[1])
   local moduleFile = io.open(modulePath)
 
   if moduleFile == nil then
-    return 'File does not exist: ' .. args.ARGS[1]
+    return 'File does not exist: ' .. args.paths[1]
   end
 
   local moduleContents = moduleFile:read('*a')
@@ -175,18 +182,39 @@ end
 
 local cli = argparse('erde')
 
-cli._usage = 'Usage: erde [-C|-X] [ARGS...]'
+cli._usage = 'Usage: erde [-C|-X] [PATH...]'
+cli:epilog('See `erde --usage` for examples / detailed usage.')
+
+local function option(shortFlag, longFlag, description)
+  local longName = longFlag:sub(3)
+
+  local option = cli:option({
+    argname = '<'..longName..'>',
+    target = longName,
+    description = description,
+  })
+
+  -- Hack to customize help output. We use this to force the flags to remain
+  -- on one line and deduplicate the argname.
+  option._public_aliases = { shortFlag .. ', ' .. longFlag }
+  option._aliases = { shortFlag, longFlag }
+
+  return option
+end
+
 cli:flag('-v --version', 'Show version and exit.')
-cli:argument('ARGS'):args('*'):hidden(true)
+cli:flag('-u --usage', 'Show detailed usage and exit.')
+cli:argument('paths'):args('*'):hidden(true)
 
 cli:group('-C, --compile',
   cli:flag('-C --compile'):hidden(true),
   -- IMPORTANT: Keep these choices in sync w/ `erde.targets`!
-  cli:option('-t --target', 'Lua target. Must be one of:\n    JIT, 5.1, 5.1+, 5.2, 5.2+, 5.3, 5.3+, 5.4, 5.4+'),
-  cli:option('-o --outDir')
+  option('-t', '--target', 'Lua target. Must be one of:\n  JIT, 5.1, 5.1+, 5.2, 5.2+, 5.3, 5.3+, 5.4, 5.4+'),
+  option('-o', '--outDir', 'Output directory for compiled files.')
 )
 
 local args = cli:parse()
+print(require('inspect')(args))
 
 if args.version then
   print('0.2-1')
@@ -194,7 +222,7 @@ elseif args.compile then
   compile(args)
 elseif args.clean then
   clean(args)
-elseif #args.ARGS == 1 then
+elseif #args.paths == 1 then
   run(args)
 else
   print('REPL not yet supported.')
