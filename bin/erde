@@ -11,17 +11,6 @@ local CWD = lfs.currentdir()
 -- Helpers
 -- -----------------------------------------------------------------------------
 
-local function split(str, separator)
-  separator = separator or '%s'
-  local result = {}
-
-  for match in string.gmatch(str, '([^'..separator..']+)') do
-    table.insert(result, match)
-  end
-
-  return result
-end
-
 local function fileExists(filePath)
   local file = io.open(filePath, 'r')
 
@@ -58,33 +47,38 @@ local function isCompiledFile(filePath)
     or (head2 and head2:find(C.COMPILED_HEADER_COMMENT))
 end
 
-local function traverseDir(root, callback)
-  for fileName in lfs.dir(root) do
-    if fileName ~= '.' and fileName ~= '..' then
-      local filePath = pathJoin(root, fileName)
-      local attributes = lfs.attributes(filePath)
+local function traversePaths(paths, callback)
+  for i, path in ipairs(paths) do
+    local attributes = lfs.attributes(path)
 
-      if attributes ~= nil then
-        if attributes.mode == 'directory' then
-          traverseDir(filePath, callback)
-        elseif attributes.mode == 'file' then
-          callback(filePath)
+    if attributes ~= nil then
+      if attributes.mode == 'file' then
+        callback(path)
+      elseif attributes.mode == 'directory' then
+        local subPaths = {}
+
+        for fileName in lfs.dir(path) do
+          if fileName ~= '.' and fileName ~= '..' then
+            subPaths[#subPaths + 1] = pathJoin(path, fileName)
+          end
         end
+
+        traversePaths(subPaths, callback)
       end
     end
   end
 end
 
-local function traverseErdeFiles(root, callback)
-  traverseDir(root, function(filePath)
+local function traverseErdeFiles(paths, callback)
+  traversePaths(paths, function(filePath)
     if filePath:match('%.erde$') then
       callback(filePath)
     end
   end)
 end
 
-local function traverseLuaFiles(root, callback)
-  traverseDir(root, function(filePath)
+local function traverseLuaFiles(paths, callback)
+  traversePaths(paths, function(filePath)
     if filePath:match('%.lua$') then
       callback(filePath)
     end
@@ -92,97 +86,27 @@ local function traverseLuaFiles(root, callback)
 end
 
 -- -----------------------------------------------------------------------------
--- Compile
--- -----------------------------------------------------------------------------
-
-local function compileFile(srcFilePath, outDir)
-  local destFilePath = srcFilePath:gsub('%.erde$', '.lua')
-
-  if outDir then
-    destFilePath = destFilePath:gsub(CWD, outDir)
-  end
-
-  if fileExists(destFilePath) and not isCompiledFile(destFilePath) then
-    error('Cannot write to ' .. destFilePath .. ': File already exists')
-  end
-
-  local srcFile = io.open(srcFilePath, 'r')
-  local compiled = erde.compile(srcFile:read('*a'))
-  srcFile:close()
-
-  local destFile = io.open(destFilePath, 'w')
-  destFile:write(compiled)
-
-  print(
-    srcFilePath:gsub(CWD .. C.PATH_SEPARATOR, '')
-    .. ' -> '
-    .. destFilePath:gsub(CWD .. C.PATH_SEPARATOR, '')
-  )
-end
-
-local function compile(args)
-  local files = #args.paths > 0 and args.paths or {'.'}
-
-  for i, filePath in ipairs(files) do
-    local attributes = lfs.attributes(filePath)
-    if attributes.mode == 'file' then
-      compileFile(filePath, outDir)
-    elseif attributes.mode == 'directory' then
-      traverseErdeFiles(filePath, function(compileFilePath)
-        compileFile(compileFilePath, outDir)
-      end)
-    end
-  end
-end
-
--- -----------------------------------------------------------------------------
--- Clean
--- -----------------------------------------------------------------------------
-
-local function cleanFile(filePath)
-  if isCompiledFile(filePath) then
-    os.remove(filePath)
-    print('Removed ' .. filePath)
-  end
-end
-
-local function clean(args)
-  local files = #args.paths > 0 and args.paths or {'.'}
-
-  for i, filePath in ipairs(files) do
-    local attributes = lfs.attributes(filePath)
-    if attributes.mode == 'file' then
-      cleanFile(filePath)
-    elseif attributes.mode == 'directory' then
-      traverseLuaFiles(filePath, cleanFile)
-    end
-  end
-end
-
--- -----------------------------------------------------------------------------
--- Run
--- -----------------------------------------------------------------------------
-
-local function run(args)
-  for i, path in ipairs(args.paths) do
-    local modulePath = pathJoin(CWD, path)
-    local moduleFile = io.open(modulePath)
-
-    if moduleFile == nil then
-      error('Unable to find file: ' .. path)
-    end
-
-    local moduleContents = moduleFile:read('*a')
-    moduleFile:close()
-    erde.run(moduleContents)
-  end
-end
-
--- -----------------------------------------------------------------------------
 -- CLI
 -- -----------------------------------------------------------------------------
 
 local cli = argparse('erde')
+
+local function option(shortFlag, longFlag, description)
+  local longName = longFlag:sub(3)
+
+  local option = cli:option({
+    argname = '<'..longName..'>',
+    target = longName,
+    description = description,
+  })
+
+  -- Hack to customize help output. We use this to force the flags to remain
+  -- on one line and deduplicate the argname.
+  option._public_aliases = { shortFlag .. ', ' .. longFlag }
+  option._aliases = { shortFlag, longFlag }
+
+  return option
+end
 
 cli._usage = 'Usage: erde [-C|-X] [PATH...]'
 
@@ -227,28 +151,13 @@ cli:epilog(
   }, '\n')
 )
 
-local function option(shortFlag, longFlag, description)
-  local longName = longFlag:sub(3)
-
-  local option = cli:option({
-    argname = '<'..longName..'>',
-    target = longName,
-    description = description,
-  })
-
-  -- Hack to customize help output. We use this to force the flags to remain
-  -- on one line and deduplicate the argname.
-  option._public_aliases = { shortFlag .. ', ' .. longFlag }
-  option._aliases = { shortFlag, longFlag }
-
-  return option
-end
-
 cli:flag('-v --version', 'Show version and exit.')
 cli:argument('paths'):args('*'):hidden(true)
 
+cli:flag('-X --clean'):hidden(true)
+cli:flag('-C --compile'):hidden(true)
+
 cli:group('-C, --compile',
-  cli:flag('-C --compile'):hidden(true),
   -- IMPORTANT: Keep these choices in sync w/ `erde.targets`!
   option('-t', '--target', 'Lua target. Must be one of:\n  JIT, 5.1, 5.1+, 5.2, 5.2+, 5.3, 5.3+, 5.4, 5.4+'),
   option('-o', '--outDir', 'Output directory for compiled files.')
@@ -256,14 +165,69 @@ cli:group('-C, --compile',
 
 local args = cli:parse()
 
+-- -----------------------------------------------------------------------------
+-- Actions
+-- -----------------------------------------------------------------------------
+
+local function clean(filePath)
+  if isCompiledFile(filePath) then
+    os.remove(filePath)
+    print('Removed ' .. filePath)
+  end
+end
+
+local function compile(filePath)
+  local destFilePath = filePath:gsub('%.erde$', '.lua')
+
+  if args.outDir then
+    destFilePath = destFilePath:gsub(CWD, args.outDir)
+  end
+
+  if fileExists(destFilePath) and not isCompiledFile(destFilePath) then
+    error('Cannot write to ' .. destFilePath .. ': File already exists')
+  end
+
+  local srcFile = io.open(filePath, 'r')
+  local compiled = erde.compile(srcFile:read('*a'))
+  srcFile:close()
+
+  local destFile = io.open(destFilePath, 'w')
+  destFile:write(compiled)
+
+  print(
+    filePath:gsub(CWD .. C.PATH_SEPARATOR, '')
+    .. ' -> '
+    .. destFilePath:gsub(CWD .. C.PATH_SEPARATOR, '')
+  )
+end
+
+local function run()
+  for i, path in ipairs(args.paths) do
+    local modulePath = pathJoin(CWD, path)
+    local moduleFile = io.open(modulePath)
+
+    if moduleFile == nil then
+      error('Unable to find file: ' .. path)
+    end
+
+    local moduleContents = moduleFile:read('*a')
+    moduleFile:close()
+    erde.run(moduleContents)
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Main
+-- -----------------------------------------------------------------------------
+
 if args.version then
   print('0.2-1')
 elseif args.compile then
-  compile(args)
+  traverseErdeFiles(#args.paths > 0 and args.paths or { '.' }, compile)
 elseif args.clean then
-  clean(args)
+  traverseLuaFiles(#args.paths > 0 and args.paths or { '.' }, clean)
 elseif #args.paths == 0 then
   print('REPL not yet supported.')
 else
-  run(args)
+  run()
 end
