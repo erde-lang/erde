@@ -2,10 +2,6 @@
 
 # 0.3-1
 
-- improve cli
-  - description / footer (point to `-u --usage`)
-  - `-u --usage` flag
-  - line wrap formatting
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
   - support compilation options using cli flags
