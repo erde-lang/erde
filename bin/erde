@@ -1,4 +1,4 @@
-#!/usr/bin/env luajit
+#!/usr/bin/env lua
 
 local argparse = require('argparse')
 local lfs = require('lfs')
@@ -164,16 +164,18 @@ end
 -- -----------------------------------------------------------------------------
 
 local function run(args)
-  local modulePath = pathJoin(CWD, args.paths[1])
-  local moduleFile = io.open(modulePath)
+  for i, path in ipairs(args.paths) do
+    local modulePath = pathJoin(CWD, path)
+    local moduleFile = io.open(modulePath)
 
-  if moduleFile == nil then
-    return 'File does not exist: ' .. args.paths[1]
+    if moduleFile == nil then
+      error('Unable to find file: ' .. path)
+    end
+
+    local moduleContents = moduleFile:read('*a')
+    moduleFile:close()
+    erde.run(moduleContents)
   end
-
-  local moduleContents = moduleFile:read('*a')
-  moduleFile:close()
-  return erde.run(moduleContents)
 end
 
 -- -----------------------------------------------------------------------------
@@ -214,7 +216,6 @@ cli:group('-C, --compile',
 )
 
 local args = cli:parse()
-print(require('inspect')(args))
 
 if args.version then
   print('0.2-1')
@@ -222,8 +223,8 @@ elseif args.compile then
   compile(args)
 elseif args.clean then
   clean(args)
-elseif #args.paths == 1 then
-  run(args)
-else
+elseif #args.paths == 0 then
   print('REPL not yet supported.')
+else
+  run(args)
 end
