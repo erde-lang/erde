@@ -1,6 +1,5 @@
 local C = require('erde.constants')
 local parse = require('erde.parse')
-local targets = require('erde.targets')
 
 -- Foward declare
 local preCompilers = {}

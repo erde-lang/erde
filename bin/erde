@@ -3,7 +3,7 @@
 local argparse = require('argparse')
 local lfs = require('lfs')
 local erde = require('erde')
-local targets = require('erde.targets')
+local luaTarget = require('erde.luaTarget')
 local C = require('erde.constants')
 
 local CWD = lfs.currentdir()
@@ -159,7 +159,7 @@ cli:flag('-X --clean'):hidden(true)
 cli:flag('-C --compile'):hidden(true)
 
 cli:group('-C, --compile',
-  -- IMPORTANT: Keep these choices in sync w/ `erde.targets`!
+  -- IMPORTANT: Keep these choices in sync w/ `erde.luaTarget`!
   option('-t', '--target', 'Lua target. Must be one of:\n  JIT, 5.1, 5.1+, 5.2, 5.2+, 5.3, 5.3+, 5.4, 5.4+'),
   option('-o', '--outDir', 'Output directory for compiled files.')
 )
@@ -222,7 +222,7 @@ end
 -- -----------------------------------------------------------------------------
 
 if args.target then
-  targets.current = args.target
+  luaTarget.current = args.target
 end
 
 if args.version then
