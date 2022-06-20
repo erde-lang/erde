@@ -1,6 +1,6 @@
-local _targets = { default = '5.1+', current = '5.1+' }
-local targetsMT = { __index = _targets}
-local targets = setmetatable({}, targetsMT)
+local _luaTarget = { default = '5.1+', current = '5.1+' }
+local luaTargetMT = { __index = _luaTarget}
+local luaTarget = setmetatable({}, luaTargetMT)
 
 -- IMPORTANT: Keep these targets in sync with the CLI target choices!
 local VALID_LUA_TARGETS = {
@@ -15,7 +15,7 @@ local VALID_LUA_TARGETS = {
   ['5.4+'] = true,
 }
 
-function targetsMT:__newindex(key, value)
+function luaTargetMT:__newindex(key, value)
   if key ~= 'current' then
     error('`targets` is read only except for the `current` key. Use `target.current = newLuaTarget` to set a new Lua target.')
   end
@@ -29,7 +29,7 @@ function targetsMT:__newindex(key, value)
     }, ' '))
   end
 
-  _targets.current = value
+  _luaTarget.current = value
 end
 
-return targets
+return luaTarget

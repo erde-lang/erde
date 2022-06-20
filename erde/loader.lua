@@ -25,7 +25,7 @@
 
 local C = require('erde.constants')
 local erde = require('erde')
-local targets = require('erde.targets')
+local luaTarget = require('erde.luaTarget')
 
 local searchers = package.loaders or package.searchers
 
@@ -48,7 +48,7 @@ local function erdeSearcher(moduleName)
 
         local moduleContents = moduleFile:read('*a')
         moduleFile:close()
-        return erde.run(moduleContents, targets.current)
+        return erde.run(moduleContents, luaTarget.current)
       end
     end
   end
@@ -56,7 +56,7 @@ end
 
 local function load(newLuaTarget)
   if newLuaTarget ~= nil then
-    targets.current = newLuaTarget
+    luaTarget.current = newLuaTarget
   end
 
   for i, searcher in ipairs(searchers) do
