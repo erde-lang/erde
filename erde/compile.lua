@@ -1,6 +1,6 @@
 local C = require('erde.constants')
 local parse = require('erde.parse')
-local precompile = require('erde.precompile')
+local preCompile = require('erde.preCompile')
 
 -- Foward declare rules
 local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlockExpr, DoBlockStatement, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
@@ -920,7 +920,7 @@ return function(text)
     return ''
   end
 
-  precompile(ast)
+  preCompile(ast)
   tmpNameCounter = 1
 
   local compiled = {}
