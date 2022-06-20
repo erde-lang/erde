@@ -3,6 +3,7 @@
 local argparse = require('argparse')
 local lfs = require('lfs')
 local erde = require('erde')
+local targets = require('erde.targets')
 local C = require('erde.constants')
 
 local CWD = lfs.currentdir()
@@ -219,6 +220,10 @@ end
 -- -----------------------------------------------------------------------------
 -- Main
 -- -----------------------------------------------------------------------------
+
+if args.target then
+  targets.current = args.target
+end
 
 if args.version then
   print('0.2-1')

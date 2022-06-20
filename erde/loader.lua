@@ -10,22 +10,25 @@
 --
 -- Usage: Removing the loader
 --    require('erde.loader').unload()
+--
+-- NOTE: While it is _technically_ possible to dynamically change the Lua target
+-- at runtime, doing so may be dangerous. For example, if the user loads an Erde
+-- module targeting 5.2, then changes the target to 5.1, the previously loaded
+-- Erde module will NOT be rerun and may potentially contain 5.1 incompatible
+-- code. It is the job of the developer to ensure that such a situation does not
+-- arise or to reload modules appropriately. We do not do any reloading on our
+-- side, as loading a module may contain side effects.
+--
+-- LINKS:
+-- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
+-- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 
 local C = require('erde.constants')
 local erde = require('erde')
 local targets = require('erde.targets')
 
--- The package searchers. In Lua 5.1, this is `package.loaders` and in Lua 5.2+
--- this is `package.searchers`.
---
--- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
--- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 local searchers = package.loaders or package.searchers
 
--- The package searcher for `.erde` modules.
---
--- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
--- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 local function erdeSearcher(moduleName)
   modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
 
@@ -51,15 +54,6 @@ local function erdeSearcher(moduleName)
   end
 end
 
--- Load the `.erde` searcher for the given Lua target.
---
--- While it is _technically_ possible to dynamically change the Lua target at
--- runtime, doing so may be dangerous. For example, if the user loads an Erde
--- module targeting 5.2, then changes the target to 5.1, the previously loaded
--- Erde module will NOT be rerun and may potentially contain 5.1 incompatible
--- code. It is the job of the developer to ensure that such a situation does not
--- arise or to reload modules appropriately. We do not do any reloading on our
--- side, as loading a module may contain side effects.
 local function load(newLuaTarget)
   if newLuaTarget ~= nil then
     targets.current = newLuaTarget
@@ -78,10 +72,6 @@ local function load(newLuaTarget)
   table.insert(searchers, 2, erdeSearcher)
 end
 
--- Unload the `.erde` searcher.
---
--- Note that this only removes the searcher from the searchers table and does
--- not remove any modules that may have been loaded w/ the `.erde` searcher.
 local function unload()
   for i, searcher in ipairs(searchers) do
     if searcher == erdeSearcher then
