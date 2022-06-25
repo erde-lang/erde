@@ -27,7 +27,7 @@ end
 
 function runErde(erdeCode)
   local luaCode = compile(erdeCode)
-  local runner = loadstring(luaCode)
+  local runner = (loadstring or load)(luaCode)
 
   if runner == nil then
     error('Invalid Lua code: ' .. luaCode)

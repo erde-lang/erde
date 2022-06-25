@@ -2,17 +2,32 @@ local _luaTarget = { default = '5.1+', current = '5.1+' }
 local luaTargetMT = { __index = _luaTarget}
 local luaTarget = setmetatable({}, luaTargetMT)
 
--- IMPORTANT: Keep these targets in sync with the CLI target choices!
-local VALID_LUA_TARGETS = {
-  ['JIT'] = true,
-  ['5.1'] = true,
+luaTarget.VALID_LUA_TARGETS = {
+  'JIT',
+  '5.1',
+  '5.1+',
+  '5.2',
+  '5.2+',
+  '5.3',
+  '5.3+',
+  '5.4',
+  '5.4+',
+}
+
+for i, target in ipairs(luaTarget.VALID_LUA_TARGETS) do
+  luaTarget.VALID_LUA_TARGETS[target] = true
+end
+
+-- Compiling bit operations for these targets are dangerous, since Mike Pall's
+-- LuaBitOp only works on 5.1 + 5.2, bit32 only works on 5.2, and 5.3 + 5.4 have
+-- built-in bit operator support.
+--
+-- In the future, we may want to only disallow bit operators for these targets
+-- if the flag in the CLI is not set, but for now we choose to treat them as
+-- "invalid" targets to avoid runtime errors.
+luaTarget.INVALID_BITOP_LUA_TARGETS = {
   ['5.1+'] = true,
-  ['5.2'] = true,
   ['5.2+'] = true,
-  ['5.3'] = true,
-  ['5.3+'] = true,
-  ['5.4'] = true,
-  ['5.4+'] = true,
 }
 
 function luaTargetMT:__newindex(key, value)

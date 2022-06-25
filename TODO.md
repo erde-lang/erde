@@ -38,3 +38,6 @@
 - macros
 - Allow all blocks as expressions (`local x = if x { return y }`)
 - Destructure "rest" spread (`local { x, ...rest }  = y`)
+- stdlib calls shorthand
+  - `mytable::concat(',')` -> `table.concat(mytable, ',')`
+  - `"some string"::sub(4)` -> `string.sub("some string", 4)`
