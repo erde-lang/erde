@@ -1,5 +1,6 @@
 local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
+local luaTarget = require('erde.luaTarget')
 
 -- Foward declare
 local Expr, Block
@@ -407,6 +408,14 @@ function Expr(minPrec)
     local rhsPrec = binop.prec
     if binop.assoc == C.LEFT_ASSOCIATIVE then
       rhsPrec = rhsPrec + 1
+    end
+
+    if C.BITOPS[binop.token] and luaTarget.INVALID_BITOP_LUA_TARGETS[luaTarget.current] then
+      error(table.concat({
+        'Cannot use bitwise operators for Lua target',
+        luaTarget.current,
+        'due to invcompatabilities between bitwise operators across Lua versions.', 
+      }, ' '))
     end
 
     node = { tag = 'Binop', op = binop, lhs = node, rhs = Expr(rhsPrec) }

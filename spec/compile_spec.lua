@@ -163,14 +163,6 @@ describe('Assignment #5.1+', function()
       ]]
     )
     assert.run(
-      4,
-      [[
-        local a = 5
-        a &= 6
-        return a
-      ]]
-    )
-    assert.run(
       8,
       [[
         local a, b = 1, 2

@@ -96,7 +96,7 @@ local function compileOptChain(node)
             or { value = compileNode(expr) }
         end
 
-        chain = ('%s(%s(%s))'):format(chain, 'unpack', Spread(spreadFields))
+        chain = ('%s(%s(%s))'):format(chain, '(unpack or table.unpack)', Spread(spreadFields))
       else
         local args = {}
 

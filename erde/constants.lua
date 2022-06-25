@@ -71,11 +71,6 @@ C.BINOPS = {
   ['>='] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
   ['<'] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
   ['>'] = { prec = 5, assoc = C.LEFT_ASSOCIATIVE },
-  ['|'] = { prec = 6, assoc = C.LEFT_ASSOCIATIVE },
-  ['~'] = { prec = 7, assoc = C.LEFT_ASSOCIATIVE },
-  ['&'] = { prec = 8, assoc = C.LEFT_ASSOCIATIVE },
-  ['<<'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
-  ['>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
   ['..'] = { prec = 10, assoc = C.LEFT_ASSOCIATIVE },
   ['+'] = { prec = 11, assoc = C.LEFT_ASSOCIATIVE },
   ['-'] = { prec = 11, assoc = C.LEFT_ASSOCIATIVE },
@@ -84,6 +79,18 @@ C.BINOPS = {
   ['%'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['^'] = { prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
 }
+
+C.BITOPS = {
+  ['|'] = { prec = 6, assoc = C.LEFT_ASSOCIATIVE },
+  ['~'] = { prec = 7, assoc = C.LEFT_ASSOCIATIVE },
+  ['&'] = { prec = 8, assoc = C.LEFT_ASSOCIATIVE },
+  ['<<'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+  ['>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+}
+
+for opToken, op in pairs(C.BITOPS) do
+  C.BINOPS[opToken] = op
+end
 
 for opToken, op in pairs(C.BINOPS) do
   op.token = opToken

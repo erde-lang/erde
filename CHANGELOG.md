@@ -9,6 +9,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `erde.loader` can now be used programatically.
 - `erde` and `erde.loader` now both accept Lua targets to compile with specific
   Lua version compatabilities.
+- Erde now supports running on Lua 5.1+
 
 ### Changed
 - Revert split of `erde` and `erdec` in favor of more `pacman` like "main flags".
