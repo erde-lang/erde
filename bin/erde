@@ -159,7 +159,7 @@ cli:flag('-X --clean'):hidden(true)
 cli:flag('-C --compile'):hidden(true)
 
 cli:group('-C, --compile',
-  option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(luaTarget.VALID_LUA_TARGETS, ', ')),
+  option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(C.VALID_LUA_TARGETS, ', ')),
   option('-o', '--outDir', 'Output directory for compiled files.')
 )
 
