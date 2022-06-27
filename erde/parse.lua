@@ -198,7 +198,6 @@ local function OptChain()
 
   while true do
     local currentTokenIndexBackup = currentTokenIndex
-    local isOptional = branch('?')
 
     local chain
     if branch('.') then
@@ -239,7 +238,6 @@ local function OptChain()
       break
     end
 
-    chain.optional = isOptional
     table.insert(node, chain)
   end
 

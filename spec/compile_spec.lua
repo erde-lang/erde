@@ -113,14 +113,6 @@ describe('Assignment #5.1+', function()
         return a.b
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a
-        a?.b = 1
-        return a?.b
-      ]]
-    )
   end)
 
   spec('multiple name assignment', function()
@@ -141,14 +133,6 @@ describe('Assignment #5.1+', function()
         local a, b = {}, {}
         a.c, b.d = 1, 2
         return a.c + b.d
-      ]]
-    )
-    assert.run(
-      -1,
-      [[
-        local a, b
-        a?.c, b?.d = 1, 2
-        return a?.c || b?.d || -1
       ]]
     )
   end)
@@ -595,13 +579,6 @@ describe('OptChain #5.1+', function()
         return a.b
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a = {}
-        return a?.b
-      ]]
-    )
   end)
 
   spec('optchain bracketIndex', function()
@@ -612,13 +589,6 @@ describe('OptChain #5.1+', function()
         return a[2 + 3]
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a = {}
-        return a?[2 + 3]
-      ]]
-    )
   end)
 
   spec('optchain functionCall', function()
@@ -627,13 +597,6 @@ describe('OptChain #5.1+', function()
       [[
         local a = (x, y) -> x + y
         return a(1, 2)
-      ]]
-    )
-    assert.run(
-      nil,
-      [[
-        local a
-        return a?(1, 2)
       ]]
     )
   end)
@@ -647,13 +610,6 @@ describe('OptChain #5.1+', function()
           c = 1,
         }
         return a:b(2)
-      ]]
-    )
-    assert.run(
-      nil,
-      [[
-        local a
-        return a?:b(1, 2)
       ]]
     )
   end)
