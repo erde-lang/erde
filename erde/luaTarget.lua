@@ -1,4 +1,5 @@
 local C = require('erde.constants')
+
 local _luaTarget = { default = '5.1+', current = '5.1+' }
 local luaTargetMT = { __index = _luaTarget}
 local luaTarget = setmetatable({}, luaTargetMT)

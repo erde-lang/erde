@@ -323,15 +323,6 @@ describe('DoBlock #5.1+', function()
         return x
       ]]
     )
-    assert.run(
-      1,
-      [[
-        local x = do {
-          return 1
-        }
-        return x
-      ]]
-    )
   end)
 end)
 
@@ -765,41 +756,6 @@ describe('Return #5.1+', function()
   end)
   spec('multi return', function()
     assert.run(1, 'return (1, 2)')
-  end)
-end)
-
--- -----------------------------------------------------------------------------
--- Spread
--- -----------------------------------------------------------------------------
-
-describe('Spread #5.1+', function()
-  spec('table spread', function()
-    assert.run(
-      21,
-      [[
-      local a = { 3, 4, 5 }
-      local function sum(t) {
-        local answer = 0
-        for i, value in ipairs(t) {
-          answer += value
-        }
-        return answer
-      }
-      return sum({ 1, 2, ...a, 6 })
-    ]]
-    )
-  end)
-  spec('function spread', function()
-    assert.run(
-      12,
-      [[
-      local a = { 3, 4, 5 }
-      local function sum(x, y, z) {
-        return x + y + z
-      }
-      return sum(...a)
-    ]]
-    )
   end)
 end)
 

@@ -5,6 +5,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [0.3-1] - UNRELEASED
 
+### Removed
+- Remove `do` expressions.
+- Remove spread operator.
+- Remove optional chaining.
+
 ### Added
 - `erde.loader` can now be used programatically.
 - `erde` and `erde.loader` now both accept Lua targets to compile with specific
