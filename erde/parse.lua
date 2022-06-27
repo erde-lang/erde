@@ -225,10 +225,7 @@ local function OptChain()
               return List({
                 allowEmpty = true,
                 allowTrailingComma = true,
-                parse = function()
-                  return not branch('...') and Expr()
-                    or { tag = 'Spread', value = Try(Expr) }
-                end,
+                parse = Expr,
               })
             end,
           }),
@@ -259,8 +256,6 @@ local function Terminal()
   if currentToken:match('^.?[0-9]') then
     -- Only need to check first couple chars, rest is token care of by tokenizer
     return consume()
-  elseif branch('do') then
-    return { tag = 'DoBlockExpr', body = Surround('{', '}', Block) }
   elseif currentToken == "'" then
     return consume() .. consume() .. consume()
   elseif currentToken == '"' or currentToken:match('^%[[[=]') then
@@ -358,9 +353,6 @@ local function Terminal()
           if currentToken == '[' then
             field.variant = 'exprKey'
             field.key = Surround('[', ']', Expr)
-          elseif branch('...') then
-            field.variant = 'spread'
-            field.value = { tag = 'Spread', value = Try(Expr) }
           else
             local expr = Expr()
 
@@ -440,7 +432,7 @@ function Block()
     elseif branch('continue') then
       statement = { tag = 'Continue' }
     elseif branch('do') then
-      statement = { tag = 'DoBlockStatement', body = Surround('{', '}', Block) }
+      statement = { tag = 'DoBlock', body = Surround('{', '}', Block) }
     elseif branch('goto') then
       statement = { tag = 'Goto', name = Name() }
     elseif branch('::') then

@@ -152,10 +152,6 @@ function preCompilers.Declaration(node)
   end
 end
 
-function preCompilers.DoBlockExpr(node)
-  FunctionBlock(node)
-end
-
 function preCompilers.Function(node)
   FunctionBlock(node)
 

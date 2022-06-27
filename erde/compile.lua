@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local preCompile = require('erde.preCompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlockExpr, DoBlockStatement, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, Spread, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -72,7 +72,6 @@ local function compileOptChain(node)
       optSubChains[#optSubChains + 1] = chain
     end
 
-    local newSubChainFormat
     if chainNode.variant == 'dotIndex' then
       chain = ('%s.%s'):format(chain, chainNode.value)
     elseif chainNode.variant == 'bracketIndex' then
@@ -80,32 +79,13 @@ local function compileOptChain(node)
       -- [ [=[some string]=] ]
       chain = ('%s[ %s ]'):format(chain, compileNode(chainNode.value))
     elseif chainNode.variant == 'functionCall' then
-      local hasSpread = false
+      local args = {}
+
       for i, arg in ipairs(chainNode.value) do
-        if arg.tag == 'Spread' then
-          hasSpread = true
-          break
-        end
+        args[#args + 1] = compileNode(arg)
       end
 
-      if hasSpread then
-        local spreadFields = {}
-
-        for i, arg in ipairs(chainNode.value) do
-          spreadFields[i] = arg.tag == 'Spread' and arg
-            or { value = compileNode(expr) }
-        end
-
-        chain = ('%s(%s(%s))'):format(chain, '(unpack or table.unpack)', Spread(spreadFields))
-      else
-        local args = {}
-
-        for i, arg in ipairs(chainNode.value) do
-          args[#args + 1] = compileNode(arg)
-        end
-
-        chain = chain .. '(' .. table.concat(args, ',') .. ')'
-      end
+      chain = chain .. '(' .. table.concat(args, ',') .. ')'
     elseif chainNode.variant == 'method' then
       chain = chain .. ':' .. chainNode.value
     end
@@ -455,11 +435,7 @@ end
 -- DoBlock
 -- -----------------------------------------------------------------------------
 
-function DoBlockExpr(node)
-  return '(function() ' .. compileNode(node.body) .. ' end)()'
-end
-
-function DoBlockStatement(node)
+function DoBlock(node)
   return 'do\n' .. compileNode(node.body) .. '\nend'
 end
 
@@ -657,71 +633,6 @@ function Return(node)
 end
 
 -- -----------------------------------------------------------------------------
--- Spread
--- -----------------------------------------------------------------------------
-
-function Spread(fields)
-  local tableVar = newTmpName()
-  local lenVar = newTmpName()
-  local hasVarArgs = false
-
-  local compileParts = {
-    'local ' .. tableVar .. ' = {}',
-    'local ' .. lenVar .. ' = 0',
-  }
-
-  for i, field in ipairs(fields) do
-    if field.tag == 'Spread' then
-      local spreadTmpName = newTmpName()
-
-      local spreadValue
-      if field.value then
-        spreadValue = compileNode(field.value)
-      else
-        hasVarArgs = true
-        spreadValue = '{ ... }'
-      end
-
-      table.insert(
-        compileParts,
-        table.concat({
-          'local ' .. spreadTmpName .. ' = ' .. spreadValue,
-          'for key, value in pairs(' .. spreadTmpName .. ') do',
-          'if type(key) == "number" then',
-          ('%s[%s + key] = value'):format(tableVar, lenVar),
-          'else',
-          tableVar .. '[key] = value',
-          'end',
-          'end',
-          ('%s = %s + #%s'):format(lenVar, lenVar, spreadTmpName),
-        }, '\n')
-      )
-    elseif field.key then
-      table.insert(
-        compileParts,
-        ('%s[%s] = %s'):format(tableVar, field.key, field.value)
-      )
-    else
-      table.insert(
-        compileParts,
-        table.concat({
-          ('%s[%s + 1] = %s'):format(tableVar, lenVar, field.value),
-          ('%s = %s + 1'):format(lenVar, lenVar),
-        }, '\n')
-      )
-    end
-  end
-
-  -- If varargs are present, proxy it to our iife!
-  return table.concat({
-    hasVarArgs and '(function(...)' or '(function()',
-    table.concat(compileParts, '\n'),
-    'return ' .. tableVar,
-    hasVarArgs and 'end)(...)' or 'end)()',
-  }, '\n')
-end
-
--- -----------------------------------------------------------------------------
 -- String
 -- -----------------------------------------------------------------------------
 
@@ -759,57 +670,26 @@ end
 -- -----------------------------------------------------------------------------
 
 function Table(node)
-  local hasSpread = false
+  local fieldParts = {}
+
   for i, field in ipairs(node) do
-    if field.variant == 'spread' then
-      hasSpread = true
-      break
+    local fieldPart
+
+    if field.variant == 'nameKey' then
+      fieldPart = field.key .. ' = ' .. compileNode(field.value)
+    elseif field.variant == 'numberKey' then
+      fieldPart = compileNode(field.value)
+    elseif field.variant == 'exprKey' then
+      fieldPart = ('[%s] = %s'):format(
+        compileNode(field.key),
+        compileNode(field.value)
+      )
     end
+
+    fieldParts[i] = fieldPart
   end
 
-  if hasSpread then
-    local spreadFields = {}
-
-    for i, field in ipairs(node) do
-      if field.variant == 'spread' then
-        spreadFields[i] = field.value
-      else
-        local spreadField = {}
-
-        if field.variant == 'nameKey' then
-          spreadField.key = '"' .. field.key .. '"'
-        elseif field.variant ~= 'numberKey' then
-          spreadField.key = compileNode(field.key)
-        end
-
-        spreadField.value = compileNode(field.value)
-        spreadFields[i] = spreadField
-      end
-    end
-
-    return Spread(spreadFields)
-  else
-    local fieldParts = {}
-
-    for i, field in ipairs(node) do
-      local fieldPart
-
-      if field.variant == 'nameKey' then
-        fieldPart = field.key .. ' = ' .. compileNode(field.value)
-      elseif field.variant == 'numberKey' then
-        fieldPart = compileNode(field.value)
-      elseif field.variant == 'exprKey' then
-        fieldPart = ('[%s] = %s'):format(
-          compileNode(field.key),
-          compileNode(field.value)
-        )
-      end
-
-      fieldParts[i] = fieldPart
-    end
-
-    return '{\n' .. table.concat(fieldParts, ',\n') .. '\n}'
-  end
+  return '{\n' .. table.concat(fieldParts, ',\n') .. '\n}'
 end
 
 -- -----------------------------------------------------------------------------
@@ -891,8 +771,7 @@ SUB_COMPILERS = {
   Continue = Continue,
   Declaration = Declaration,
   Destructure = Destructure,
-  DoBlockExpr = DoBlockExpr,
-  DoBlockStatement = DoBlockStatement,
+  DoBlock = DoBlock,
   Expr = Expr,
   Function = Function,
   GenericFor = GenericFor,
@@ -905,7 +784,6 @@ SUB_COMPILERS = {
   Params = Params,
   RepeatUntil = RepeatUntil,
   Return = Return,
-  Spread = Spread,
   String = String,
   Table = Table,
   TryCatch = TryCatch,

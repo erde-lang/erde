@@ -20,9 +20,6 @@ questions or concerns!
 - function parameter defaults
 - table destructuring
 - assignment operators (`+=`, `*=`, etc)
-- optional chaining (`a?.b.c?[1]`)
-- null coalescing operator (`??`)
-- table spread operator (`...`)
 - `continue` keyword
 - try catch statement
 - and more!

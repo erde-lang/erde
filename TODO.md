@@ -2,9 +2,9 @@
 
 # 0.3-1
 
+- remove opt chain (make erde more minimal)
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
-  - support compilation options using cli flags
 - throw error if only part of file is parsed
 - throw errors for undeclared variables (precompile)
 - throw version errors for number forms
@@ -17,7 +17,6 @@
 
 # 0.4-1
 
-- +1 new features? blocks as expressions?
 - Optimize compiled code
   - Avoid closure creation (slow, cannot be JITed)
     - ex) compile assignment / declaration into if statements
@@ -33,11 +32,9 @@
 
 - rewrite erde in erde
 
-# Uncertain Proposals (need community input)
+# Future Proposals
 
 - macros
-- Allow all blocks as expressions (`local x = if x { return y }`)
-- Destructure "rest" spread (`local { x, ...rest }  = y`)
 - stdlib calls shorthand
   - `mytable::concat(',')` -> `table.concat(mytable, ',')`
   - `"some string"::sub(4)` -> `string.sub("some string", 4)`
