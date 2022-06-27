@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local preCompile = require('erde.preCompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, IndexChain, Module, Params, RepeatUntil, Return, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -63,15 +63,10 @@ local function compileBinop(op, lhs, rhs)
 end
 
 -- TODO: rename
-local function compileOptChain(node)
+local function compileIndexChain(node)
   local chain = compileNode(node.base)
-  local optSubChains = {}
 
   for i, chainNode in ipairs(node) do
-    if chainNode.optional then
-      optSubChains[#optSubChains + 1] = chain
-    end
-
     if chainNode.variant == 'dotIndex' then
       chain = ('%s.%s'):format(chain, chainNode.value)
     elseif chainNode.variant == 'bracketIndex' then
@@ -91,7 +86,7 @@ local function compileOptChain(node)
     end
   end
 
-  return { optSubChains = optSubChains, chain = chain }
+  return chain
 end
 
 -- =============================================================================
@@ -142,30 +137,10 @@ local function compileRawAssignment(node)
   for _, id in ipairs(node.idList) do
     if type(id) == 'string' then
       table.insert(assignmentNames, id)
-    elseif id.tag ~= 'OptChain' then
+    elseif id.tag ~= 'IndexChain' then
       table.insert(assignmentNames, compileNode(id))
     else
-      local optChain = compileOptChain(id)
-
-      if #optChain.optSubChains == 0 then
-        table.insert(assignmentNames, optChain.chain)
-      else
-        local assignmentName = newTmpName()
-        table.insert(assignmentNames, assignmentName)
-
-        local optChecks = {}
-        for i, optSubChain in ipairs(optChain.optSubChains) do
-          table.insert(optChecks, optSubChain .. ' ~= nil')
-        end
-
-        table.insert(
-          compiled,
-          ('if %s then %s end'):format(
-            table.concat(optChecks, ' and '),
-            optChain.chain .. ' = ' .. assignmentName
-          )
-        )
-      end
+      table.insert(assignmentNames, compileIndexChain(id))
     end
   end
 
@@ -212,34 +187,18 @@ local function compileBinopAssignment(node)
         compiled,
         id .. ' = ' .. compileBinop(node.op, id, assignmentName)
       )
-    elseif id.tag ~= 'OptChain' then
+    elseif id.tag ~= 'IndexChain' then
       local compiledId = compileNode(id)
       table.insert(
         compiled,
         compiledId .. ' = ' .. compileBinop(node.op, compiledId, assignmentName)
       )
     else
-      local optChain = compileOptChain(id)
-      local compiledAssignment = optChain.chain
+      local optChain = compileIndexChain(id)
+      local compiledAssignment = optChain
         .. ' = '
-        .. compileBinop(node.op, optChain.chain, assignmentName)
-
-      if #optChain.optSubChains == 0 then
-        table.insert(compiled, compiledAssignment)
-      else
-        local optChecks = {}
-        for i, optSubChain in ipairs(optChain.optSubChains) do
-          table.insert(optChecks, optSubChain .. ' ~= nil')
-        end
-
-        table.insert(
-          compiled,
-          ('if %s then %s end'):format(
-            table.concat(optChecks, ' and '),
-            table.insert(compiled, compiledAssignment)
-          )
-        )
-      end
+        .. compileBinop(node.op, optChain, assignmentName)
+      table.insert(compiled, compiledAssignment)
     end
   end
 
@@ -545,27 +504,11 @@ function IfElse(node)
 end
 
 -- -----------------------------------------------------------------------------
--- OptChain
+-- IndexChain
 -- -----------------------------------------------------------------------------
 
-function OptChain(node)
-  local optChain = compileOptChain(node)
-
-  if #optChain.optSubChains == 0 then
-    return optChain.chain
-  end
-
-  local optChecks = {}
-  for i, optSubChain in ipairs(optChain.optSubChains) do
-    optChecks[i] = 'if ' .. optSubChain .. ' == nil then return end'
-  end
-
-  return table.concat({
-    '(function()',
-    table.concat(optChecks, '\n'),
-    'return ' .. optChain.chain,
-    'end)()',
-  }, '\n')
+function IndexChain(node)
+  return compileIndexChain(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -780,7 +723,7 @@ SUB_COMPILERS = {
   IfElse = IfElse,
   Module = Module,
   NumericFor = NumericFor,
-  OptChain = OptChain,
+  IndexChain = IndexChain,
   Params = Params,
   RepeatUntil = RepeatUntil,
   Return = Return,

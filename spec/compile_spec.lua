@@ -113,14 +113,6 @@ describe('Assignment #5.1+', function()
         return a.b
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a
-        a?.b = 1
-        return a?.b
-      ]]
-    )
   end)
 
   spec('multiple name assignment', function()
@@ -141,14 +133,6 @@ describe('Assignment #5.1+', function()
         local a, b = {}, {}
         a.c, b.d = 1, 2
         return a.c + b.d
-      ]]
-    )
-    assert.run(
-      -1,
-      [[
-        local a, b
-        a?.c, b?.d = 1, 2
-        return a?.c || b?.d || -1
       ]]
     )
   end)
@@ -579,15 +563,15 @@ describe('Module #5.1+', function()
 end)
 
 -- -----------------------------------------------------------------------------
--- OptChain
+-- IndexChain
 -- -----------------------------------------------------------------------------
 
-describe('OptChain #5.1+', function()
-  spec('optchain base', function()
+describe('IndexChain #5.1+', function()
+  spec('base', function()
     assert.eval(1, '({ x = 1 }).x')
   end)
 
-  spec('optchain dotIndex', function()
+  spec('dotIndex', function()
     assert.run(
       1,
       [[
@@ -595,16 +579,9 @@ describe('OptChain #5.1+', function()
         return a.b
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a = {}
-        return a?.b
-      ]]
-    )
   end)
 
-  spec('optchain bracketIndex', function()
+  spec('bracketIndex', function()
     assert.run(
       1,
       [[
@@ -612,16 +589,9 @@ describe('OptChain #5.1+', function()
         return a[2 + 3]
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a = {}
-        return a?[2 + 3]
-      ]]
-    )
   end)
 
-  spec('optchain functionCall', function()
+  spec('functionCall', function()
     assert.run(
       3,
       [[
@@ -629,16 +599,9 @@ describe('OptChain #5.1+', function()
         return a(1, 2)
       ]]
     )
-    assert.run(
-      nil,
-      [[
-        local a
-        return a?(1, 2)
-      ]]
-    )
   end)
 
-  spec('optchain method', function()
+  spec('method', function()
     assert.run(
       3,
       [[
@@ -647,13 +610,6 @@ describe('OptChain #5.1+', function()
           c = 1,
         }
         return a:b(2)
-      ]]
-    )
-    assert.run(
-      nil,
-      [[
-        local a
-        return a?:b(1, 2)
       ]]
     )
   end)

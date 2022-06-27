@@ -2,7 +2,6 @@
 
 # 0.3-1
 
-- remove opt chain (make erde more minimal)
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - throw error if only part of file is parsed
@@ -25,7 +24,6 @@
 
 # 0.5-1
 
-- +1 new features? macros?
 - add CLI REPL
 
 # 1.0-1
@@ -34,6 +32,7 @@
 
 # Future Proposals
 
+- reverse compiler (compile Lua to Erde)
 - macros
 - stdlib calls shorthand
   - `mytable::concat(',')` -> `table.concat(mytable, ',')`
