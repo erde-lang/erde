@@ -563,15 +563,15 @@ describe('Module #5.1+', function()
 end)
 
 -- -----------------------------------------------------------------------------
--- OptChain
+-- IndexChain
 -- -----------------------------------------------------------------------------
 
-describe('OptChain #5.1+', function()
-  spec('optchain base', function()
+describe('IndexChain #5.1+', function()
+  spec('base', function()
     assert.eval(1, '({ x = 1 }).x')
   end)
 
-  spec('optchain dotIndex', function()
+  spec('dotIndex', function()
     assert.run(
       1,
       [[
@@ -581,7 +581,7 @@ describe('OptChain #5.1+', function()
     )
   end)
 
-  spec('optchain bracketIndex', function()
+  spec('bracketIndex', function()
     assert.run(
       1,
       [[
@@ -591,7 +591,7 @@ describe('OptChain #5.1+', function()
     )
   end)
 
-  spec('optchain functionCall', function()
+  spec('functionCall', function()
     assert.run(
       3,
       [[
@@ -601,7 +601,7 @@ describe('OptChain #5.1+', function()
     )
   end)
 
-  spec('optchain method', function()
+  spec('method', function()
     assert.run(
       3,
       [[

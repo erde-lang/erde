@@ -183,8 +183,8 @@ end
 -- Expr
 -- -----------------------------------------------------------------------------
 
-local function OptChain()
-  local node = { tag = 'OptChain' }
+local function IndexChain()
+  local node = { tag = 'IndexChain' }
 
   if currentToken ~= '(' then
     node.base = Name()
@@ -241,7 +241,7 @@ local function OptChain()
     table.insert(node, chain)
   end
 
-  return #node == 0 and node.base or node -- unpack trivial OptChain
+  return #node == 0 and node.base or node -- unpack trivial IndexChain
 end
 
 local function Terminal()
@@ -376,7 +376,7 @@ local function Terminal()
     node.tag = 'Table'
     return node
   else
-    return OptChain()
+    return IndexChain()
   end
 end
 
@@ -540,26 +540,26 @@ function Block()
         exprList = branch('=') and List({ parse = Expr }) or {},
       }
     else
-      local optChain = Try(OptChain)
+      local indexChain = Try(IndexChain)
 
-      if optChain then
-        local optChainLast = optChain[#optChain]
+      if indexChain then
+        local indexChainLast = indexChain[#indexChain]
 
-        if optChainLast and optChainLast.variant == 'functionCall' then
+        if indexChainLast and indexChainLast.variant == 'functionCall' then
           -- Allow function calls as standalone statements
-          statement = optChain
+          statement = indexChain
         else
           statement = { tag = 'Assignment' }
           statement.idList = not branch(',') and {} or List({
             parse = function()
-              local node = OptChain()
+              local node = IndexChain()
               local last = node[#node]
               assert(not last or last.variant ~= 'functionCall')
               return node
             end,
           })
 
-          table.insert(statement.idList, 1, optChain)
+          table.insert(statement.idList, 1, indexChain)
 
           if C.BINOP_ASSIGNMENT_BLACKLIST[currentToken] then
             error('Invalid assignment operator: ' .. currentToken)

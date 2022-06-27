@@ -3,7 +3,7 @@ local parse = require('erde.parse')
 local preCompile = require('erde.preCompile')
 
 -- Foward declare rules
-local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, Module, OptChain, Params, RepeatUntil, Return, String, Table, TryCatch, Unop, WhileLoop
+local ArrowFunction, Assignment, Binop, Block, Break, Continue, Declaration, Destructure, DoBlock, Expr, Function, FunctionCall, Goto, GotoLabel, Id, IfElse, IndexChain, Module, Params, RepeatUntil, Return, String, Table, TryCatch, Unop, WhileLoop
 local SUB_COMPILERS
 
 -- =============================================================================
@@ -63,7 +63,7 @@ local function compileBinop(op, lhs, rhs)
 end
 
 -- TODO: rename
-local function compileOptChain(node)
+local function compileIndexChain(node)
   local chain = compileNode(node.base)
 
   for i, chainNode in ipairs(node) do
@@ -137,10 +137,10 @@ local function compileRawAssignment(node)
   for _, id in ipairs(node.idList) do
     if type(id) == 'string' then
       table.insert(assignmentNames, id)
-    elseif id.tag ~= 'OptChain' then
+    elseif id.tag ~= 'IndexChain' then
       table.insert(assignmentNames, compileNode(id))
     else
-      table.insert(assignmentNames, compileOptChain(id))
+      table.insert(assignmentNames, compileIndexChain(id))
     end
   end
 
@@ -187,14 +187,14 @@ local function compileBinopAssignment(node)
         compiled,
         id .. ' = ' .. compileBinop(node.op, id, assignmentName)
       )
-    elseif id.tag ~= 'OptChain' then
+    elseif id.tag ~= 'IndexChain' then
       local compiledId = compileNode(id)
       table.insert(
         compiled,
         compiledId .. ' = ' .. compileBinop(node.op, compiledId, assignmentName)
       )
     else
-      local optChain = compileOptChain(id)
+      local optChain = compileIndexChain(id)
       local compiledAssignment = optChain
         .. ' = '
         .. compileBinop(node.op, optChain, assignmentName)
@@ -504,11 +504,11 @@ function IfElse(node)
 end
 
 -- -----------------------------------------------------------------------------
--- OptChain
+-- IndexChain
 -- -----------------------------------------------------------------------------
 
-function OptChain(node)
-  return compileOptChain(node)
+function IndexChain(node)
+  return compileIndexChain(node)
 end
 
 -- -----------------------------------------------------------------------------
@@ -723,7 +723,7 @@ SUB_COMPILERS = {
   IfElse = IfElse,
   Module = Module,
   NumericFor = NumericFor,
-  OptChain = OptChain,
+  IndexChain = IndexChain,
   Params = Params,
   RepeatUntil = RepeatUntil,
   Return = Return,

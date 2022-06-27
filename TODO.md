@@ -24,7 +24,6 @@
 
 # 0.5-1
 
-- +1 new features? macros?
 - add CLI REPL
 
 # 1.0-1
@@ -33,6 +32,7 @@
 
 # Future Proposals
 
+- reverse compiler (compile Lua to Erde)
 - macros
 - stdlib calls shorthand
   - `mytable::concat(',')` -> `table.concat(mytable, ',')`
