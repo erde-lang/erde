@@ -410,7 +410,7 @@ function Expr(minPrec)
       rhsPrec = rhsPrec + 1
     end
 
-    if C.BITOPS[binop.token] and luaTarget.INVALID_BITOP_LUA_TARGETS[luaTarget.current] then
+    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[luaTarget.current] then
       error(table.concat({
         'Cannot use bitwise operators for Lua target',
         luaTarget.current,
