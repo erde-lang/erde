@@ -16,7 +16,6 @@ local tmpNameCounter
 -- Helpers
 -- =============================================================================
 
--- TODO: remove?
 local function compileNode(node)
   if type(node) == 'string' then
     return node
@@ -39,7 +38,6 @@ end
 -- Macros
 -- =============================================================================
 
--- TODO: rename
 local function compileBinop(op, lhs, rhs)
   if op.token == '!=' then
     return table.concat({ lhs, ' ~= ', rhs })
@@ -62,7 +60,6 @@ local function compileBinop(op, lhs, rhs)
   end
 end
 
--- TODO: rename
 local function compileIndexChain(node)
   local chain = compileNode(node.base)
 

@@ -325,6 +325,7 @@ local function Terminal()
       node.body = Surround('{', '}', Block)
     elseif currentToken == '(' then
       node.hasImplicitReturns = true
+      -- TODO: need to check if parens belong to expr!
       node.returns = Parens({
         allowRecursion = true,
         parse = function()
@@ -464,7 +465,10 @@ function Block()
     elseif branch('if') then
       statement = {
         tag = 'IfElse',
-        ifNode = { condition = Expr(), body = Surround('{', '}', Block) }
+        ifNode = {
+          condition = Expr(),
+          body = Surround('{', '}', Block),
+        }
       }
 
       local elseifNodes = {}
