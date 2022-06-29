@@ -2,11 +2,12 @@
 
 # 0.3-1
 
-- Source maps (for runtime errors when using erde.loader)
-  - preserve line numbers when compiling
+- refactor `require('erde.loader').load()` into `require('erde').load()`
 - Add semicolons (like Lua)
+- compile in place (do not parse to ast)
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
+- Source maps (for runtime errors when using erde.loader)
 - throw error if only part of file is parsed
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
@@ -21,6 +22,10 @@
 # 1.0-1
 
 - rewrite erde in erde
+
+# Docs
+
+- returns allow parentheses (for multiline returns)
 
 # Future Goals
 
