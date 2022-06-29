@@ -80,10 +80,10 @@ end
 -- Macros
 -- -----------------------------------------------------------------------------
 
-local function Try(rule)
+local function Try(callback)
   local currentTokenIndexBackup = currentTokenIndex
 
-  local ok, node = pcall(rule)
+  local ok, node = pcall(callback)
   if ok then return node end
 
   currentTokenIndex = currentTokenIndexBackup
@@ -97,26 +97,26 @@ local function Surround(openChar, closeChar, include, callback)
   return include and openChar .. result .. closeChar or result
 end
 
-local function Parens(allowRecursion, include, parse)
+local function Parens(allowRecursion, include, callback)
   return Surround('(', ')', include, function()
     return (allowRecursion and currentToken == '(') 
-      and Parens(true, parse) or parse()
+      and Parens(true, include, callback) or callback()
   end)
 end
 
-local function List(opts)
+local function List(allowEmpty, allowTrailingComma, callback)
   local list = {}
   local hasTrailingComma = false
 
   repeat
-    local node = Try(opts.parse)
+    local node = Try(callback)
     if not node then break end
     hasTrailingComma = branch(',')
     table.insert(list, node)
   until not hasTrailingComma
 
-  assert(opts.allowTrailingComma or not hasTrailingComma)
-  assert(opts.allowEmpty or #list > 0)
+  assert(allowEmpty or #list > 0)
+  assert(allowTrailingComma or not hasTrailingComma)
 
   return list
 end
@@ -124,6 +124,21 @@ end
 -- -----------------------------------------------------------------------------
 -- Partials
 -- -----------------------------------------------------------------------------
+
+local function Name(allowKeywords)
+  assert(
+    currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
+    'Malformed name: ' .. currentToken
+  )
+
+  if not allowKeywords then
+    for i, keyword in pairs(C.KEYWORDS) do
+      assert(currentToken ~= keyword, 'Unexpected keyword: ' .. currentToken)
+    end
+  end
+
+  return consume()
+end
 
 local function Destructure()
   local varName = newTmpName()
@@ -133,43 +148,37 @@ local function Destructure()
   if currentToken == '[' then
     local arrayIndex = 0
     Surround('[', ']', false, function()
-      List({
-        allowTrailingComma = true,
-        parse = function()
-          local name = Name()
-          arrayIndex = arrayIndex + 1
+      List(false, true, function()
+        local name = Name()
+        arrayIndex = arrayIndex + 1
 
-          table.insert(nameList, name)
-          table.insert(assignments, ('%s = %s[%s]'):format(name, varName, arrayIndex))
+        table.insert(nameList, name)
+        table.insert(assignments, ('%s = %s[%s]'):format(name, varName, arrayIndex))
 
-          if branch('=') then
-            table.insert(
-              assignments,
-              ('if %s == nil then %s = %s end'):format(name, name, Expr())
-            )
-          end
-        end,
-      })
+        if branch('=') then
+          table.insert(
+            assignments,
+            ('if %s == nil then %s = %s end'):format(name, name, Expr())
+          )
+        end
+      end)
     end)
   else
     Surround('{', '}', false, function()
-      List({
-        allowTrailingComma = true,
-        parse = function()
-          local key = Name()
-          local name = branch(':') and Name() or key
+      List(false, true, function()
+        local key = Name()
+        local name = branch(':') and Name() or key
 
-          table.insert(nameList, name)
-          table.insert(assignments, ('%s = %s.%s'):format(name, varName, key))
+        table.insert(nameList, name)
+        table.insert(assignments, ('%s = %s.%s'):format(name, varName, key))
 
-          if branch('=') then
-            table.insert(
-              assignments,
-              ('if %s == nil then %s = %s end'):format(name, name, Expr())
-            )
-          end
-        end,
-      })
+        if branch('=') then
+          table.insert(
+            assignments,
+            ('if %s == nil then %s = %s end'):format(name, name, Expr())
+          )
+        end
+      end)
     end)
   end
 
@@ -182,19 +191,9 @@ local function Destructure()
   }
 end
 
-local function Name(opts)
-  assert(
-    currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
-    'Malformed name: ' .. currentToken
-  )
-
-  if not opts or not opts.allowKeywords then
-    for i, keyword in pairs(C.KEYWORDS) do
-      assert(currentToken ~= keyword, 'Unexpected keyword: ' .. currentToken)
-    end
-  end
-
-  return consume()
+local function Var()
+  return (currentToken == '{' or currentToken == '[')
+    and Destructure() or Name()
 end
 
 local function Params()
@@ -202,28 +201,24 @@ local function Params()
   local preBody = {}
 
   Parens(false, false, function()
-    List({
-      allowEmpty = true,
-      allowTrailingComma = true,
-      parse = function()
-        local var = Var()
+    List(true, true, function()
+      local var = Var()
 
-        local name = type(var) == 'string' and var or var.name
-        table.insert(names, name)
+      local name = type(var) == 'string' and var or var.name
+      table.insert(names, name)
 
-        if branch('=') then
-          table.insert(preBody, table.concat({
-            'if ' .. name .. ' == nil then',
-            name .. ' = ' .. Expr(),
-            'end',
-          }, '\n'))
-        end
+      if branch('=') then
+        table.insert(preBody, table.concat({
+          'if ' .. name .. ' == nil then',
+          name .. ' = ' .. Expr(),
+          'end',
+        }, '\n'))
+      end
 
-        if type(var) == 'table' then
-          table.insert(preBody, var.compiled)
-        end
-      end,
-    })
+      if type(var) == 'table' then
+        table.insert(preBody, var.compiled)
+      end
+    end)
 
     if branch('...') then
       table.insert(names, '...')
@@ -240,11 +235,6 @@ local function Params()
   }
 end
 
-local function Var()
-  return (currentToken == '{' or currentToken == '[')
-    and Destructure() or Name()
-end
-
 -- -----------------------------------------------------------------------------
 -- Expressions
 -- -----------------------------------------------------------------------------
@@ -259,24 +249,20 @@ local function IndexChain(allowTrivialChain)
     nextIndex = nil
 
     if branch('.') then
-      nextIndex = '.' .. Name({ allowKeywords = true })
+      nextIndex = '.' .. Name(true)
     elseif currentToken == '[' then
       -- Add space around brackets to handle long string expressions
       -- [ [=[some string]=] ]
       nextIndex = '[ ' .. Surround('[', ']', false, Expr) .. ' ]'
     elseif branch(':') then
-      nextIndex = ':' .. Name({ allowKeywords = true })
+      nextIndex = ':' .. Name(true)
       if currentToken ~= '(' then
         error('Missing parentheses for method call')
       end
     elseif currentToken == '(' then
       -- TODO: semicolon
       nextIndex = Parens(false, true, function()
-        return table.concat(List({
-          allowEmpty = true,
-          allowTrailingComma = true,
-          parse = Expr,
-        }), ',')
+        return table.concat(List(true, true, Expr), ',')
       end)
     end
   end
@@ -315,14 +301,12 @@ local function Assignment(firstId)
   local idList = { firstId }
 
   if branch(',') then
-    List({
-      parse = function()
-        local indexChain = IndexChain()
-        assert(indexChain:sub(-1) ~= ')')
-        table.insert(idList, indexChain)
-        return indexChain
-      end,
-    })
+    List(false, false, function()
+      local indexChain = IndexChain()
+      assert(indexChain:sub(-1) ~= ')')
+      table.insert(idList, indexChain)
+      return indexChain
+    end)
   end
 
   local op = C.BINOPS[currentToken] and consume()
@@ -331,7 +315,7 @@ local function Assignment(firstId)
   end
 
   expect('=')
-  local exprList = List({ parse = Expr })
+  local exprList = List(false, false, Expr)
 
   if not op then
     return table.concat(idList, ',') .. ' = ' .. table.concat(exprList, ',')
@@ -358,7 +342,7 @@ end
 local function Declaration(scope)
   local declaration = {}
   local destructures = {}
-  local varList = List({ parse = Var })
+  local varList = List(false, false, Var)
 
   if scope == 'local' or scope == 'module' then
     table.insert(declaration, 'local')
@@ -381,7 +365,7 @@ local function Declaration(scope)
 
   if branch('=') then
     table.insert(declaration, '=')
-    table.insert(declaration, table.concat(List({ parse = Expr }), ','))
+    table.insert(declaration, table.concat(List(false, false, Expr), ','))
   end
 
   return table.concat({
@@ -395,7 +379,7 @@ local function ForLoop()
     local name = Name()
     consume() -- '='
 
-    local exprList = List({ parse = Expr })
+    local exprList = List(false, false, Expr)
     local exprListLen = #exprList
 
     if exprListLen < 2 then
@@ -413,7 +397,7 @@ local function ForLoop()
     local nameList = {}
     local preBody = {}
 
-    for i, var in ipairs(List({ parse = Var })) do
+    for i, var in ipairs(List(false, false, Var)) do
       if type(var) == 'string' then
         table.insert(nameList, var)
       else
@@ -430,7 +414,7 @@ local function ForLoop()
         -- Generic for parses an expression list!
         -- see https://www.lua.org/pil/7.2.html
         -- TODO: only allow max 3 expressions? Job for linter?
-        table.concat(List({ parse = Expr }), ','),
+        table.concat(List(false, false, Expr), ','),
         'do',
       }, ' '),
       Surround('{', '}', false, Block),
@@ -493,11 +477,11 @@ local function Return()
   local firstReturn = Try(Expr)
   if firstReturn then
     return branch(',')
-      and 'return ' .. firstReturn .. ',' .. List({ parse = Expr })
+      and 'return ' .. firstReturn .. ',' .. List(false, false, Expr)
       or 'return ' .. firstReturn
   elseif currentToken == '(' then
     return 'return ' .. table.concat(Parens(true, false, function()
-      return List({ allowTrailingComma = true, parse = Expr })
+      return List(false, true, Expr)
     end), ',')
   else
     return 'return'

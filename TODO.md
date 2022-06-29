@@ -2,9 +2,10 @@
 
 # 0.3-1
 
+- compile in place (do not parse to ast)
+  - port exprs
 - refactor `require('erde.loader').load()` into `require('erde').load()`
 - Add semicolons (like Lua)
-- compile in place (do not parse to ast)
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - Source maps (for runtime errors when using erde.loader)
