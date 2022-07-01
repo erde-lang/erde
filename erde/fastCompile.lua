@@ -230,7 +230,7 @@ local function Params()
   end)
 
   return {
-    compiled = '(' .. table.concat(names, ',') .. ')',
+    names = names,
     preBody = table.concat(preBody, '\n'),
   }
 end
@@ -238,6 +238,45 @@ end
 -- -----------------------------------------------------------------------------
 -- Expressions
 -- -----------------------------------------------------------------------------
+
+local function ArrowFunction()
+  local paramNames = {}
+  local body = {}
+
+  if currentToken == '(' then
+    local params = Params()
+    paramNames = params.names
+    table.insert(body, params.preBody)
+  else
+    local var = Var()
+    if type(var) == 'string' then
+      table.insert(paramNames, var)
+    else
+      table.insert(paramNames, var.name)
+      table.insert(body, params.preBody)
+    end
+  end
+
+  if branch('=>') then
+    table.insert(paramNames, 1, 'self')
+  end
+
+  if currentToken == '{' then
+    table.insert(body, Surround('{', '}', false, Block))
+  elseif currentToken == '(' then
+    table.insert(body, 'return ' .. Parens(true, false, function()
+      return List(false, true, Expr)
+    end))
+  else
+    table.insert(body, 'return ' .. Expr())
+  end
+
+  return table.concat({
+    'function(' .. table.concat(paramNames, ',') .. ')',
+    table.concat(body, '\n'),
+    'end',
+  }, '\n')
+end
 
 local function IndexChain(allowTrivialChain)
   local indexChainBase = currentToken == '(' and Parens(true, true, Expr) or Name()
@@ -274,6 +313,40 @@ local function IndexChain(allowTrivialChain)
   return indexChain
 end
 
+local function InterpolationString(startQuote, endQuote)
+  local interpolationString = startQuote
+
+  while currentToken ~= endQuote do
+    if currentToken ~= '{' then
+      interpolationString = interpolationString .. consume()
+    else
+      interpolationString = interpolationString .. table.concat({
+        endQuote,
+        'tostring(' .. Surround('{', '}', false, Expr) .. ')',
+        startQuote,
+      }, '..')
+    end
+  end
+
+  return interpolationString .. consume()
+end
+
+local function Table()
+  return Surround('{', '}', true, function()
+    return table.concat(List(true, true, function()
+      if currentToken == '[' then
+        -- Add space around brackets to handle long string expressions
+        -- [ [=[some string]=] ]
+        return '[ ' .. Surround('[', ']', false, Expr) .. ' ]' .. expect('=') .. Expr()
+      end
+
+      local expr = Expr()
+      return (branch('=') and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$'))
+        and expr .. expect('=') .. Expr() or expr
+    end), ',')
+  end)
+end
+
 local function Terminal()
   for _, terminal in pairs(C.TERMINALS) do
     if branch(terminal) then
@@ -284,13 +357,100 @@ local function Terminal()
   if currentToken:match('^.?[0-9]') then
     -- Only need to check first couple chars, rest is token care of by tokenizer
     return consume()
+  elseif currentToken == "'" then
+    return consume() .. consume() .. consume()
+  elseif branch('"') then
+    return InterpolationString('"', '"')
+  elseif currentToken:match('^%[[[=]') then
+    local startQuote = consume()
+    return InterpolationString(startQuote, startQuote:gsub('%[', ']'))
+  end
+
+  local nextToken = lookAhead(1)
+  local isArrowFunction = nextToken == '->' or nextToken == '=>'
+  local surroundEnd = currentToken == '(' and ')'
+    or currentToken == '[' and ']'
+    or currentToken == '{' and '}'
+    or nil
+
+  -- First do a quick check for isArrowFunction (in case of implicit params),
+  -- otherwise if surroundEnd is truthy (possible params), need to check the 
+  -- next token after. This is _much_ faster than backtracking.
+  if not isArrowFunction and surroundEnd then
+    local surroundStart = currentToken
+    local surroundDepth = 0
+
+    local tokenIndex = currentTokenIndex + 1
+    local token = tokens[tokenIndex]
+
+    while token ~= surroundEnd or surroundDepth > 0 do
+      if token == nil then
+        error('Unexpected EOF')
+      elseif token == surroundStart then
+        surroundDepth = surroundDepth + 1
+      elseif token == surroundEnd then
+        surroundDepth = surroundDepth - 1
+      end
+
+      tokenIndex = tokenIndex + 1
+      token = tokens[tokenIndex]
+    end
+
+    -- Check one past surrounds for arrow
+    tokenIndex = tokenIndex + 1
+    token = tokens[tokenIndex]
+    isArrowFunction = token == '->' or token == '=>'
+  end
+
+  if isArrowFunction then
+    return ArrowFunction()
+  elseif currentToken == '{' then
+    return Table()
   else
     return IndexChain(true)
   end
 end
 
-function Expr()
-  return Terminal()
+local function Unop()
+  local unop = C.UNOPS[consume()]
+  local operand = Expr(unop.prec + 1)
+
+  if unop.token == '~' then
+    return 'require("bit").bnot(' .. operand .. ')'
+  elseif unop.token == '!' then
+    return 'not ' .. operand
+  else
+    return unop.token .. operand
+  end
+end
+
+function Expr(minPrec)
+  minPrec = minPrec or 1
+
+  local expr = C.UNOPS[currentToken] and Unop() or Terminal()
+  local binop = C.BINOPS[currentToken]
+
+  while binop and binop.prec >= minPrec do
+    consume()
+
+    local rhsMinPrec = binop.prec
+    if binop.assoc == C.LEFT_ASSOCIATIVE then
+      rhsMinPrec = rhsMinPrec + 1
+    end
+
+    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[luaTarget.current] then
+      error(table.concat({
+        'Cannot use bitwise operators for Lua target',
+        luaTarget.current,
+        'due to invcompatabilities between bitwise operators across Lua versions.', 
+      }, ' '))
+    end
+
+    expr = compileBinop(binop, expr, Expr(rhsMinPrec))
+    binop = C.BINOPS[currentToken]
+  end
+
+  return expr
 end
 
 -- -----------------------------------------------------------------------------
@@ -446,7 +606,7 @@ local function Function(scope)
       scope or (not isTableValue and 'local' or ''),
       'function',
       signature,
-      params.compiled,
+      '(' .. table.concat(params.names, ',') .. ')',
     }, ' '),
     params.preBody,
     Surround('{', '}', false, Block),
