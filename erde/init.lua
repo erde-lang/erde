@@ -3,7 +3,7 @@ local compile = require('erde.compile')
 return {
   compile = compile,
   run = function(text)
-    local source = compile(text)
+    local source = fastCompile(text)
 
     local loader, err = (loadstring or load)(source)
     if type(loader) == 'function' then
