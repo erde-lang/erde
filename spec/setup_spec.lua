@@ -1,7 +1,7 @@
 local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
 local inspect = require('inspect')
-local compile = require('erde.compile')
+local erde = require('erde')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -26,7 +26,7 @@ end
 -- -----------------------------------------------------------------------------
 
 function runErde(erdeCode)
-  local luaCode = compile(erdeCode)
+  local luaCode = erde.compile(erdeCode)
   local runner = (loadstring or load)(luaCode)
 
   if runner == nil then
@@ -81,7 +81,7 @@ local function eval(state, args)
   local result = deepCompare(expected, got)
 
   if not result then
-    error(('Eval error.\n\n%s\n\n==================================\n\n%s'):format(
+    error(('Eval error.\n\nExpected: %s\nGot: %s'):format(
       inspect(expected),
       inspect(got)
     ))
@@ -103,7 +103,7 @@ local function run(state, args)
   local result = deepCompare(expected, got)
 
   if not result then
-    error(('Run error.\n\n%s\n\n==================================\n\n%s'):format(
+    error(('Run error.\n\nExpected: %s\nGot: %s'):format(
       inspect(expected),
       inspect(got)
     ))

@@ -12,11 +12,20 @@ local Expr, Block
 local tokens, tokenInfo, newlines
 local currentTokenIndex, currentToken
 
+local blockDepth
+
 local tmpNameCounter
 
 -- Keeps track of the closest loop block ancestor. This is used to validate
 -- Break / Continue nodes, as well as register nested Continue nodes.
-local loopRef
+local breakName, hasContinue
+
+-- Table for Declaration and Function to register `module` scope variables.
+local moduleNames
+
+-- Keeps track of whether the module has a `return` statement. Used to warn the
+-- developer if they try to combine `return` with `module` scopes.
+local isModuleReturnBlock, hasModuleReturn
 
 -- -----------------------------------------------------------------------------
 -- Parse Helpers
@@ -54,25 +63,25 @@ local function newTmpName()
   return ('__ERDE_TMP_%d__'):format(tmpNameCounter)
 end
 
-local function compileBinop(op, lhs, rhs)
-  if op.token == '!=' then
+local function compileBinop(opToken, lhs, rhs)
+  if opToken == '!=' then
     return table.concat({ lhs, ' ~= ', rhs })
-  elseif op.token == '||' then
+  elseif opToken == '||' then
     return table.concat({ lhs, ' or ', rhs })
-  elseif op.token == '&&' then
+  elseif opToken == '&&' then
     return table.concat({ lhs, ' and ', rhs })
-  elseif op.token == '|' then
+  elseif opToken == '|' then
     return ('require("bit").bor(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '~' then
+  elseif opToken == '~' then
     return ('require("bit").bxor(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '&' then
+  elseif opToken == '&' then
     return ('require("bit").band(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '<<' then
+  elseif opToken == '<<' then
     return ('require("bit").lshift(%s, %s)'):format(lhs, rhs)
-  elseif op.token == '>>' then
+  elseif opToken == '>>' then
     return ('require("bit").rshift(%s, %s)'):format(lhs, rhs)
   else
-    return table.concat({ lhs, op.token, rhs }, ' ')
+    return table.concat({ lhs, opToken, rhs }, ' ')
   end
 end
 
@@ -83,8 +92,8 @@ end
 local function Try(callback)
   local currentTokenIndexBackup = currentTokenIndex
 
-  local ok, node = pcall(callback)
-  if ok then return node end
+  local ok, result = pcall(callback)
+  if ok then return result, ok end
 
   currentTokenIndex = currentTokenIndexBackup
   currentToken = tokens[currentTokenIndex]
@@ -99,6 +108,10 @@ end
 
 local function Parens(allowRecursion, include, callback)
   return Surround('(', ')', include, function()
+    -- Try callback first before recursing, in case the callback itself needs to
+    -- consume parentheses! For example, an iife.
+    local result, ok = Try(callback)
+    if ok then return result end
     return (allowRecursion and currentToken == '(') 
       and Parens(true, include, callback) or callback()
   end)
@@ -108,14 +121,18 @@ local function List(allowEmpty, allowTrailingComma, callback)
   local list = {}
   local hasTrailingComma = false
 
+  -- Explicitly count numItems in case callback doesn't actually return items.
+  local numItems = 0
+
   repeat
-    local node = Try(callback)
-    if not node then break end
+    local result, ok = Try(callback)
+    if not ok then break end
     hasTrailingComma = branch(',')
-    table.insert(list, node)
+    numItems = numItems + 1
+    list[numItems] = result
   until not hasTrailingComma
 
-  assert(allowEmpty or #list > 0)
+  assert(allowEmpty or numItems > 0)
   assert(allowTrailingComma or not hasTrailingComma)
 
   return list
@@ -186,7 +203,7 @@ local function Destructure()
     name = varName,
     compiled = table.concat({
       'local ' .. table.concat(nameList, ','),
-      table.concat(assignments, ','),
+      table.concat(assignments, '\n'),
     }, '\n')
   }
 end
@@ -235,6 +252,36 @@ local function Params()
   }
 end
 
+local function FunctionBlock()
+  local oldIsInModuleReturnBlock = isModuleReturnBlock
+  local oldBreakName = breakName
+
+  isModuleReturnBlock = false
+  breakName = nil
+
+  local block = Surround('{', '}', false, Block)
+
+  isModuleReturnBlock = oldIsModuleReturnBlock
+  breakName = oldBreakName
+  return block
+end
+
+local function LoopBlock()
+  local oldBreakName = breakName
+  local oldHasContinue = hasContinue
+
+  breakName = newTmpName()
+  hasContinue = false
+
+  local block = Surround('{', '}', false, function()
+    return Block(true)
+  end)
+
+  breakName = oldBreakName
+  hasContinue = oldHasContinue
+  return block
+end
+
 -- -----------------------------------------------------------------------------
 -- Expressions
 -- -----------------------------------------------------------------------------
@@ -253,19 +300,19 @@ local function ArrowFunction()
       table.insert(paramNames, var)
     else
       table.insert(paramNames, var.name)
-      table.insert(body, params.preBody)
+      table.insert(body, var.compiled)
     end
   end
 
-  if branch('=>') then
+  if consume() == '=>' then
     table.insert(paramNames, 1, 'self')
   end
 
   if currentToken == '{' then
-    table.insert(body, Surround('{', '}', false, Block))
+    table.insert(body, FunctionBlock())
   elseif currentToken == '(' then
     table.insert(body, 'return ' .. Parens(true, false, function()
-      return List(false, true, Expr)
+      return table.concat(List(false, true, Expr), ',')
     end))
   else
     table.insert(body, 'return ' .. Expr())
@@ -278,8 +325,9 @@ local function ArrowFunction()
   }, '\n')
 end
 
-local function IndexChain(allowTrivialChain)
-  local indexChainBase = currentToken == '(' and Parens(true, true, Expr) or Name()
+local function IndexChain(allowArbitraryExpr)
+  local hasExprBase = currentToken == '('
+  local indexChainBase = hasExprBase and Parens(true, true, Expr) or Name()
   local indexChain = indexChainBase
   local nextIndex = ''
 
@@ -306,7 +354,7 @@ local function IndexChain(allowTrivialChain)
     end
   end
 
-  if not allowTrivialChain and indexChain == indexChainBase then
+  if hasExprBase and not allowArbitraryExpr and indexChain == indexChainBase then
     error('Require id')
   end
 
@@ -342,7 +390,7 @@ local function Table()
 
       local expr = Expr()
       return (branch('=') and expr:match('^[_a-zA-Z][_a-zA-Z0-9]*$'))
-        and expr .. expect('=') .. Expr() or expr
+        and expr .. ' = ' .. Expr() or expr
     end), ',')
   end)
 end
@@ -446,7 +494,7 @@ function Expr(minPrec)
       }, ' '))
     end
 
-    expr = compileBinop(binop, expr, Expr(rhsMinPrec))
+    expr = compileBinop(binop.token, expr, Expr(rhsMinPrec))
     binop = C.BINOPS[currentToken]
   end
 
@@ -465,19 +513,18 @@ local function Assignment(firstId)
       local indexChain = IndexChain()
       assert(indexChain:sub(-1) ~= ')')
       table.insert(idList, indexChain)
-      return indexChain
     end)
   end
 
-  local op = C.BINOPS[currentToken] and consume()
-  if op and C.BINOP_ASSIGNMENT_BLACKLIST[op.token] then
+  local opToken = C.BINOPS[currentToken] and consume()
+  if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
     error('Invalid assignment operator: ' .. currentToken)
   end
 
   expect('=')
   local exprList = List(false, false, Expr)
 
-  if not op then
+  if not opToken then
     return table.concat(idList, ',') .. ' = ' .. table.concat(exprList, ',')
   elseif #idList == 1 and #exprList == 1 then
     -- Optimize most common use case
@@ -489,7 +536,7 @@ local function Assignment(firstId)
     for i, id in ipairs(idList) do
       local assignmentName = newTmpName()
       table.insert(assignmentNames, assignmentName)
-      table.insert(binopAssignments, id .. ' = ' .. compileBinop(op, id, assignmentName))
+      table.insert(binopAssignments, id .. ' = ' .. compileBinop(opToken, id, assignmentName))
     end
 
     return table.concat({
@@ -504,6 +551,10 @@ local function Declaration(scope)
   local destructures = {}
   local varList = List(false, false, Var)
 
+  if blockDepth > 1 and scope == 'module' then
+    error('module declarations must appear at the top level')
+  end
+
   if scope == 'local' or scope == 'module' then
     table.insert(declaration, 'local')
   end
@@ -517,6 +568,12 @@ local function Declaration(scope)
       else
         table.insert(nameList, var.name)
         table.insert(destructures, var.compiled)
+      end
+    end
+
+    if scope == 'module' then
+      for _, name in ipairs(nameList) do
+        table.insert(moduleNames, name)
       end
     end
 
@@ -535,6 +592,8 @@ local function Declaration(scope)
 end
 
 local function ForLoop()
+  local compiled = {}
+
   if lookAhead(1) == '=' then
     local name = Name()
     consume() -- '='
@@ -548,11 +607,7 @@ local function ForLoop()
       error('Invalid for loop parameters (too many parameters)')
     end
 
-    return table.concat({
-      'for ' .. name .. ' = ' .. table.concat(exprList, ',') .. ' do',
-      Surround('{', '}', false, Block),
-      'end',
-    }, '\n')
+    table.insert(compiled, 'for ' .. name .. ' = ' .. table.concat(exprList, ',') .. ' do')
   else
     local nameList = {}
     local preBody = {}
@@ -562,29 +617,31 @@ local function ForLoop()
         table.insert(nameList, var)
       else
         table.insert(nameList, var.name)
-        table.insert(prebody, var.compiled)
+        table.insert(preBody, var.compiled)
       end
     end
 
-    return table.concat({
-      table.concat({
-        'for',
-        table.concat(nameList, ','),
-        expect('in'),
-        -- Generic for parses an expression list!
-        -- see https://www.lua.org/pil/7.2.html
-        -- TODO: only allow max 3 expressions? Job for linter?
-        table.concat(List(false, false, Expr), ','),
-        'do',
-      }, ' '),
-      Surround('{', '}', false, Block),
-      'end',
-    }, '\n')
+    table.insert(compiled, table.concat({
+      'for',
+      table.concat(nameList, ','),
+      expect('in'),
+      -- Generic for parses an expression list!
+      -- see https://www.lua.org/pil/7.2.html
+      -- TODO: only allow max 3 expressions? Job for linter?
+      table.concat(List(false, false, Expr), ','),
+      'do',
+    }, ' '))
+
+    table.insert(compiled, table.concat(preBody, '\n'))
   end
 
-  statement.body = Surround('{', '}', Block)
+  table.insert(compiled, LoopBlock())
+  table.insert(compiled, 'end')
+  return table.concat(compiled, '\n')
 end
 
+-- TODO: throw error on 'local' scope used with table values?? seems to be
+-- behavior in Lua
 local function Function(scope)
   local signature = Name()
   local isTableValue = currentToken == '.'
@@ -598,18 +655,29 @@ local function Function(scope)
     signature = signature .. ':' .. Name()
   end
 
+  if scope and isTableValue then
+    error('Cannot use scope keyword for table values')
+  end
+
+  if scope == 'module' then
+    if blockDepth > 1 then
+      error('module declarations must appear at the top level')
+    end
+    table.insert(moduleNames, signature)
+  end
+
   local params = Params()
 
   return table.concat({
     table.concat({
       -- Default functions to local scope _unless_ they are part of a table.
-      scope or (not isTableValue and 'local' or ''),
+      scope and (scope == 'global' and '' or 'local') or (isTableValue and '' or 'local'),
       'function',
-      signature,
-      '(' .. table.concat(params.names, ',') .. ')',
+      signature .. '(' .. table.concat(params.names, ',') .. ')',
     }, ' '),
     params.preBody,
-    Surround('{', '}', false, Block),
+    FunctionBlock(),
+    'end',
   }, '\n')
 end
 
@@ -682,20 +750,22 @@ end
 -- Block
 -- -----------------------------------------------------------------------------
 
-function Block()
-  local compiled = {}
+function Block(isLoopBlock)
+  local statements = {}
+  blockDepth = blockDepth + 1
 
   repeat
     local statement
 
     if branch('break') then
-      assert(loopRef ~= nil, 'Cannot use `break` outside of loop')
+      assert(breakName ~= nil, 'Cannot use `break` outside of loop')
       statement = 'break'
     elseif branch('continue') then
-      assert(loopRef ~= nil, 'Cannot use `continue` outside of loop')
+      assert(breakName ~= nil, 'Cannot use `continue` outside of loop')
+      hasContinue = true
       -- TODO: compile GOTO `continue` version when possible
-      -- return 'goto ' .. node.gotoLabel
-      statement = loopRef .. ' = true break'
+      -- return 'goto ' .. gotoLabel
+      statement = breakName .. ' = true break'
     elseif branch('goto') then
       statement = 'goto ' .. Name()
     elseif branch('::') then
@@ -707,12 +777,13 @@ function Block()
     elseif branch('for') then
       statement = ForLoop()
     elseif branch('while') then
-      statement = 'while ' .. Expr() .. ' do ' .. Surround('{', '}', false, Block) .. ' end'
+      statement = 'while ' .. Expr() .. ' do ' .. LoopBlock() .. ' end'
     elseif branch('repeat') then
-      statement = table.concat({ 'repeat', Surround('{', '}', false, Block), expect('until'), Expr() }, ' ')
+      statement = table.concat({ 'repeat', LoopBlock(), expect('until'), Expr() }, ' ')
     elseif branch('try') then
       statement = TryCatch()
     elseif branch('return') then
+      if isModuleReturnBlock then hasModuleReturn = true end
       statement = Return()
     elseif branch('function') then
       statement = Function()
@@ -727,10 +798,24 @@ function Block()
       end
     end
 
-    table.insert(compiled, statement)
+    table.insert(statements, statement)
   until not statement
 
-  return table.concat(compiled, '\n')
+  blockDepth = blockDepth - 1
+
+  if isLoopBlock and breakName and hasContinue then
+    -- TODO: compile GOTO `continue` version when possible
+    return table.concat({
+      'local ' .. breakName .. ' = false',
+      'repeat',
+      table.concat(statements, '\n'),
+      breakName .. ' = true',
+      'until true',
+      'if not ' .. breakName .. ' then break end',
+    }, '\n')
+  else
+    return table.concat(statements, '\n')
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -741,13 +826,41 @@ return function(text)
   tokens, tokenInfo, newlines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
+
+  blockDepth = 0
+  isModuleReturnBlock = true
+  hasModuleReturn = false
+  hasContinue = false
   tmpNameCounter = 1
+  moduleNames = {}
 
   -- Check for empty file or file w/ only comments
   if currentToken == nil then
     return nil
   end
 
-  local shebang = currentToken:match('^#!') and consume() or ''
-  return shebang .. Block()
+  local module = {}
+
+  if currentToken:match('^#!') then
+    table.insert(module, consume())
+  end
+
+  table.insert(module, C.COMPILED_HEADER_COMMENT)
+  table.insert(module, Block())
+
+  if #moduleNames > 0 then
+    if hasModuleReturn then
+      error('Cannot use both `return` and `module` together.')
+    else
+      local moduleTableElements = {}
+
+      for i, moduleName in ipairs(moduleNames) do
+        moduleTableElements[i] = moduleName .. '=' .. moduleName
+      end
+
+      table.insert(module, 'return { ' .. table.concat(moduleTableElements, ',') .. ' }')
+    end
+  end
+
+  return table.concat(module, '\n')
 end

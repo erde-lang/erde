@@ -1,9 +1,10 @@
 local compile = require('erde.compile')
+local fastCompile = require('erde.fastCompile')
 
 return {
-  compile = compile,
+  compile = fastCompile,
   run = function(text)
-    local source = compile(text)
+    local source = fastCompile(text)
 
     local loader, err = (loadstring or load)(source)
     if type(loader) == 'function' then
