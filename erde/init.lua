@@ -1,8 +1,7 @@
 local compile = require('erde.compile')
-local fastCompile = require('erde.fastCompile')
 
 return {
-  compile = fastCompile,
+  compile = compile,
   run = function(text)
     local source = fastCompile(text)
 
