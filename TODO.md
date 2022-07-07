@@ -2,18 +2,18 @@
 
 # 0.3-1
 
-- syntax highlighting: `type(() -> {})`
-- error severities to bypass `Try`
-- refactor `require('erde.loader').load()` into `require('erde').load()`
 - Add semicolons (like Lua)
 - throw error if only part of file is parsed
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
   - https://www.lua.org/manual/5.4/manual.html#3.1
+- error severities to bypass `Try`
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - Source maps (for runtime errors when using erde.loader)
+  - retain line numbers (for compiled code)
+  - advanced source map when using erde loader
 - vastly improve error messages / diagnosis
 
 # 0.4-1
