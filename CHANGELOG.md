@@ -11,15 +11,14 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Remove optional chaining.
 
 ### Added
-- `erde.loader` can now be used programatically.
-- `erde` and `erde.loader` now both accept Lua targets to compile with specific
-  Lua version compatabilities.
 - Erde now supports running on Lua 5.1+
+- `erde` and `erde.loader` now both accept Lua targets to compile with specific Lua version compatabilities.
+- Exposed `erde.loader` to `init.lua` (allows `require('erde').load()`)
 
 ### Changed
 - Revert split of `erde` and `erdec` in favor of more `pacman` like "main flags".
 - Improve `erde --help` output.
-- `erde` can now run multiple scripts and so in the provided order
+- `erde` can now run multiple scripts and does so in the provided order
 - `erde` now runs with the regular lua shebang (`#!/usr/bin/env lua` instead of `#!/usr/bin/env luajit`)
 - `erde.loader` no longer has `require` side effects and must be used programatically.
 
