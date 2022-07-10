@@ -30,10 +30,8 @@ local function pathJoin(...)
     :gsub(C.PATH_SEPARATOR .. '+', C.PATH_SEPARATOR)
 end
 
--- Check whether a file has been generated from `erde` by checking if one of 
--- the file's first two lines match `C.COMPILED_HEADER_COMMENT`.
---
--- Note we have to check the first _two_ lines in case the first is a shebang.
+-- Check whether a file has been generated from `erde` by checking if the file
+-- ends with `C.COMPILED_FOOTER_COMMENT`.
 local function isCompiledFile(filePath)
   local file = io.open(filePath, 'r')
 
@@ -41,11 +39,11 @@ local function isCompiledFile(filePath)
     return false
   end
 
-  local head1, head2 = file:read('*l'), file:read('*l')
+  file:seek('end', -#C.COMPILED_FOOTER_COMMENT_LEN)
+  local footer = file:read(#C.COMPILED_FOOTER_COMMENT_LEN)
   file:close()
 
-  return (head1 and head1:find(C.COMPILED_HEADER_COMMENT)) 
-    or (head2 and head2:find(C.COMPILED_HEADER_COMMENT))
+  return footer == C.COMPILED_FOOTER_COMMENT
 end
 
 local function traversePaths(paths, callback)

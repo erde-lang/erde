@@ -2,13 +2,12 @@
 
 # 0.3-1
 
-- Add semicolons (like Lua)
-- throw error if only part of file is parsed
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
   - https://www.lua.org/manual/5.4/manual.html#3.1
 - error severities to bypass `Try`
+- throw error if only part of file is parsed
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - Source maps (for runtime errors when using erde.loader)
@@ -26,7 +25,9 @@
 
 # Docs
 
+- change to "Differences from lua"
 - returns allow parentheses (for multiline returns)
+- no semicolons
 
 # Future Goals
 
