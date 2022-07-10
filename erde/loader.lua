@@ -1,5 +1,5 @@
 local C = require('erde.constants')
-local erde = require('erde')
+local run = require('erde.run')
 local luaTarget = require('erde.luaTarget')
 
 -- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
@@ -25,7 +25,7 @@ local function erdeSearcher(moduleName)
 
         local moduleContents = moduleFile:read('*a')
         moduleFile:close()
-        return erde.run(moduleContents, luaTarget.current)
+        return run(moduleContents, luaTarget.current)
       end
     end
   end

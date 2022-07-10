@@ -845,7 +845,6 @@ return function(text)
     table.insert(module, consume())
   end
 
-  table.insert(module, C.COMPILED_HEADER_COMMENT)
   table.insert(module, Block())
 
   if #moduleNames > 0 then
@@ -862,5 +861,6 @@ return function(text)
     end
   end
 
+  table.insert(module, C.COMPILED_FOOTER_COMMENT)
   return table.concat(module, '\n')
 end
