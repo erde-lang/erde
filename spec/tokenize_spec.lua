@@ -2,18 +2,18 @@ local tokenize = require('erde.tokenize')
 local C = require('erde.constants')
 
 local function assertToken(token)
-  local tokens, tokenInfo = tokenize(token)
+  local tokens = tokenize(token)
   assert.are.equal(token, tokens[1])
 end
 
 local function assertTokens(text, expectedTokens)
-  local tokens, tokenInfo = tokenize(text)
+  local tokens = tokenize(text)
   assert.subtable(expectedTokens, tokens)
 end
 
-local function assertTokenInfo(text, expectedTokenInfo)
-  local tokens, tokenInfo = tokenize(text)
-  assert.subtable(expectedTokenInfo, tokenInfo)
+local function assertTokenLines(text, expectedTokenLines)
+  local tokens, tokenLines = tokenize(text)
+  assert.subtable(expectedTokenLines, tokenLines)
 end
 
 describe('tokenize #5.1+', function()
@@ -200,16 +200,8 @@ describe('tokenize #5.1+', function()
 
   describe('tokenInfo', function()
     spec('tokenInfo', function()
-      assertTokenInfo('a\nb', { { line = 1 }, { line = 2 } })
-      assertTokenInfo('a\nb', { { column = 1 }, { column = 1 } })
-      assertTokenInfo(
-        'hello world\ngoodbye world',
-        { { line = 1 }, { line = 1 }, { line = 2 }, { line = 2 } }
-      )
-      assertTokenInfo(
-        'hello world\ngoodbye world',
-        { { column = 1 }, { column = 7 }, { column = 1 }, { column = 9 } }
-      )
+      assertTokenLines('a\nb', { 1, 2 })
+      assertTokenLines('hello world\ngoodbye world', { 1, 1, 2, 2 })
     end)
   end)
 end)
