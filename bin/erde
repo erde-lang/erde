@@ -157,7 +157,7 @@ cli:flag('-X --clean'):hidden(true)
 cli:flag('-C --compile'):hidden(true)
 
 -- TODO: remove me later
-cli:flag('-F --fast'):hidden(true)
+cli:flag('-T --test'):hidden(true)
 
 cli:group('-C, --compile',
   option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(C.VALID_LUA_TARGETS, ', ')),
@@ -218,7 +218,7 @@ local function run()
 end
 
 -- TODO: remove me later
-local function fastRun()
+local function test()
   for i, path in ipairs(args.paths) do
     local modulePath = pathJoin(CWD, path)
     local moduleFile = io.open(modulePath)
@@ -230,7 +230,7 @@ local function fastRun()
     local moduleContents = moduleFile:read('*a')
     moduleFile:close()
 
-    local source = require('erde.fastCompile')(moduleContents)
+    local source = require('erde.debugCompile')(moduleContents)
     local loader, err = (loadstring or load)(source)
 
     if type(loader) == 'function' then
@@ -262,8 +262,8 @@ elseif args.clean then
   traverseLuaFiles(#args.paths > 0 and args.paths or { '.' }, clean)
 elseif #args.paths == 0 then
   print('REPL not yet supported.')
-elseif args.fast then
-  fastRun()
+elseif args.test then
+  test()
 else
   run()
 end

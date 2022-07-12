@@ -9,8 +9,7 @@ local Token
 
 local text, char, charIndex
 local line, column
-local tokens, numTokens, tokenInfo
-local newlines
+local tokens, numTokens, tokenLines
 
 local token
 local numLookup, numExp1, numExp2
@@ -22,7 +21,7 @@ local numLookup, numExp1, numExp2
 local function commit(token)
   numTokens = numTokens + 1
   tokens[numTokens] = token
-  tokenInfo[numTokens] = { line = line, column = column }
+  tokenLines[numTokens] = line
   column = column + #token
 end
 
@@ -118,7 +117,6 @@ function Token()
 
     commit(token)
   elseif char == '\n' then
-    newlines[numTokens] = true
     repeat
       Newline()
       Space()
@@ -292,8 +290,7 @@ end
 return function(input)
   text, char, charIndex = input, input:sub(1, 1), 1
   line, column = 1, 1
-  tokens, numTokens, tokenInfo = {}, 0, {}
-  newlines = {}
+  tokens, numTokens, tokenLines = {}, 0, {}
 
   if peek(2) == '#!' then
     token = consume(2)
@@ -318,5 +315,5 @@ return function(input)
     error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
   end
 
-  return tokens, tokenInfo, newlines
+  return tokens, tokenLines
 end

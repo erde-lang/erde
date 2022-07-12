@@ -26,7 +26,9 @@ end
 -- -----------------------------------------------------------------------------
 
 function runErde(erdeCode)
-  local luaCode = erde.compile(erdeCode)
+  -- local luaCode = erde.compile(erdeCode)
+  -- TODO: remove me
+  local luaCode = erde.debugCompile(erdeCode)
   local runner = (loadstring or load)(luaCode)
 
   if runner == nil then
