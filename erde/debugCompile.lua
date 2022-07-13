@@ -41,8 +41,6 @@ local concat = table.concat
 local insert = table.insert
 
 local function weave(t, separator)
-  separator = separator or ','
-
   local woven = {}
   local tLen = #t
 
@@ -330,7 +328,7 @@ local function ArrowFunction()
   elseif currentToken == '(' then
     insert(compileLines, 'return')
     insert(compileLines, Parens(true, false, function()
-      return weave(List(false, true, Expr))
+      return weave(List(false, true, Expr), ',')
     end))
   else
     insert(compileLines, 'return')
@@ -346,17 +344,25 @@ local function IndexChain(allowArbitraryExpr)
   local isTrivialChain = true
 
   local hasExprBase = currentToken == '('
-  insert(compileLines, hasExprBase and Parens(true, true, Expr) or Name())
+
+  if hasExprBase then
+    insert(compileLines, Parens(true, true, Expr))
+  else
+    insert(compileLines, currentTokenLine)
+    insert(compileLines, Name())
+  end
 
   while true do
     if currentToken == '.' then
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume() .. Name(true))
     elseif currentToken == '[' then
+      insert(compileLines, currentTokenLine)
       insert(compileLines, '[')
       insert(compileLines, Surround('[', ']', false, Expr))
       insert(compileLines, ']')
     elseif branch(':') then
+      insert(compileLines, currentTokenLine)
       insert(compileLines, ':' .. Name(true))
       if currentToken ~= '(' then
         error('Missing parentheses for method call')
@@ -368,7 +374,7 @@ local function IndexChain(allowArbitraryExpr)
       --    `ambiguous syntax (function call x new statement) near '('`
       compileLines[#compileLines] = compileLines[#compileLines] .. '('
       insert(compileLines, Parens(false, false, function()
-        return weave(List(true, true, Expr))
+        return weave(List(true, true, Expr), ',')
       end))
       insert(compileLines, ')')
     else
@@ -442,7 +448,7 @@ local function Table()
       insert(compileLines, Expr())
     end)
 
-    return weave(compileLines)
+    return weave(compileLines, ',')
   end)
 end
 
@@ -559,97 +565,106 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Assignment(firstId)
+  local compileLines = { firstId }
   local idList = { firstId }
 
-  if branch(',') then
-    List(false, false, function()
-      local indexChain = IndexChain()
-      assert(indexChain:sub(-1) ~= ')')
-      table.insert(idList, indexChain)
-    end)
+  while currentToken == ',' do
+    insert(compileLines, consume())
+    local indexChain = IndexChain()
+    assert(indexChain:sub(-1) ~= ')') -- Do not allow function calls
+    insert(compileLines, indexChain)
+    insert(idList, indexChain)
   end
 
-  local opToken = C.BINOPS[currentToken] and consume()
+  local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
   if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-    error('Invalid assignment operator: ' .. currentToken)
+    -- TODO: fatal error + use opLine in error
+    error('Invalid assignment operator: ' .. opToken)
   end
 
   expect('=')
   local exprList = List(false, false, Expr)
 
   if not opToken then
-    return table.concat(idList, ',') .. ' = ' .. table.concat(exprList, ',')
-  elseif #idList == 1 and #exprList == 1 then
+    insert(compileLines, '=')
+    insert(compileLines, weave(exprList, ','))
+  elseif #compileLines == 1 then
     -- Optimize most common use case
-    return firstId .. ' = ' .. firstId .. ' + ' .. exprList[1]
+    insert(compileLines, opLine)
+    insert(compileLines, '=')
+    insert(compileLines, firstId)
+    insert(compileLines, '+')
+    insert(compileLines, exprList[1])
   else
-    local binopAssignments = {}
     local assignmentNames = {}
+    local assignmentCompileLines = {}
 
     for i, id in ipairs(idList) do
       local assignmentName = newTmpName()
-      table.insert(assignmentNames, assignmentName)
-      table.insert(binopAssignments, id .. ' = ' .. compileBinop(opToken, id, assignmentName))
+      insert(assignmentNames, assignmentName)
+      insert(assignmentCompileLines, id)
+      insert(assignmentCompileLines, '=')
+      insert(assignmentCompileLines, compileBinop(opToken, opLine, id, assignmentName))
     end
 
-    return table.concat({
-      'local ' .. table.concat(assignmentNames, ',') .. ' = ' .. table.concat(exprList, ','),
-      table.concat(binopAssignments, '\n'),
-    }, '\n')
+    insert(compileLines, 'local')
+    insert(compileLines, concat(assignmentNames, ','))
+    insert(compileLines, '=')
+    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, assignmentCompileLines)
   end
+
+  return compileLines
 end
 
 local function Declaration(scope)
-  -- TODO: move scope logic here
-  local declaration = {}
-  local destructures = {}
-  local varList = List(false, false, Var)
+  local compileLines = {}
+  local destructureCompileLines = {}
+  local names = {}
 
   if blockDepth > 1 and scope == 'module' then
     error('module declarations must appear at the top level')
   end
-
-  if scope == 'local' or scope == 'module' then
-    table.insert(declaration, 'local')
+  
+  if scope ~= 'global' then
+    insert(compileLines, 'local')
   end
 
-  do
-    local nameList = {}
-
-    for i, var in ipairs(varList) do
-      if type(var) == 'string' then
-        table.insert(nameList, var)
-      else
-        table.insert(nameList, var.name)
-        table.insert(destructures, var.compiled)
-      end
+  for i, var in ipairs(List(false, false, Var)) do
+    if type(var) == 'string' then
+      insert(names, var)
+    else
+      insert(names, var.name)
+      insert(destructureCompileLines, var.compiled)
     end
+  end
 
-    if scope == 'module' then
-      for _, name in ipairs(nameList) do
-        table.insert(moduleNames, name)
-      end
+  if scope == 'module' then
+    for _, name in ipairs(names) do
+      insert(moduleNames, name)
     end
-
-    table.insert(declaration, table.concat(nameList, ','))
   end
 
-  if branch('=') then
-    table.insert(declaration, '=')
-    table.insert(declaration, table.concat(List(false, false, Expr), ','))
+  insert(compileLines, weave(names, ','))
+
+  if currentToken == '=' then
+    insert(compileLines, consume())
+    insert(compileLines, weave(List(false, false, Expr), ','))
   end
 
-  return table.concat({
-    table.concat(declaration, ' '),
-    table.concat(destructures, '\n'),
-  }, '\n')
+  insert(compileLines, destructureCompileLines)
+  return compileLines
 end
 
 local function ForLoop()
-  commit(consume())
+  local compileLines = { consume() }
+  local preBodyCompileLines = {}
 
   if lookAhead(1) == '=' then
-    commit(Name() .. consume())
+    insert(compileLines, currentTokenLine)
+    insert(compileLines, Name())
+    insert(compileLines, currentTokenLine)
+    insert(compileLines, consume())
 
     local exprList = List(false, false, Expr)
     local exprListLen = #exprList
@@ -660,46 +675,46 @@ local function ForLoop()
       error('Invalid for loop parameters (too many parameters)')
     end
 
-    commit(exprList)
+    insert(compileLines, weave(exprList, ','))
   else
-    local nameList = {}
-    local preBody = {}
+    local names = {}
 
     for i, var in ipairs(List(false, false, Var)) do
       if type(var) == 'string' then
-        commit(var)
+        insert(names, var)
       else
-        commit(var.name)
-        table.insert(nameList, var.name)
-        table.insert(preBody, var.compiled)
+        insert(names, var.name)
+        insert(preBodyCompileLines, var.compileLines)
       end
     end
 
-    table.insert(compiled, table.concat({
-      'for',
-      table.concat(nameList, ','),
-      expect('in'),
-      -- Generic for parses an expression list!
-      -- see https://www.lua.org/pil/7.2.html
-      -- TODO: only allow max 3 expressions? Job for linter?
-      table.concat(List(false, false, Expr), ','),
-      'do',
-    }, ' '))
+    insert(compileLines, weave(names, ','))
+    insert(compileLines, expect('in'))
 
-    table.insert(compiled, table.concat(preBody, '\n'))
+    -- Generic for parses an expression list!
+    -- see https://www.lua.org/pil/7.2.html
+    -- TODO: only allow max 3 expressions? Job for linter?
+    insert(weave(List(false, false, Expr), ','))
   end
 
-  commit(nil, 'do')
-  LoopBlock()
-  commit(nil, 'end')
+  insert(compileLines, 'do')
+  insert(compileLines, preBodyCompileLines)
+  insert(compileLines, LoopBlock())
+  insert(compileLines, 'end')
+  return compileLines
 end
 
--- TODO: throw error on 'local' scope used with table values?? seems to be
--- behavior in Lua
 local function Function(scope)
-  -- TODO: move scope logic here
+  scope = scope or 'local'
+  local compileLines = {}
   local signature = Name()
   local isTableValue = currentToken == '.'
+
+  if scope ~= 'global' then
+    insert(compileLines, scope)
+  end
+
+  insert(compileLines, consume()) -- `function`
 
   while branch('.') do
     signature = signature .. '.' .. Name()
@@ -711,6 +726,7 @@ local function Function(scope)
   end
 
   if scope and isTableValue then
+    -- Lua does not allow scope for table functions (ex. `local function a.b()`)
     error('Cannot use scope keyword for table values')
   end
 
@@ -722,84 +738,81 @@ local function Function(scope)
   end
 
   local params = Params()
+  insert(compileLines, '(' .. concat(params.names, ',') .. ')')
+  insert(compileLines, params.compileLines)
 
-  return table.concat({
-    table.concat({
-      -- Default functions to local scope _unless_ they are part of a table.
-      scope and (scope == 'global' and '' or 'local') or (isTableValue and '' or 'local'),
-      'function',
-      signature .. '(' .. table.concat(params.names, ',') .. ')',
-    }, ' '),
-    params.preBody,
-    FunctionBlock(),
-    'end',
-  }, '\n')
+  insert(compileLines, FunctionBlock())
+  insert(compileLines, 'end')
+  return compileLines
 end
 
 local function IfElse()
-  commit(consume())
-  Expr()
-  commit('then')
-  Surround('{', '}', false, Block)
+  local compileLines = {}
+
+  insert(compileLines, consume())
+  insert(compileLines, Expr())
+  insert(compileLines, 'then')
+  insert(compileLines, Surround('{', '}', false, Block))
 
   while currentToken == 'elseif' do
-    commit(consume())
-    commit(Expr())
-    commit('then')
-    Surround('{', '}', false, Block)
+    insert(compileLines, consume())
+    insert(compileLines, Expr())
+    insert(compileLines, 'then')
+    insert(compileLines, Surround('{', '}', false, Block))
   end
 
   if currentToken == 'else' then
-    commit(consume())
-    Surround('{', '}', false, Block)
+    insert(compileLines, consume())
+    insert(compileLines, Surround('{', '}', false, Block))
   end
 
-  commit('end')
+  insert(compileLines, 'end')
+  return compileLines
 end
 
 local function Return()
+  local compileLines = { currentTokenLine, consume() }
   local firstReturn = Try(Expr)
+
   if firstReturn then
-    return branch(',')
-      and 'return ' .. firstReturn .. ',' .. concat(List(false, false, Expr), ',')
-      or 'return ' .. firstReturn
+    insert(compileLines, firstReturn)
+    if currentToken == ',' then
+      insert(compileLines, consume())
+      insert(compileLines, weave(List(false, false, Expr), ','))
+    end
   elseif currentToken == '(' then
-    return 'return ' .. table.concat(Parens(true, false, function()
-      return List(false, true, Expr)
-    end), ',')
-  else
-    return 'return'
+    insert(compileLines, Parens(true, false, function()
+      return weave(List(false, true, Expr), ',')
+    end))
   end
+
+  return compileLines
 end
 
 local function TryCatch()
+  local compileLines = {}
   local okName = newTmpName()
   local errorName = newTmpName()
 
-  local compiled = {
-    ('local %s, %s = pcall(function() %s end)'):format(
-      okName,
-      errorName,
-      Surround('{', '}', false, Block)
-    ),
-    'if ' .. okName .. ' == false then',
-  }
+  insert(compileLines, ('local %s, %s = pcall(function()'):format(okName, errorName))
+  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, 'end if ' .. okName .. ' == false then')
 
   expect('catch')
   local errorVar = Try(Var)
 
   if errorVar then
     if type(errorVar) == 'string' then
-      table.insert(compiled, 'local ' .. errorVar .. ' = ' .. errorName)
+      insert(compileLines, ('local %s = %s'):format(errorVar, errorName))
     else
-      table.insert(compiled, ('local ' .. errorVar.name .. ' = ' .. errorName))
-      table.insert(compiled, errorVar.compiled)
+      insert(compileLines, ('local %s = %s'):format(errorVar.name, errorName))
+      insert(compileLines, errorVar.compileLines)
     end
   end
 
-  table.insert(compiled, Surround('{', '}', false, Block))
-  table.insert(compiled, 'end')
-  return table.concat(compiled, '\n')
+  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, 'end')
+  return compileLines
 end
 
 -- -----------------------------------------------------------------------------
@@ -859,16 +872,21 @@ function Block(isLoopBlock)
     elseif currentToken == 'function' then
       insert(compileLines, Function())
     elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
+      local scope = consume()
       insert(
         compileLines,
-        lookAhead(1) == 'function' and Function() or Declaration()
+        currentToken == 'function' and Function(scope) or Declaration(scope)
       )
     else
       local indexChain = Try(IndexChain)
-      if not indexChain then break end
-      -- TODO: properly check for function call
-      -- Allow function calls as standalone statements
-      insert(compileLines, true and indexChain or Assignment(indexChain))
+      if not indexChain then
+        break
+      elseif indexChain[#indexChain] == ')' then
+        -- Allow function calls as standalone statements
+        insert(compileLines, indexChain)
+      else
+        insert(compileLines, Assignment(indexChain))
+      end
     end
   end
 
@@ -935,6 +953,14 @@ return function(text)
   local collapsedCompileLines = {}
   local collapsedCompileLineCounter = 0
   local sourceMap = {}
+
+  -- Assign compiled lines with no source to the last known source line. We do
+  -- this because Lua may give an error at the line of the _next_ token in
+  -- certain cases. For example, the following will give an error at line 3,
+  -- instead of line 2 where the nil index actually occurs:
+  --   local x = nil
+  --   print(x.a
+  --   )
   local sourceLine = 1
 
   local function collectLines(lines)
@@ -952,7 +978,6 @@ return function(text)
   end
 
   collectLines(compileLines)
-  print('COMPILE LINES', require('inspect')(compileLines))
   insert(collapsedCompileLines, C.COMPILED_FOOTER_COMMENT)
   return concat(collapsedCompileLines, '\n'), sourceMap
 end

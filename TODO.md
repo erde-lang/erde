@@ -3,7 +3,6 @@
 # 0.3-1
 
 - Source maps (for runtime errors when using erde.loader)
-  - group function call parens on same line (luajit error)
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
@@ -13,6 +12,7 @@
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - vastly improve error messages / diagnosis
+- internal documentation
 
 # 0.4-1
 
@@ -27,7 +27,7 @@
 - change to "Differences from lua"
 - returns allow parentheses (for multiline returns)
 - no semicolons
-
+- multi binop assignment
 - Limitations
   - cannot retain line numbers for compiled code
     - local { x = myexpr() } =

@@ -230,17 +230,22 @@ local function test()
     local moduleContents = moduleFile:read('*a')
     moduleFile:close()
 
-    local source = require('erde.debugCompile')(moduleContents)
-    local loader, err = (loadstring or load)(source)
+    local compiled, sourceMap = require('erde.debugCompile')(moduleContents)
+    local loader, err = (loadstring or load)(compiled)
 
     if type(loader) == 'function' then
-      print(source)
-      loader()
+      local ok, err = pcall(loader)
+      if not ok then
+        -- TODO: fix filename (fix loading string in loader?)
+        fileName, errLine, errMsg = err:match('^(.*):(%d+): (.*)$')
+        print(('erde: %s:%d: %s'):format(fileName, sourceMap[tonumber(errLine)], errMsg))
+        os.exit(1)
+      end
     else
       error(table.concat({
         'Failed to load compiled Lua.',
         'Error: ' .. err,
-        'Compiled Code: ' .. source,
+        'Compiled Code: ' .. compiled,
       }, '\n'))
     end
   end
