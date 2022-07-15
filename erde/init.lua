@@ -1,9 +1,10 @@
-local loader = require('erde.loader')
+local lib = require('erde.lib')
 
 return {
-  load = loader.load,
-  unload = loader.unload,
   compile = require('erde.compile'),
-  run = require('erde.run').string,
-  debug = require('erde.debug'),
+  rewrite = lib.rewrite,
+  traceback = lib.traceback,
+  run = lib.runString,
+  load = lib.load,
+  unload = lib.unload,
 }

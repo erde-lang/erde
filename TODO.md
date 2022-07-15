@@ -2,7 +2,6 @@
 
 # 0.3-1
 
-- Source maps (for runtime errors when using erde.loader)
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
