@@ -2,10 +2,10 @@
 
 local argparse = require('argparse')
 local lfs = require('lfs')
-local erde = require('erde')
-local luaTarget = require('erde.luaTarget')
 local C = require('erde.constants')
-local run = require('erde.run')
+local compile = require('erde.compile')
+local luaTarget = require('erde.luaTarget')
+local lib = require('erde.lib')
 
 local CWD = lfs.currentdir()
 
@@ -187,7 +187,7 @@ local function compileFile(filePath)
   end
 
   local srcFile = io.open(filePath, 'r')
-  local compiled = erde.compile(srcFile:read('*a'))
+  local compiled = compile(srcFile:read('*a'))
   srcFile:close()
 
   local destFile = io.open(destFilePath, 'w')
@@ -218,6 +218,6 @@ elseif #args.paths == 0 then
   print('REPL not yet supported.')
 else
   for i, path in ipairs(args.paths) do
-    run.file(pathJoin(CWD, path))
+    lib.runFile(pathJoin(CWD, path))
   end
 end
