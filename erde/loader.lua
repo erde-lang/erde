@@ -7,7 +7,7 @@ local luaTarget = require('erde.luaTarget')
 local searchers = package.loaders or package.searchers
 
 local function erdeSearcher(moduleName)
-  modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
+  local modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') do
     local fullModulePath = path:gsub('%.lua', '.erde'):gsub('?', modulePath)
@@ -17,15 +17,10 @@ local function erdeSearcher(moduleName)
       moduleFile:close()
 
       return function()
-        local moduleFile = io.open(fullModulePath)
-
-        if moduleFile == nil then
-          return 'File no longer exists: ' .. fullModulePath
-        end
-
-        local moduleContents = moduleFile:read('*a')
-        moduleFile:close()
-        return run(moduleContents, luaTarget.current)
+        local _, result = pcall(function()
+          return run.file(fullModulePath)
+        end)
+        return result
       end
     end
   end

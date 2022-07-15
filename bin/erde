@@ -5,6 +5,7 @@ local lfs = require('lfs')
 local erde = require('erde')
 local luaTarget = require('erde.luaTarget')
 local C = require('erde.constants')
+local run = require('erde.run')
 
 local CWD = lfs.currentdir()
 
@@ -156,9 +157,6 @@ cli:argument('paths'):args('*'):hidden(true)
 cli:flag('-X --clean'):hidden(true)
 cli:flag('-C --compile'):hidden(true)
 
--- TODO: remove me later
-cli:flag('-T --test'):hidden(true)
-
 cli:group('-C, --compile',
   option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(C.VALID_LUA_TARGETS, ', ')),
   option('-o', '--outDir', 'Output directory for compiled files.')
@@ -170,14 +168,14 @@ local args = cli:parse()
 -- Actions
 -- -----------------------------------------------------------------------------
 
-local function clean(filePath)
+local function cleanFile(filePath)
   if isCompiledFile(filePath) then
     os.remove(filePath)
     print('Removed ' .. filePath)
   end
 end
 
-local function compile(filePath)
+local function compileFile(filePath)
   local destFilePath = filePath:gsub('%.erde$', '.lua')
 
   if args.outDir then
@@ -202,55 +200,6 @@ local function compile(filePath)
   )
 end
 
-local function run()
-  for i, path in ipairs(args.paths) do
-    local modulePath = pathJoin(CWD, path)
-    local moduleFile = io.open(modulePath)
-
-    if moduleFile == nil then
-      error('Unable to find file: ' .. path)
-    end
-
-    local moduleContents = moduleFile:read('*a')
-    moduleFile:close()
-    erde.run(moduleContents)
-  end
-end
-
--- TODO: remove me later
-local function test()
-  for i, path in ipairs(args.paths) do
-    local modulePath = pathJoin(CWD, path)
-    local moduleFile = io.open(modulePath)
-
-    if moduleFile == nil then
-      error('Unable to find file: ' .. path)
-    end
-
-    local moduleContents = moduleFile:read('*a')
-    moduleFile:close()
-
-    local compiled, sourceMap = require('erde.debugCompile')(moduleContents)
-    local loader, err = (loadstring or load)(compiled)
-
-    if type(loader) == 'function' then
-      local ok, err = pcall(loader)
-      if not ok then
-        -- TODO: fix filename (fix loading string in loader?)
-        fileName, errLine, errMsg = err:match('^(.*):(%d+): (.*)$')
-        print(('erde: %s:%d: %s'):format(fileName, sourceMap[tonumber(errLine)], errMsg))
-        os.exit(1)
-      end
-    else
-      error(table.concat({
-        'Failed to load compiled Lua.',
-        'Error: ' .. err,
-        'Compiled Code: ' .. compiled,
-      }, '\n'))
-    end
-  end
-end
-
 -- -----------------------------------------------------------------------------
 -- Main
 -- -----------------------------------------------------------------------------
@@ -262,13 +211,13 @@ end
 if args.version then
   print('0.2-1')
 elseif args.compile then
-  traverseErdeFiles(#args.paths > 0 and args.paths or { '.' }, compile)
+  traverseErdeFiles(#args.paths > 0 and args.paths or { '.' }, compileFile)
 elseif args.clean then
-  traverseLuaFiles(#args.paths > 0 and args.paths or { '.' }, clean)
+  traverseLuaFiles(#args.paths > 0 and args.paths or { '.' }, cleanFile)
 elseif #args.paths == 0 then
   print('REPL not yet supported.')
-elseif args.test then
-  test()
 else
-  run()
+  for i, path in ipairs(args.paths) do
+    run.file(pathJoin(CWD, path))
+  end
 end
