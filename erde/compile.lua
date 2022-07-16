@@ -37,8 +37,8 @@ local isModuleReturnBlock, hasModuleReturn
 -- -----------------------------------------------------------------------------
 
 local unpack = table.unpack or unpack
-local concat = table.concat
 local insert = table.insert
+local concat = table.concat
 
 -- -----------------------------------------------------------------------------
 -- Parse Helpers

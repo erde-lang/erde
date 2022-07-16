@@ -192,9 +192,8 @@ end
 -- LuaBitOp only works on 5.1 + 5.2, bit32 only works on 5.2, and 5.3 + 5.4 have
 -- built-in bit operator support.
 --
--- In the future, we may want to only disallow bit operators for these targets
--- if the flag in the CLI is not set, but for now we choose to treat them as
--- "invalid" targets to avoid runtime errors.
+-- TODO: do not disallow bit operators for these targets if a custom bit lib is
+-- set in the CLI
 C.INVALID_BITOP_LUA_TARGETS = {
   ['5.1+'] = true,
   ['5.2+'] = true,
