@@ -37,8 +37,8 @@ local isModuleReturnBlock, hasModuleReturn
 -- -----------------------------------------------------------------------------
 
 local unpack = table.unpack or unpack
-local concat = table.concat
 local insert = table.insert
+local concat = table.concat
 
 -- -----------------------------------------------------------------------------
 -- Parse Helpers
@@ -935,7 +935,7 @@ return function(text)
   tokens, tokenLines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
-  currentTokenLine = 1
+  currentTokenLine = tokenLines[1]
 
   blockDepth = 0
   isModuleReturnBlock = true

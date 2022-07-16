@@ -2,19 +2,29 @@
 
 # 0.3-1
 
+- move luaTarget to constants
+- officially readd 5.1+ support
+  - support multiple bitwise operator compiles (best effort based on versions)
+- throw error if only part of file is parsed
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
   - https://www.lua.org/manual/5.4/manual.html#3.1
 - error severities to bypass `Try`
-- throw error if only part of file is parsed
-- officially readd 5.1+ support
-  - support multiple bitwise operator compiles (best effort based on versions)
+- improve test coverage
+  - more compiler tests
+  - lua version tests
+  - error handling tests
+  - erde API tests
 - vastly improve error messages / diagnosis
-- internal documentation
 
 # 0.4-1
 
+- refactor tokenizer (for organization, do not microoptimize)
+- vastly improve documentation
+  - internal documentation
+  - update language spec + tutorial, etc.
+  - playground?
 - add CLI REPL
 
 # 1.0-1
@@ -25,7 +35,7 @@
 
 - change to "Differences from lua"
 - returns allow parentheses (for multiline returns)
-- no semicolons
+- no semicolons?
 - multi binop assignment
 - Limitations
   - cannot retain line numbers for compiled code

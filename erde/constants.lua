@@ -11,6 +11,10 @@ C.PATH_SEPARATOR = package.config:sub(1, 1)
 C.COMPILED_FOOTER_COMMENT = '-- __ERDE_COMPILED__'
 C.COMPILED_FOOTER_COMMENT_LEN = #C.COMPILED_FOOTER_COMMENT
 
+-- Flag to know whether or not we are running under the cli. Required for more
+-- precise error rewriting.
+C.IS_CLI_RUNTIME = false
+
 -- -----------------------------------------------------------------------------
 -- Keywords / Terminals
 -- -----------------------------------------------------------------------------
@@ -192,9 +196,8 @@ end
 -- LuaBitOp only works on 5.1 + 5.2, bit32 only works on 5.2, and 5.3 + 5.4 have
 -- built-in bit operator support.
 --
--- In the future, we may want to only disallow bit operators for these targets
--- if the flag in the CLI is not set, but for now we choose to treat them as
--- "invalid" targets to avoid runtime errors.
+-- TODO: do not disallow bit operators for these targets if a custom bit lib is
+-- set in the CLI
 C.INVALID_BITOP_LUA_TARGETS = {
   ['5.1+'] = true,
   ['5.2+'] = true,
