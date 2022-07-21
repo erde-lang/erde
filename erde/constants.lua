@@ -11,6 +11,10 @@ C.PATH_SEPARATOR = package.config:sub(1, 1)
 C.COMPILED_FOOTER_COMMENT = '-- __ERDE_COMPILED__'
 C.COMPILED_FOOTER_COMMENT_LEN = #C.COMPILED_FOOTER_COMMENT
 
+-- Flag to know whether or not we are running under the cli. Required for more
+-- precise error rewriting.
+C.IS_CLI_RUNTIME = false
+
 -- -----------------------------------------------------------------------------
 -- Keywords / Terminals
 -- -----------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 # 0.3-1
 
+- move luaTarget to constants
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - throw error if only part of file is parsed
@@ -10,17 +11,20 @@
   - https://www.lua.org/manual/5.1/manual.html#2.1
   - https://www.lua.org/manual/5.4/manual.html#3.1
 - error severities to bypass `Try`
-- vastly improve error messages / diagnosis
 - improve test coverage
   - more compiler tests
   - lua version tests
   - error handling tests
   - erde API tests
-- internal documentation
+- vastly improve error messages / diagnosis
 
 # 0.4-1
 
 - refactor tokenizer (for organization, do not microoptimize)
+- vastly improve documentation
+  - internal documentation
+  - update language spec + tutorial, etc.
+  - playground?
 - add CLI REPL
 
 # 1.0-1

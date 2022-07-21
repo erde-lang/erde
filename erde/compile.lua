@@ -935,7 +935,7 @@ return function(text)
   tokens, tokenLines = tokenize(text)
   currentTokenIndex = 1
   currentToken = tokens[1]
-  currentTokenLine = 1
+  currentTokenLine = tokenLines[1]
 
   blockDepth = 0
   isModuleReturnBlock = true
