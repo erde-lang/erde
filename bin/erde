@@ -186,34 +186,26 @@ local function compileFile(filePath)
   )
 end
 
+-- IMPORTANT: THIS IS AN ERDE CODE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
+-- `__erde_internal_load_source__`!
 local function runFile(filePath)
-  local source = utils.readFile(utils.joinPaths(CWD, filePath))
-
-  -- TODO: error handling here
-  local compiled, sourceMap = compile(source)
-
-  local loader, err = load(compiled, filePath)
-
-  -- TODO: provide option to disable source map caching, as it may increase
-  -- memory usage?
-  -- sourceMapCache[filePath] = sourceMap
-
-  local ok, result = xpcall(loader, function(err)
-    if type(err) == 'table' and err.stacktrace then
-      return err.stacktrace
+  local ok, result = xpcall(
+    function()
+      local sourceCode = utils.readFile(filePath)
+      local result = lib.__erde_internal_load_source__(sourceCode, filePath)
+      return result
+    end,
+    function(err)
+      if type(err) == 'table' and err.__is_erde_internal_load_error__ then
+        return err.stacktrace
+      elseif not utils.fileExists(filePath) then
+        return 'file does not exist: ' .. filePath
+      else
+        -- This should never happen?
+        return 'internal error, please report this at: '
+      end
     end
-
-    -- Coerce other thrown values into strings
-    local message = tostring(err)
-
-    if message:match('^.*:%d+: .*$') then
-      message = lib.rewrite(message, sourceMap, filePath)
-    end
-
-    -- Add an extra level to the traceback to account for the wrapping anonymous
-    -- function above (in xpcall).
-    return lib.traceback(message, 2)
-  end)
+  )
 
   if not ok then
     -- Do not use `error` here! Need to preserve stack trace in `result`.

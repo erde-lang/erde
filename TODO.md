@@ -17,15 +17,16 @@
   - error handling tests
   - erde API tests
 - vastly improve error messages / diagnosis
+  - include line numbers (use this in `__erde_internal_load_source__`!)
+- update / improve documentation
 
 # 0.4-1
 
 - refactor tokenizer (for organization, do not microoptimize)
-- vastly improve documentation
-  - internal documentation
-  - update language spec + tutorial, etc.
-  - playground?
 - add CLI REPL
+- documentation
+  - tutorial
+  - playground
 
 # 1.0-1
 

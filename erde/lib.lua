@@ -13,27 +13,18 @@ local unpack = table.unpack or unpack
 -- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 local searchers = package.loaders or package.searchers
 
-local sourceMapCache = {}
+local erdeSourceIdCounter = 1
+local erdeSourceCache = {}
 
 -- -----------------------------------------------------------------------------
 -- Debug
 -- -----------------------------------------------------------------------------
 
--- Patterns to remove from generated tracebacks. This is mostly to hide erde's
--- internal function calls, as they will be noisy to the user and possibly
--- misleading.
-local TRACEBACK_FILTERS = {
-  table.concat({
-    "[^\n]*%[C]: in function 'xpcall'\n",
-    "[^\n]*: in function '__erde_internal_run_string__'\n",
-    '[^\n]*\n',
-  }),
-  table.concat({
-    "[^\n]*%[C]: in function 'xpcall'\n",
-    "[^\n]*: in function '__erde_internal_run_module__'\n",
-    '[^\n]*\n',
-  }),
-}
+local ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE = table.concat({
+  "[^\n]*%[C]: in function 'xpcall'\n",
+  "[^\n]*: in function '__erde_internal_load_source__'\n",
+  '[^\n]*\n',
+})
 
 local function rewrite(message, sourceMap, sourceAlias)
   -- Only rewrite strings! Other thrown values (including nil) do not get source
@@ -46,28 +37,22 @@ local function rewrite(message, sourceMap, sourceAlias)
   -- see: https://www.lua.org/manual/5.1/manual.html#pdf-error
   if not sourceFile or not errLine then return message end
 
-  -- Extract chunknames from `load` if it looks like:
-  -- 1. an .erde file (from __erde_internal_run_module__)
-  -- 2. an embedded `load` (from __erde_internal_run_string__)
-  --
-  -- TODO: Technically, these are not "safe" in the sense that a user defined
-  -- chunkname may match one of these. Maybe need to make the matching more
-  -- strict, for example by injecting a string (for example: `[string __erde_internal__ ./myfile.erde]`)
-  -- but for now this is cleaner and should work 99.9% of the time.
-  sourceAlias = sourceAlias or sourceFile:match('^%[string "(.+%.erde)"]$')
-  sourceAlias = sourceAlias or sourceFile:match('^%[string "(%[string ".*"])"]$')
-
-  -- TODO: if we detect we are rewriting a loaded erde string and there is no
-  -- source map, indicate the line number is for compiled lua
-
-  if sourceMap == nil then
-    local erdeSourceFile = sourceFile:gsub('%.lua$', '.erde')
-    -- TODO: use sourceMapCache
+  -- Use cached alias + sourceMap as a backup if they are not provided
+  local erdeSourceId = sourceFile:match('^%[string "(__erde_source_%d+__)"]$')
+  if erdeSourceId and erdeSourceCache[erdeSourceId] then
+    sourceAlias = sourceAlias or erdeSourceCache[erdeSourceId].alias
+    sourceMap = sourceMap or erdeSourceCache[erdeSourceId].sourceMap
   end
 
-  return ('%s:%d: %s'):format(
+  -- If we have don't have a sourceMap for erde code, we need to indiciate that
+  -- the error line is for the generated Lua.
+  if erdeSourceId and not sourceMap then
+    errLine = ('(compiled: %s)'):format(errLine)
+  end
+
+  return ('%s:%s: %s'):format(
     sourceAlias or sourceFile,
-    sourceMap ~= nil and sourceMap[tonumber(errLine)] or errLine,
+    sourceMap and sourceMap[tonumber(errLine)] or errLine,
     content
   )
 end
@@ -136,6 +121,7 @@ local function traceback(message, level)
     info = debug.getinfo(level, 'nSl')
   end
 
+  -- TODO: provide CLI option to show this (verbosity level, ex. -vvv)
   if C.IS_CLI_RUNTIME then
     -- Remove following from stack trace (caused by the CLI):
     -- [C]: in function 'xpcall'
@@ -149,9 +135,10 @@ local function traceback(message, level)
 
   local stacktrace = table.concat(stack, '\n')
 
-  for _, filter in ipairs(TRACEBACK_FILTERS) do
-    stacktrace = stacktrace:gsub(filter, '')
-  end
+  -- Remove any lines from `__erde_internal_load_source__` calls.
+  -- See `__erde_internal_load_source__` for more details.
+  -- TODO: provide CLI option to show this (verbosity level, ex. -vvv)
+  stacktrace = stacktrace:gsub(ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE, '')
 
   return stacktrace
 end
@@ -170,19 +157,100 @@ local function xpcallRewrite(callback, msgh, ...)
 end
 
 -- -----------------------------------------------------------------------------
--- Run
+-- Sources
 -- -----------------------------------------------------------------------------
 
--- Do not expose __erde_internal_run_string__ directly. We choose an odd naming
--- so that it is reliable searchable in stacktraces and we need a proxy between
--- the identifiable function and the exposed one in case the function is called
--- under a different name.
+-- Load a chunk of Erde code. This caches the generated sourceMap / sourceAlias
+-- (see `erdeSourceCache`) so we can fetch them later during error rewrites.
 --
--- For example, if we do return `{ run = __erde_internal_run_string__ }` in this
--- module and the user calls `local x = require('erde').run`, the stacktrace
--- will show a call to `x` and we will lose the __erde_internal_run_string__
--- marker.
-local function __erde_internal_run_string__(sourceCode, sourceAlias)
+-- The sourceAlias is _not_ used as the chunkname in the underlying Lua `load`
+-- call. Instead, a unique ID is generated and inserted instead. During error
+-- rewrites, this ID will be extracted and replaced with the cached sourceAlias.
+--
+-- This function is also given a unique function name so that it is reliably
+-- searchable in stacktraces. During stracetrace rewrites (see `traceback`), the
+-- presence of this name dictates which lines we need to remove (see `ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE`).
+-- Otherwise, the resulting stacktraces will include function calls from this
+-- file, which will be quite confusing and noisy for the end user.
+--
+-- IMPORTANT: THIS FUNCTION MUST NOT BE TAIL CALLED NOR DIRECTLY CALLED BY THE
+-- USER AND IS ASSUMED TO BE CALLED AT THE TOP LEVEL OF LOADING ERDE SOURCE CODE.
+--
+-- Although we use a unique name here to find it in stacktraces, the actual
+-- rewriting is much trickier. Because Lua will automatically collapse tail
+-- calls in stacktraces, its hard to know how many lines of internal code
+-- _before_ the call to `__erde_internal_load_source__` we need to remove.
+--
+-- Furthermore, finding the name of the function call is also nontrivial and
+-- will actually get lost if this is directly called by the user, so it must
+-- have at least one function call before it (even the Lua docs seem to mention
+-- this in `debug.getinfo`, see https://www.lua.org/pil/23.1.html).
+--
+-- Thus, for consistency we always assume that this is never tail called and
+-- it is called at the top level of loading erde source code, which ensures that
+-- we always have the following 3 lines to remove:
+--
+-- 1. The `xpcall` in `__erde_internal_load_source__`
+-- 2. The call to `__erde_internal_load_source__` itself
+-- 3. The call 
+--
+-- Currently there are three ways for the user to load Erde code:
+--
+-- 1. Via the CLI (ex. `erde myfile.erde`)
+-- 2. Via `erdeSearcher`
+-- 3. Via `runString`
+--
+-- Any changes to these functions and their stack calls should be done w/ great
+-- precaution.
+local function __erde_internal_load_source__(sourceCode, sourceAlias)
+  local erdeSourceId = ('__erde_source_%d__'):format(erdeSourceIdCounter)
+  erdeSourceIdCounter = erdeSourceIdCounter + 1
+
+  local ok, compiled, sourceMap = pcall(function()
+    -- TODO: include sourceCode line number in error and rewrite it!
+    return compile(sourceCode)
+  end)
+
+  if not ok then
+    error({
+      -- Provide a flag so we don't rewrite messages multiple times (see above).
+      __is_erde_internal_load_error__ = true,
+      message = compiled,
+      -- Add 2 extra levels to the traceback to account for the wrapping
+      -- anonymous function above (in pcall) as well as the erde loader itself.
+      stacktrace = traceback(compiled, 3),
+    })
+  end
+
+  -- TODO: provide an option to disable source maps? Caching them prevents them
+  -- from getting freed, and the tables (which may be potentially large) may
+  -- have excessive memory usage on extremely constrained systems?
+  erdeSourceCache[erdeSourceId] = { alias = sourceAlias, sourceMap = sourceMap }
+
+  local ok, result = xpcall(load(compiled, erdeSourceId), function(message)
+    if type(message) == 'table' and message.__is_erde_internal_load_error__ then
+      -- Do not unnecessarily wrap an error we have already handled!
+      return message
+    else
+      message = rewrite(message, sourceMap, sourceAlias)
+      return {
+        -- Provide a flag so we don't rewrite messages multiple times (see above).
+        __is_erde_internal_load_error__ = true,
+        message = message,
+        -- Add an extra level to the traceback to account for the wrapping
+        -- anonymous function above (in xpcall).
+        stacktrace = traceback(message, 2),
+      }
+    end
+  end)
+
+  if not ok then error(result) end
+  return result
+end
+
+-- IMPORTANT: THIS IS AN ERDE CODE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
+-- `__erde_internal_load_source__`!
+local function runErdeString(sourceCode, sourceAlias)
   if sourceAlias == nil then
     sourceAlias = sourceCode:sub(1, 6)
 
@@ -193,67 +261,13 @@ local function __erde_internal_run_string__(sourceCode, sourceAlias)
     sourceAlias = ('[string "%s"]'):format(sourceAlias)
   end
 
-  -- TODO: error handling here
-  local compiled, sourceMap = compile(sourceCode)
-  local loader, err = load(compiled, sourceAlias)
-
-  local ok, result = xpcall(loader, function(message)
-    if type(message) == 'table' and message.stacktrace then
-      -- Do not unnecessarily wrap an error we have already handled!
-      return message
-    else
-      message = rewrite(message, sourceMap, sourceAlias)
-      -- Add an extra level to the traceback to account for the wrapping
-      -- anonymous function above (in xpcall).
-      return { message = message, stacktrace = traceback(message, 2) }
-    end
-  end)
-
-  if not ok then error(result) end
-  return result
-end
-
-local function runString(sourceCode, sourceAlias)
-  -- DO NOT USE `return __erde_internal_run_string__(...)`
-  --
-  -- Lua recycles stacks in tail calls, which causes `__erde_internal_run_string__`
-  -- to become unidentifiable in the stack trace. This is a problem, since we
-  -- need to remove the `xpcall` and `__erde_internal_run_string__` calls from
-  -- the stack trace before showing it to the user.
-  --
-  -- (see `TRACEBACK_FILTERS`)
-  -- (see https://www.lua.org/pil/23.1.html on why retrieving the function name is tricky)
-  local result = __erde_internal_run_string__(sourceCode, sourceAlias)
+  local result = __erde_internal_load_source__(sourceCode, sourceAlias)
   return result
 end
 
 -- -----------------------------------------------------------------------------
 -- Loader
 -- -----------------------------------------------------------------------------
-
-local function __erde_internal_run_module__(filePath)
-  local sourceCode = utils.readFile(filePath)
-
-  -- TODO: error handling here
-  local compiled, sourceMap = compile(sourceCode)
-
-  local loader, err = load(compiled, filePath)
-
-  local ok, result = xpcall(loader, function(message)
-    if type(message) == 'table' and message.stacktrace then
-      -- Do not unnecessarily wrap an error we have already handled!
-      return message
-    else
-      message = rewrite(message, sourceMap, filePath)
-      -- Add an extra level to the traceback to account for the wrapping
-      -- anonymous function above (in xpcall).
-      return { message = message, stacktrace = traceback(message, 2) }
-    end
-  end)
-
-  if not ok then error(result) end
-  return result
-end
 
 local function erdeSearcher(moduleName)
   local modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
@@ -265,17 +279,11 @@ local function erdeSearcher(moduleName)
     if moduleFile ~= nil then
       moduleFile:close()
 
+      -- IMPORTANT: THIS IS AN ERDE CODE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
+      -- `__erde_internal_load_source__`!
       return function()
-        -- DO NOT USE `return __erde_internal_run_module__(...)`
-        --
-        -- Lua recycles stacks in tail calls, which causes `__erde_internal_run_module__`
-        -- to become unidentifiable in the stack trace. This is a problem, since we
-        -- need to remove the `xpcall` and `__erde_internal_run_module__` calls from
-        -- the stack trace before showing it to the user.
-        --
-        -- (see `TRACEBACK_FILTERS`)
-        -- (see https://www.lua.org/pil/23.1.html on why retrieving the function name is tricky)
-        local result = __erde_internal_run_module__(fullModulePath)
+        local sourceCode = utils.readFile(fullModulePath)
+        local result = __erde_internal_load_source__(sourceCode, fullModulePath)
         return result
       end
     end
@@ -314,11 +322,12 @@ end
 -- -----------------------------------------------------------------------------
 
 return {
+  __erde_internal_load_source__ = __erde_internal_load_source__,
   rewrite = rewrite,
   traceback = traceback,
-  pcallRewrite = pcallRewrite,
-  xpcallRewrite = xpcallRewrite,
-  runString = runString,
+  pcall = pcallRewrite,
+  xpcall = xpcallRewrite,
+  run = runErdeString,
   load = load,
   unload = unload,
 }
