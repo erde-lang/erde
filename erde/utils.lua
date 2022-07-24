@@ -34,7 +34,7 @@ local function readFile(filePath)
   local file = io.open(filePath)
 
   if file == nil then
-    error('File does not exist: ' .. filePath)
+    error('file does not exist: ' .. filePath)
   end
 
   local contents = file:read('*a')
