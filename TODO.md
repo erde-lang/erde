@@ -2,7 +2,6 @@
 
 # 0.3-1
 
-- move luaTarget to constants
 - officially readd 5.1+ support
   - support multiple bitwise operator compiles (best effort based on versions)
 - throw error if only part of file is parsed

@@ -4,7 +4,6 @@ local argparse = require('argparse')
 local lfs = require('lfs')
 local C = require('erde.constants')
 local compile = require('erde.compile')
-local luaTarget = require('erde.luaTarget')
 local lib = require('erde.lib')
 local utils = require('erde.utils')
 
@@ -201,8 +200,8 @@ local function runFile(filePath)
       elseif not utils.fileExists(filePath) then
         return 'file does not exist: ' .. filePath
       else
-        -- This should never happen?
-        return 'internal error, please report this at: '
+        -- This _should_ never happen
+        return 'internal error, please report this at: https://github.com/erde-lang/erde/issues'
       end
     end
   )
@@ -220,8 +219,8 @@ end
 -- Main
 -- -----------------------------------------------------------------------------
 
-if args.target then
-  luaTarget.current = args.target
+if args.target and C.VALID_LUA_TARGETS[args.target] then
+  C.LUA_TARGET = args.target
 end
 
 if args.version then
