@@ -1,6 +1,5 @@
 local C = require('erde.constants')
 local tokenize = require('erde.tokenize')
-local luaTarget = require('erde.luaTarget')
 
 -- Foward declare
 local Expr, Block
@@ -558,11 +557,11 @@ function Expr(minPrec)
       rhsMinPrec = rhsMinPrec + 1
     end
 
-    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[luaTarget.current] then
+    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] then
       -- TODO: fatal
       error(table.concat({
         'Cannot use bitwise operators for Lua target',
-        luaTarget.current,
+        C.LUA_TARGET,
         'due to invcompatabilities between bitwise operators across Lua versions.', 
       }, ' '))
     end
@@ -859,13 +858,13 @@ function Block(isLoopBlock)
       hasContinue = true
       insert(compileLines, breakName .. ' = true break')
     elseif currentToken == 'goto' then
-      -- TODO: check luaTarget
+      -- TODO: check C.LUA_TARGET
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
       insert(compileLines, currentTokenLine)
       insert(compileLines, Name())
     elseif currentToken == '::' then
-      -- TODO: check luaTarget
+      -- TODO: check C.LUA_TARGET
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume() .. Name() .. expect('::'))
     elseif currentToken == 'do' then

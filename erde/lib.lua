@@ -3,7 +3,6 @@
 
 local C = require('erde.constants')
 local compile = require('erde.compile')
-local luaTarget = require('erde.luaTarget')
 local utils = require('erde.utils')
 
 local load = loadstring or load
@@ -291,8 +290,8 @@ local function erdeSearcher(moduleName)
 end
 
 local function load(newLuaTarget)
-  if newLuaTarget ~= nil then
-    luaTarget.current = newLuaTarget
+  if newLuaTarget ~= nil and C.VALID_LUA_TARGETS[newLuaTarget] then
+    C.LUA_TARGET = newLuaTarget
   end
 
   for i, searcher in ipairs(searchers) do
