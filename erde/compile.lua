@@ -67,6 +67,10 @@ local function lookAhead(n)
   return tokens[currentTokenIndex + n]
 end
 
+local function fatal(message)
+  error({ severity = 'fatal', message = message })
+end
+
 -- -----------------------------------------------------------------------------
 -- Compile Helpers
 -- -----------------------------------------------------------------------------
@@ -122,6 +126,10 @@ local function Try(callback)
 
   local ok, result = pcall(callback)
   if ok then return result, ok end
+
+  if type(result) == 'table' and result.severity == 'fatal' then
+    error(result.message)
+  end
 
   currentTokenIndex = currentTokenIndexBackup
   currentToken = tokens[currentTokenIndex]
@@ -366,7 +374,7 @@ local function IndexChain(allowArbitraryExpr)
       insert(compileLines, currentTokenLine)
       insert(compileLines, ':' .. Name(true))
       if currentToken ~= '(' then
-        error('Missing parentheses for method call')
+        fatal('Missing parentheses for method call')
       end
     elseif currentToken == '(' then
       -- TODO: need semicolon for ambiguous syntax?
@@ -502,7 +510,7 @@ local function Terminal()
 
     while token ~= surroundEnd or surroundDepth > 0 do
       if token == nil then
-        error('Unexpected EOF')
+        fatal('Unexpected EOF')
       elseif token == surroundStart then
         surroundDepth = surroundDepth + 1
       elseif token == surroundEnd then
@@ -558,8 +566,7 @@ function Expr(minPrec)
     end
 
     if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] then
-      -- TODO: fatal
-      error(table.concat({
+      fatal(table.concat({
         'Cannot use bitwise operators for Lua target',
         C.LUA_TARGET,
         'due to invcompatabilities between bitwise operators across Lua versions.', 
@@ -587,7 +594,7 @@ local function Assignment(firstId)
     for _, line in ipairs(indexChain) do
       if line == ')' then
         -- Do not allow function calls anywhere in index chain
-        error('Invalid id')
+        fatal('Invalid id')
       end
     end
 
@@ -596,8 +603,8 @@ local function Assignment(firstId)
 
   local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
   if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-    -- TODO: fatal error + use opLine in error
-    error('Invalid assignment operator: ' .. opToken)
+    -- TODO: use opLine in error
+    fatal('Invalid assignment operator: ' .. opToken)
   end
 
   expect('=')
@@ -643,7 +650,7 @@ local function Declaration(scope)
   local names = {}
 
   if blockDepth > 1 and scope == 'module' then
-    error('module declarations must appear at the top level')
+    fatal('module declarations must appear at the top level')
   end
   
   if scope ~= 'global' then
@@ -690,9 +697,9 @@ local function ForLoop()
     local exprListLen = #exprList
 
     if exprListLen < 2 then
-      error('Invalid for loop parameters (missing parameters)')
+      fatal('Invalid for loop parameters (missing parameters)')
     elseif exprListLen > 3 then
-      error('Invalid for loop parameters (too many parameters)')
+      fatal('Invalid for loop parameters (too many parameters)')
     end
 
     insert(compileLines, weave(exprList, ','))
@@ -742,7 +749,7 @@ local function Function(scope)
 
   if isTableValue and scope ~= nil then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    error('Cannot use scope keyword for table values')
+    fatal('Cannot use scope keyword for table values')
   end
 
   if not isTableValue and scope ~= 'global' then
@@ -752,7 +759,7 @@ local function Function(scope)
 
   if scope == 'module' then
     if blockDepth > 1 then
-      error('module declarations must appear at the top level')
+      fatal('module declarations must appear at the top level')
     end
 
     insert(moduleNames, signature)
@@ -954,7 +961,19 @@ return function(text)
     insert(compileLines, consume())
   end
 
-  insert(compileLines, Block())
+  do
+    local ok, result = pcall(Block)
+
+    if not ok then
+      if type(result) == 'table' and result.severity == 'fatal' then
+        error(result.message)
+      else
+        error(result)
+      end
+    end
+
+    insert(compileLines, result)
+  end
 
   if #moduleNames > 0 then
     if hasModuleReturn then
