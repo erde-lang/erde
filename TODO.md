@@ -9,7 +9,6 @@
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
   - https://www.lua.org/manual/5.4/manual.html#3.1
-- error severities to bypass `Try`
 - improve test coverage
   - more compiler tests
   - lua version tests
@@ -49,7 +48,10 @@
 
 - formatter
 - reverse compiler (compile Lua to Erde)
+- `::` operator to place arbitrary expressions as first argument?
+  - Allows for `mytable::filter(...)::map(...)` -> `map(filter(mytable, ...), ...)`
 - linter?
   - undeclared variables
   - unitialized variable
   - etc (see https://github.com/lunarmodules/luacheck)
+  - maybe just better as lsp client?
