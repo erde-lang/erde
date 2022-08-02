@@ -145,6 +145,7 @@ cli:flag('-C --compile'):hidden(true)
 cli:group('-C, --compile',
   option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(C.VALID_LUA_TARGETS, ', ')),
   option('-o', '--outDir', 'Output directory for compiled files.')
+  option('-b', '--bitLib', 'Library for bit operations.')
 )
 
 local args = cli:parse()
@@ -221,6 +222,10 @@ end
 
 if args.target and C.VALID_LUA_TARGETS[args.target] then
   C.LUA_TARGET = args.target
+end
+
+if args.bitLib then
+  C.BIT_LIP = args.bitLib
 end
 
 if args.version then

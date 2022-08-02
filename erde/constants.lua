@@ -16,6 +16,28 @@ C.COMPILED_FOOTER_COMMENT_LEN = #C.COMPILED_FOOTER_COMMENT
 C.IS_CLI_RUNTIME = false
 
 -- -----------------------------------------------------------------------------
+-- Lua Target
+-- -----------------------------------------------------------------------------
+
+C.LUA_TARGET = '5.1+'
+
+C.VALID_LUA_TARGETS = {
+  'JIT',
+  '5.1',
+  '5.1+',
+  '5.2',
+  '5.2+',
+  '5.3',
+  '5.3+',
+  '5.4',
+  '5.4+',
+}
+
+for i, target in ipairs(C.VALID_LUA_TARGETS) do
+  C.VALID_LUA_TARGETS[target] = true
+end
+
+-- -----------------------------------------------------------------------------
 -- Keywords / Terminals
 -- -----------------------------------------------------------------------------
 
@@ -51,7 +73,7 @@ C.TERMINALS = {
 }
 
 -- -----------------------------------------------------------------------------
--- Unops / Binops
+-- Operations
 -- -----------------------------------------------------------------------------
 
 C.LEFT_ASSOCIATIVE = -1
@@ -67,6 +89,33 @@ C.UNOPS = {
 for opToken, op in pairs(C.UNOPS) do
   op.token = opToken
 end
+
+C.BITOPS = {
+  ['|'] = { prec = 6, assoc = C.LEFT_ASSOCIATIVE },
+  ['~'] = { prec = 7, assoc = C.LEFT_ASSOCIATIVE },
+  ['&'] = { prec = 8, assoc = C.LEFT_ASSOCIATIVE },
+  ['<<'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+  ['>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
+}
+
+-- Compiling bit operations for these targets are dangerous, since Mike Pall's
+-- LuaBitOp only works on 5.1 + 5.2, bit32 only works on 5.2, and 5.3 + 5.4 have
+-- built-in bit operator support.
+C.INVALID_BITOP_LUA_TARGETS = {
+  ['5.1+'] = true,
+  ['5.2+'] = true,
+}
+
+-- User specified library to use for bit operations.
+C.BITLIB = nil
+
+C.BITLIB_METHODS = {
+  ['|'] = 'bor',
+  ['~'] = 'bxor',
+  ['&'] = 'band',
+  ['<<'] = 'lshift',
+  ['>>'] = 'rshift',
+}
 
 C.BINOPS = {
   ['||'] = { prec = 3, assoc = C.LEFT_ASSOCIATIVE },
@@ -84,14 +133,6 @@ C.BINOPS = {
   ['/'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['%'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['^'] = { prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
-}
-
-C.BITOPS = {
-  ['|'] = { prec = 6, assoc = C.LEFT_ASSOCIATIVE },
-  ['~'] = { prec = 7, assoc = C.LEFT_ASSOCIATIVE },
-  ['&'] = { prec = 8, assoc = C.LEFT_ASSOCIATIVE },
-  ['<<'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
-  ['>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
 }
 
 for opToken, op in pairs(C.BITOPS) do
@@ -171,39 +212,6 @@ for byte = string.byte('g'), string.byte('z') do
   C.WORD_HEAD[char] = true
   C.WORD_BODY[char] = true
 end
-
--- -----------------------------------------------------------------------------
--- Lua Target
--- -----------------------------------------------------------------------------
-
-C.LUA_TARGET = '5.1+'
-
-C.VALID_LUA_TARGETS = {
-  'JIT',
-  '5.1',
-  '5.1+',
-  '5.2',
-  '5.2+',
-  '5.3',
-  '5.3+',
-  '5.4',
-  '5.4+',
-}
-
-for i, target in ipairs(C.VALID_LUA_TARGETS) do
-  C.VALID_LUA_TARGETS[target] = true
-end
-
--- Compiling bit operations for these targets are dangerous, since Mike Pall's
--- LuaBitOp only works on 5.1 + 5.2, bit32 only works on 5.2, and 5.3 + 5.4 have
--- built-in bit operator support.
---
--- TODO: do not disallow bit operators for these targets if a custom bit lib is
--- set in the CLI
-C.INVALID_BITOP_LUA_TARGETS = {
-  ['5.1+'] = true,
-  ['5.2+'] = true,
-}
 
 -- -----------------------------------------------------------------------------
 -- Return
