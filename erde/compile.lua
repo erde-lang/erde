@@ -31,6 +31,10 @@ local moduleNames
 -- developer if they try to combine `return` with `module` scopes.
 local isModuleReturnBlock, hasModuleReturn
 
+-- Resolved bit library to use for compiling bit operations. Undefined when
+-- compiling to Lua 5.3+ native operators.
+local bitLib
+
 -- -----------------------------------------------------------------------------
 -- General Helpers
 -- -----------------------------------------------------------------------------
@@ -96,22 +100,15 @@ local function weave(t, separator)
 end
 
 local function compileBinop(opToken, opLine, lhs, rhs)
-  if opToken == '!=' then
+  if bitLib and C.BITOPS[opToken] then
+    local bitOperation = ('require("%s").%s('):format(bitLib, C.BIT_LIB_METHODS[opToken])
+    return { opLine, bitOperation, lhs, opLine, ',', rhs, opLine, ')' }
+  elseif opToken == '!=' then
     return { lhs, opLine, '~=', rhs }
   elseif opToken == '||' then
     return { lhs, opLine, 'or', rhs }
   elseif opToken == '&&' then
     return { lhs, opLine, 'and', rhs }
-  elseif opToken == '|' then
-    return { opLine, 'require("bit").bor(', lhs, opLine, ',', rhs, opLine, ')' }
-  elseif opToken == '~' then
-    return { opLine, 'require("bit").bxor(', lhs, opLine, ',', rhs, opLine, ')' }
-  elseif opToken == '&' then
-    return { opLine, 'require("bit").band(', lhs, opLine, ',', rhs, opLine, ')' }
-  elseif opToken == '<<' then
-    return { opLine, 'require("bit").lshift(', lhs, opLine, ',', rhs, opLine, ')' }
-  elseif opToken == '>>' then
-    return { opLine, 'require("bit").rshift(', lhs, opLine, ',', rhs, opLine, ')' }
   else
     return { lhs, opLine, opToken, rhs }
   end
@@ -542,7 +539,16 @@ local function Unop()
   local operandLine, operand = currentTokenLine, Expr(unop.prec + 1)
 
   if unop.token == '~' then
-    return { unopLine, 'require("bit").bnot(', operandLine, operand, unopLine, ')' }
+    if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
+      fatal(table.concat({
+        'Cannot use bitwise operators for Lua target',
+        C.LUA_TARGET,
+        'due to incompatabilities between bitwise operators across Lua versions.', 
+      }, ' '))
+    end
+
+    local bitOperation = ('require("%s").%s('):format(bitLib, 'bnot')
+    return { unopLine, bitOperation, operandLine, operand, unopLine, ')' }
   elseif unop.token == '!' then
     return { unopLine, 'not', operandLine, operand }
   else
@@ -565,11 +571,11 @@ function Expr(minPrec)
       rhsMinPrec = rhsMinPrec + 1
     end
 
-    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] then
+    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
       fatal(table.concat({
         'Cannot use bitwise operators for Lua target',
         C.LUA_TARGET,
-        'due to invcompatabilities between bitwise operators across Lua versions.', 
+        'due to incompatabilities between bitwise operators across Lua versions.', 
       }, ' '))
     end
 
@@ -863,7 +869,12 @@ function Block(isLoopBlock)
       -- TODO: use currentTokenLine in error
       assert(breakName ~= nil, 'Cannot use `continue` outside of loop')
       hasContinue = true
-      insert(compileLines, breakName .. ' = true break')
+
+      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+        insert(compileLines, breakName .. ' = true break')
+      else
+        insert(compileLines, 'goto ' .. breakName)
+      end
     elseif currentToken == 'goto' then
       -- TODO: check C.LUA_TARGET
       insert(compileLines, currentTokenLine)
@@ -922,12 +933,15 @@ function Block(isLoopBlock)
   blockDepth = blockDepth - 1
 
   if isLoopBlock and breakName and hasContinue then
-    -- TODO: compile GOTO `continue` version when possible
-    insert(compileLines, 1, ('local %s = false repeat'):format(breakName))
-    insert(
-      compileLines,
-      ('%s = true until true if not %s then break end'):format(breakName, breakName)
-    )
+    if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+      insert(compileLines, 1, ('local %s = false repeat'):format(breakName))
+      insert(
+        compileLines,
+        ('%s = true until true if not %s then break end'):format(breakName, breakName)
+      )
+    else
+      insert(compileLines, '::' .. breakName .. '::')
+    end
   end
 
   return compileLines
@@ -949,6 +963,10 @@ return function(text)
   hasContinue = false
   tmpNameCounter = 1
   moduleNames = {}
+
+  bitLib = C.BIT_LIB 
+    or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
+    or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
 
   -- Check for empty file or file w/ only comments
   if currentToken == nil then

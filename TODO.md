@@ -2,9 +2,6 @@
 
 # 0.3-1
 
-- officially readd 5.1+ support
-  - support multiple bitwise operator compiles (best effort based on versions)
-- throw error if only part of file is parsed
 - throw version errors for number forms
 - throw version errors for escape valid escape chars
   - https://www.lua.org/manual/5.1/manual.html#2.1
@@ -18,7 +15,7 @@
   - include line numbers (use this in `__erde_internal_load_source__`!)
 - update / improve documentation
 
-# 0.4-1
+# 0.3-2
 
 - refactor tokenizer (for organization, do not microoptimize)
 - add CLI REPL
@@ -48,8 +45,6 @@
 
 - formatter
 - reverse compiler (compile Lua to Erde)
-- `::` operator to place arbitrary expressions as first argument?
-  - Allows for `mytable::filter(...)::map(...)` -> `map(filter(mytable, ...), ...)`
 - linter?
   - undeclared variables
   - unitialized variable
