@@ -2,12 +2,8 @@
 
 # 0.3-1
 
-- throw version errors for number forms
-- throw version errors for escape valid escape chars
-  - https://www.lua.org/manual/5.1/manual.html#2.1
-  - https://www.lua.org/manual/5.4/manual.html#3.1
 - improve test coverage
-  - more compiler tests
+  - refactor compiler tests
   - lua version tests
   - error handling tests
   - erde API tests
@@ -17,7 +13,6 @@
 
 # 0.3-2
 
-- refactor tokenizer (for organization, do not microoptimize)
 - add CLI REPL
 - documentation
   - tutorial

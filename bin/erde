@@ -25,8 +25,8 @@ local function isCompiledFile(filePath)
     return false
   end
 
-  file:seek('end', -#C.COMPILED_FOOTER_COMMENT_LEN)
-  local footer = file:read(#C.COMPILED_FOOTER_COMMENT_LEN)
+  file:seek('end', -C.COMPILED_FOOTER_COMMENT_LEN)
+  local footer = file:read(C.COMPILED_FOOTER_COMMENT_LEN)
   file:close()
 
   return footer == C.COMPILED_FOOTER_COMMENT
@@ -144,7 +144,7 @@ cli:flag('-C --compile'):hidden(true)
 
 cli:group('-C, --compile',
   option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(C.VALID_LUA_TARGETS, ', ')),
-  option('-o', '--outDir', 'Output directory for compiled files.')
+  option('-o', '--outDir', 'Output directory for compiled files.'),
   option('-b', '--bitLib', 'Library for bit operations.')
 )
 

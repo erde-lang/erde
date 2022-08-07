@@ -11,9 +11,6 @@ local text, char, charIndex
 local line, column
 local tokens, numTokens, tokenLines
 
-local token
-local numLookup, numExp1, numExp2
-
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
@@ -29,6 +26,10 @@ local function peek(n)
   return text:sub(charIndex, charIndex + n - 1)
 end
 
+local function lookAhead(n)
+  return text:sub(charIndex + n, charIndex + n)
+end
+
 local function consume(n)
   n = n or 1
   local consumed = n == 1 and char or peek(n)
@@ -38,7 +39,7 @@ local function consume(n)
 end
 
 -- -----------------------------------------------------------------------------
--- Macros
+-- Partials
 -- -----------------------------------------------------------------------------
 
 local function Newline()
@@ -47,6 +48,67 @@ local function Newline()
   return consume()
 end
 
+local function EscapeChar(preventInterpolation)
+  consume() -- backslash
+
+  if not preventInterpolation and (char == '{' or char == '}') then
+    return consume()
+  elseif C.STANDARD_ESCAPE_CHARS[char] then
+    return '\\' .. consume()
+  elseif C.DIGIT[char] then
+    return '\\' .. consume()
+  elseif char == 'z' then
+    if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+      error('escape sequence \\z not compatible w/ lua target ' .. C.LUA_TARGET)
+    end
+    return '\\' .. consume()
+  elseif char == 'x' then
+    if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+      error('escape sequence \\xXX not compatible w/ lua target ' .. C.LUA_TARGET)
+    end
+
+    local escapeChar = '\\' .. consume()
+
+    for i = 1, 2 do
+      if not C.HEX[char] then
+        error('escape sequence \\xXX must use exactly 2 hex characters')
+      end
+      escapeChar = escapeChar .. consume()
+    end
+
+    return escapeChar
+  elseif char == 'u' then
+    local escapeChar = consume()
+
+    if char ~= '{' then
+      error('missing { in escape sequence \\u{XXX}')
+    elseif C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2' or C.LUA_TARGET == '5.2+' then
+      error('escape sequence \\u{XXX} not compatible w/ lua target ' .. C.LUA_TARGET)
+    end
+
+    escapeChar = escapeChar .. consume()
+    if not C.HEX[char] then
+      error('missing hex in escape sequence \\u{XXX}')
+    end
+
+    while C.HEX[char] do
+      escapeChar = escapeChar .. consume()
+    end
+
+    if char ~= '}' then
+      error('missing } in escape sequence \\u{XXX}')
+    end
+
+    return escapeChar .. consume()
+  else
+    error('invalid escape sequence \\' .. char)
+  end
+end
+
+-- -----------------------------------------------------------------------------
+-- Macros
+-- -----------------------------------------------------------------------------
+
 local function Space()
   while char == ' ' or char == '\t' do
     consume()
@@ -54,49 +116,232 @@ local function Space()
   end
 end
 
-local function InnerString()
-  if char == '' then
-    error('Unexpected EOF (unterminated string)')
-  elseif char == '\\' then
-    consume()
-    if char == '{' or char == '}' then
-      -- Remove escape for '{', '}' (not allowed in pure lua)
-      token = token .. consume()
-    else
-      token = token .. '\\' .. consume()
-    end
-  elseif char == '{' then
-    if #token > 0 then
-      commit(token)
-    end
+local function Word()
+  local token = consume()
 
-    commit(consume()) -- '{'
-    Space()
-
-    -- Keep track of brace depth to differentiate end of interpolation from
-    -- nested braces
-    local braceDepth = 0
-
-    while char ~= '}' or braceDepth > 0 do
-      if char == '{' then
-        braceDepth = braceDepth + 1
-        commit(consume())
-      elseif char == '}' then
-        braceDepth = braceDepth - 1
-        commit(consume())
-      elseif char == '' then
-        error('Unexpected EOF (unterminated interpolation)')
-      else
-        Token()
-      end
-
-      Space()
-    end
-
-    commit(consume()) -- '}'
-    token = ''
-  else
+  while C.WORD_BODY[char] do
     token = token .. consume()
+  end
+
+  commit(token)
+end
+
+local function Hex()
+  local token = consume(2) -- 0[xX]
+
+  if not C.HEX[char] and not (char == '.' and C.HEX[lookAhead(1)]) then
+    error('malformed hex')
+  end
+
+  while C.HEX[char] do
+    token = token .. consume()
+  end
+
+  if char == '.' and C.HEX[lookAhead(1)] then
+    if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+      error('hex fractional parts not compatible w/ lua target ' .. C.LUA_TARGET)
+    end
+
+    token = token .. consume(2)
+    while C.HEX[char] do
+      token = token .. consume()
+    end
+  end
+
+  if char == 'p' or char == 'P' then
+    token = token .. consume()
+
+    if char == '+' or char == '-' then
+      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+        error('hex exponent sign not compatible w/ lua target ' .. C.LUA_TARGET)
+      end
+      token = token .. consume()
+    end
+
+    if not C.DIGIT[char] then
+      error('missing exponent value')
+    end
+
+    while C.DIGIT[char] do
+      token = token .. consume()
+    end
+  end
+
+  commit(token)
+end
+
+local function Decimal()
+  local token = ''
+
+  while C.DIGIT[char] do
+    token = token .. consume()
+  end
+
+  if char == '.' and C.DIGIT[lookAhead(1)] then
+    token = token .. consume(2)
+    while C.DIGIT[char] do
+      token = token .. consume()
+    end
+  end
+
+  if char == 'e' or char == 'E' then
+    token = token .. consume()
+
+    if char == '+' or char == '-' then
+      token = token .. consume()
+    end
+
+    if not C.DIGIT[char] then
+      error('missing exponent value')
+    end
+
+    while C.DIGIT[char] do
+      token = token .. consume()
+    end
+  end
+
+  commit(token)
+end
+
+local function Interpolation()
+  commit(consume()) -- '{'
+  Space()
+
+  -- Keep track of brace depth to differentiate end of interpolation from
+  -- nested braces
+  local braceDepth = 0
+
+  while char ~= '}' or braceDepth > 0 do
+    if char == '{' then
+      braceDepth = braceDepth + 1
+      commit(consume())
+    elseif char == '}' then
+      braceDepth = braceDepth - 1
+      commit(consume())
+    elseif char == '' then
+      error('unterminated interpolation')
+    else
+      Token()
+    end
+
+    Space()
+  end
+
+  commit(consume()) -- '}'
+end
+
+local function SingleQuoteString()
+  local quote, content = consume(), ''
+  commit(quote)
+
+  while char ~= quote do
+    if char == '' then
+      error('unterminated string')
+    elseif char == '\n' then
+      error('unexpected newline')
+    elseif char == '\\' then
+      content = content .. EscapeChar(true)
+    else
+      content = content .. consume()
+    end
+  end
+
+  if content ~= '' then commit(content) end
+  commit(consume()) -- quote
+end
+
+local function DoubleQuoteString()
+  local quote, content = consume(), ''
+  commit(quote)
+
+  while char ~= quote do
+    if char == '' then
+      error('unterminated string')
+    elseif char == '\n' then
+      error('unexpected newline')
+    elseif char == '\\' then
+      content = content .. EscapeChar()
+    elseif char == '{' then
+      if content ~= '' then
+        commit(content)
+        content = ''
+      end
+      Interpolation()
+    else
+      content = content .. consume()
+    end
+  end
+
+  if content ~= '' then commit(content) end
+  commit(consume()) -- quote
+end
+
+local function LongString()
+  consume() -- '['
+
+  local strEq, strCloseLen = '', 2
+  while char == '=' do
+    strEq = strEq .. consume()
+    strCloseLen = strCloseLen + 1
+  end
+
+  consume() -- '['
+  commit('[' .. strEq .. '[')
+  strClose = ']' .. strEq .. ']'
+  content = ''
+
+  while peek(strCloseLen) ~= strClose do
+    if char == '' then
+      error('unterminated string')
+    elseif char == '\n' then
+      content = content .. Newline()
+    elseif char == '\\' then
+      content = content .. EscapeChar()
+    elseif char == '{' then
+      if content ~= '' then
+        commit(content)
+        content = ''
+      end
+      Interpolation()
+    else
+      content = content .. consume()
+    end
+  end
+
+  if content ~= '' then commit(content) end
+  commit(consume(strCloseLen)) -- `strClose`
+end
+
+local function Comment()
+  consume(2) -- '--'
+
+  if not text:sub(charIndex):match('^%[=*%[') then
+    while char ~= '' and char ~= '\n' do
+      consume()
+    end
+  else
+    consume() -- '['
+
+    local strEq, strCloseLen = '', 2
+    while char == '=' do
+      strEq = strEq .. consume()
+      strCloseLen = strCloseLen + 1
+    end
+
+    consume()
+    local strClose = ']' .. strEq .. ']'
+
+    while peek(strCloseLen) ~= strClose do
+      if char == '' then
+        error('unterminated comment')
+      elseif char == '\n' then
+        Newline()
+      else
+        consume()
+      end
+    end
+
+    consume(strCloseLen)
   end
 end
 
@@ -106,180 +351,32 @@ end
 
 function Token()
   local peekTwo = peek(2)
-  token = ''
 
-  if C.WORD_HEAD[char] then
-    token = consume()
-
-    while C.WORD_BODY[char] do
-      token = token .. consume()
-    end
-
-    commit(token)
-  elseif char == '\n' then
+  if char == '\n' then
     repeat
       Newline()
       Space()
     until char ~= '\n'
+  elseif C.WORD_HEAD[char] then
+    Word()
+  elseif peekTwo:match('0[xX]') then
+    Hex()
+  elseif C.DIGIT[char] or (char == '.' and C.DIGIT[lookAhead(1)]) then
+    Decimal()
   elseif char == "'" then
-    local quote = consume()
-    commit(quote)
-
-    while char ~= quote do
-      if char == '\n' or char == '' then
-        error('Unexpected newline (unterminated string)')
-      else
-        token = token .. consume()
-      end
-    end
-
-    commit(token)
-    commit(consume()) -- quote
+    SingleQuoteString()
   elseif char == '"' then
-    local quote = consume()
-    commit(quote)
-
-    while char ~= quote do
-      if char == '\n' then
-        error('Unexpected newline (unterminated string)')
-      else
-        InnerString()
-      end
-    end
-
-    if #token > 0 then
-      commit(token)
-    end
-
-    commit(consume()) -- quote
-  elseif peekTwo:match('%[[[=]') then
-    consume() -- '['
-
-    local strEq, strCloseLen = '', 2
-    while char == '=' do
-      strEq = strEq .. consume()
-      strCloseLen = strCloseLen + 1
-    end
-
-    if char ~= '[' then
-      error('Invalid start of long string (expected [ got ' .. char .. ')')
-    else
-      consume()
-    end
-
-    commit('[' .. strEq .. '[')
-    strClose = ']' .. strEq .. ']'
-
-    while peek(strCloseLen) ~= strClose do
-      if char == '\n' then
-        token = token .. char
-        Newline()
-      else
-        InnerString()
-      end
-    end
-
-    if #token > 0 then
-      commit(token)
-    end
-
-    commit(strClose)
-    consume(strCloseLen)
+    DoubleQuoteString()
+  elseif text:sub(charIndex):match('^%[=*%[') then
+    LongString()
   elseif peekTwo == '--' then
-    consume(2)
-
-    if not peek(2):match('%[[[=]') then
-      while char ~= '' and char ~= '\n' do
-        consume()
-      end
-    else
-      consume() -- '['
-
-      local strEq, strCloseLen = '', 2
-      while char == '=' do
-        strEq = strEq .. consume()
-        strCloseLen = strCloseLen + 1
-      end
-      local strClose = ']' .. strEq .. ']'
-
-      if char ~= '[' then
-        error('Invalid start of long comment (expected [ got ' .. char .. ')')
-      else
-        consume()
-      end
-
-      while peek(strCloseLen) ~= strClose do
-        if char == '' then
-          error('Unexpected EOF (unterminated comment)')
-        elseif char == '\n' then
-          Newline()
-        else
-          consume()
-        end
-      end
-
-      consume(strCloseLen)
-    end
-  elseif C.DIGIT[char] or peekTwo:match('%.[0-9]') then
-    if peekTwo == '0x' or peekTwo == '0X' then
-      numLookup = C.HEX
-      numExp1, numExp2 = 'p', 'P'
-
-      token = consume(2) -- 0[xX]
-
-      if not C.HEX[char] and char ~= '.' then
-        error('Missing hex after ' .. token)
-      end
-    else
-      numLookup = C.DIGIT
-      numExp1, numExp2 = 'e', 'E'
-    end
-
-    while numLookup[char] do
-      token = token .. consume()
-    end
-
-    if char == '.' then
-      token = token .. consume()
-
-      if not numLookup[char] then
-        error('Missing number after decimal point')
-      end
-
-      while numLookup[char] do
-        token = token .. consume()
-      end
-    end
-
-    if char == numExp1 or char == numExp2 then
-      token = token .. consume()
-
-      if char == '+' or char == '-' then
-        token = token .. consume()
-      end
-
-      if not C.DIGIT[char] then
-        error('Missing number after exponent')
-      end
-
-      while C.DIGIT[char] do
-        token = token .. consume()
-      end
-    end
-
-    if C.ALPHA[char] then
-      error('Words cannot start with a digit')
-    end
-
-    commit(token)
+    Comment()
+  elseif C.SYMBOLS[peek(3)] then
+    commit(consume(3))
+  elseif C.SYMBOLS[peekTwo] then
+    commit(consume(2))
   else
-    if C.SYMBOLS[peek(3)] then
-      commit(consume(3))
-    elseif C.SYMBOLS[peekTwo] then
-      commit(consume(2))
-    else
-      commit(consume())
-    end
+    commit(consume())
   end
 end
 
@@ -293,13 +390,13 @@ return function(input)
   tokens, numTokens, tokenLines = {}, 0, {}
 
   if peek(2) == '#!' then
-    token = consume(2)
+    local shebang = consume(2)
 
     while char ~= '\n' do
-      token = token .. consume()
+      shebang = shebang .. consume()
     end
 
-    commit(token)
+    commit(shebang)
     Newline()
   end
 
