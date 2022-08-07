@@ -170,6 +170,21 @@ for opToken, op in pairs(C.BINOPS) do
   end
 end
 
+-- Valid escape characters for 5.1+
+C.STANDARD_ESCAPE_CHARS = {
+  a = true,
+  b = true,
+  f = true,
+  n = true,
+  r = true,
+  t = true,
+  v = true,
+  ['\\'] = true,
+  ['"'] = true,
+  ["'"] = true,
+  ['\n'] = true,
+}
+
 C.ALPHA = {}
 C.DIGIT = {}
 C.HEX = {}

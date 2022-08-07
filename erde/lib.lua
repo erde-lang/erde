@@ -137,7 +137,7 @@ local function traceback(message, level)
   -- Remove any lines from `__erde_internal_load_source__` calls.
   -- See `__erde_internal_load_source__` for more details.
   -- TODO: provide CLI option to show this (verbosity level, ex. -vvv)
-  stacktrace = stacktrace:gsub(ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE, '')
+  -- stacktrace = stacktrace:gsub(ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE, '')
 
   return stacktrace
 end
