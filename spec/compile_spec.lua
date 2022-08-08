@@ -446,7 +446,7 @@ end)
 -- Goto
 -- -----------------------------------------------------------------------------
 
-describe('Goto #JIT #5.2+', function()
+describe('Goto #jit #5.2+', function()
   spec('goto', function()
     assert.run(
       1,

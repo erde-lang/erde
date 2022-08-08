@@ -63,7 +63,7 @@ describe('hex', function()
     assert.has_error(function() tokenize('0xfpa') end)
   end)
 
-  spec('#JIT #5.2+', function()
+  spec('#jit #5.2+', function()
     assertToken('0x.1')
     assertToken('0xd.a')
     assertToken('0xfp+1')
@@ -101,7 +101,7 @@ describe('escape chars', function()
     assert.has_error(function() tokenize("'\\{'") end)
   end)
 
-  spec('#JIT #5.2+', function()
+  spec('#jit #5.2+', function()
     assertTokens('"\\z"', { '"', '\\z', '"' })
     assertTokens('"\\x1f"', { '"', '\\x1f', '"' })
 
@@ -109,7 +109,7 @@ describe('escape chars', function()
     assert.has_error(function() tokenize('"\\x1G"') end)
   end)
 
-  spec('#JIT #5.3+', function()
+  spec('#jit #5.3+', function()
     assertTokens('"\\u{a}"', { '"', '\\u{a}', '"' })
     assertTokens('"\\u{abc}"', { '"', '\\u{abc}', '"' })
 
