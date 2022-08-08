@@ -22,7 +22,7 @@ C.IS_CLI_RUNTIME = false
 C.LUA_TARGET = '5.1+'
 
 C.VALID_LUA_TARGETS = {
-  'JIT',
+  'jit',
   '5.1',
   '5.1+',
   '5.2',
