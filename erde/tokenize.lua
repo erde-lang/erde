@@ -11,9 +11,6 @@ local text, char, charIndex
 local line, column
 local tokens, numTokens, tokenLines
 
-local token
-local numLookup, numExp1, numExp2
-
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
@@ -51,10 +48,10 @@ local function Newline()
   return consume()
 end
 
-local function EscapeChar()
+local function EscapeChar(preventInterpolation)
   consume() -- backslash
 
-  if char == '{' or char == '}' then
+  if not preventInterpolation and (char == '{' or char == '}') then
     return consume()
   elseif C.STANDARD_ESCAPE_CHARS[char] then
     return '\\' .. consume()
@@ -74,7 +71,7 @@ local function EscapeChar()
 
     for i = 1, 2 do
       if not C.HEX[char] then
-        error('\\x must be followed by exactly 2 hex characters')
+        error('escape sequence \\xXX must use exactly 2 hex characters')
       end
       escapeChar = escapeChar .. consume()
     end
@@ -206,26 +203,6 @@ local function Decimal()
   commit(token)
 end
 
-local function SingleQuoteString()
-  local quote, content = consume(), ''
-  commit(quote)
-
-  while char ~= quote do
-    if char == '' then
-      error('unterminated string')
-    elseif char == '\n' then
-      error('unexpected newline')
-    elseif char == '\\' then
-      content = content .. EscapeChar()
-    else
-      content = content .. consume()
-    end
-  end
-
-  if content ~= '' then commit(content) end
-  commit(consume()) -- quote
-end
-
 local function Interpolation()
   commit(consume()) -- '{'
   Space()
@@ -251,6 +228,26 @@ local function Interpolation()
   end
 
   commit(consume()) -- '}'
+end
+
+local function SingleQuoteString()
+  local quote, content = consume(), ''
+  commit(quote)
+
+  while char ~= quote do
+    if char == '' then
+      error('unterminated string')
+    elseif char == '\n' then
+      error('unexpected newline')
+    elseif char == '\\' then
+      content = content .. EscapeChar(true)
+    else
+      content = content .. consume()
+    end
+  end
+
+  if content ~= '' then commit(content) end
+  commit(consume()) -- quote
 end
 
 local function DoubleQuoteString()

@@ -3,7 +3,7 @@
 # 0.3-1
 
 - improve test coverage
-  - more tokenizer / compiler tests
+  - refactor compiler tests
   - lua version tests
   - error handling tests
   - erde API tests
