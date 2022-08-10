@@ -101,7 +101,7 @@ end
 
 local function compileBinop(opToken, opLine, lhs, rhs)
   if bitLib and C.BITOPS[opToken] then
-    local bitOperation = ('require("%s").%s('):format(bitLib, C.BIT_LIB_METHODS[opToken])
+    local bitOperation = ('require("%s").%s('):format(bitLib, C.BITLIB_METHODS[opToken])
     return { opLine, bitOperation, lhs, opLine, ',', rhs, opLine, ')' }
   elseif opToken == '!=' then
     return { lhs, opLine, '~=', rhs }
@@ -481,7 +481,10 @@ local function Terminal()
     -- Only need to check first couple chars, rest is token care of by tokenizer
     return { currentTokenLine, consume() }
   elseif currentToken == "'" then
-    return { currentTokenLine, consume() .. consume() .. consume() }
+    local quote = consume()
+    return currentToken == quote -- check empty string
+      and { currentTokenLine, quote .. consume() }
+      or { currentTokenLine, quote .. consume() .. consume() }
   elseif currentToken == '"' then
     return InterpolationString('"', '"')
   elseif currentToken:match('^%[[[=]') then
@@ -966,6 +969,7 @@ return function(text)
 
   bitLib = C.BIT_LIB 
     or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
+    or (C.LUA_TARGET == 'jit' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
 
   -- Check for empty file or file w/ only comments
@@ -988,6 +992,8 @@ return function(text)
       else
         error(result)
       end
+    elseif currentToken then
+      error('unexpected token ' .. currentToken)
     end
 
     insert(compileLines, result)

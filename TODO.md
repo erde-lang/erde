@@ -4,9 +4,12 @@
 
 - improve test coverage
   - refactor compiler tests
-  - lua version tests
   - error handling tests
   - erde API tests
+- cleanup TODOs
+- support arbitrary terminals (not expressions) as index chain bases
+  - ex) `myfunc().x`
+  - ex) `a + b.x`
 - vastly improve error messages / diagnosis
   - include line numbers (use this in `__erde_internal_load_source__`!)
 - update / improve documentation
