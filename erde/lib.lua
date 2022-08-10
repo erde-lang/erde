@@ -120,8 +120,7 @@ local function traceback(message, level)
     info = debug.getinfo(level, 'nSl')
   end
 
-  -- TODO: provide CLI option to show this (verbosity level, ex. -vvv)
-  if C.IS_CLI_RUNTIME then
+  if C.IS_CLI_RUNTIME and not C.DEBUG then
     -- Remove following from stack trace (caused by the CLI):
     -- [C]: in function 'xpcall'
     -- erde/bin/erde:xxx: in function 'runFile'
@@ -134,25 +133,13 @@ local function traceback(message, level)
 
   local stacktrace = table.concat(stack, '\n')
 
-  -- Remove any lines from `__erde_internal_load_source__` calls.
-  -- See `__erde_internal_load_source__` for more details.
-  -- TODO: provide CLI option to show this (verbosity level, ex. -vvv)
-  -- stacktrace = stacktrace:gsub(ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE, '')
+  if not C.DEBUG then
+    -- Remove any lines from `__erde_internal_load_source__` calls.
+    -- See `__erde_internal_load_source__` for more details.
+    stacktrace = stacktrace:gsub(ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE, '')
+  end
 
   return stacktrace
-end
-
-local function pcallRewrite(callback, ...)
-  local args = { ... }
-  return xpcall(function() return callback(unpack(args)) end, rewrite)
-end
-
-local function xpcallRewrite(callback, msgh, ...)
-  local args = { ... }
-  return xpcall(
-    function() return callback(unpack(args)) end,
-    function(message) return msgh(rewrite(message)) end
-  )
 end
 
 -- -----------------------------------------------------------------------------
@@ -191,7 +178,7 @@ end
 --
 -- 1. The `xpcall` in `__erde_internal_load_source__`
 -- 2. The call to `__erde_internal_load_source__` itself
--- 3. The call 
+-- 3. The call that invoked `__erde_internal_load_source__`
 --
 -- Currently there are three ways for the user to load Erde code:
 --
@@ -289,9 +276,15 @@ local function erdeSearcher(moduleName)
   end
 end
 
-local function load(newLuaTarget)
+local function load(newLuaTarget, options)
   if newLuaTarget ~= nil and C.VALID_LUA_TARGETS[newLuaTarget] then
     C.LUA_TARGET = newLuaTarget
+  end
+
+  if options then
+    if options.debug then
+      C.DEBUG = true
+    end
   end
 
   for i, searcher in ipairs(searchers) do
@@ -324,8 +317,6 @@ return {
   __erde_internal_load_source__ = __erde_internal_load_source__,
   rewrite = rewrite,
   traceback = traceback,
-  pcall = pcallRewrite,
-  xpcall = xpcallRewrite,
   run = runErdeString,
   load = load,
   unload = unload,

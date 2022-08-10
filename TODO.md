@@ -2,13 +2,16 @@
 
 # 0.3-1
 
+- support arbitrary terminals (not expressions) as index chain bases
+  - ex) `myfunc().x`
+  - ex) `a + b.x`
 - improve test coverage
-  - refactor compiler tests
-  - lua version tests
   - error handling tests
   - erde API tests
 - vastly improve error messages / diagnosis
   - include line numbers (use this in `__erde_internal_load_source__`!)
+  - rewrite line numbers in `__erde_internal_load_source__`?
+- release!
 - update / improve documentation
 
 # 0.3-2

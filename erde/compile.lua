@@ -101,7 +101,7 @@ end
 
 local function compileBinop(opToken, opLine, lhs, rhs)
   if bitLib and C.BITOPS[opToken] then
-    local bitOperation = ('require("%s").%s('):format(bitLib, C.BIT_LIB_METHODS[opToken])
+    local bitOperation = ('require("%s").%s('):format(bitLib, C.BITLIB_METHODS[opToken])
     return { opLine, bitOperation, lhs, opLine, ',', rhs, opLine, ')' }
   elseif opToken == '!=' then
     return { lhs, opLine, '~=', rhs }
@@ -373,9 +373,9 @@ local function IndexChain(allowArbitraryExpr)
       if currentToken ~= '(' then
         fatal('Missing parentheses for method call')
       end
-    elseif currentToken == '(' then
-      -- TODO: need semicolon for ambiguous syntax?
-
+    -- Use newlines to infer whether the parentheses belong to a function call
+    -- or the next statement.
+    elseif currentToken == '(' and currentTokenLine == tokenLines[currentTokenIndex - 1] then
       local precedingCompileLines = compileLines
       local precedingCompileLinesLen = #precedingCompileLines
       while type(precedingCompileLines[precedingCompileLinesLen]) == 'table' do
@@ -481,7 +481,10 @@ local function Terminal()
     -- Only need to check first couple chars, rest is token care of by tokenizer
     return { currentTokenLine, consume() }
   elseif currentToken == "'" then
-    return { currentTokenLine, consume() .. consume() .. consume() }
+    local quote = consume()
+    return currentToken == quote -- check empty string
+      and { currentTokenLine, quote .. consume() }
+      or { currentTokenLine, quote .. consume() .. consume() }
   elseif currentToken == '"' then
     return InterpolationString('"', '"')
   elseif currentToken:match('^%[[[=]') then
@@ -609,7 +612,6 @@ local function Assignment(firstId)
 
   local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
   if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-    -- TODO: use opLine in error
     fatal('Invalid assignment operator: ' .. opToken)
   end
 
@@ -861,12 +863,10 @@ function Block(isLoopBlock)
 
   while true do
     if currentToken == 'break' then
-      -- TODO: use currentTokenLine in error
       assert(breakName ~= nil, 'Cannot use `break` outside of loop')
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
     elseif branch('continue') then
-      -- TODO: use currentTokenLine in error
       assert(breakName ~= nil, 'Cannot use `continue` outside of loop')
       hasContinue = true
 
@@ -876,13 +876,19 @@ function Block(isLoopBlock)
         insert(compileLines, 'goto ' .. breakName)
       end
     elseif currentToken == 'goto' then
-      -- TODO: check C.LUA_TARGET
+      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+        fatal('cannot use `goto` when targeting 5.1 or 5.1+')
+      end
+
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
       insert(compileLines, currentTokenLine)
       insert(compileLines, Name())
     elseif currentToken == '::' then
-      -- TODO: check C.LUA_TARGET
+      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+        fatal('cannot use goto statements when targeting 5.1 or 5.1+')
+      end
+
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume() .. Name() .. expect('::'))
     elseif currentToken == 'do' then
@@ -928,6 +934,10 @@ function Block(isLoopBlock)
         insert(compileLines, Assignment(indexChain))
       end
     end
+
+    if currentToken == ';' then
+      insert(compileLines, consume())
+    end
   end
 
   blockDepth = blockDepth - 1
@@ -964,8 +974,9 @@ return function(text)
   tmpNameCounter = 1
   moduleNames = {}
 
-  bitLib = C.BIT_LIB 
+  bitLib = C.BITLIB 
     or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
+    or (C.LUA_TARGET == 'jit' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
 
   -- Check for empty file or file w/ only comments
@@ -988,6 +999,8 @@ return function(text)
       else
         error(result)
       end
+    elseif currentToken then
+      error('unexpected token ' .. currentToken)
     end
 
     insert(compileLines, result)

@@ -142,6 +142,9 @@ cli:argument('paths'):args('*'):hidden(true)
 cli:flag('-X --clean'):hidden(true)
 cli:flag('-C --compile'):hidden(true)
 
+-- flag to show more erde internals in error output
+cli:flag('--debug')
+
 cli:group('-C, --compile',
   option('-t', '--target', 'Lua target. Must be one of:\n  ' .. table.concat(C.VALID_LUA_TARGETS, ', ')),
   option('-o', '--outDir', 'Output directory for compiled files.'),
@@ -225,7 +228,11 @@ if args.target and C.VALID_LUA_TARGETS[args.target] then
 end
 
 if args.bitLib then
-  C.BIT_LIP = args.bitLib
+  C.BITLIB = args.bitLib
+end
+
+if args.debug then
+  C.DEBUG = true
 end
 
 if args.version then

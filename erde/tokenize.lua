@@ -78,7 +78,7 @@ local function EscapeChar(preventInterpolation)
 
     return escapeChar
   elseif char == 'u' then
-    local escapeChar = consume()
+    local escapeChar = '\\' .. consume()
 
     if char ~= '{' then
       error('missing { in escape sequence \\u{XXX}')

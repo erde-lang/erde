@@ -15,6 +15,9 @@ C.COMPILED_FOOTER_COMMENT_LEN = #C.COMPILED_FOOTER_COMMENT
 -- precise error rewriting.
 C.IS_CLI_RUNTIME = false
 
+-- Flag to display more erde internals during error rewriting.
+C.DEBUG = false
+
 -- -----------------------------------------------------------------------------
 -- Lua Target
 -- -----------------------------------------------------------------------------
