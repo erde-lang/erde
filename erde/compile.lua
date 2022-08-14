@@ -373,9 +373,9 @@ local function IndexChain(allowArbitraryExpr)
       if currentToken ~= '(' then
         fatal('Missing parentheses for method call')
       end
-    elseif currentToken == '(' then
-      -- TODO: need semicolon for ambiguous syntax?
-
+    -- Use newlines to infer whether the parentheses belong to a function call
+    -- or the next statement.
+    elseif currentToken == '(' and currentTokenLine == tokenLines[currentTokenIndex - 1] then
       local precedingCompileLines = compileLines
       local precedingCompileLinesLen = #precedingCompileLines
       while type(precedingCompileLines[precedingCompileLinesLen]) == 'table' do
@@ -612,7 +612,6 @@ local function Assignment(firstId)
 
   local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
   if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-    -- TODO: use opLine in error
     fatal('Invalid assignment operator: ' .. opToken)
   end
 
@@ -864,12 +863,10 @@ function Block(isLoopBlock)
 
   while true do
     if currentToken == 'break' then
-      -- TODO: use currentTokenLine in error
       assert(breakName ~= nil, 'Cannot use `break` outside of loop')
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
     elseif branch('continue') then
-      -- TODO: use currentTokenLine in error
       assert(breakName ~= nil, 'Cannot use `continue` outside of loop')
       hasContinue = true
 
@@ -879,13 +876,19 @@ function Block(isLoopBlock)
         insert(compileLines, 'goto ' .. breakName)
       end
     elseif currentToken == 'goto' then
-      -- TODO: check C.LUA_TARGET
+      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+        fatal('cannot use `goto` when targeting 5.1 or 5.1+')
+      end
+
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
       insert(compileLines, currentTokenLine)
       insert(compileLines, Name())
     elseif currentToken == '::' then
-      -- TODO: check C.LUA_TARGET
+      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+        fatal('cannot use goto statements when targeting 5.1 or 5.1+')
+      end
+
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume() .. Name() .. expect('::'))
     elseif currentToken == 'do' then
@@ -930,6 +933,10 @@ function Block(isLoopBlock)
       else
         insert(compileLines, Assignment(indexChain))
       end
+    end
+
+    if currentToken == ';' then
+      insert(compileLines, consume())
     end
   end
 

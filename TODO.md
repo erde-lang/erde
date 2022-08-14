@@ -2,15 +2,15 @@
 
 # 0.3-1
 
-- improve test coverage
-  - error handling tests
-  - erde API tests
-- cleanup TODOs
 - support arbitrary terminals (not expressions) as index chain bases
   - ex) `myfunc().x`
   - ex) `a + b.x`
+- improve test coverage
+  - error handling tests
+  - erde API tests
 - vastly improve error messages / diagnosis
   - include line numbers (use this in `__erde_internal_load_source__`!)
+  - rewrite line numbers in `__erde_internal_load_source__`?
 - release!
 - update / improve documentation
 

@@ -684,3 +684,26 @@ spec('while loop  #5.1+', function()
     return x
   ]])
 end)
+
+-- -----------------------------------------------------------------------------
+-- Misc
+-- -----------------------------------------------------------------------------
+
+spec('ambiguous syntax 5.1+', function()
+  assert.run(1, [[
+    local a = 1
+    local x = a;(() -> 2)()
+    return x
+  ]])
+  assert.run(1, [[
+    local a = 1
+    local x = a
+    (() -> 2)()
+    return x
+  ]])
+  assert.run(2, [[
+    local a = f -> f
+    local x = a(() -> 2)()
+    return x
+  ]])
+end)
