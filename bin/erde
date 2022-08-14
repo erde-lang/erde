@@ -225,7 +225,7 @@ if args.target and C.VALID_LUA_TARGETS[args.target] then
 end
 
 if args.bitLib then
-  C.BIT_LIP = args.bitLib
+  C.BITLIB = args.bitLib
 end
 
 if args.version then

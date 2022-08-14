@@ -3,7 +3,6 @@
 # 0.3-1
 
 - improve test coverage
-  - refactor compiler tests
   - error handling tests
   - erde API tests
 - cleanup TODOs
@@ -12,6 +11,7 @@
   - ex) `a + b.x`
 - vastly improve error messages / diagnosis
   - include line numbers (use this in `__erde_internal_load_source__`!)
+- release!
 - update / improve documentation
 
 # 0.3-2

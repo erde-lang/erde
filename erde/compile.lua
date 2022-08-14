@@ -967,7 +967,7 @@ return function(text)
   tmpNameCounter = 1
   moduleNames = {}
 
-  bitLib = C.BIT_LIB 
+  bitLib = C.BITLIB 
     or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == 'jit' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library

@@ -6,37 +6,47 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ## [0.3-1] - UNRELEASED
 
 ### Removed
-- Remove `do` expressions.
-- Remove spread operator.
-- Remove optional chaining.
+- Removed `do` expressions.
+- Removed spread operator.
+- Removed optional chaining.
+- Removed `erde.loader` (replaced by `require('erde').load` api)
 
 ### Added
 - Erde now supports running on Lua 5.1+
-- `erde` and `erde.loader` now both accept Lua targets to compile with specific Lua version compatabilities.
-- Exposed `erde.loader` to `init.lua` (allows `require('erde').load()`)
+- `erde` now accepts Lua targets to compile to, with specific Lua version compatabilities
+- `erde` now accepts specifying a bit library to compile bit operations to
+- Erde now generates souce maps and will rewrite errors when running scripts via the CLI or using `erde.load`.
+- Several new apis have been added both to replace `erde.loader` and to allow for better error handling
+  - `erde.rewrite` - rewrite Lua errors using a source map. Does a best-effort
+    lookup for cached source map when one is not provided
+  - `erde.traceback` - erde version of `debug.traceback` w/ line rewrites
+  - `erde.load` - replacement for `erde.loader`, with an optional lua target
+    as a parameter.
+  - `erde.unload` - api to remove the injected erde loader (from a previous call
+    to `erde.load`).
+
 
 ### Changed
-- Revert split of `erde` and `erdec` in favor of more `pacman` like "main flags".
-- Improve `erde --help` output.
+- Reverted split of `erde` and `erdec` in favor of more `pacman` like "main flags".
+- Improved `erde --help` output.
 - `erde` can now run multiple scripts and does so in the provided order
 - `erde` now runs with the regular lua shebang (`#!/usr/bin/env lua` instead of `#!/usr/bin/env luajit`)
-- `erde.loader` no longer has `require` side effects and must be used programatically.
 
 ## [0.2-1] - June 03, 2022
 
 ### Removed
-- Remove `self` shorthand `$`. Completely unnecessary and confusing.
-- Remove `main` keyword. Completely unnecessary and confusing.
-- Remove ternary / null coalescing operator
+- Removed `self` shorthand `$`. Completely unnecessary and confusing.
+- Removed `main` keyword. Completely unnecessary and confusing.
+- Removed ternary / null coalescing operator
   - Ternary created ambiguous syntax (`a ? b:c() : d()` vs `a ? b : c():d()`)
   - Both difficult to optimize (requires iife)
 
 ### Changed
-- Refactor internal structure (now cleaner / faster)
-- Use newline to differentiate syntax ambiguity
-- No longer parse number destruct aliases as valid syntax
+- Refactored internal structure (now cleaner / faster)
+- Erde now uses a newline to differentiate syntax ambiguity
+- Erde no longer parses number destruct aliases as valid syntax
 - Varargs now spreads when used as a table or param expression.
-- Do not allow trailing comma in Return exprs unless parens are present
+- Erde no longer allows trailing commas in Return expressions unless parentheses are present
 - `erde.loader` no longer mutates the global require function, but uses `package.loaders` (as it should)
 - `catch` var no longer uses parentheses (more lua like)
 - `catch` var can now be a destructure

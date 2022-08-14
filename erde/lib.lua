@@ -142,19 +142,6 @@ local function traceback(message, level)
   return stacktrace
 end
 
-local function pcallRewrite(callback, ...)
-  local args = { ... }
-  return xpcall(function() return callback(unpack(args)) end, rewrite)
-end
-
-local function xpcallRewrite(callback, msgh, ...)
-  local args = { ... }
-  return xpcall(
-    function() return callback(unpack(args)) end,
-    function(message) return msgh(rewrite(message)) end
-  )
-end
-
 -- -----------------------------------------------------------------------------
 -- Sources
 -- -----------------------------------------------------------------------------
@@ -324,8 +311,6 @@ return {
   __erde_internal_load_source__ = __erde_internal_load_source__,
   rewrite = rewrite,
   traceback = traceback,
-  pcall = pcallRewrite,
-  xpcall = xpcallRewrite,
   run = runErdeString,
   load = load,
   unload = unload,
