@@ -7,8 +7,7 @@ local Token
 -- State
 -- -----------------------------------------------------------------------------
 
-local text, char, charIndex
-local line, column
+local text, char, charIndex, line
 local tokens, numTokens, tokenLines
 
 -- -----------------------------------------------------------------------------
@@ -19,7 +18,6 @@ local function commit(token)
   numTokens = numTokens + 1
   tokens[numTokens] = token
   tokenLines[numTokens] = line
-  column = column + #token
 end
 
 local function peek(n)
@@ -38,12 +36,19 @@ local function consume(n)
   return consumed
 end
 
+local function throw(message, errLine)
+  error({
+    __is_erde_internal_load_error__ = true,
+    message = message,
+    line = errLine or line,
+  })
+end
+
 -- -----------------------------------------------------------------------------
 -- Partials
 -- -----------------------------------------------------------------------------
 
 local function Newline()
-  column = 1
   line = line + 1
   return consume()
 end
@@ -59,19 +64,19 @@ local function EscapeChar(preventInterpolation)
     return '\\' .. consume()
   elseif char == 'z' then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      error('escape sequence \\z not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('escape sequence \\z not compatible w/ lua target ' .. C.LUA_TARGET)
     end
     return '\\' .. consume()
   elseif char == 'x' then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      error('escape sequence \\xXX not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('escape sequence \\xXX not compatible w/ lua target ' .. C.LUA_TARGET)
     end
 
     local escapeChar = '\\' .. consume()
 
     for i = 1, 2 do
       if not C.HEX[char] then
-        error('escape sequence \\xXX must use exactly 2 hex characters')
+        throw('escape sequence \\xXX must use exactly 2 hex characters')
       end
       escapeChar = escapeChar .. consume()
     end
@@ -81,14 +86,14 @@ local function EscapeChar(preventInterpolation)
     local escapeChar = '\\' .. consume()
 
     if char ~= '{' then
-      error('missing { in escape sequence \\u{XXX}')
+      throw('missing { in escape sequence \\u{XXX}')
     elseif C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2' or C.LUA_TARGET == '5.2+' then
-      error('escape sequence \\u{XXX} not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('escape sequence \\u{XXX} not compatible w/ lua target ' .. C.LUA_TARGET)
     end
 
     escapeChar = escapeChar .. consume()
     if not C.HEX[char] then
-      error('missing hex in escape sequence \\u{XXX}')
+      throw('missing hex in escape sequence \\u{XXX}')
     end
 
     while C.HEX[char] do
@@ -96,12 +101,12 @@ local function EscapeChar(preventInterpolation)
     end
 
     if char ~= '}' then
-      error('missing } in escape sequence \\u{XXX}')
+      throw('missing } in escape sequence \\u{XXX}')
     end
 
     return escapeChar .. consume()
   else
-    error('invalid escape sequence \\' .. char)
+    throw('invalid escape sequence \\' .. char)
   end
 end
 
@@ -112,7 +117,6 @@ end
 local function Space()
   while char == ' ' or char == '\t' do
     consume()
-    column = column + 1
   end
 end
 
@@ -130,7 +134,7 @@ local function Hex()
   local token = consume(2) -- 0[xX]
 
   if not C.HEX[char] and not (char == '.' and C.HEX[lookAhead(1)]) then
-    error('malformed hex')
+    throw('malformed hex')
   end
 
   while C.HEX[char] do
@@ -139,7 +143,7 @@ local function Hex()
 
   if char == '.' and C.HEX[lookAhead(1)] then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      error('hex fractional parts not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('hex fractional parts not compatible w/ lua target ' .. C.LUA_TARGET)
     end
 
     token = token .. consume(2)
@@ -153,13 +157,13 @@ local function Hex()
 
     if char == '+' or char == '-' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        error('hex exponent sign not compatible w/ lua target ' .. C.LUA_TARGET)
+        throw('hex exponent sign not compatible w/ lua target ' .. C.LUA_TARGET)
       end
       token = token .. consume()
     end
 
     if not C.DIGIT[char] then
-      error('missing exponent value')
+      throw('missing exponent value')
     end
 
     while C.DIGIT[char] do
@@ -192,7 +196,7 @@ local function Decimal()
     end
 
     if not C.DIGIT[char] then
-      error('missing exponent value')
+      throw('missing exponent value')
     end
 
     while C.DIGIT[char] do
@@ -219,7 +223,7 @@ local function Interpolation()
       braceDepth = braceDepth - 1
       commit(consume())
     elseif char == '' then
-      error('unterminated interpolation')
+      throw('unterminated interpolation')
     else
       Token()
     end
@@ -236,9 +240,9 @@ local function SingleQuoteString()
 
   while char ~= quote do
     if char == '' then
-      error('unterminated string')
+      throw('unterminated string')
     elseif char == '\n' then
-      error('unexpected newline')
+      throw('unterminated string')
     elseif char == '\\' then
       content = content .. EscapeChar(true)
     else
@@ -256,9 +260,9 @@ local function DoubleQuoteString()
 
   while char ~= quote do
     if char == '' then
-      error('unterminated string')
+      throw('unterminated string')
     elseif char == '\n' then
-      error('unexpected newline')
+      throw('unterminated string')
     elseif char == '\\' then
       content = content .. EscapeChar()
     elseif char == '{' then
@@ -277,6 +281,7 @@ local function DoubleQuoteString()
 end
 
 local function LongString()
+  local firstLine = line
   consume() -- '['
 
   local strEq, strCloseLen = '', 2
@@ -292,7 +297,7 @@ local function LongString()
 
   while peek(strCloseLen) ~= strClose do
     if char == '' then
-      error('unterminated string')
+      throw('unterminated string', firstLine)
     elseif char == '\n' then
       content = content .. Newline()
     elseif char == '\\' then
@@ -313,6 +318,7 @@ local function LongString()
 end
 
 local function Comment()
+  local firstLine = line
   consume(2) -- '--'
 
   if not text:sub(charIndex):match('^%[=*%[') then
@@ -333,7 +339,7 @@ local function Comment()
 
     while peek(strCloseLen) ~= strClose do
       if char == '' then
-        error('unterminated comment')
+        throw('unterminated comment', firstLine)
       elseif char == '\n' then
         Newline()
       else
@@ -385,8 +391,7 @@ end
 -- -----------------------------------------------------------------------------
 
 return function(input)
-  text, char, charIndex = input, input:sub(1, 1), 1
-  line, column = 1, 1
+  text, char, charIndex, line = input, input:sub(1, 1), 1, 1
   tokens, numTokens, tokenLines = {}, 0, {}
 
   if peek(2) == '#!' then
@@ -400,16 +405,10 @@ return function(input)
     Newline()
   end
 
-  local ok, errorMsg = pcall(function()
+  Space()
+  while char ~= '' do
+    Token()
     Space()
-    while char ~= '' do
-      Token()
-      Space()
-    end
-  end)
-
-  if not ok then
-    error(('Error (Line %d, Column %d): %s'):format(line, column, errorMsg))
   end
 
   return tokens, tokenLines

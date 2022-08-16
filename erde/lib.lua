@@ -192,19 +192,23 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   local erdeSourceId = ('__erde_source_%d__'):format(erdeSourceIdCounter)
   erdeSourceIdCounter = erdeSourceIdCounter + 1
 
+  -- No xpcall here, we want the traceback to start from this stack!
   local ok, compiled, sourceMap = pcall(function()
-    -- TODO: include sourceCode line number in error and rewrite it!
     return compile(sourceCode)
   end)
 
   if not ok then
+    local message = type(compiled) == 'table' and compiled.__is_erde_internal_load_error__ 
+      and ('%s:%d: %s'):format(sourceAlias, compiled.line, compiled.message)
+      or compiled
+
     error({
       -- Provide a flag so we don't rewrite messages multiple times (see above).
       __is_erde_internal_load_error__ = true,
-      message = compiled,
+      message = message,
       -- Add 2 extra levels to the traceback to account for the wrapping
       -- anonymous function above (in pcall) as well as the erde loader itself.
-      stacktrace = traceback(compiled, 3),
+      stacktrace = traceback(message, 3),
     })
   end
 

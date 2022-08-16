@@ -2,15 +2,6 @@
 
 # 0.3-1
 
-- support arbitrary terminals (not expressions) as index chain bases
-  - ex) `myfunc().x`
-  - ex) `a + b.x`
-- improve test coverage
-  - error handling tests
-  - erde API tests
-- vastly improve error messages / diagnosis
-  - include line numbers (use this in `__erde_internal_load_source__`!)
-  - rewrite line numbers in `__erde_internal_load_source__`?
 - release!
 - update / improve documentation
 
@@ -48,3 +39,9 @@
   - unitialized variable
   - etc (see https://github.com/lunarmodules/luacheck)
   - maybe just better as lsp client?
+
+# Needs further discussion
+- Allow strings / tables as index chain bases?
+  - ex) `"hello %s":format(name)`
+- Allow arbitrary first parameter injection syntax
+  - ex) `mytable::filter(() -> true)` == `filter(mytable, () -> true)`
