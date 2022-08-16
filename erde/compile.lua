@@ -62,17 +62,25 @@ local function branch(token)
   end
 end
 
-local function expect(token)
-  assert(token == currentToken, 'Expected ' .. token .. ' got ' .. tostring(currentToken))
-  return consume()
-end
-
 local function lookAhead(n)
   return tokens[currentTokenIndex + n]
 end
 
-local function fatal(message)
-  error({ severity = 'fatal', message = message })
+local function throw(message, isFatal)
+  error({
+    __is_erde_internal_load_error__ = true,
+    message = message,
+    severity = isFatal and 'fatal' or 'error',
+    line = currentTokenLine,
+  })
+end
+
+local function expect(token, preventConsume)
+  if token ~= currentToken then
+    throw(('expected %s got %s'):format(token, currentToken))
+  elseif not preventConsume then
+    return consume()
+  end
 end
 
 -- -----------------------------------------------------------------------------
@@ -125,7 +133,7 @@ local function Try(callback)
   if ok then return result, ok end
 
   if type(result) == 'table' and result.severity == 'fatal' then
-    error(result.message)
+    error(result)
   end
 
   currentTokenIndex = currentTokenIndexBackup
@@ -370,9 +378,7 @@ local function IndexChain(allowArbitraryExpr)
     elseif branch(':') then
       insert(compileLines, currentTokenLine)
       insert(compileLines, ':' .. Name(true))
-      if currentToken ~= '(' then
-        fatal('Missing parentheses for method call')
-      end
+      expect('(', true)
     -- Use newlines to infer whether the parentheses belong to a function call
     -- or the next statement.
     elseif currentToken == '(' and currentTokenLine == tokenLines[currentTokenIndex - 1] then
@@ -402,7 +408,7 @@ local function IndexChain(allowArbitraryExpr)
   end
 
   if hasExprBase and not allowArbitraryExpr and isTrivialChain then
-    error('Require id')
+    error() -- internal error
   end
 
   return compileLines
@@ -510,7 +516,7 @@ local function Terminal()
 
     while token ~= surroundEnd or surroundDepth > 0 do
       if token == nil then
-        fatal('Unexpected EOF')
+        throw('unexpected eof', true)
       elseif token == surroundStart then
         surroundDepth = surroundDepth + 1
       elseif token == surroundEnd then
@@ -543,11 +549,8 @@ local function Unop()
 
   if unop.token == '~' then
     if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
-      fatal(table.concat({
-        'Cannot use bitwise operators for Lua target',
-        C.LUA_TARGET,
-        'due to incompatabilities between bitwise operators across Lua versions.', 
-      }, ' '))
+      -- TODO: provide documentation link for explanation here
+      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
     end
 
     local bitOperation = ('require("%s").%s('):format(bitLib, 'bnot')
@@ -575,11 +578,8 @@ function Expr(minPrec)
     end
 
     if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
-      fatal(table.concat({
-        'Cannot use bitwise operators for Lua target',
-        C.LUA_TARGET,
-        'due to incompatabilities between bitwise operators across Lua versions.', 
-      }, ' '))
+      -- TODO: provide documentation link for explanation here
+      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
     end
 
     compileLines = compileBinop(binop.token, binopLine, compileLines, Expr(rhsMinPrec))
@@ -603,7 +603,7 @@ local function Assignment(firstId)
     for _, line in ipairs(indexChain) do
       if line == ')' then
         -- Do not allow function calls anywhere in index chain
-        fatal('Invalid id')
+        throw('unexpected function call', true)
       end
     end
 
@@ -612,7 +612,10 @@ local function Assignment(firstId)
 
   local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
   if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-    fatal('Invalid assignment operator: ' .. opToken)
+    throw('invalid assignment operator: ' .. opToken, true)
+  elseif C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
+    -- TODO: provide documentation link for explanation here
+    throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
   end
 
   expect('=')
@@ -658,7 +661,7 @@ local function Declaration(scope)
   local names = {}
 
   if blockDepth > 1 and scope == 'module' then
-    fatal('module declarations must appear at the top level')
+    throw('module declarations must appear at the top level', true)
   end
   
   if scope ~= 'global' then
@@ -705,9 +708,9 @@ local function ForLoop()
     local exprListLen = #exprList
 
     if exprListLen < 2 then
-      fatal('Invalid for loop parameters (missing parameters)')
+      throw('missing loop parameters', true)
     elseif exprListLen > 3 then
-      fatal('Invalid for loop parameters (too many parameters)')
+      throw('too many loop parameters', true)
     end
 
     insert(compileLines, weave(exprList, ','))
@@ -757,7 +760,7 @@ local function Function(scope)
 
   if isTableValue and scope ~= nil then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    fatal('Cannot use scope keyword for table values')
+    throw('cannot use scopes for table values', true)
   end
 
   if not isTableValue and scope ~= 'global' then
@@ -767,7 +770,7 @@ local function Function(scope)
 
   if scope == 'module' then
     if blockDepth > 1 then
-      fatal('module declarations must appear at the top level')
+      throw('module declarations must appear at the top level', true)
     end
 
     insert(moduleNames, signature)
@@ -877,7 +880,7 @@ function Block(isLoopBlock)
       end
     elseif currentToken == 'goto' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        fatal('cannot use `goto` when targeting 5.1 or 5.1+')
+        throw('cannot use goto when targeting 5.1 or 5.1+', true)
       end
 
       insert(compileLines, currentTokenLine)
@@ -886,7 +889,7 @@ function Block(isLoopBlock)
       insert(compileLines, Name())
     elseif currentToken == '::' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        fatal('cannot use goto statements when targeting 5.1 or 5.1+')
+        throw('cannot use goto when targeting 5.1 or 5.1+', true)
       end
 
       insert(compileLines, currentTokenLine)
@@ -990,25 +993,15 @@ return function(text)
     insert(compileLines, consume())
   end
 
-  do
-    local ok, result = pcall(Block)
+  insert(compileLines, Block())
 
-    if not ok then
-      if type(result) == 'table' and result.severity == 'fatal' then
-        error(result.message)
-      else
-        error(result)
-      end
-    elseif currentToken then
-      error('unexpected token ' .. currentToken)
-    end
-
-    insert(compileLines, result)
+  if currentToken then
+    throw('failed to parse statement')
   end
 
   if #moduleNames > 0 then
     if hasModuleReturn then
-      error('Cannot use both `return` and `module` together.')
+      throw('cannot use `module` declarations w/ `return`')
     else
       local moduleTableElements = {}
 
