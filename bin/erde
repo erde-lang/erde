@@ -110,8 +110,8 @@ cli:epilog(
     '   erde',
     '      Launch the REPL',
     '',
-    '   erde my_script.erde my_other_script.erde',
-    '      Run my_script.erde first, then my_other_script.erde. Compilation is done in memory.',
+    '   erde my_script.erde',
+    '      Run my_script.erde. Compilation is done in memory.',
     '',
     '   erde -C',
     '      Compile all *.erde files under the current directory.',
@@ -245,7 +245,5 @@ elseif #args.paths == 0 then
   print('REPL not yet supported.')
 else
   lib.load()
-  for i, path in ipairs(args.paths) do
-    runFile(path)
-  end
+  runFile(args.paths[1])
 end

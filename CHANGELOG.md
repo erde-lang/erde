@@ -29,7 +29,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Changed
 - Reverted split of `erde` and `erdec` in favor of more `pacman` like "main flags".
 - Improved `erde --help` output.
-- `erde` can now run multiple scripts and does so in the provided order
 - `erde` now runs with the regular lua shebang (`#!/usr/bin/env lua` instead of `#!/usr/bin/env luajit`)
 
 ## [0.2-1] - June 03, 2022
