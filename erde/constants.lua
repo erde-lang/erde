@@ -134,6 +134,7 @@ C.BINOPS = {
   ['-'] = { prec = 11, assoc = C.LEFT_ASSOCIATIVE },
   ['*'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['/'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
+  ['//'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['%'] = { prec = 12, assoc = C.LEFT_ASSOCIATIVE },
   ['^'] = { prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
 }

@@ -117,6 +117,10 @@ local function compileBinop(opToken, opLine, lhs, rhs)
     return { lhs, opLine, 'or', rhs }
   elseif opToken == '&&' then
     return { lhs, opLine, 'and', rhs }
+  elseif opToken == '//' then
+    return (C.LUA_TARGET == '5.3' or C.LUA_TARGET == '5.3+' or C.LUA_TARGET == '5.4' or C.LUA_TARGET == '5.4+')
+      and { lhs, opLine, opToken, rhs }
+      or { opLine, 'math.floor(', lhs, opLine, '/', rhs, opLine, ')' }
   else
     return { lhs, opLine, opToken, rhs }
   end
