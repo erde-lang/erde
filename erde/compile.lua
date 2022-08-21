@@ -629,7 +629,7 @@ local function Assignment(firstId)
     insert(compileLines, weave(idList, ','))
     insert(compileLines, '=')
     insert(compileLines, weave(exprList, ','))
-  elseif #compileLines == 1 then
+  elseif #idList == 1 then
     -- Optimize most common use case
     insert(compileLines, firstId)
     insert(compileLines, opLine)

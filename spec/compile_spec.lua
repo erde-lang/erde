@@ -270,6 +270,18 @@ spec('assignment #5.1+', function()
     a, b += 2, 3
     return a + b
   ]])
+  assert.run({ 1, 2 }, [[
+    function test() { return 1, 2 }
+    local x, y = 0, 0
+    x, y += test()
+    return { x, y }
+  ]])
+  assert.run({ 1, 2, 3 }, [[
+    function test() { return 2, 3 }
+    local x, y, z = 0, 0, 0
+    x, y, z += 1, test()
+    return { x, y, z }
+  ]])
 end)
 
 spec('break #5.1+', function()
