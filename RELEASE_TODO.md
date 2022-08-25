@@ -1,5 +1,5 @@
 - Update version
-  - Change version in erde rockspec
+  - Change version in erde rockspec (version + source.tag)
   - Change version in cli (`erde --version`)
 - Update Changelog
   - Change `UNRELEASED` to current date
@@ -8,3 +8,4 @@
   - Create git tag for version
   - Create git release
   - Upload rockspec to luarocks
+  - Publish new documentation?

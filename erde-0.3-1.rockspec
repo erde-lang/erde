@@ -1,14 +1,14 @@
 package = 'erde'
-version = '0.2-1'
+version = '0.3-1'
 rockspec_format = '3.0'
 
 description = {
   summary = 'A modern Lua dialect',
   detailed = [[
-    Erde is an expressive programming language that compiles to Lua. 
-    Syntactically it favors symbols over keywords and adds support for many 
-    features commonly found in other programming languages that Lua otherwise 
-    sacrifices for simplicity. ]],
+    Erde is an programming language that compiles to Lua. It uses a more symbol
+    favored syntax (similar to languages such as Rust, Golang, JavaScript, etc)
+    and has been designed to map very closely to Lua.
+  ]],
   homepage = 'https://erde-lang.github.io/',
   license = 'MIT',
 }
@@ -21,7 +21,7 @@ dependencies = {
 
 source = {
    url = 'git://github.com/erde-lang/erde',
-   tag = '0.2-1',
+   tag = '0.3-1',
 }
 
 build = {
@@ -29,7 +29,6 @@ build = {
   install = {
     bin = {
       ['erde'] = 'bin/erde',
-      ['erdec'] = 'bin/erdec',
     }
   },
 }

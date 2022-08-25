@@ -3,7 +3,15 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [0.3-1] - UNRELEASED
+## [] - UNRELEASED
+
+### Removed
+
+### Added
+
+### Changed
+
+## [0.3-1] - August 26, 2022
 
 ### Removed
 - Removed `do` expressions.
@@ -24,7 +32,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
     as a parameter.
   - `erde.unload` - api to remove the injected erde loader (from a previous call
     to `erde.load`).
-
 
 ### Changed
 - Reverted split of `erde` and `erdec` in favor of more `pacman` like "main flags".
