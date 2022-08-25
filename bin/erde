@@ -188,7 +188,7 @@ local function compileFile(filePath)
   )
 end
 
--- IMPORTANT: THIS IS AN ERDE CODE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
+-- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 local function runFile(filePath)
   local ok, result = xpcall(
@@ -203,8 +203,10 @@ local function runFile(filePath)
       elseif not utils.fileExists(filePath) then
         return 'file does not exist: ' .. filePath
       else
-        -- This _should_ never happen
-        return 'internal error, please report this at: https://github.com/erde-lang/erde/issues'
+        return table.concat({
+          'internal error: ' .. tostring(err),
+          'please report this at: https://github.com/erde-lang/erde/issues',
+        }, '\n')
       end
     end
   )
