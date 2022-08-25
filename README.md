@@ -1,40 +1,37 @@
 # Erde
 
-Erde is an expressive programming language that compiles to Lua. Syntactically 
-it favors symbols over keywords and adds support for many features commonly 
-found in other programming languages that Lua otherwise sacrifices for 
-simplicity.
-
-Erde currently only supports [LuaJIT](https://luajit.org/luajit.html), although
-it may work on Lua5.2+ as well (not tested). Support for other Lua versions is 
-planned to be added in the future (planned v0.3).
-
-**NOTE:** Erde is still in early development. Some things may be undocumented or 
-the documentation may be out of date. This note will be removed once the project 
-starts to stabilize but feel free to mess around and open issues about any 
-questions or concerns!
-
-## Features
-
-- arrow functions
-- function parameter defaults
-- table destructuring
-- assignment operators (`+=`, `*=`, etc)
-- `continue` keyword
-- try catch statement
-- and more!
+Erde is a programming language that compiles to Lua. It uses a more symbol
+favored syntax (similar to languages such as Rust, Golang, JavaScript, etc) and
+has been designed to map very closely to Lua.
 
 ## Installation
 
-The recommended way to install is via [luarocks](https://luarocks.org):
+The recommended way to install is through [luarocks](https://luarocks.org/modules/bsuth/erde):
 
-```
+```bash
 luarocks install erde
 ```
 
-Alternatively, you can clone this repo and update your `$LUA_PATH`.
+Alternatively you can clone this repo and update your PATH and
+[LUA_PATH](https://www.lua.org/pil/8.1.html) accordingly:
+
+```bash
+git clone https://github.com/erde-lang/erde.git
+ERDE_ROOT="$(pwd)/erde"
+export PATH="$ERDE_ROOT/bin:$PATH"
+export LUA_PATH="$ERDE_ROOT/?.lua;$ERDE_ROOT/?/init.lua;$LUA_PATH"
+```
+
+You can check whether Erde is installed correctly by running:
+
+```bash
+erde -h
+```
 
 ## Similar Projects
+
+There is a comprehensive list of [languages that compile to Lua](https://github.com/hengestone/lua-languages),
+but the following are some such languages that Erde took inspiration from.
 
 - [moonscript](https://moonscript.org): A programmer friendly language that compiles into Lua
 - [fennel](https://fennel-lang.org): A lisp that compiles to Lua
