@@ -143,7 +143,7 @@ local function traceback(message, level)
 end
 
 -- -----------------------------------------------------------------------------
--- Sources
+-- Source Loaders
 -- -----------------------------------------------------------------------------
 
 -- Load a chunk of Erde code. This caches the generated sourceMap / sourceAlias
@@ -217,7 +217,19 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   -- have excessive memory usage on extremely constrained systems?
   erdeSourceCache[erdeSourceId] = { alias = sourceAlias, sourceMap = sourceMap }
 
-  local ok, result = xpcall(load(compiled, erdeSourceId), function(message)
+  -- Remove the shebang! Lua's `load` function cannot handle shebangs.
+  compiled = compiled:gsub('^#![^\n]+', '')
+
+  local sourceLoader, err = load(compiled, erdeSourceId)
+
+  if err ~= nil then
+    error(table.concat({
+      'failed to load compiled code',
+      'lua: ' .. tostring(err),
+    }, '\n'), 0)
+  end
+
+  local ok, result = xpcall(sourceLoader, function(message)
     if type(message) == 'table' and message.__is_erde_internal_load_error__ then
       -- Do not unnecessarily wrap an error we have already handled!
       return message
@@ -238,7 +250,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   return result
 end
 
--- IMPORTANT: THIS IS AN ERDE CODE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
+-- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 local function runErdeString(sourceCode, sourceAlias)
   if sourceAlias == nil then
@@ -256,7 +268,7 @@ local function runErdeString(sourceCode, sourceAlias)
 end
 
 -- -----------------------------------------------------------------------------
--- Loader
+-- Package Loader
 -- -----------------------------------------------------------------------------
 
 local function erdeSearcher(moduleName)
@@ -269,7 +281,7 @@ local function erdeSearcher(moduleName)
     if moduleFile ~= nil then
       moduleFile:close()
 
-      -- IMPORTANT: THIS IS AN ERDE CODE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
+      -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
       -- `__erde_internal_load_source__`!
       return function()
         local sourceCode = utils.readFile(fullModulePath)
