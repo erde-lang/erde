@@ -634,9 +634,7 @@ local function Assignment(firstId)
     insert(compileLines, firstId)
     insert(compileLines, opLine)
     insert(compileLines, '=')
-    insert(compileLines, firstId)
-    insert(compileLines, '+')
-    insert(compileLines, exprList[1])
+    insert(compileLines, compileBinop(opToken, opLine, firstId, exprList[1]))
   else
     local assignmentNames = {}
     local assignmentCompileLines = {}
