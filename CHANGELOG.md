@@ -5,6 +5,10 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [] - UNRELEASED
 
+### Fixed
+
+- Fix assignment operator compiled operation
+
 ### Removed
 
 ### Added
