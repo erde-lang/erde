@@ -198,7 +198,7 @@ local function runFile(filePath)
       return result
     end,
     function(err)
-      if type(err) == 'table' and err.__is_erde_internal_load_error__ then
+      if type(err) == 'table' and err.__is_erde_error__ then
         return err.stacktrace
       elseif not utils.fileExists(filePath) then
         return 'file does not exist: ' .. filePath

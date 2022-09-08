@@ -198,16 +198,14 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   end)
 
   if not ok then
-    local message = type(compiled) == 'table' and compiled.__is_erde_internal_load_error__ 
+    local message = type(compiled) == 'table' and compiled.__is_erde_error__ 
       and ('%s:%d: %s'):format(sourceAlias, compiled.line, compiled.message)
       or compiled
 
-    error({
-      -- Provide a flag so we don't rewrite messages multiple times (see above).
-      __is_erde_internal_load_error__ = true,
+    utils.erdeError({
       message = message,
-      -- Add 2 extra levels to the traceback to account for the wrapping
-      -- anonymous function above (in pcall) as well as the erde loader itself.
+      -- Use 3 levels to the traceback to account for the wrapping anonymous
+      -- function above (in pcall) as well as the erde loader itself.
       stacktrace = traceback(message, 3),
     })
   end
@@ -230,14 +228,12 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   end
 
   local ok, result = xpcall(sourceLoader, function(message)
-    if type(message) == 'table' and message.__is_erde_internal_load_error__ then
+    if type(message) == 'table' and message.__is_erde_error__ then
       -- Do not unnecessarily wrap an error we have already handled!
       return message
     else
       message = rewrite(message, sourceMap, sourceAlias)
       return {
-        -- Provide a flag so we don't rewrite messages multiple times (see above).
-        __is_erde_internal_load_error__ = true,
         message = message,
         -- Add an extra level to the traceback to account for the wrapping
         -- anonymous function above (in xpcall).
@@ -246,7 +242,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
     end
   end)
 
-  if not ok then error(result) end
+  if not ok then utils.erdeError(result) end
   return result
 end
 
@@ -275,12 +271,9 @@ local function erdeSearcher(moduleName)
   local modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') do
-    local fullModulePath = path:gsub('%.lua', '.erde'):gsub('?', modulePath)
-    local moduleFile = io.open(fullModulePath)
+    local fullModulePath = path:gsub('%.lua$', '.erde'):gsub('?', modulePath)
 
-    if moduleFile ~= nil then
-      moduleFile:close()
-
+    if utils.fileExists(fullModulePath) then
       -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
       -- `__erde_internal_load_source__`!
       return function()
