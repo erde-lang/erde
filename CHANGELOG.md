@@ -15,6 +15,8 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ### Changed
 
+### Fixed
+
 ## [0.3-1] - August 26, 2022
 
 ### Removed

@@ -1,4 +1,5 @@
 local C = require('erde.constants')
+local utils = require('erde.utils')
 local tokenize = require('erde.tokenize')
 
 -- Foward declare
@@ -67,8 +68,7 @@ local function lookAhead(n)
 end
 
 local function throw(message, isFatal)
-  error({
-    __is_erde_internal_load_error__ = true,
+  utils.erdeError({
     message = message,
     severity = isFatal and 'fatal' or 'error',
     line = currentTokenLine,

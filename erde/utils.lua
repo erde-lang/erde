@@ -52,6 +52,31 @@ local function joinPaths(...)
 end
 
 -- -----------------------------------------------------------------------------
+-- Errors
+-- -----------------------------------------------------------------------------
+
+local ERDE_ERROR_MT = {
+  __tostring = function(self)
+    return self.message
+  end
+}
+
+local function erdeError(err)
+  local newErdeError = { __is_erde_error__ = true }
+
+  if type(err) == 'table' then
+    for key, value in pairs(err) do
+      newErdeError[key] = value
+    end
+  else
+    newErdeError.message = tostring(err)
+  end
+
+  setmetatable(newErdeError, ERDE_ERROR_MT)
+  error(newErdeError)
+end
+
+-- -----------------------------------------------------------------------------
 -- Return
 -- -----------------------------------------------------------------------------
 
@@ -60,4 +85,5 @@ return {
   fileExists = fileExists,
   readFile = readFile,
   joinPaths = joinPaths,
+  erdeError = erdeError,
 }
