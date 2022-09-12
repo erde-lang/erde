@@ -175,11 +175,20 @@ local function compileFile(filePath)
   end
 
   local srcFile = io.open(filePath, 'r')
-  local compiled = compile(srcFile:read('*a'))
+
+  local ok, result = pcall(function()
+    return compile(srcFile:read('*a'))
+  end)
+
+  if not ok then
+    print('erde: ' .. tostring(result))
+    os.exit(1)
+  end
+
   srcFile:close()
 
   local destFile = io.open(destFilePath, 'w')
-  destFile:write(compiled)
+  destFile:write(result)
 
   print(
     filePath:gsub(CWD .. C.PATH_SEPARATOR, '')
@@ -213,7 +222,7 @@ local function runFile(filePath)
 
   if not ok then
     -- Do not use `error` here! Need to preserve stack trace in `result`.
-    print('erde: ' .. result)
+    print('erde: ' .. tostring(result))
     os.exit(1)
   end
 
