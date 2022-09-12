@@ -1,4 +1,5 @@
 local C = require('erde.constants')
+local utils = require('erde.utils')
 
 -- Foward declare
 local Token
@@ -37,8 +38,8 @@ local function consume(n)
 end
 
 local function throw(message, errLine)
-  error({
-    __is_erde_internal_load_error__ = true,
+  utils.erdeError({
+    message = message,
     message = message,
     line = errLine or line,
   })
