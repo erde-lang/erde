@@ -12,10 +12,13 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Removed
 
 ### Added
+- Added __tostring metamethod for thrown table errors (especially useful for sandboxed, embedded lua such as neovim)
 
 ### Changed
 
 ### Fixed
+- Fixed accidentally hardcoded assignment operator compiled operator.
+- Fixed missing line numbers in compile errors.
 
 ## [0.3-1] - August 26, 2022
 

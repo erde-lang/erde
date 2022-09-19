@@ -181,7 +181,11 @@ local function compileFile(filePath)
   end)
 
   if not ok then
-    print('erde: ' .. tostring(result))
+    if type(result == 'table') then
+      print(('erde:%d: %s'):format(result.line, result.message))
+    else
+      print('erde: ' .. tostring(result))
+    end
     os.exit(1)
   end
 
