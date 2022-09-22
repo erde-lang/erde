@@ -203,6 +203,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
       or compiled
 
     utils.erdeError({
+      type = 'compile',
       message = message,
       -- Use 3 levels to the traceback to account for the wrapping anonymous
       -- function above (in pcall) as well as the erde loader itself.
@@ -221,10 +222,13 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   local sourceLoader, err = load(compiled, erdeSourceId)
 
   if err ~= nil then
-    error(table.concat({
-      'failed to load compiled code',
-      'lua: ' .. tostring(err),
-    }, '\n'), 0)
+    utils.erdeError({
+      type = 'run',
+      message = table.concat({
+        'failed to load compiled code: ' .. tostring(err),
+        'please report this at: https://github.com/erde-lang/erde/issues',
+      }, '\n'),
+    })
   end
 
   local ok, result = xpcall(sourceLoader, function(message)
@@ -234,6 +238,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
     else
       message = rewrite(message, sourceMap, sourceAlias)
       return {
+        type = 'run',
         message = message,
         -- Add an extra level to the traceback to account for the wrapping
         -- anonymous function above (in xpcall).
