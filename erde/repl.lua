@@ -1,15 +1,22 @@
+local RL = require('readline')
 local lib = require('erde.lib')
 
 local PROMPT = '> '
 
-return function()
-  while true do
-    io.write(PROMPT)
-    local line = io.read()
+RL.set_readline_name('erde')
+RL.set_options({
+  keeplines = 1000,
+  histfile = '~/.erde_history',
+  completion = false,
+  auto_add = false,
+})
 
-    if line == nil then
-      break
-    elseif #line > 0 then
+return function()
+  repeat
+    local line = RL.readline(PROMPT)
+    if line and #line > 0 then
+      RL.add_history(line)
+
       -- Try expressions first! This way we can still print the value in the
       -- case that the expression is also a valid block (i.e. function calls).
       local exprOk, exprResult = pcall(function() return lib.run('return ' .. line, 'stdin') end)
@@ -36,5 +43,5 @@ return function()
         end
       end
     end
-  end
+  until not line
 end
