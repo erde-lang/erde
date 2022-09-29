@@ -1,26 +1,24 @@
 # TODO
 
-# 0.3-1
-
-- release!
-
 # 0.3-2
 
 - add CLI REPL
+- add `finally` block
 
 # 1.0-1
 
 - rewrite erde in erde
 
-# Possible Future Subprojects
+# 1.0-2
 
 - formatter
-- reverse compiler (compile Lua to Erde)
-- linter
+
+# Possible Future Subprojects
+
+- checker
+  - check correct syntax
   - undeclared variables
-  - unitialized variable
   - etc (see https://github.com/lunarmodules/luacheck)
-- language server
 
 # Possible Language Features (needs further discussion)
 - Allow strings / tables as index chain bases

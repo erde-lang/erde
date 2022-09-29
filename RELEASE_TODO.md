@@ -1,6 +1,6 @@
 - Update version
   - Change version in erde rockspec (version + source.tag)
-  - Change version in cli (`erde --version`)
+  - Change version in erde.constants
 - Update Changelog
   - Change `UNRELEASED` to current date
   - Add next version section with UNRELEASED

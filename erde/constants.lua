@@ -1,5 +1,7 @@
 local C = {}
 
+C.VERSION = '0.3-1'
+
 -- Get the current platform path separator. Note that while this is undocumented
 -- in the Lua 5.1 manual, it is indeed supported in 5.1+.
 --

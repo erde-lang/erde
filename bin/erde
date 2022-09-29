@@ -251,7 +251,7 @@ if args.debug then
 end
 
 if args.version then
-  print('0.3-1')
+  print(C.VERSION)
 elseif args.run then
   lib.load()
   runFile(args.script)
