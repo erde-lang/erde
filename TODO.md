@@ -3,7 +3,8 @@
 # 0.3-2
 
 - add CLI REPL
-- add `finally` block
+- add tests for external parens (to throw away unused values)
+  - ex) `return (myfunc())`
 
 # 1.0-1
 
@@ -25,3 +26,5 @@
   - ex) `"hello %s":format(name)`
 - Allow arbitrary first parameter injection syntax
   - ex) `mytable::filter(() -> true)` == `filter(mytable, () -> true)`
+- Allow assignments in branches (if, elseif, with)
+  - ex) `if myvar = someFunc() { ... }` => `do { local myvar = someFunc() if myvar { ... } }`

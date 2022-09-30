@@ -225,8 +225,19 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
     utils.erdeError({
       type = 'run',
       message = table.concat({
-        'failed to load compiled code: ' .. tostring(err),
-        'please report this at: https://github.com/erde-lang/erde/issues',
+        'Failed to load compiled code:',
+        tostring(err),
+        '',
+        'This is an internal error that should never happen.',
+        'Please report this at: https://github.com/erde-lang/erde/issues',
+        '',
+        'erde',
+        '----',
+        sourceCode,
+        '',
+        'lua',
+        '---',
+        compiled,
       }, '\n'),
     })
   end
