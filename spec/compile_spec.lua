@@ -652,6 +652,17 @@ spec('return #5.1+', function()
       2,
     )
   ]])
+  assert.has_error(function()
+    compile('return 1 if true {}')
+  end)
+  assert.has_error(function()
+    compile([[
+      if true {
+        return 1
+        print(32)
+      }
+    ]])
+  end)
 end)
 
 spec('try catch #5.1+', function()

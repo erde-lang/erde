@@ -5,6 +5,7 @@
 - add CLI REPL
 - add tests for external parens (to throw away unused values)
   - ex) `return (myfunc())`
+- improve error messages (mimic lua)
 
 # 1.0-1
 
