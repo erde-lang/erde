@@ -215,11 +215,11 @@ local function runFile(filePath)
       if type(err) == 'table' and err.__is_erde_error__ then
         return err.stacktrace
       elseif not utils.fileExists(filePath) then
-        return 'file does not exist: ' .. filePath
+        return 'File does not exist: ' .. filePath
       else
         return table.concat({
-          'internal error: ' .. tostring(err),
-          'please report this at: https://github.com/erde-lang/erde/issues',
+          'Internal error: ' .. tostring(err),
+          'Please report this at: https://github.com/erde-lang/erde/issues',
         }, '\n')
       end
     end
