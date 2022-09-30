@@ -815,6 +815,10 @@ local function Return()
   local compileLines = { currentTokenLine, consume() }
   local firstReturn = Try(Expr)
 
+  if isModuleReturnBlock then
+    hasModuleReturn = true
+  end
+
   if firstReturn then
     insert(compileLines, firstReturn)
     if currentToken == ',' then
@@ -825,6 +829,14 @@ local function Return()
     insert(compileLines, Parens(true, false, function()
       return weave(List(false, true, Expr), ',')
     end))
+  end
+
+  if blockDepth == 1 then
+    if currentToken then
+      error('expected <eof>')
+    end
+  elseif currentToken ~= '}' then
+    error('unexpected token: ', currentToken)
   end
 
   return compileLines
@@ -918,7 +930,6 @@ function Block(isLoopBlock)
     elseif currentToken == 'try' then
       insert(compileLines, TryCatch())
     elseif currentToken == 'return' then
-      if isModuleReturnBlock then hasModuleReturn = true end
       insert(compileLines, Return())
     elseif currentToken == 'function' then
       insert(compileLines, Function())
