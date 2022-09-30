@@ -17,6 +17,8 @@
 
 # Possible Future Subprojects
 
+- add types to all internal errors
+  - remove need to backslash in repl. Instead, continue user input if error is EOL error
 - checker
   - check correct syntax
   - undeclared variables
