@@ -2,10 +2,12 @@
 
 # 0.3-2
 
-- add CLI REPL
-- add tests for external parens (to throw away unused values)
-  - ex) `return (myfunc())`
 - improve error messages (mimic lua)
+
+# 0.3-3
+
+- add types to all internal errors
+  - remove need for backslash in repl. Instead, continue user input if error is EOL error
 
 # 1.0-1
 
@@ -17,8 +19,6 @@
 
 # Possible Future Subprojects
 
-- add types to all internal errors
-  - remove need to backslash in repl. Instead, continue user input if error is EOL error
 - checker
   - check correct syntax
   - undeclared variables

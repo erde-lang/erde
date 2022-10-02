@@ -730,3 +730,16 @@ spec('ambiguous syntax 5.1+', function()
     return x
   ]])
 end)
+
+spec('retain throwaway parens', function()
+  assert.run(true, [[
+    local a = () -> (1, 2)
+    local x, y = (a())
+    return x == 1
+  ]])
+  assert.run(false, [[
+    local a = () -> (1, 2)
+    local x, y = (a())
+    return y == 2
+  ]])
+end)
