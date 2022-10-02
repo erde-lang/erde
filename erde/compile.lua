@@ -83,6 +83,16 @@ local function expect(token, preventConsume)
   end
 end
 
+local function ensure(isValid, message, isFatal)
+  if not isValid then
+    utils.erdeError({
+      message = message,
+      severity = isFatal and 'fatal' or 'error',
+      line = currentTokenLine,
+    })
+  end
+end
+
 -- -----------------------------------------------------------------------------
 -- Compile Helpers
 -- -----------------------------------------------------------------------------
@@ -177,9 +187,8 @@ local function List(allowEmpty, allowTrailingComma, callback)
     list[numItems] = result
   until not hasTrailingComma
 
-  assert(allowEmpty or numItems > 0)
-  assert(allowTrailingComma or not hasTrailingComma)
-
+  ensure(allowEmpty or numItems > 0, 'Cannot have empty list')
+  ensure(allowTrailingComma or not hasTrailingComma, 'Trailing comma not allowed')
   return list
 end
 
@@ -188,14 +197,11 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Name(allowKeywords)
-  assert(
-    currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
-    'Malformed name: ' .. currentToken
-  )
+  ensure(currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'), 'Malformed name: ' .. currentToken)
 
   if not allowKeywords then
     for i, keyword in pairs(C.KEYWORDS) do
-      assert(currentToken ~= keyword, 'unexpected keyword: ' .. currentToken)
+      ensure(currentToken ~= keyword, 'unexpected keyword: ' .. currentToken)
     end
   end
 
@@ -880,11 +886,11 @@ function Block(isLoopBlock)
 
   while true do
     if currentToken == 'break' then
-      assert(breakName ~= nil, 'Cannot use `break` outside of loop')
+      ensure(breakName ~= nil, 'Cannot use `break` outside of loop')
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
     elseif branch('continue') then
-      assert(breakName ~= nil, 'Cannot use `continue` outside of loop')
+      ensure(breakName ~= nil, 'Cannot use `continue` outside of loop')
       hasContinue = true
 
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
