@@ -195,7 +195,7 @@ local function Name(allowKeywords)
 
   if not allowKeywords then
     for i, keyword in pairs(C.KEYWORDS) do
-      assert(currentToken ~= keyword, 'Unexpected keyword: ' .. currentToken)
+      assert(currentToken ~= keyword, 'unexpected keyword: ' .. currentToken)
     end
   end
 
@@ -836,7 +836,7 @@ local function Return()
       error('expected <eof>')
     end
   elseif currentToken ~= '}' then
-    error('unexpected token: ', currentToken)
+    error('unexpected token: ' .. currentToken)
   end
 
   return compileLines
