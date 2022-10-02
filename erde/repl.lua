@@ -1,22 +1,33 @@
-local RL = require('readline')
 local C = require('erde.constants')
 local lib = require('erde.lib')
 local utils = require('erde.utils')
 
 local PROMPT = '> '
 local SUB_PROMPT = '>> '
+local HAS_READLINE, RL = pcall(function() return require('readline') end)
 
-RL.set_options({
-  keeplines = 1000,
-  histfile = '~/.erde_history',
-  completion = false,
-  auto_add = false,
-})
-RL.set_readline_name('erde')
+if HAS_READLINE then
+  RL.set_readline_name('erde')
+  RL.set_options({
+    keeplines = 1000,
+    histfile = '~/.erde_history',
+    completion = false,
+    auto_add = false,
+  })
+end
 
 local function readLine(prompt)
-  local replLine = RL.readline(prompt)
-  if not replLine or replLine:match('^%s*$') then return end
+  local replLine
+  if HAS_READLINE then
+    replLine = RL.readline(prompt)
+  else
+    io.write(prompt)
+    replLine = io.read()
+  end
+
+  if not replLine or replLine:match('^%s*$') then
+    return
+  end
 
   local sourceLines = {}
   local needsSubPrompt = false
@@ -29,9 +40,13 @@ local function readLine(prompt)
   return replLine, table.concat(sourceLines, '\n'), replLine:match('\\%s*$')
 end
 
-return function()
-  print('erde ' .. C.VERSION .. '  Copyright (C) 2021-2022 bsuth')
+local function runRepl()
+  print(('Erde %s on %s -- Copyright (C) 2021-2022 bsuth'):format(C.VERSION, _VERSION))
   print('Use trailing backslashes for multiline inputs.')
+
+  if not HAS_READLINE then
+    print('Install the `readline` Lua library to get support for arrow keys, keyboard shortcuts, history, etc.')
+  end
 
   while true do
     local replLine, sourceLine, needsSubPrompt = readLine(PROMPT)
@@ -46,7 +61,9 @@ return function()
       until not needsSubPrompt
     end
 
-    RL.add_history(replLine)
+    if HAS_READLINE then
+      RL.add_history(replLine)
+    end
 
     -- Try expressions first! This way we can still print the value in the
     -- case that the expression is also a valid block (i.e. function calls).
@@ -74,4 +91,10 @@ return function()
       end
     end
   end
+end
+
+return function()
+  -- Protect runRepl so we don't show stacktraces when the user uses Control+c
+  -- without readline.
+  pcall(runRepl)
 end
