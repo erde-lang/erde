@@ -1,29 +1,33 @@
 # TODO
 
-# 0.3-1
-
-- release!
-
 # 0.3-2
 
-- add CLI REPL
+- improve error messages (mimic lua)
+
+# 0.3-3
+
+- add types to all internal errors
+  - remove need for backslash in repl. Instead, continue user input if error is EOL error
 
 # 1.0-1
 
 - rewrite erde in erde
 
-# Possible Future Subprojects
+# 1.0-2
 
 - formatter
-- reverse compiler (compile Lua to Erde)
-- linter
+
+# Possible Future Subprojects
+
+- checker
+  - check correct syntax
   - undeclared variables
-  - unitialized variable
   - etc (see https://github.com/lunarmodules/luacheck)
-- language server
 
 # Possible Language Features (needs further discussion)
 - Allow strings / tables as index chain bases
   - ex) `"hello %s":format(name)`
 - Allow arbitrary first parameter injection syntax
   - ex) `mytable::filter(() -> true)` == `filter(mytable, () -> true)`
+- Allow assignments in branches (if, elseif, with)
+  - ex) `if myvar = someFunc() { ... }` => `do { local myvar = someFunc() if myvar { ... } }`

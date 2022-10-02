@@ -5,6 +5,7 @@ local lfs = require('lfs')
 local C = require('erde.constants')
 local compile = require('erde.compile')
 local lib = require('erde.lib')
+local repl = require('erde.repl')
 local utils = require('erde.utils')
 
 local load = loadstring or load
@@ -214,11 +215,11 @@ local function runFile(filePath)
       if type(err) == 'table' and err.__is_erde_error__ then
         return err.stacktrace
       elseif not utils.fileExists(filePath) then
-        return 'file does not exist: ' .. filePath
+        return 'File does not exist: ' .. filePath
       else
         return table.concat({
-          'internal error: ' .. tostring(err),
-          'please report this at: https://github.com/erde-lang/erde/issues',
+          'Internal error: ' .. tostring(err),
+          'Please report this at: https://github.com/erde-lang/erde/issues',
         }, '\n')
       end
     end
@@ -250,7 +251,7 @@ if args.debug then
 end
 
 if args.version then
-  print('0.3-1')
+  print(C.VERSION)
 elseif args.run then
   lib.load()
   runFile(args.script)
@@ -259,5 +260,5 @@ elseif args.compile then
 elseif args.clean then
   traverseLuaFiles(#args.paths > 0 and args.paths or { '.' }, cleanFile)
 else
-  print('repl not support yet')
+  repl()
 end

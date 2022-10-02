@@ -8,6 +8,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Fixed
 
 - Fix assignment operator compiled operation
+- Throw error when `return` statement is not the last statement in a block
 
 ### Removed
 

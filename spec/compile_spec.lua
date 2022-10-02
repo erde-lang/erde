@@ -652,6 +652,17 @@ spec('return #5.1+', function()
       2,
     )
   ]])
+  assert.has_error(function()
+    compile('return 1 if true {}')
+  end)
+  assert.has_error(function()
+    compile([[
+      if true {
+        return 1
+        print(32)
+      }
+    ]])
+  end)
 end)
 
 spec('try catch #5.1+', function()
@@ -717,5 +728,18 @@ spec('ambiguous syntax 5.1+', function()
     local a = f -> f
     local x = a(() -> 2)()
     return x
+  ]])
+end)
+
+spec('retain throwaway parens', function()
+  assert.run(true, [[
+    local a = () -> (1, 2)
+    local x, y = (a())
+    return x == 1
+  ]])
+  assert.run(false, [[
+    local a = () -> (1, 2)
+    local x, y = (a())
+    return y == 2
   ]])
 end)

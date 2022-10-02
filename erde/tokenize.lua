@@ -40,7 +40,6 @@ end
 local function throw(message, errLine)
   utils.erdeError({
     message = message,
-    message = message,
     line = errLine or line,
   })
 end
