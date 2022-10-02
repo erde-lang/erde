@@ -2,10 +2,9 @@
 
 # 0.3-2
 
-- improve error messages (mimic lua)
-
-# 0.3-3
-
+- add watch mode (linotify w/ lfs + polling backup)
+- improve error messages
+- remove argparse dependency (hand craft)
 - add types to all internal errors
   - remove need for backslash in repl. Instead, continue user input if error is EOL error
 
