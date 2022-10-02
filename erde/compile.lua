@@ -833,10 +833,10 @@ local function Return()
 
   if blockDepth == 1 then
     if currentToken then
-      error('expected <eof>')
+      throw('expected <eof>')
     end
   elseif currentToken ~= '}' then
-    error('unexpected token: ' .. currentToken)
+    throw('unexpected token: ' .. currentToken)
   end
 
   return compileLines
