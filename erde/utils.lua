@@ -47,8 +47,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function joinPaths(...)
-  return table.concat({ ... }, C.PATH_SEPARATOR)
-    :gsub(C.PATH_SEPARATOR .. '+', C.PATH_SEPARATOR)
+  return (table.concat({ ... }, C.PATH_SEPARATOR):gsub(C.PATH_SEPARATOR .. '+', C.PATH_SEPARATOR))
 end
 
 -- -----------------------------------------------------------------------------

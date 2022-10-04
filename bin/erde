@@ -33,42 +33,28 @@ local function isCompiledFile(filePath)
   return footer == C.COMPILED_FOOTER_COMMENT
 end
 
-local function traversePaths(paths, callback)
+local function traverseFiles(paths, fileMatch, callback)
   for i, path in ipairs(paths) do
     local attributes = lfs.attributes(path)
 
     if attributes ~= nil then
       if attributes.mode == 'file' then
-        callback(path)
+        if fileMatch == nil or path:match(fileMatch) then
+          callback(path, attributes)
+        end
       elseif attributes.mode == 'directory' then
         local subPaths = {}
 
         for fileName in lfs.dir(path) do
           if fileName ~= '.' and fileName ~= '..' then
-            subPaths[#subPaths + 1] = utils.joinPaths(path, fileName)
+            table.insert(subPaths, utils.joinPaths(path, fileName))
           end
         end
 
-        traversePaths(subPaths, callback)
+        traverseFiles(subPaths, fileMatch, callback)
       end
     end
   end
-end
-
-local function traverseErdeFiles(paths, callback)
-  traversePaths(paths, function(filePath)
-    if filePath:match('%.erde$') then
-      callback(filePath)
-    end
-  end)
-end
-
-local function traverseLuaFiles(paths, callback)
-  traversePaths(paths, function(filePath)
-    if filePath:match('%.lua$') then
-      callback(filePath)
-    end
-  end)
 end
 
 local function addOption(parser, shortFlag, longFlag, description)
@@ -142,6 +128,7 @@ cliRun:argument('script'):args(1):hidden(true)
 
 local cliCompile = cli:command('compile', 'Compile Erde files into Lua.')
 cliCompile._usage = 'Usage: erde compile [options] [paths]'
+cliCompile:flag('-w --watch', 'Watch files / directories and recompile on changes.')
 addOption(cliCompile, '-t', '--target', 'Lua target. Must be one of:\n' .. table.concat(C.VALID_LUA_TARGETS, ', '))
 addOption(cliCompile, '-o', '--outDir', 'Output directory for compiled files.')
 addOption(cliCompile, '-b', '--bitLib', 'Library for bit operations.')
@@ -156,13 +143,6 @@ local args = cli:parse()
 -- -----------------------------------------------------------------------------
 -- Actions
 -- -----------------------------------------------------------------------------
-
-local function cleanFile(filePath)
-  if isCompiledFile(filePath) then
-    os.remove(filePath)
-    print('Removed ' .. filePath)
-  end
-end
 
 local function compileFile(filePath)
   local destFilePath = filePath:gsub('%.erde$', '.lua')
@@ -194,12 +174,13 @@ local function compileFile(filePath)
 
   local destFile = io.open(destFilePath, 'w')
   destFile:write(result)
+  destFile:close()
 
-  print(
-    filePath:gsub(CWD .. C.PATH_SEPARATOR, '')
-    .. ' -> '
-    .. destFilePath:gsub(CWD .. C.PATH_SEPARATOR, '')
-  )
+  print(('[%s] %s => %s'):format(
+    os.date('%X'),
+    filePath:gsub(CWD .. C.PATH_SEPARATOR, ''),
+    destFilePath:gsub(CWD .. C.PATH_SEPARATOR, '')
+  ))
 end
 
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
@@ -256,9 +237,51 @@ elseif args.run then
   lib.load()
   runFile(args.script)
 elseif args.compile then
-  traverseErdeFiles(#args.paths > 0 and args.paths or { '.' }, compileFile)
+  local paths = #args.paths > 0 and args.paths or { '.' }
+
+  if not args.watch then
+    traverseFiles(paths, '%.erde$', compileFile)
+  else
+    local modifications = {}
+    local pollIntervalSeconds = 1
+
+    local hasSocket, socket = pcall(function() return require('socket') end)
+    local hasPosix, posix = pcall(function() return require('posix.unistd') end)
+    if not hasSocket and not hasPosix then
+      print(table.concat({
+        'WARNING: No libraries with sleep functionality found. This will ',
+        'cause high CPU usage while watching. To fix this, you can install ',
+        'either LuaSocket (https://luarocks.org/modules/luasocket/luasocket) ',
+        'or luaposix (https://luarocks.org/modules/gvvaughan/luaposix)\n',
+      }))
+    end
+
+    while true do
+      traverseFiles(paths, '%.erde$', function(filePath, attributes)
+        if not modifications[filePath] or modifications[filePath] ~= attributes.modification then
+          modifications[filePath] = attributes.modification
+          compileFile(filePath)
+        end
+      end)
+
+      if hasSocket then
+        socket.sleep(pollIntervalSeconds)
+      elseif hasPosix then
+        posix.sleep(pollIntervalSeconds)
+      else
+        local lastTimeout = os.time()
+        repeat until os.time() - lastTimeout > pollIntervalSeconds
+      end
+    end
+  end
 elseif args.clean then
-  traverseLuaFiles(#args.paths > 0 and args.paths or { '.' }, cleanFile)
+  local paths = #args.paths > 0 and args.paths or { '.' }
+  traverseFiles(paths, '%.lua$', function(filePath)
+    if isCompiledFile(filePath) then
+      os.remove(filePath)
+      print(filePath .. ' => DELETED')
+    end
+  end)
 else
   repl()
 end
