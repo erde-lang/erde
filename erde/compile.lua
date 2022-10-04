@@ -130,7 +130,7 @@ local function compileBinop(opToken, opLine, lhs, rhs)
   elseif opToken == '^' then
     return (C.LUA_TARGET == '5.3' or C.LUA_TARGET == '5.3+' or C.LUA_TARGET == '5.4' or C.LUA_TARGET == '5.4+')
       and { lhs, opLine, opToken, rhs }
-      or { opLine, 'math.pow(', lhs, rhs, opLine, ')' }
+      or { opLine, 'math.pow(', lhs, ',', rhs, opLine, ')' }
   elseif opToken == '//' then
     return (C.LUA_TARGET == '5.3' or C.LUA_TARGET == '5.3+' or C.LUA_TARGET == '5.4' or C.LUA_TARGET == '5.4+')
       and { lhs, opLine, opToken, rhs }
