@@ -213,7 +213,7 @@ local function runFile(filePath)
     end,
     function(err)
       if type(err) == 'table' and err.__is_erde_error__ then
-        return err.stacktrace
+        return err.stacktrace or err.message
       elseif not utils.fileExists(filePath) then
         return 'File does not exist: ' .. filePath
       else

@@ -10,6 +10,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Throw error when `return` statement is not the last statement in a block
 - Fixed compilation error rewriting for asserts
 - Fixed compilation of exponentiation operator for pre Lua5.3
+- Fixed empty message when error does not have stacktrace
 
 ### Removed
 
