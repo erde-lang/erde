@@ -2,7 +2,6 @@
 
 # 0.3-2
 
-- add watch mode (linotify w/ lfs + polling backup)
 - remove argparse dependency (hand craft)
 - improve error messages
 - add types to all internal errors
