@@ -2,9 +2,8 @@
 
 # 0.3-2
 
-- add watch mode (linotify w/ lfs + polling backup)
-- improve error messages
 - remove argparse dependency (hand craft)
+- improve error messages
 - add types to all internal errors
   - remove need for backslash in repl. Instead, continue user input if error is EOL error
 
