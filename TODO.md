@@ -23,9 +23,9 @@
   - etc (see https://github.com/lunarmodules/luacheck)
 
 # Possible Language Features (needs further discussion)
+- Nested breaks using numbers (-1 for break all)
+  - ex) `break 2`, `break -1`
 - Allow strings / tables as index chain bases
   - ex) `"hello %s":format(name)`
-- Allow arbitrary first parameter injection syntax
-  - ex) `mytable::filter(() -> true)` == `filter(mytable, () -> true)`
-- Allow assignments in branches (if, elseif, with)
+- Allow assignments in branches (if, elseif, while)
   - ex) `if myvar = someFunc() { ... }` => `do { local myvar = someFunc() if myvar { ... } }`
