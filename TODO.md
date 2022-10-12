@@ -2,10 +2,14 @@
 
 # 0.3-2
 
-- remove argparse dependency (hand craft)
+- fix line numbers for ending compile errors
 - improve error messages
 - add types to all internal errors
   - remove need for backslash in repl. Instead, continue user input if error is EOL error
+
+# 0.3-3
+
+- Use `do` expression as IIFE syntactic sugar
 
 # 1.0-1
 
@@ -23,9 +27,9 @@
   - etc (see https://github.com/lunarmodules/luacheck)
 
 # Possible Language Features (needs further discussion)
+- Nested breaks using numbers (-1 for break all)
+  - ex) `break 2`, `break -1`
 - Allow strings / tables as index chain bases
   - ex) `"hello %s":format(name)`
-- Allow arbitrary first parameter injection syntax
-  - ex) `mytable::filter(() -> true)` == `filter(mytable, () -> true)`
-- Allow assignments in branches (if, elseif, with)
+- Allow assignments in branches (if, elseif, while)
   - ex) `if myvar = someFunc() { ... }` => `do { local myvar = someFunc() if myvar { ... } }`
