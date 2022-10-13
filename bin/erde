@@ -7,8 +7,6 @@ local lib = require('erde.lib')
 local repl = require('erde.repl')
 local utils = require('erde.utils')
 
-local CWD = lfs.currentdir()
-
 local HELP = ([[
 Usage: erde [command] [args]
 
@@ -52,7 +50,7 @@ Examples:
 ]]):format(table.concat(C.VALID_LUA_TARGETS, ', '))
 
 local subCommand = nil
-local outDir = CWD
+local outDir = nil
 local watch = false
 local args = {}
 
@@ -111,8 +109,8 @@ end
 
 local function compileFile(srcFilePath, includeTimestamp)
   local destFilePath = srcFilePath:gsub('%.erde$', '.lua')
-  if args.outDir then
-    destFilePath = args.outDir .. '/' .. destFilePath
+  if outDir then
+    destFilePath = outDir .. '/' .. destFilePath
   end
 
   if utils.fileExists(destFilePath) and not isCompiledFile(destFilePath) then

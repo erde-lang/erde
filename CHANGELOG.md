@@ -23,6 +23,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed compilation error rewriting for asserts
 - Fixed compilation of exponentiation operator for pre Lua5.3
 - Fixed empty message when error does not have stacktrace
+- Fixed `C.BITLIB` vs `C.BIT_LIB` inconsistencies
 
 ## [0.3-1] - August 26, 2022
 
