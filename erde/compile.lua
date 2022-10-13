@@ -562,7 +562,7 @@ local function Unop()
   local operandLine, operand = currentTokenLine, Expr(unop.prec + 1)
 
   if unop.token == '~' then
-    if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
+    if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
       -- TODO: provide documentation link for explanation here
       throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
     end
@@ -591,7 +591,7 @@ function Expr(minPrec)
       rhsMinPrec = rhsMinPrec + 1
     end
 
-    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
+    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
       -- TODO: provide documentation link for explanation here
       throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
     end
@@ -627,7 +627,7 @@ local function Assignment(firstId)
   local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
   if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
     throw('invalid assignment operator: ' .. opToken, true)
-  elseif C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BIT_LIB then
+  elseif C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
     -- TODO: provide documentation link for explanation here
     throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
   end
