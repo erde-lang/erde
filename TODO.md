@@ -2,10 +2,13 @@
 
 # 0.3-2
 
-- remove argparse dependency (hand craft)
 - improve error messages
 - add types to all internal errors
   - remove need for backslash in repl. Instead, continue user input if error is EOL error
+
+# 0.3-3
+
+- Use `do` expression as IIFE syntactic sugar
 
 # 1.0-1
 
