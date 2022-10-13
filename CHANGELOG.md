@@ -5,14 +5,8 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [] - UNRELEASED
 
-### Fixed
-- Fix assignment operator compiled operation
-- Throw error when `return` statement is not the last statement in a block
-- Fixed compilation error rewriting for asserts
-- Fixed compilation of exponentiation operator for pre Lua5.3
-- Fixed empty message when error does not have stacktrace
-
 ### Removed
+- Erde no longer depends on [argparse](https://luarocks.org/modules/argparse/argparse)
 
 ### Added
 - Added __tostring metamethod for thrown table errors (especially useful for sandboxed, embedded lua such as neovim)
@@ -20,10 +14,15 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Added basic REPL support
 
 ### Changed
+- `erde run` no longer uses a subcommand
+- `erde compile` and `erde clean` no longer default to cwd
 
 ### Fixed
-- Fixed accidentally hardcoded assignment operator compiled operator.
-- Fixed missing line numbers in compile errors.
+- Fix assignment operator compiled operation
+- Throw error when `return` statement is not the last statement in a block
+- Fixed compilation error rewriting for asserts
+- Fixed compilation of exponentiation operator for pre Lua5.3
+- Fixed empty message when error does not have stacktrace
 
 ## [0.3-1] - August 26, 2022
 
