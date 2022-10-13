@@ -9,20 +9,28 @@ local utils = require('erde.utils')
 
 local CWD = lfs.currentdir()
 
-local HELP = [[
+local HELP = ([[
 Usage: erde [command] [args]
 
-Options:
-   -h, --help           Show this help message and exit.
-   -v, --version        Show version and exit.
-
 Commands:
-   compile              Compile Erde files into Lua.
-   clean                Remove generated Lua files.
+   compile                Compile Erde files into Lua.
+   clean                  Remove generated Lua files.
+
+Options:
+   -h, --help             Show this help message and exit.
+   -v, --version          Show version and exit.
+   -d, --debug            Expose internal stack calls in tracebacks.
+   -t, --target <TARGET>  Lua target for version compatability.
+                          Must be one of: %s
+
+Compile Options:
+   -o, --outDir <DIR>     Output directory for compiled files.
+   -b, --bitLib <LIB>     Library to use for compiled bit operations.
+   -w, --watch            Watch files and recompile on change.
 
 Examples:
    erde
-      Launch the REPL
+      Launch the REPL.
 
    erde my_script.erde
       Run my_script.erde.
@@ -41,7 +49,7 @@ Examples:
 
    erde clean .
       Remove all generated *.lua files under the current directory.
-]]
+]]):format(table.concat(C.VALID_LUA_TARGETS, ', '))
 
 local subCommand = nil
 local outDir = CWD
