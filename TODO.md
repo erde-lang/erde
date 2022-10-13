@@ -2,6 +2,7 @@
 
 # 0.3-2
 
+- fix line numbers for ending compile errors
 - improve error messages
 - add types to all internal errors
   - remove need for backslash in repl. Instead, continue user input if error is EOL error
