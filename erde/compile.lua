@@ -530,7 +530,7 @@ local function Terminal()
 
     while token ~= surroundEnd or surroundDepth > 0 do
       if token == nil then
-        throw('unexpected eof', true)
+        throw('Unexpected EOF', true)
       elseif token == surroundStart then
         surroundDepth = surroundDepth + 1
       elseif token == surroundEnd then
