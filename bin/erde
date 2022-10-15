@@ -197,7 +197,7 @@ local function runFile(filePath)
 
   if not ok then
     if type(result) == 'table' and result.__is_erde_error__ then
-      terminate('erde: ' .. result.stacktrace or result.message)
+      terminate('erde: ' .. (result.stacktrace or result.message))
     else
       terminate(table.concat({
         'Internal error: ' .. tostring(result),
