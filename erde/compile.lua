@@ -67,27 +67,29 @@ local function lookAhead(n)
   return tokens[currentTokenIndex + n]
 end
 
-local function throw(message, isFatal)
+local function throw(message, bypassTry, tokenIndexOffset)
   utils.erdeError({
     message = message,
-    severity = isFatal and 'fatal' or 'error',
-    line = currentTokenLine,
+    bypassTry = bypassTry,
+    line = tokenIndexOffset
+      and tokenLines[currentTokenIndex + tokenIndexOffset]
+      or currentTokenLine,
   })
 end
 
 local function expect(token, preventConsume)
   if token ~= currentToken then
-    throw(('expected %s got %s'):format(token, currentToken))
+    throw(("expected '%s' got '%s'"):format(token, currentToken))
   elseif not preventConsume then
     return consume()
   end
 end
 
-local function ensure(isValid, message, isFatal)
+local function ensure(isValid, message, bypassTry)
   if not isValid then
     utils.erdeError({
       message = message,
-      severity = isFatal and 'fatal' or 'error',
+      bypassTry = bypassTry,
       line = currentTokenLine,
     })
   end
@@ -150,12 +152,13 @@ local function Try(callback)
   local ok, result = pcall(callback)
   if ok then return result, ok end
 
-  if type(result) == 'table' and result.severity == 'fatal' then
-    error(result)
-  end
-
   currentTokenIndex = currentTokenIndexBackup
   currentToken = tokens[currentTokenIndex]
+  currentTokenLine = tokenLines[currentTokenIndex]
+
+  if type(result) == 'table' and result.bypassTry then
+    error(result)
+  end
 end
 
 local function Surround(openChar, closeChar, include, callback)
@@ -192,7 +195,11 @@ local function List(allowEmpty, allowTrailingComma, callback)
   until not hasTrailingComma
 
   ensure(allowEmpty or numItems > 0, 'Cannot have empty list')
-  ensure(allowTrailingComma or not hasTrailingComma, 'Trailing comma not allowed')
+
+  if hasTrailingComma and not allowTrailingComma then
+    throw("unexpected token ','", false, -1)
+  end
+
   return list
 end
 
@@ -612,22 +619,23 @@ local function Assignment(firstId)
   local idList = { firstId }
 
   while branch(',') do
-    local indexChain = IndexChain()
+    local indexChain = Try(IndexChain)
 
-    for _, line in ipairs(indexChain) do
-      if line == ')' then
-        -- Do not allow function calls anywhere in index chain
-        throw('unexpected function call', true)
+    if not indexChain then
+      if currentToken == '=' or C.BINOP_ASSIGNMENT_TOKENS[opToken] then
+        throw("unexpected token ','", true, -1)
+      else
+        throw(("unexpected token '%s'"):format(currentToken), true)
       end
+    elseif indexChain[#indexChain] == ')' then
+      throw('cannot assign value to function call', true)
     end
 
     insert(idList, indexChain)
   end
 
-  local opLine, opToken = currentTokenLine, C.BINOPS[currentToken] and consume()
-  if opToken and C.BINOP_ASSIGNMENT_BLACKLIST[opToken] then
-    throw('invalid assignment operator: ' .. opToken, true)
-  elseif C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
+  local opLine, opToken = currentTokenLine, C.BINOP_ASSIGNMENT_TOKENS[currentToken] and consume()
+  if C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
     -- TODO: provide documentation link for explanation here
     throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
   end
@@ -846,7 +854,7 @@ local function Return()
       throw('expected <eof>')
     end
   elseif currentToken ~= '}' then
-    throw('unexpected token: ' .. currentToken)
+    throw(("unexpected token '%s'"):format(currentToken))
   end
 
   return compileLines
@@ -890,11 +898,11 @@ function Block(isLoopBlock)
 
   while true do
     if currentToken == 'break' then
-      ensure(breakName ~= nil, 'Cannot use `break` outside of loop')
+      ensure(breakName ~= nil, 'cannot use `break` outside of loop')
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
     elseif branch('continue') then
-      ensure(breakName ~= nil, 'Cannot use `continue` outside of loop')
+      ensure(breakName ~= nil, 'cannot use `continue` outside of loop')
       hasContinue = true
 
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
