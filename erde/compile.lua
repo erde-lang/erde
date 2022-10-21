@@ -77,22 +77,16 @@ local function throw(message, bypassTry, tokenIndexOffset)
   })
 end
 
-local function expect(token, preventConsume)
-  if token ~= currentToken then
-    throw(("expected '%s' got '%s'"):format(token, currentToken))
-  elseif not preventConsume then
-    return consume()
+local function ensure(isValid, message, bypassTry)
+  if not isValid then
+    throw(message, bypassTry)
   end
 end
 
-local function ensure(isValid, message, bypassTry)
-  if not isValid then
-    utils.erdeError({
-      message = message,
-      bypassTry = bypassTry,
-      line = currentTokenLine,
-    })
-  end
+local function expect(token, preventConsume)
+  ensure(currentToken ~= nil, 'unexpected eof')
+  ensure(token == currentToken, ("expected '%s' got '%s'"):format(token, currentToken))
+  if not preventConsume then return consume() end
 end
 
 -- -----------------------------------------------------------------------------
@@ -210,11 +204,12 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Name(allowKeywords)
-  ensure(currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'), 'Malformed name: ' .. currentToken)
+  ensure(currentToken ~= nil, 'unexpected eof')
+  ensure(currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'), ("malformed name '%s'"):format(currentToken))
 
   if not allowKeywords then
     for i, keyword in pairs(C.KEYWORDS) do
-      ensure(currentToken ~= keyword, 'unexpected keyword: ' .. currentToken)
+      ensure(currentToken ~= keyword, ("unexpected keyword '%s'"):format(currentToken))
     end
   end
 
@@ -354,8 +349,15 @@ local function ArrowFunction()
     end
   end
 
-  if consume() == '=>' then
+  if currentToken == '->' then
+    consume()
+  elseif currentToken == '=>' then
     insert(paramNames, 1, 'self')
+    consume()
+  elseif currentToken == nil then
+    throw('unexpected eof')
+  else
+    throw(("unexpected token '%s'"):format(currentToken))
   end
 
   insert(compileLines, 1, 'function(' .. concat(paramNames, ',') .. ')')
@@ -500,6 +502,8 @@ local function Table()
 end
 
 local function Terminal()
+  ensure(currentToken ~= nil, 'unexpected eof')
+
   for _, terminal in pairs(C.TERMINALS) do
     if currentToken == terminal then
       return { currentTokenLine, consume() }
@@ -539,7 +543,7 @@ local function Terminal()
 
     while token ~= surroundEnd or surroundDepth > 0 do
       if token == nil then
-        throw('Unexpected EOF', true)
+        throw('unexpected eof', true)
       elseif token == surroundStart then
         surroundDepth = surroundDepth + 1
       elseif token == surroundEnd then
@@ -624,8 +628,8 @@ local function Assignment(firstId)
     local indexChainOk, indexChain = Try(IndexChain)
 
     if not indexChainOk then
-      if currentToken == '=' or C.BINOP_ASSIGNMENT_TOKENS[opToken] then
-        throw("unexpected token ','", true, -1)
+      if currentToken == nil then
+        throw('unexpected eof', true)
       else
         throw(("unexpected token '%s'"):format(currentToken), true)
       end
@@ -851,12 +855,10 @@ local function Return()
     end))
   end
 
-  if blockDepth == 1 then
-    if currentToken then
-      throw('expected <eof>')
-    end
-  elseif currentToken ~= '}' then
-    throw(("unexpected token '%s'"):format(currentToken))
+  if blockDepth > 1 then
+    expect('}', true)
+  elseif currentToken then
+    throw(("expected '<eof>' got '%s'"), currentToken)
   end
 
   return compileLines
@@ -900,11 +902,11 @@ function Block(isLoopBlock)
 
   while true do
     if currentToken == 'break' then
-      ensure(breakName ~= nil, 'cannot use `break` outside of loop')
+      ensure(breakName ~= nil, "cannot use 'break' outside of loop")
       insert(compileLines, currentTokenLine)
       insert(compileLines, consume())
     elseif branch('continue') then
-      ensure(breakName ~= nil, 'cannot use `continue` outside of loop')
+      ensure(breakName ~= nil, "cannot use 'continue' outside of loop")
       hasContinue = true
 
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
@@ -914,7 +916,7 @@ function Block(isLoopBlock)
       end
     elseif currentToken == 'goto' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw('cannot use goto when targeting 5.1 or 5.1+', true)
+        throw("cannot use 'goto' when targeting 5.1 or 5.1+", true)
       end
 
       insert(compileLines, currentTokenLine)
@@ -923,7 +925,7 @@ function Block(isLoopBlock)
       insert(compileLines, Name())
     elseif currentToken == '::' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw('cannot use goto when targeting 5.1 or 5.1+', true)
+        throw("cannot use 'goto' when targeting 5.1 or 5.1+", true)
       end
 
       insert(compileLines, currentTokenLine)
@@ -999,9 +1001,6 @@ end
 
 return function(text)
   tokens, tokenLines = tokenize(text)
-  -- table.insert(tokens, '') -- use empty string as <eof>
-  -- table.insert(tokenLines, tokenLines[#tokenLines])
-
   currentTokenIndex = 1
   currentToken = tokens[1]
   currentTokenLine = tokenLines[1]
@@ -1037,7 +1036,7 @@ return function(text)
 
   if #moduleNames > 0 then
     if hasModuleReturn then
-      throw('cannot use `module` declarations w/ `return`')
+      throw("cannot use 'module' declarations w/ 'return'")
     else
       local moduleTableElements = {}
 
