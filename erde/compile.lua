@@ -148,17 +148,19 @@ end
 
 local function Try(callback)
   local currentTokenIndexBackup = currentTokenIndex
-
   local ok, result = pcall(callback)
-  if ok then return result, ok end
 
-  currentTokenIndex = currentTokenIndexBackup
-  currentToken = tokens[currentTokenIndex]
-  currentTokenLine = tokenLines[currentTokenIndex]
+  if not ok then
+    currentTokenIndex = currentTokenIndexBackup
+    currentToken = tokens[currentTokenIndex]
+    currentTokenLine = tokenLines[currentTokenIndex]
 
-  if type(result) == 'table' and result.bypassTry then
-    error(result)
+    if type(result) == 'table' and result.bypassTry then
+      error(result)
+    end
   end
+
+  return ok, result
 end
 
 local function Surround(openChar, closeChar, include, callback)
@@ -172,7 +174,7 @@ local function Parens(allowRecursion, include, callback)
   return Surround('(', ')', include, function()
     -- Try callback first before recursing, in case the callback itself needs to
     -- consume parentheses! For example, an iife.
-    local result, ok = Try(callback)
+    local ok, result = Try(callback)
     if ok then return result end
     return (allowRecursion and currentToken == '(') 
       and Parens(true, include, callback) or callback()
@@ -183,22 +185,22 @@ local function List(allowEmpty, allowTrailingComma, callback)
   local list = {}
   local hasTrailingComma = false
 
+  -- Keep track of 'result', since we proxy error messages from the callback.
+  local ok, result
+
   -- Explicitly count numItems in case callback doesn't actually return items.
   local numItems = 0
 
   repeat
-    local result, ok = Try(callback)
+    ok, result = Try(callback)
     if not ok then break end
     hasTrailingComma = branch(',')
     numItems = numItems + 1
     list[numItems] = result
   until not hasTrailingComma
 
-  ensure(allowEmpty or numItems > 0, 'Cannot have empty list')
-
-  if hasTrailingComma and not allowTrailingComma then
-    throw("unexpected token ','", false, -1)
-  end
+  ensure(allowEmpty or numItems > 0, result)
+  ensure(allowTrailingComma or not hasTrailingComma, result)
 
   return list
 end
@@ -290,8 +292,8 @@ local function Params()
 
     if branch('...') then
       insert(names, '...')
-      local varargsName = Try(Name)
-      if varargsName then
+      local varargsNameOk, varargsName = Try(Name)
+      if varargsNameOk then
         insert(compileLines, 'local ' .. varargsName .. ' = { ... }')
       end
     end
@@ -619,9 +621,9 @@ local function Assignment(firstId)
   local idList = { firstId }
 
   while branch(',') do
-    local indexChain = Try(IndexChain)
+    local indexChainOk, indexChain = Try(IndexChain)
 
-    if not indexChain then
+    if not indexChainOk then
       if currentToken == '=' or C.BINOP_ASSIGNMENT_TOKENS[opToken] then
         throw("unexpected token ','", true, -1)
       else
@@ -831,13 +833,13 @@ end
 
 local function Return()
   local compileLines = { currentTokenLine, consume() }
-  local firstReturn = Try(Expr)
+  local firstReturnOk, firstReturn = Try(Expr)
 
   if isModuleReturnBlock then
     hasModuleReturn = true
   end
 
-  if firstReturn then
+  if firstReturnOk then
     insert(compileLines, firstReturn)
     if currentToken == ',' then
       insert(compileLines, consume())
@@ -871,9 +873,9 @@ local function TryCatch()
   insert(compileLines, 'end) if ' .. okName .. ' == false then')
 
   expect('catch')
-  local errorVar = Try(Var)
+  local errorVarOk, errorVar = Try(Var)
 
-  if errorVar then
+  if errorVarOk then
     if type(errorVar) == 'string' then
       insert(compileLines, ('local %s = %s'):format(errorVar, errorName))
     else
@@ -958,8 +960,8 @@ function Block(isLoopBlock)
         currentToken == 'function' and Function(scope) or Declaration(scope)
       )
     else
-      local indexChain = Try(IndexChain)
-      if not indexChain then
+      local indexChainOk, indexChain = Try(IndexChain)
+      if not indexChainOk then
         break
       elseif indexChain[#indexChain] == ')' then
         -- Allow function calls as standalone statements
@@ -997,6 +999,9 @@ end
 
 return function(text)
   tokens, tokenLines = tokenize(text)
+  -- table.insert(tokens, '') -- use empty string as <eof>
+  -- table.insert(tokenLines, tokenLines[#tokenLines])
+
   currentTokenIndex = 1
   currentToken = tokens[1]
   currentTokenLine = tokenLines[1]
