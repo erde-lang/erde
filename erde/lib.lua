@@ -199,7 +199,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
 
   if not ok then
     local message = type(compiled) == 'table' and compiled.__is_erde_error__ 
-      and ('%s:%d: %s'):format(sourceAlias, compiled.line, compiled.message)
+      and ('%s:%d: %s'):format(sourceAlias, compiled.line or 0, compiled.message)
       or compiled
 
     utils.erdeError({
