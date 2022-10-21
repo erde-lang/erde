@@ -2,15 +2,16 @@
 
 # 0.3-2
 
+- add tests for error messages
+- fix line numbers for ending compile errors
 - transform words that are keywords in lua but not in erde!
   - ex) `local end = 4`
-- fix line numbers for ending compile errors
-- improve error messages
 - add types to all internal errors
   - remove need for backslash in repl. Instead, continue user input if error is EOL error
 
 # 0.3-3
 
+- support column errors lines (also in source maps!)
 - Use `do` expression as IIFE syntactic sugar
 
 # 1.0-1
