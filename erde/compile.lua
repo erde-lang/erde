@@ -205,7 +205,10 @@ end
 
 local function Name(allowKeywords)
   ensure(currentToken ~= nil, 'unexpected eof')
-  ensure(currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'), ("malformed name '%s'"):format(currentToken))
+  ensure(
+    currentToken:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
+    ("unexpected token '%s'"):format(currentToken)
+  )
 
   if not allowKeywords then
     for i, keyword in pairs(C.KEYWORDS) do
@@ -900,7 +903,7 @@ function Block(isLoopBlock)
   local blockStartLine = currentTokenLine
   blockDepth = blockDepth + 1
 
-  while true do
+  while currentToken ~= nil and currentToken ~= '}' do
     if currentToken == 'break' then
       ensure(breakName ~= nil, "cannot use 'break' outside of loop")
       insert(compileLines, currentTokenLine)
@@ -962,10 +965,8 @@ function Block(isLoopBlock)
         currentToken == 'function' and Function(scope) or Declaration(scope)
       )
     else
-      local indexChainOk, indexChain = Try(IndexChain)
-      if not indexChainOk then
-        break
-      elseif indexChain[#indexChain] == ')' then
+      local indexChain = IndexChain()
+      if indexChain[#indexChain] == ')' then
         -- Allow function calls as standalone statements
         insert(compileLines, indexChain)
       else
