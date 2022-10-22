@@ -16,6 +16,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Changed
 - `erde run` no longer uses a subcommand
 - `erde compile` and `erde clean` no longer default to cwd
+- Improved error messages and error handling
 
 ### Fixed
 - Fix assignment operator compiled operation
@@ -24,6 +25,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed compilation of exponentiation operator for pre Lua5.3
 - Fixed empty message when error does not have stacktrace
 - Fixed `C.BITLIB` vs `C.BIT_LIB` inconsistencies
+- Fixed empty file compilation
 
 ## [0.3-1] - August 26, 2022
 

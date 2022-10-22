@@ -1020,7 +1020,7 @@ return function(text)
 
   -- Check for empty file or file w/ only comments
   if currentToken == nil then
-    return nil
+    return ''
   end
 
   local compileLines = {}
