@@ -3,7 +3,7 @@
 # 0.3-2
 
 - add tests for error messages
-- fix line numbers for ending compile errors
+- fix line numbers for compile errors (need to backtrack!)
 - transform words that are keywords in lua but not in erde!
   - ex) `local end = 4`
 - add types to all internal errors
