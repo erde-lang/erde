@@ -214,6 +214,10 @@ local function Name(allowKeywords)
     for i, keyword in pairs(C.KEYWORDS) do
       ensure(currentToken ~= keyword, ("unexpected keyword '%s'"):format(currentToken))
     end
+
+    if C.LUA_KEYWORDS[currentToken] then
+      return ('__ERDE_SUBSTITUTE_%s__'):format(consume())
+    end
   end
 
   return consume()

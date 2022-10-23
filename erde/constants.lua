@@ -70,6 +70,16 @@ C.KEYWORDS = {
   'continue',
 }
 
+-- Words that are keywords in Lua but NOT in Erde. These are allowed to be used
+-- as variable names in Erde, but must be transformed when compiling.
+C.LUA_KEYWORDS = {
+  ['not'] = true,
+  ['and'] = true,
+  ['or'] = true,
+  ['end'] = true,
+  ['then'] = true,
+}
+
 C.TERMINALS = {
   'true',
   'false',
