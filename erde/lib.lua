@@ -52,7 +52,7 @@ local function rewrite(message, sourceMap, sourceAlias)
   return ('%s:%s: %s'):format(
     sourceAlias or sourceFile,
     sourceMap and sourceMap[tonumber(errLine)] or errLine,
-    content
+    content:gsub('__ERDE_SUBSTITUTE_([a-zA-Z]+)__', '%1')
   )
 end
 
