@@ -17,27 +17,12 @@ if HAS_READLINE then
 end
 
 local function readLine(prompt)
-  local replLine
   if HAS_READLINE then
-    replLine = RL.readline(prompt)
+    return RL.readline(prompt)
   else
     io.write(prompt)
-    replLine = io.read()
+    return io.read()
   end
-
-  if not replLine or replLine:match('^%s*$') then
-    return
-  end
-
-  local sourceLines = {}
-  local needsSubPrompt = false
-
-  -- Check all lines from readline in case user is reusing a previous multiline command
-  for _, line in pairs(utils.split(replLine, '\n')) do
-    table.insert(sourceLines, (line:gsub('\\%s*$', '')))
-  end
-
-  return replLine, table.concat(sourceLines, '\n'), replLine:match('\\%s*$')
 end
 
 local function runRepl()
@@ -49,46 +34,45 @@ local function runRepl()
   end
 
   while true do
-    local replLine, sourceLine, needsSubPrompt = readLine(PROMPT)
-    if not replLine then break end
+    local runOk, runResult
 
-    if needsSubPrompt then
-      repeat
-        local subReplLine, subSourceLine, needsSubPrompt = readLine(SUB_PROMPT)
-        if not subReplLine then break end
-        replLine = replLine .. '\n' .. subReplLine
-        sourceLine = sourceLine .. '\n' .. subSourceLine
-      until not needsSubPrompt
-    end
+    local source = readLine(PROMPT)
+    if not source then break end
 
-    if HAS_READLINE then
-      RL.add_history(replLine)
-    end
+    repeat
+      -- Try input as an expression first! This way we can still print the value
+      -- in the case that the expression is also a valid block (i.e. function calls).
+      local runOk, runResult = pcall(function()
+        return lib.run('return ' .. source, 'stdin')
+      end)
 
-    -- Try expressions first! This way we can still print the value in the
-    -- case that the expression is also a valid block (i.e. function calls).
-    local exprOk, exprResult = pcall(function() return lib.run('return ' .. sourceLine, 'stdin') end)
-
-    if exprOk then
-      if exprResult ~= nil then
-        print(exprResult)
+      if not runOk and runResult.type == 'compile' and not runResult.message:find('unexpected eof') then
+        -- Try input as a block
+        local runOk, runResult = pcall(function()
+          return lib.run(source, 'stdin')
+        end)
       end
-    elseif exprResult.type ~= 'compile' then
-      print(exprResult.stacktrace or exprResult.message)
-    else
-      local blockOk, blockResult = pcall(function() return lib.run(sourceLine, 'stdin') end)
 
-      if blockOk then
-        if blockResult ~= nil then
-          print(blockResult)
+      if not runOk then
+        if runResult.type ~= 'compile' then
+          print(runResult.stacktrace or runResult.message)
+        elseif runResult.message:find('unexpected eof') then
+          repeat
+            local subSource = readLine(SUB_PROMPT)
+            source = source .. (subSource or '')
+          until subSource
+        else
+          print('invalid syntax')
         end
-      elseif blockResult.type ~= 'compile' then
-        print(blockResult.stacktrace)
-      else
-        print('invalid syntax')
-        print('expr: ' .. tostring(exprResult))
-        print('block: ' .. tostring(blockResult))
       end
+    until runOk
+
+    if runResult ~= nil then
+      print(runResult)
+    end
+       
+    if HAS_READLINE then
+      RL.add_history(source)
     end
   end
 end
