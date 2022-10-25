@@ -867,8 +867,10 @@ local function Return()
     insert(compileLines, weave(List(false, false, Expr), ','))
   end
 
-  if (blockDepth == 1 and currentToken) or (blockDepth > 1 and currentToken ~= '}') then
-    throw('need')
+  if blockDepth == 1 and currentToken then
+    throw(("expected '<eof>', got '%s'"):format(currentToken))
+  elseif blockDepth > 1 and currentToken ~= '}' then
+    throw(("expected '}', got '%s'"):format(currentToken))
   end
 
   return compileLines
