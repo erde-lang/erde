@@ -84,6 +84,10 @@ describe('arrow function #5.1+', function()
       local b, c = a()
       return b + c
     ]])
+    assert.run(1, [[
+      local a = x -> ({ x = x }).x
+      return a(1)
+    ]])
   end)
 
   spec('skinny', function()

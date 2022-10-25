@@ -223,7 +223,7 @@ local function Interpolation()
       braceDepth = braceDepth - 1
       commit(consume())
     elseif char == '' then
-      throw('unterminated interpolation')
+      throw('unexpected eof')
     else
       Token()
     end
@@ -240,7 +240,7 @@ local function SingleQuoteString()
 
   while char ~= quote do
     if char == '' then
-      throw('unterminated string')
+      throw('unexpected eof')
     elseif char == '\n' then
       throw('unterminated string')
     elseif char == '\\' then
@@ -260,7 +260,7 @@ local function DoubleQuoteString()
 
   while char ~= quote do
     if char == '' then
-      throw('unterminated string')
+      throw('unexpected eof')
     elseif char == '\n' then
       throw('unterminated string')
     elseif char == '\\' then
@@ -297,7 +297,7 @@ local function LongString()
 
   while peek(strCloseLen) ~= strClose do
     if char == '' then
-      throw('unterminated string', firstLine)
+      throw('unexpected eof', firstLine)
     elseif char == '\n' then
       content = content .. Newline()
     elseif char == '\\' then
@@ -339,7 +339,7 @@ local function Comment()
 
     while peek(strCloseLen) ~= strClose do
       if char == '' then
-        throw('unterminated comment', firstLine)
+        throw('unexpected eof', firstLine)
       elseif char == '\n' then
         Newline()
       else

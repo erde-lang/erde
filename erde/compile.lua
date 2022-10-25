@@ -373,9 +373,14 @@ local function ArrowFunction()
     insert(compileLines, FunctionBlock())
   elseif currentToken == '(' then
     insert(compileLines, 'return')
-    insert(compileLines, Parens(true, false, function()
-      return weave(List(false, true, Expr), ',')
-    end))
+    local exprOk, exprResult = Try(Expr)
+    if exprOk then
+      insert(compileLines, exprResult)
+    else
+      insert(compileLines, Parens(true, false, function()
+        return weave(List(false, true, Expr), ',')
+      end))
+    end
   else
     insert(compileLines, 'return')
     insert(compileLines, Expr())
@@ -844,28 +849,26 @@ end
 
 local function Return()
   local compileLines = { currentTokenLine, consume() }
-  local firstReturnOk, firstReturn = Try(Expr)
 
   if isModuleReturnBlock then
     hasModuleReturn = true
   end
 
-  if firstReturnOk then
-    insert(compileLines, firstReturn)
-    if currentToken == ',' then
-      insert(compileLines, consume())
-      insert(compileLines, weave(List(false, false, Expr), ','))
+  if currentToken == '(' then
+    local exprOk, exprResult = Try(Expr)
+    if exprOk then
+      insert(compileLines, exprResult)
+    else
+      insert(compileLines, Parens(true, false, function()
+        return weave(List(false, true, Expr), ',')
+      end))
     end
-  elseif currentToken == '(' then
-    insert(compileLines, Parens(true, false, function()
-      return weave(List(false, true, Expr), ',')
-    end))
+  elseif currentToken and currentToken ~= '}' then
+    insert(compileLines, weave(List(false, false, Expr), ','))
   end
 
-  if blockDepth > 1 then
-    expect('}', true)
-  elseif currentToken then
-    throw(("expected '<eof>' got '%s'"), currentToken)
+  if (blockDepth == 1 and currentToken) or (blockDepth > 1 and currentToken ~= '}') then
+    throw('need')
   end
 
   return compileLines
