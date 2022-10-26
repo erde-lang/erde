@@ -169,6 +169,10 @@ describe('index chain #5.1+', function()
       return a[1].b
     ]])
   end)
+
+  spec('nested parens', function()
+    assert.eval(1, '((({ x = 1 }))).x')
+  end)
 end)
 
 describe('strings #5.1+', function()

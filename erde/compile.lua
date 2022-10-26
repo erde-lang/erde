@@ -180,17 +180,6 @@ local function Surround(openChar, closeChar, include, callback)
   return include and { openChar, result, closeChar } or result
 end
 
-local function Parens(allowRecursion, include, callback)
-  return Surround('(', ')', include, function()
-    -- Try callback first before recursing, in case the callback itself needs to
-    -- consume parentheses! For example, an iife.
-    local ok, result = Try(callback)
-    if ok then return result end
-    return (allowRecursion and currentToken == '(') 
-      and Parens(true, include, callback) or callback()
-  end)
-end
-
 -- -----------------------------------------------------------------------------
 -- Partials
 -- -----------------------------------------------------------------------------
@@ -266,7 +255,7 @@ local function Params()
   local compileLines = {}
   local names = {}
 
-  Parens(false, false, function()
+  Surround('(', ')', false, function()
     if currentToken ~= ')' and currentToken ~= '...' then
       List(function()
         local var = Var()
@@ -369,7 +358,7 @@ local function ArrowFunction()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Parens(true, false, function()
+      insert(compileLines, Surround('(', ')', false, function()
         return weave(List(Expr, ')'), ',')
       end))
     end
@@ -389,7 +378,7 @@ local function IndexChain(allowArbitraryExpr)
   local hasExprBase = currentToken == '('
 
   if hasExprBase then
-    insert(compileLines, Parens(true, true, Expr))
+    insert(compileLines, Surround('(', ')', true, Expr))
   else
     insert(compileLines, currentTokenLine)
     insert(compileLines, Name())
@@ -424,7 +413,7 @@ local function IndexChain(allowArbitraryExpr)
       precedingCompileLines[precedingCompileLinesLen] = 
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
-      insert(compileLines, Parens(false, false, function()
+      insert(compileLines, Surround('(', ')', false, function()
         return currentToken == ')' and {} or weave(List(Expr, ')'), ',')
       end))
 
@@ -853,7 +842,7 @@ local function Return()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Parens(true, false, function()
+      insert(compileLines, Surround('(', ')', false, function()
         return weave(List(Expr, ')'), ',')
       end))
     end
