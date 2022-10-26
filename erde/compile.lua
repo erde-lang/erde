@@ -99,6 +99,7 @@ local function newTmpName()
 end
 
 local function weave(t, separator)
+  separator = separator or ','
   local woven = {}
   local tLen = #t
 
@@ -157,46 +158,30 @@ local function Try(callback)
   return ok, result
 end
 
-local function Surround(openChar, closeChar, include, callback)
+local function List(callback, breakToken)
+  local list = {}
+
+  repeat
+    local item = callback()
+    if item then table.insert(list, item) end
+  until not branch(',') or (breakToken and currentToken == breakToken)
+
+  return list
+end
+
+local function Surround(openChar, closeChar, callback)
   expect(openChar)
   local result = callback()
   expect(closeChar)
-  return include and { openChar, result, closeChar } or result
+  return result
 end
 
-local function Parens(allowRecursion, include, callback)
-  return Surround('(', ')', include, function()
-    -- Try callback first before recursing, in case the callback itself needs to
-    -- consume parentheses! For example, an iife.
-    local ok, result = Try(callback)
-    if ok then return result end
-    return (allowRecursion and currentToken == '(') 
-      and Parens(true, include, callback) or callback()
+local function SurroundList(openChar, closeChar, callback, allowEmpty)
+  return Surround(openChar, closeChar, function()
+    if not allowEmpty or currentToken ~= closeChar then
+      return List(callback, closeChar)
+    end
   end)
-end
-
-local function List(allowEmpty, allowTrailingComma, callback)
-  local list = {}
-  local hasTrailingComma = false
-
-  -- Keep track of 'result', since we proxy error messages from the callback.
-  local ok, result
-
-  -- Explicitly count numItems in case callback doesn't actually return items.
-  local numItems = 0
-
-  repeat
-    ok, result = Try(callback)
-    if not ok then break end
-    hasTrailingComma = branch(',')
-    numItems = numItems + 1
-    list[numItems] = result
-  until not hasTrailingComma
-
-  ensure(allowEmpty or numItems > 0, result)
-  ensure(allowTrailingComma or not hasTrailingComma, result)
-
-  return list
 end
 
 -- -----------------------------------------------------------------------------
@@ -229,36 +214,32 @@ local function Destructure()
 
   if currentToken == '[' then
     local arrayIndex = 0
-    Surround('[', ']', false, function()
-      List(false, true, function()
-        local nameLine, name = currentTokenLine, Name()
-        arrayIndex = arrayIndex + 1
+    SurroundList('[', ']', function()
+      local nameLine, name = currentTokenLine, Name()
+      arrayIndex = arrayIndex + 1
 
-        insert(compileLines, nameLine)
-        insert(compileLines, ('local %s = %s[%s]'):format(name, varName, arrayIndex))
+      insert(compileLines, nameLine)
+      insert(compileLines, ('local %s = %s[%s]'):format(name, varName, arrayIndex))
 
-        if branch('=') then
-          insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-          insert(compileLines, Expr())
-          insert(compileLines, 'end')
-        end
-      end)
+      if branch('=') then
+        insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+        insert(compileLines, Expr())
+        insert(compileLines, 'end')
+      end
     end)
   else
-    Surround('{', '}', false, function()
-      List(false, true, function()
-        local keyLine, key = currentTokenLine, Name()
-        local name = branch(':') and Name() or key
+    SurroundList('{', '}', function()
+      local keyLine, key = currentTokenLine, Name()
+      local name = branch(':') and Name() or key
 
-        insert(compileLines, keyLine)
-        insert(compileLines, ('local %s = %s.%s'):format(name, varName, key))
+      insert(compileLines, keyLine)
+      insert(compileLines, ('local %s = %s.%s'):format(name, varName, key))
 
-        if branch('=') then
-          insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-          insert(compileLines, Expr())
-          insert(compileLines, 'end')
-        end
-      end)
+      if branch('=') then
+        insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+        insert(compileLines, Expr())
+        insert(compileLines, 'end')
+      end
     end)
   end
 
@@ -274,10 +255,18 @@ local function Params()
   local compileLines = {}
   local names = {}
 
-  Parens(false, false, function()
-    List(true, true, function()
-      local varLine, var = currentTokenLine, Var()
+  SurroundList('(', ')', function()
+    if branch('...') then
+      insert(names, '...')
 
+      if currentToken ~= ')' then
+        insert(compileLines, 'local ' .. Name() .. ' = { ... }')
+      end
+
+      branch(',')
+      expect(')', true)
+    else
+      local var = Var()
       local name = type(var) == 'string' and var or var.name
       insert(names, name)
 
@@ -290,16 +279,8 @@ local function Params()
       if type(var) == 'table' then
         insert(compileLines, var.compileLines)
       end
-    end)
-
-    if branch('...') then
-      insert(names, '...')
-      local varargsNameOk, varargsName = Try(Name)
-      if varargsNameOk then
-        insert(compileLines, 'local ' .. varargsName .. ' = { ... }')
-      end
     end
-  end)
+  end, true)
 
   return { names = names, compileLines = compileLines }
 end
@@ -311,7 +292,7 @@ local function FunctionBlock()
   isModuleReturnBlock = false
   breakName = nil
 
-  local compileLines = Surround('{', '}', false, Block)
+  local compileLines = Surround('{', '}', Block)
 
   isModuleReturnBlock = oldIsModuleReturnBlock
   breakName = oldBreakName
@@ -325,7 +306,7 @@ local function LoopBlock()
   breakName = newTmpName()
   hasContinue = false
 
-  local compileLines = Surround('{', '}', false, function()
+  local compileLines = Surround('{', '}', function()
     return Block(true)
   end)
 
@@ -377,9 +358,7 @@ local function ArrowFunction()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Parens(true, false, function()
-        return weave(List(false, true, Expr), ',')
-      end))
+      insert(compileLines, weave(SurroundList('(', ')', Expr)))
     end
   else
     insert(compileLines, 'return')
@@ -397,7 +376,9 @@ local function IndexChain(allowArbitraryExpr)
   local hasExprBase = currentToken == '('
 
   if hasExprBase then
-    insert(compileLines, Parens(true, true, Expr))
+    insert(compileLines, '(')
+    insert(compileLines, Surround('(', ')', Expr))
+    insert(compileLines, ')')
   else
     insert(compileLines, currentTokenLine)
     insert(compileLines, Name())
@@ -410,7 +391,7 @@ local function IndexChain(allowArbitraryExpr)
     elseif currentToken == '[' then
       insert(compileLines, currentTokenLine)
       insert(compileLines, '[')
-      insert(compileLines, Surround('[', ']', false, Expr))
+      insert(compileLines, Surround('[', ']', Expr))
       insert(compileLines, ']')
     elseif branch(':') then
       insert(compileLines, currentTokenLine)
@@ -432,9 +413,8 @@ local function IndexChain(allowArbitraryExpr)
       precedingCompileLines[precedingCompileLinesLen] = 
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
-      insert(compileLines, Parens(false, false, function()
-        return weave(List(true, true, Expr), ',')
-      end))
+      local args = SurroundList('(', ')', Expr, true)
+      if args then insert(compileLines, weave(args)) end
 
       insert(compileLines, ')')
     else
@@ -469,12 +449,7 @@ local function InterpolationString(startQuote, endQuote)
         insert(compileLines, content .. endQuote)
       end
 
-      insert(compileLines, {
-        'tostring(',
-        Surround('{', '}', false, Expr),
-        ')',
-      })
-
+      insert(compileLines, { 'tostring(', Surround('{', '}', Expr), ')' })
       contentLine, content = currentTokenLine, startQuote
     else
       content = content .. consume()
@@ -493,24 +468,22 @@ end
 local function Table()
   local compileLines = {}
 
-  return Surround('{', '}', true, function()
-    List(true, true, function()
-      if currentToken == '[' then
-        insert(compileLines, '[')
-        insert(compileLines, Surround('[', ']', false, Expr))
-        insert(compileLines, ']')
-        insert(compileLines, expect('='))
-      elseif lookAhead(1) == '=' then
-        insert(compileLines, Name())
-        insert(compileLines, consume()) -- '='
-      end
+  SurroundList('{', '}', function()
+    if currentToken == '[' then
+      insert(compileLines, '[')
+      insert(compileLines, Surround('[', ']', Expr))
+      insert(compileLines, ']')
+      insert(compileLines, expect('='))
+    elseif lookAhead(1) == '=' then
+      insert(compileLines, Name())
+      insert(compileLines, consume()) -- '='
+    end
 
-      insert(compileLines, Expr())
-      insert(compileLines, ',')
-    end)
+    insert(compileLines, Expr())
+    insert(compileLines, ',')
+  end, true)
 
-    return compileLines
-  end)
+  return { '{', compileLines, '}' }
 end
 
 local function Terminal()
@@ -641,12 +614,12 @@ local function Assignment(firstId)
 
     if not indexChainOk then
       if currentToken == nil then
-        throw('unexpected eof', true)
+        throw('unexpected eof')
       else
-        throw(("unexpected token '%s'"):format(currentToken), true)
+        throw(("unexpected token '%s'"):format(currentToken))
       end
     elseif indexChain[#indexChain] == ')' then
-      throw('cannot assign value to function call', true)
+      throw('cannot assign value to function call')
     end
 
     insert(idList, indexChain)
@@ -659,12 +632,12 @@ local function Assignment(firstId)
   end
 
   expect('=')
-  local exprList = List(false, false, Expr)
+  local exprList = List(Expr)
 
   if not opToken then
-    insert(compileLines, weave(idList, ','))
+    insert(compileLines, weave(idList))
     insert(compileLines, '=')
-    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, weave(exprList))
   elseif #idList == 1 then
     -- Optimize most common use case
     insert(compileLines, firstId)
@@ -686,7 +659,7 @@ local function Assignment(firstId)
     insert(compileLines, 'local')
     insert(compileLines, concat(assignmentNames, ','))
     insert(compileLines, '=')
-    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, weave(exprList))
     insert(compileLines, assignmentCompileLines)
   end
 
@@ -706,7 +679,7 @@ local function Declaration(scope)
     insert(compileLines, 'local')
   end
 
-  for i, var in ipairs(List(false, false, Var)) do
+  for i, var in ipairs(List(Var)) do
     if type(var) == 'string' then
       insert(names, var)
     else
@@ -721,11 +694,11 @@ local function Declaration(scope)
     end
   end
 
-  insert(compileLines, weave(names, ','))
+  insert(compileLines, weave(names))
 
   if currentToken == '=' then
     insert(compileLines, consume())
-    insert(compileLines, weave(List(false, false, Expr), ','))
+    insert(compileLines, weave(List(Expr)))
   end
 
   insert(compileLines, destructureCompileLines)
@@ -742,7 +715,7 @@ local function ForLoop()
     insert(compileLines, currentTokenLine)
     insert(compileLines, consume())
 
-    local exprList = List(false, false, Expr)
+    local exprList = List(Expr)
     local exprListLen = #exprList
 
     if exprListLen < 2 then
@@ -751,11 +724,11 @@ local function ForLoop()
       throw('too many loop parameters', true)
     end
 
-    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, weave(exprList))
   else
     local names = {}
 
-    for i, var in ipairs(List(false, false, Var)) do
+    for i, var in ipairs(List(Var)) do
       if type(var) == 'string' then
         insert(names, var)
       else
@@ -764,13 +737,13 @@ local function ForLoop()
       end
     end
 
-    insert(compileLines, weave(names, ','))
+    insert(compileLines, weave(names))
     insert(compileLines, expect('in'))
 
     -- Generic for parses an expression list!
     -- see https://www.lua.org/pil/7.2.html
     -- TODO: only allow max 3 expressions? Job for linter?
-    insert(compileLines, weave(List(false, false, Expr), ','))
+    insert(compileLines, weave(List(Expr)))
   end
 
   insert(compileLines, 'do')
@@ -829,18 +802,18 @@ local function IfElse()
   insert(compileLines, consume())
   insert(compileLines, Expr())
   insert(compileLines, 'then')
-  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, Surround('{', '}', Block))
 
   while currentToken == 'elseif' do
     insert(compileLines, consume())
     insert(compileLines, Expr())
     insert(compileLines, 'then')
-    insert(compileLines, Surround('{', '}', false, Block))
+    insert(compileLines, Surround('{', '}', Block))
   end
 
   if currentToken == 'else' then
     insert(compileLines, consume())
-    insert(compileLines, Surround('{', '}', false, Block))
+    insert(compileLines, Surround('{', '}', Block))
   end
 
   insert(compileLines, 'end')
@@ -859,12 +832,10 @@ local function Return()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Parens(true, false, function()
-        return weave(List(false, true, Expr), ',')
-      end))
+      insert(compileLines, weave(SurroundList('(', ')', Expr)))
     end
   elseif currentToken and currentToken ~= '}' then
-    insert(compileLines, weave(List(false, false, Expr), ','))
+    insert(compileLines, weave(List(Expr)))
   end
 
   if blockDepth == 1 and currentToken then
@@ -883,7 +854,7 @@ local function TryCatch()
 
   consume() -- 'try'
   insert(compileLines, ('local %s, %s = pcall(function()'):format(okName, errorName))
-  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, Surround('{', '}', Block))
   insert(compileLines, 'end) if ' .. okName .. ' == false then')
 
   expect('catch')
@@ -898,7 +869,7 @@ local function TryCatch()
     end
   end
 
-  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, Surround('{', '}', Block))
   insert(compileLines, 'end')
   return compileLines
 end
@@ -944,7 +915,7 @@ function Block(isLoopBlock)
       insert(compileLines, consume() .. Name() .. expect('::'))
     elseif currentToken == 'do' then
       insert(compileLines, consume())
-      insert(compileLines, Surround('{', '}', false, Block))
+      insert(compileLines, Surround('{', '}', Block))
       insert(compileLines, 'end')
     elseif currentToken == 'if' then
       insert(compileLines, IfElse())
