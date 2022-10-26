@@ -157,6 +157,22 @@ local function Try(callback)
   return ok, result
 end
 
+local function List(callback, ...)
+  local list = {}
+  local breakTokens = {}
+
+  for i, breakToken in ipairs({ ... }) do
+    breakTokens[breakToken] = true
+  end
+
+  repeat
+    local item = callback()
+    if item then table.insert(list, item) end
+  until not branch(',') or breakTokens[currentToken]
+
+  return list
+end
+
 local function Surround(openChar, closeChar, include, callback)
   expect(openChar)
   local result = callback()
@@ -173,30 +189,6 @@ local function Parens(allowRecursion, include, callback)
     return (allowRecursion and currentToken == '(') 
       and Parens(true, include, callback) or callback()
   end)
-end
-
-local function List(allowEmpty, allowTrailingComma, callback)
-  local list = {}
-  local hasTrailingComma = false
-
-  -- Keep track of 'result', since we proxy error messages from the callback.
-  local ok, result
-
-  -- Explicitly count numItems in case callback doesn't actually return items.
-  local numItems = 0
-
-  repeat
-    ok, result = Try(callback)
-    if not ok then break end
-    hasTrailingComma = branch(',')
-    numItems = numItems + 1
-    list[numItems] = result
-  until not hasTrailingComma
-
-  ensure(allowEmpty or numItems > 0, result)
-  ensure(allowTrailingComma or not hasTrailingComma, result)
-
-  return list
 end
 
 -- -----------------------------------------------------------------------------
@@ -230,7 +222,7 @@ local function Destructure()
   if currentToken == '[' then
     local arrayIndex = 0
     Surround('[', ']', false, function()
-      List(false, true, function()
+      List(function()
         local nameLine, name = currentTokenLine, Name()
         arrayIndex = arrayIndex + 1
 
@@ -242,11 +234,11 @@ local function Destructure()
           insert(compileLines, Expr())
           insert(compileLines, 'end')
         end
-      end)
+      end, ']')
     end)
   else
     Surround('{', '}', false, function()
-      List(false, true, function()
+      List(function()
         local keyLine, key = currentTokenLine, Name()
         local name = branch(':') and Name() or key
 
@@ -258,7 +250,7 @@ local function Destructure()
           insert(compileLines, Expr())
           insert(compileLines, 'end')
         end
-      end)
+      end, '}')
     end)
   end
 
@@ -275,28 +267,28 @@ local function Params()
   local names = {}
 
   Parens(false, false, function()
-    List(true, true, function()
-      local varLine, var = currentTokenLine, Var()
+    if currentToken ~= ')' and currentToken ~= '...' then
+      List(function()
+        local var = Var()
+        local name = type(var) == 'string' and var or var.name
+        insert(names, name)
 
-      local name = type(var) == 'string' and var or var.name
-      insert(names, name)
+        if branch('=') then
+          insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+          insert(compileLines, Expr())
+          insert(compileLines, 'end')
+        end
 
-      if branch('=') then
-        insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-        insert(compileLines, Expr())
-        insert(compileLines, 'end')
-      end
-
-      if type(var) == 'table' then
-        insert(compileLines, var.compileLines)
-      end
-    end)
+        if type(var) == 'table' then
+          insert(compileLines, var.compileLines)
+        end
+      end, ')', '...')
+    end
 
     if branch('...') then
       insert(names, '...')
-      local varargsNameOk, varargsName = Try(Name)
-      if varargsNameOk then
-        insert(compileLines, 'local ' .. varargsName .. ' = { ... }')
+      if currentToken ~= ')' then
+        insert(compileLines, 'local ' .. Name() .. ' = { ... }')
       end
     end
   end)
@@ -378,7 +370,7 @@ local function ArrowFunction()
       insert(compileLines, exprResult)
     else
       insert(compileLines, Parens(true, false, function()
-        return weave(List(false, true, Expr), ',')
+        return weave(List(Expr, ')'), ',')
       end))
     end
   else
@@ -433,7 +425,7 @@ local function IndexChain(allowArbitraryExpr)
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
       insert(compileLines, Parens(false, false, function()
-        return weave(List(true, true, Expr), ',')
+        return currentToken == ')' and {} or weave(List(Expr, ')'), ',')
       end))
 
       insert(compileLines, ')')
@@ -491,23 +483,25 @@ local function InterpolationString(startQuote, endQuote)
 end
 
 local function Table()
-  local compileLines = {}
-
   return Surround('{', '}', true, function()
-    List(true, true, function()
-      if currentToken == '[' then
-        insert(compileLines, '[')
-        insert(compileLines, Surround('[', ']', false, Expr))
-        insert(compileLines, ']')
-        insert(compileLines, expect('='))
-      elseif lookAhead(1) == '=' then
-        insert(compileLines, Name())
-        insert(compileLines, consume()) -- '='
-      end
+    local compileLines = {}
 
-      insert(compileLines, Expr())
-      insert(compileLines, ',')
-    end)
+    if currentToken ~= '}' then
+      List(function()
+        if currentToken == '[' then
+          insert(compileLines, '[')
+          insert(compileLines, Surround('[', ']', false, Expr))
+          insert(compileLines, ']')
+          insert(compileLines, expect('='))
+        elseif lookAhead(1) == '=' then
+          insert(compileLines, Name())
+          insert(compileLines, consume()) -- '='
+        end
+
+        insert(compileLines, Expr())
+        insert(compileLines, ',')
+      end, '}')
+    end
 
     return compileLines
   end)
@@ -641,12 +635,12 @@ local function Assignment(firstId)
 
     if not indexChainOk then
       if currentToken == nil then
-        throw('unexpected eof', true)
+        throw('unexpected eof')
       else
-        throw(("unexpected token '%s'"):format(currentToken), true)
+        throw(("unexpected token '%s'"):format(currentToken))
       end
     elseif indexChain[#indexChain] == ')' then
-      throw('cannot assign value to function call', true)
+      throw('cannot assign value to function call')
     end
 
     insert(idList, indexChain)
@@ -659,7 +653,7 @@ local function Assignment(firstId)
   end
 
   expect('=')
-  local exprList = List(false, false, Expr)
+  local exprList = List(Expr)
 
   if not opToken then
     insert(compileLines, weave(idList, ','))
@@ -706,7 +700,7 @@ local function Declaration(scope)
     insert(compileLines, 'local')
   end
 
-  for i, var in ipairs(List(false, false, Var)) do
+  for i, var in ipairs(List(Var)) do
     if type(var) == 'string' then
       insert(names, var)
     else
@@ -725,7 +719,7 @@ local function Declaration(scope)
 
   if currentToken == '=' then
     insert(compileLines, consume())
-    insert(compileLines, weave(List(false, false, Expr), ','))
+    insert(compileLines, weave(List(Expr), ','))
   end
 
   insert(compileLines, destructureCompileLines)
@@ -742,7 +736,7 @@ local function ForLoop()
     insert(compileLines, currentTokenLine)
     insert(compileLines, consume())
 
-    local exprList = List(false, false, Expr)
+    local exprList = List(Expr)
     local exprListLen = #exprList
 
     if exprListLen < 2 then
@@ -755,7 +749,7 @@ local function ForLoop()
   else
     local names = {}
 
-    for i, var in ipairs(List(false, false, Var)) do
+    for i, var in ipairs(List(Var)) do
       if type(var) == 'string' then
         insert(names, var)
       else
@@ -770,7 +764,7 @@ local function ForLoop()
     -- Generic for parses an expression list!
     -- see https://www.lua.org/pil/7.2.html
     -- TODO: only allow max 3 expressions? Job for linter?
-    insert(compileLines, weave(List(false, false, Expr), ','))
+    insert(compileLines, weave(List(Expr), ','))
   end
 
   insert(compileLines, 'do')
@@ -860,11 +854,11 @@ local function Return()
       insert(compileLines, exprResult)
     else
       insert(compileLines, Parens(true, false, function()
-        return weave(List(false, true, Expr), ',')
+        return weave(List(Expr, ')'), ',')
       end))
     end
   elseif currentToken and currentToken ~= '}' then
-    insert(compileLines, weave(List(false, false, Expr), ','))
+    insert(compileLines, weave(List(Expr), ','))
   end
 
   if blockDepth == 1 and currentToken then
