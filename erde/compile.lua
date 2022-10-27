@@ -99,6 +99,7 @@ local function newTmpName()
 end
 
 local function weave(t, separator)
+  separator = separator or ','
   local woven = {}
   local tLen = #t
 
@@ -357,7 +358,7 @@ local function ArrowFunction()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, weave(SurroundList('(', ')', Expr), ','))
+      insert(compileLines, weave(SurroundList('(', ')', Expr)))
     end
   else
     insert(compileLines, 'return')
@@ -413,7 +414,7 @@ local function IndexChain(allowArbitraryExpr)
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
       local args = SurroundList('(', ')', Expr, true)
-      if args then insert(compileLines, weave(args, ',')) end
+      if args then insert(compileLines, weave(args)) end
 
       insert(compileLines, ')')
     else
@@ -634,9 +635,9 @@ local function Assignment(firstId)
   local exprList = List(Expr)
 
   if not opToken then
-    insert(compileLines, weave(idList, ','))
+    insert(compileLines, weave(idList))
     insert(compileLines, '=')
-    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, weave(exprList))
   elseif #idList == 1 then
     -- Optimize most common use case
     insert(compileLines, firstId)
@@ -658,7 +659,7 @@ local function Assignment(firstId)
     insert(compileLines, 'local')
     insert(compileLines, concat(assignmentNames, ','))
     insert(compileLines, '=')
-    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, weave(exprList))
     insert(compileLines, assignmentCompileLines)
   end
 
@@ -693,11 +694,11 @@ local function Declaration(scope)
     end
   end
 
-  insert(compileLines, weave(names, ','))
+  insert(compileLines, weave(names))
 
   if currentToken == '=' then
     insert(compileLines, consume())
-    insert(compileLines, weave(List(Expr), ','))
+    insert(compileLines, weave(List(Expr)))
   end
 
   insert(compileLines, destructureCompileLines)
@@ -723,7 +724,7 @@ local function ForLoop()
       throw('too many loop parameters', true)
     end
 
-    insert(compileLines, weave(exprList, ','))
+    insert(compileLines, weave(exprList))
   else
     local names = {}
 
@@ -736,13 +737,13 @@ local function ForLoop()
       end
     end
 
-    insert(compileLines, weave(names, ','))
+    insert(compileLines, weave(names))
     insert(compileLines, expect('in'))
 
     -- Generic for parses an expression list!
     -- see https://www.lua.org/pil/7.2.html
     -- TODO: only allow max 3 expressions? Job for linter?
-    insert(compileLines, weave(List(Expr), ','))
+    insert(compileLines, weave(List(Expr)))
   end
 
   insert(compileLines, 'do')
@@ -831,10 +832,10 @@ local function Return()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, weave(SurroundList('(', ')', Expr), ','))
+      insert(compileLines, weave(SurroundList('(', ')', Expr)))
     end
   elseif currentToken and currentToken ~= '}' then
-    insert(compileLines, weave(List(Expr), ','))
+    insert(compileLines, weave(List(Expr)))
   end
 
   if blockDepth == 1 and currentToken then
