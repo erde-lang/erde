@@ -175,6 +175,14 @@ local function Surround(openChar, closeChar, callback)
   return result
 end
 
+local function SurroundList(openChar, closeChar, callback, allowEmpty)
+  return Surround(openChar, closeChar, function()
+    if not allowEmpty or currentToken ~= closeChar then
+      return List(callback, closeChar)
+    end
+  end)
+end
+
 -- -----------------------------------------------------------------------------
 -- Partials
 -- -----------------------------------------------------------------------------
@@ -205,36 +213,32 @@ local function Destructure()
 
   if currentToken == '[' then
     local arrayIndex = 0
-    Surround('[', ']', function()
-      List(function()
-        local nameLine, name = currentTokenLine, Name()
-        arrayIndex = arrayIndex + 1
+    SurroundList('[', ']', function()
+      local nameLine, name = currentTokenLine, Name()
+      arrayIndex = arrayIndex + 1
 
-        insert(compileLines, nameLine)
-        insert(compileLines, ('local %s = %s[%s]'):format(name, varName, arrayIndex))
+      insert(compileLines, nameLine)
+      insert(compileLines, ('local %s = %s[%s]'):format(name, varName, arrayIndex))
 
-        if branch('=') then
-          insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-          insert(compileLines, Expr())
-          insert(compileLines, 'end')
-        end
-      end, ']')
+      if branch('=') then
+        insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+        insert(compileLines, Expr())
+        insert(compileLines, 'end')
+      end
     end)
   else
-    Surround('{', '}', function()
-      List(function()
-        local keyLine, key = currentTokenLine, Name()
-        local name = branch(':') and Name() or key
+    SurroundList('{', '}', function()
+      local keyLine, key = currentTokenLine, Name()
+      local name = branch(':') and Name() or key
 
-        insert(compileLines, keyLine)
-        insert(compileLines, ('local %s = %s.%s'):format(name, varName, key))
+      insert(compileLines, keyLine)
+      insert(compileLines, ('local %s = %s.%s'):format(name, varName, key))
 
-        if branch('=') then
-          insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-          insert(compileLines, Expr())
-          insert(compileLines, 'end')
-        end
-      end, '}')
+      if branch('=') then
+        insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+        insert(compileLines, Expr())
+        insert(compileLines, 'end')
+      end
     end)
   end
 
@@ -250,36 +254,32 @@ local function Params()
   local compileLines = {}
   local names = {}
 
-  Surround('(', ')', function()
-    if currentToken ~= ')' then
-      List(function()
-        if branch('...') then
-          insert(names, '...')
+  SurroundList('(', ')', function()
+    if branch('...') then
+      insert(names, '...')
 
-          if currentToken ~= ')' then
-            insert(compileLines, 'local ' .. Name() .. ' = { ... }')
-          end
+      if currentToken ~= ')' then
+        insert(compileLines, 'local ' .. Name() .. ' = { ... }')
+      end
 
-          branch(',')
-          expect(')', true)
-        else
-          local var = Var()
-          local name = type(var) == 'string' and var or var.name
-          insert(names, name)
+      branch(',')
+      expect(')', true)
+    else
+      local var = Var()
+      local name = type(var) == 'string' and var or var.name
+      insert(names, name)
 
-          if branch('=') then
-            insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-            insert(compileLines, Expr())
-            insert(compileLines, 'end')
-          end
+      if branch('=') then
+        insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+        insert(compileLines, Expr())
+        insert(compileLines, 'end')
+      end
 
-          if type(var) == 'table' then
-            insert(compileLines, var.compileLines)
-          end
-        end
-      end, ')')
+      if type(var) == 'table' then
+        insert(compileLines, var.compileLines)
+      end
     end
-  end)
+  end, true)
 
   return { names = names, compileLines = compileLines }
 end
@@ -357,9 +357,7 @@ local function ArrowFunction()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Surround('(', ')', function()
-        return weave(List(Expr, ')'), ',')
-      end))
+      insert(compileLines, weave(SurroundList('(', ')', Expr), ','))
     end
   else
     insert(compileLines, 'return')
@@ -414,9 +412,8 @@ local function IndexChain(allowArbitraryExpr)
       precedingCompileLines[precedingCompileLinesLen] = 
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
-      insert(compileLines, Surround('(', ')', function()
-        return currentToken == ')' and {} or weave(List(Expr, ')'), ',')
-      end))
+      local args = SurroundList('(', ')', Expr, true)
+      if args then insert(compileLines, weave(args, ',')) end
 
       insert(compileLines, ')')
     else
@@ -468,28 +465,24 @@ local function InterpolationString(startQuote, endQuote)
 end
 
 local function Table()
-  return Surround('{', '}', function()
-    local compileLines = {}
+  local compileLines = {}
 
-    if currentToken ~= '}' then
-      List(function()
-        if currentToken == '[' then
-          insert(compileLines, '[')
-          insert(compileLines, Surround('[', ']', Expr))
-          insert(compileLines, ']')
-          insert(compileLines, expect('='))
-        elseif lookAhead(1) == '=' then
-          insert(compileLines, Name())
-          insert(compileLines, consume()) -- '='
-        end
-
-        insert(compileLines, Expr())
-        insert(compileLines, ',')
-      end, '}')
+  SurroundList('{', '}', function()
+    if currentToken == '[' then
+      insert(compileLines, '[')
+      insert(compileLines, Surround('[', ']', Expr))
+      insert(compileLines, ']')
+      insert(compileLines, expect('='))
+    elseif lookAhead(1) == '=' then
+      insert(compileLines, Name())
+      insert(compileLines, consume()) -- '='
     end
 
-    return { '{', compileLines, '}' }
-  end)
+    insert(compileLines, Expr())
+    insert(compileLines, ',')
+  end, true)
+
+  return { '{', compileLines, '}' }
 end
 
 local function Terminal()
@@ -838,9 +831,7 @@ local function Return()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Surround('(', ')', function()
-        return weave(List(Expr, ')'), ',')
-      end))
+      insert(compileLines, weave(SurroundList('(', ')', Expr), ','))
     end
   elseif currentToken and currentToken ~= '}' then
     insert(compileLines, weave(List(Expr), ','))
