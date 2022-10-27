@@ -157,18 +157,13 @@ local function Try(callback)
   return ok, result
 end
 
-local function List(callback, ...)
+local function List(callback, breakToken)
   local list = {}
-  local breakTokens = {}
-
-  for i, breakToken in ipairs({ ... }) do
-    breakTokens[breakToken] = true
-  end
 
   repeat
     local item = callback()
     if item then table.insert(list, item) end
-  until not branch(',') or breakTokens[currentToken]
+  until not branch(',') or (breakToken and currentToken == breakToken)
 
   return list
 end
@@ -256,29 +251,33 @@ local function Params()
   local names = {}
 
   Surround('(', ')', function()
-    if currentToken ~= ')' and currentToken ~= '...' then
+    if currentToken ~= ')' then
       List(function()
-        local var = Var()
-        local name = type(var) == 'string' and var or var.name
-        insert(names, name)
+        if branch('...') then
+          insert(names, '...')
 
-        if branch('=') then
-          insert(compileLines, ('if %s == nil then %s = '):format(name, name))
-          insert(compileLines, Expr())
-          insert(compileLines, 'end')
+          if currentToken ~= ')' then
+            insert(compileLines, 'local ' .. Name() .. ' = { ... }')
+          end
+
+          branch(',')
+          expect(')', true)
+        else
+          local var = Var()
+          local name = type(var) == 'string' and var or var.name
+          insert(names, name)
+
+          if branch('=') then
+            insert(compileLines, ('if %s == nil then %s = '):format(name, name))
+            insert(compileLines, Expr())
+            insert(compileLines, 'end')
+          end
+
+          if type(var) == 'table' then
+            insert(compileLines, var.compileLines)
+          end
         end
-
-        if type(var) == 'table' then
-          insert(compileLines, var.compileLines)
-        end
-      end, ')', '...')
-    end
-
-    if branch('...') then
-      insert(names, '...')
-      if currentToken ~= ')' then
-        insert(compileLines, 'local ' .. Name() .. ' = { ... }')
-      end
+      end, ')')
     end
   end)
 
