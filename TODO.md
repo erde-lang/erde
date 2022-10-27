@@ -2,8 +2,7 @@
 
 # 0.3-2
 
-- remove Parens + Try macros
-- allow Surround to include list
+- remove Try macro
 - add ReturnList partial
 - refactor repl
 - remove need for backslash in repl. Instead, continue user input if error is EOL error

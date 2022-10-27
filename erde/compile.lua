@@ -173,11 +173,11 @@ local function List(callback, ...)
   return list
 end
 
-local function Surround(openChar, closeChar, include, callback)
+local function Surround(openChar, closeChar, callback)
   expect(openChar)
   local result = callback()
   expect(closeChar)
-  return include and { openChar, result, closeChar } or result
+  return result
 end
 
 -- -----------------------------------------------------------------------------
@@ -210,7 +210,7 @@ local function Destructure()
 
   if currentToken == '[' then
     local arrayIndex = 0
-    Surround('[', ']', false, function()
+    Surround('[', ']', function()
       List(function()
         local nameLine, name = currentTokenLine, Name()
         arrayIndex = arrayIndex + 1
@@ -226,7 +226,7 @@ local function Destructure()
       end, ']')
     end)
   else
-    Surround('{', '}', false, function()
+    Surround('{', '}', function()
       List(function()
         local keyLine, key = currentTokenLine, Name()
         local name = branch(':') and Name() or key
@@ -255,7 +255,7 @@ local function Params()
   local compileLines = {}
   local names = {}
 
-  Surround('(', ')', false, function()
+  Surround('(', ')', function()
     if currentToken ~= ')' and currentToken ~= '...' then
       List(function()
         local var = Var()
@@ -292,7 +292,7 @@ local function FunctionBlock()
   isModuleReturnBlock = false
   breakName = nil
 
-  local compileLines = Surround('{', '}', false, Block)
+  local compileLines = Surround('{', '}', Block)
 
   isModuleReturnBlock = oldIsModuleReturnBlock
   breakName = oldBreakName
@@ -306,7 +306,7 @@ local function LoopBlock()
   breakName = newTmpName()
   hasContinue = false
 
-  local compileLines = Surround('{', '}', false, function()
+  local compileLines = Surround('{', '}', function()
     return Block(true)
   end)
 
@@ -358,7 +358,7 @@ local function ArrowFunction()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Surround('(', ')', false, function()
+      insert(compileLines, Surround('(', ')', function()
         return weave(List(Expr, ')'), ',')
       end))
     end
@@ -378,7 +378,9 @@ local function IndexChain(allowArbitraryExpr)
   local hasExprBase = currentToken == '('
 
   if hasExprBase then
-    insert(compileLines, Surround('(', ')', true, Expr))
+    insert(compileLines, '(')
+    insert(compileLines, Surround('(', ')', Expr))
+    insert(compileLines, ')')
   else
     insert(compileLines, currentTokenLine)
     insert(compileLines, Name())
@@ -391,7 +393,7 @@ local function IndexChain(allowArbitraryExpr)
     elseif currentToken == '[' then
       insert(compileLines, currentTokenLine)
       insert(compileLines, '[')
-      insert(compileLines, Surround('[', ']', false, Expr))
+      insert(compileLines, Surround('[', ']', Expr))
       insert(compileLines, ']')
     elseif branch(':') then
       insert(compileLines, currentTokenLine)
@@ -413,7 +415,7 @@ local function IndexChain(allowArbitraryExpr)
       precedingCompileLines[precedingCompileLinesLen] = 
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
-      insert(compileLines, Surround('(', ')', false, function()
+      insert(compileLines, Surround('(', ')', function()
         return currentToken == ')' and {} or weave(List(Expr, ')'), ',')
       end))
 
@@ -450,12 +452,7 @@ local function InterpolationString(startQuote, endQuote)
         insert(compileLines, content .. endQuote)
       end
 
-      insert(compileLines, {
-        'tostring(',
-        Surround('{', '}', false, Expr),
-        ')',
-      })
-
+      insert(compileLines, { 'tostring(', Surround('{', '}', Expr), ')' })
       contentLine, content = currentTokenLine, startQuote
     else
       content = content .. consume()
@@ -472,14 +469,14 @@ local function InterpolationString(startQuote, endQuote)
 end
 
 local function Table()
-  return Surround('{', '}', true, function()
+  return Surround('{', '}', function()
     local compileLines = {}
 
     if currentToken ~= '}' then
       List(function()
         if currentToken == '[' then
           insert(compileLines, '[')
-          insert(compileLines, Surround('[', ']', false, Expr))
+          insert(compileLines, Surround('[', ']', Expr))
           insert(compileLines, ']')
           insert(compileLines, expect('='))
         elseif lookAhead(1) == '=' then
@@ -492,7 +489,7 @@ local function Table()
       end, '}')
     end
 
-    return compileLines
+    return { '{', compileLines, '}' }
   end)
 end
 
@@ -812,18 +809,18 @@ local function IfElse()
   insert(compileLines, consume())
   insert(compileLines, Expr())
   insert(compileLines, 'then')
-  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, Surround('{', '}', Block))
 
   while currentToken == 'elseif' do
     insert(compileLines, consume())
     insert(compileLines, Expr())
     insert(compileLines, 'then')
-    insert(compileLines, Surround('{', '}', false, Block))
+    insert(compileLines, Surround('{', '}', Block))
   end
 
   if currentToken == 'else' then
     insert(compileLines, consume())
-    insert(compileLines, Surround('{', '}', false, Block))
+    insert(compileLines, Surround('{', '}', Block))
   end
 
   insert(compileLines, 'end')
@@ -842,7 +839,7 @@ local function Return()
     if exprOk then
       insert(compileLines, exprResult)
     else
-      insert(compileLines, Surround('(', ')', false, function()
+      insert(compileLines, Surround('(', ')', function()
         return weave(List(Expr, ')'), ',')
       end))
     end
@@ -866,7 +863,7 @@ local function TryCatch()
 
   consume() -- 'try'
   insert(compileLines, ('local %s, %s = pcall(function()'):format(okName, errorName))
-  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, Surround('{', '}', Block))
   insert(compileLines, 'end) if ' .. okName .. ' == false then')
 
   expect('catch')
@@ -881,7 +878,7 @@ local function TryCatch()
     end
   end
 
-  insert(compileLines, Surround('{', '}', false, Block))
+  insert(compileLines, Surround('{', '}', Block))
   insert(compileLines, 'end')
   return compileLines
 end
@@ -927,7 +924,7 @@ function Block(isLoopBlock)
       insert(compileLines, consume() .. Name() .. expect('::'))
     elseif currentToken == 'do' then
       insert(compileLines, consume())
-      insert(compileLines, Surround('{', '}', false, Block))
+      insert(compileLines, Surround('{', '}', Block))
       insert(compileLines, 'end')
     elseif currentToken == 'if' then
       insert(compileLines, IfElse())
