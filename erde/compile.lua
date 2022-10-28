@@ -67,6 +67,30 @@ local function lookAhead(n)
   return tokens[currentTokenIndex + n]
 end
 
+local function lookPastSurround()
+  local surroundStart = currentToken
+  local surroundEnd = C.SURROUND_ENDS[surroundStart]
+  local surroundDepth = 1
+
+  local lookAheadTokenIndex = currentTokenIndex + 1
+  local lookAheadToken = tokens[lookAheadTokenIndex]
+
+  while surroundDepth > 0 do
+    if lookAheadToken == nil then
+      throw('unexpected eof', true)
+    elseif lookAheadToken == surroundStart then
+      surroundDepth = surroundDepth + 1
+    elseif lookAheadToken == surroundEnd then
+      surroundDepth = surroundDepth - 1
+    end
+
+    lookAheadTokenIndex = lookAheadTokenIndex + 1
+    lookAheadToken = tokens[lookAheadTokenIndex]
+  end
+
+  return lookAheadToken
+end
+
 local function throw(message, bypassTry, tokenIndexOffset)
   utils.erdeError({
     message = message,
@@ -511,38 +535,13 @@ local function Terminal()
 
   local nextToken = lookAhead(1)
   local isArrowFunction = nextToken == '->' or nextToken == '=>'
-  local surroundEnd = currentToken == '(' and ')'
-    or currentToken == '[' and ']'
-    or currentToken == '{' and '}'
-    or nil
 
   -- First do a quick check for isArrowFunction (in case of implicit params),
   -- otherwise if surroundEnd is truthy (possible params), need to check the 
   -- next token after. This is _much_ faster than backtracking.
-  if not isArrowFunction and surroundEnd then
-    local surroundStart = currentToken
-    local surroundDepth = 0
-
-    local tokenIndex = currentTokenIndex + 1
-    local token = tokens[tokenIndex]
-
-    while token ~= surroundEnd or surroundDepth > 0 do
-      if token == nil then
-        throw('unexpected eof', true)
-      elseif token == surroundStart then
-        surroundDepth = surroundDepth + 1
-      elseif token == surroundEnd then
-        surroundDepth = surroundDepth - 1
-      end
-
-      tokenIndex = tokenIndex + 1
-      token = tokens[tokenIndex]
-    end
-
-    -- Check one past surrounds for arrow
-    tokenIndex = tokenIndex + 1
-    token = tokens[tokenIndex]
-    isArrowFunction = token == '->' or token == '=>'
+  if not isArrowFunction and C.SURROUND_ENDS[currentToken] then
+    local pastSurroundToken = lookPastSurround()
+    isArrowFunction = pastSurroundToken == '->' or pastSurroundToken == '=>'
   end
 
   if isArrowFunction then
@@ -610,15 +609,9 @@ local function Assignment(firstId)
   local idList = { firstId }
 
   while branch(',') do
-    local indexChainOk, indexChain = Try(IndexChain)
+    local indexChain = IndexChain()
 
-    if not indexChainOk then
-      if currentToken == nil then
-        throw('unexpected eof')
-      else
-        throw(("unexpected token '%s'"):format(currentToken))
-      end
-    elseif indexChain[#indexChain] == ')' then
+    if indexChain[#indexChain] == ')' then
       throw('cannot assign value to function call')
     end
 
@@ -858,9 +851,9 @@ local function TryCatch()
   insert(compileLines, 'end) if ' .. okName .. ' == false then')
 
   expect('catch')
-  local errorVarOk, errorVar = Try(Var)
 
-  if errorVarOk then
+  if currentToken ~= '{' or lookPastSurround() == '{' then
+    local errorVar = Var()
     if type(errorVar) == 'string' then
       insert(compileLines, ('local %s = %s'):format(errorVar, errorName))
     else
