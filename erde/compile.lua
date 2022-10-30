@@ -63,12 +63,34 @@ local function branch(token)
   end
 end
 
+local function throw(message, tokenIndexOffset)
+  utils.erdeError({
+    message = message,
+    line = tokenIndexOffset
+      and tokenLines[currentTokenIndex + tokenIndexOffset]
+      or currentTokenLine,
+  })
+end
+
+local function ensure(isValid, message)
+  if not isValid then
+    throw(message)
+  end
+end
+
+local function expect(token, preventConsume)
+  ensure(currentToken ~= nil, 'unexpected eof')
+  ensure(token == currentToken, ("expected '%s' got '%s'"):format(token, currentToken))
+  if not preventConsume then return consume() end
+end
+
 local function lookAhead(n)
   return tokens[currentTokenIndex + n]
 end
 
-local function lookPastSurround()
-  local surroundStart = currentToken
+local function lookPastSurround(tokenStartIndex)
+  tokenStartIndex = tokenStartIndex or currentTokenIndex
+  local surroundStart = tokens[tokenStartIndex]
   local surroundEnd = C.SURROUND_ENDS[surroundStart]
   local surroundDepth = 1
 
@@ -77,7 +99,7 @@ local function lookPastSurround()
 
   while surroundDepth > 0 do
     if lookAheadToken == nil then
-      throw('unexpected eof', true)
+      throw('unexpected eof')
     elseif lookAheadToken == surroundStart then
       surroundDepth = surroundDepth + 1
     elseif lookAheadToken == surroundEnd then
@@ -88,29 +110,7 @@ local function lookPastSurround()
     lookAheadToken = tokens[lookAheadTokenIndex]
   end
 
-  return lookAheadToken
-end
-
-local function throw(message, bypassTry, tokenIndexOffset)
-  utils.erdeError({
-    message = message,
-    bypassTry = bypassTry,
-    line = tokenIndexOffset
-      and tokenLines[currentTokenIndex + tokenIndexOffset]
-      or currentTokenLine,
-  })
-end
-
-local function ensure(isValid, message, bypassTry)
-  if not isValid then
-    throw(message, bypassTry)
-  end
-end
-
-local function expect(token, preventConsume)
-  ensure(currentToken ~= nil, 'unexpected eof')
-  ensure(token == currentToken, ("expected '%s' got '%s'"):format(token, currentToken))
-  if not preventConsume then return consume() end
+  return lookAheadToken, lookAheadTokenIndex
 end
 
 -- -----------------------------------------------------------------------------
@@ -164,23 +164,6 @@ end
 -- -----------------------------------------------------------------------------
 -- Macros
 -- -----------------------------------------------------------------------------
-
-local function Try(callback)
-  local currentTokenIndexBackup = currentTokenIndex
-  local ok, result = pcall(callback)
-
-  if not ok then
-    currentTokenIndex = currentTokenIndexBackup
-    currentToken = tokens[currentTokenIndex]
-    currentTokenLine = tokenLines[currentTokenIndex]
-
-    if type(result) == 'table' and result.bypassTry then
-      error(result)
-    end
-  end
-
-  return ok, result
-end
 
 local function List(callback, breakToken)
   local list = {}
@@ -273,6 +256,35 @@ end
 local function Var()
   return (currentToken == '{' or currentToken == '[')
     and Destructure() or Name()
+end
+
+local function ReturnList(requireListParens)
+  local compileLines = {}
+  local surroundCounts = {}
+  
+  if currentToken == '(' then
+    local isList = false
+    local _, lookAheadTokenIndexLimit = lookPastSurround()
+
+    for lookAheadTokenIndex = currentTokenIndex + 1, lookAheadTokenIndexLimit do
+      local lookAheadToken = tokens[lookAheadTokenIndex]
+
+      if C.SURROUND_ENDS[lookAheadToken] then
+        _, lookAheadTokenIndex = lookPastSurround()
+      elseif lookAheadToken == ',' then
+        isList = true
+        break
+      end
+    end
+
+    insert(compileLines, isList and weave(SurroundList('(', ')', Expr)) or Expr())
+  elseif requireListParens then
+    insert(compileLines, Expr())
+  else
+    insert(compileLines, weave(List(Expr)))
+  end
+
+  return compileLines
 end
 
 local function Params()
@@ -376,17 +388,9 @@ local function ArrowFunction()
 
   if currentToken == '{' then
     insert(compileLines, FunctionBlock())
-  elseif currentToken == '(' then
-    insert(compileLines, 'return')
-    local exprOk, exprResult = Try(Expr)
-    if exprOk then
-      insert(compileLines, exprResult)
-    else
-      insert(compileLines, weave(SurroundList('(', ')', Expr)))
-    end
   else
     insert(compileLines, 'return')
-    insert(compileLines, Expr())
+    insert(compileLines, ReturnList(true))
   end
 
   insert(compileLines, 'end')
@@ -561,7 +565,7 @@ local function Unop()
   if unop.token == '~' then
     if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
       -- TODO: provide documentation link for explanation here
-      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
+      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET)
     end
 
     local bitOperation = ('require("%s").%s('):format(bitLib, 'bnot')
@@ -590,7 +594,7 @@ function Expr(minPrec)
 
     if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
       -- TODO: provide documentation link for explanation here
-      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
+      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET)
     end
 
     compileLines = compileBinop(binop.token, binopLine, compileLines, Expr(rhsMinPrec))
@@ -621,7 +625,7 @@ local function Assignment(firstId)
   local opLine, opToken = currentTokenLine, C.BINOP_ASSIGNMENT_TOKENS[currentToken] and consume()
   if C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
     -- TODO: provide documentation link for explanation here
-    throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET, true)
+    throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET)
   end
 
   expect('=')
@@ -665,7 +669,7 @@ local function Declaration(scope)
   local names = {}
 
   if blockDepth > 1 and scope == 'module' then
-    throw('module declarations must appear at the top level', true)
+    throw('module declarations must appear at the top level')
   end
   
   if scope ~= 'global' then
@@ -712,9 +716,9 @@ local function ForLoop()
     local exprListLen = #exprList
 
     if exprListLen < 2 then
-      throw('missing loop parameters', true)
+      throw('missing loop parameters')
     elseif exprListLen > 3 then
-      throw('too many loop parameters', true)
+      throw('too many loop parameters')
     end
 
     insert(compileLines, weave(exprList))
@@ -764,7 +768,7 @@ local function Function(scope)
 
   if isTableValue and scope ~= nil then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    throw('cannot use scopes for table values', true)
+    throw('cannot use scopes for table values')
   end
 
   if not isTableValue and scope ~= 'global' then
@@ -774,7 +778,7 @@ local function Function(scope)
 
   if scope == 'module' then
     if blockDepth > 1 then
-      throw('module declarations must appear at the top level', true)
+      throw('module declarations must appear at the top level')
     end
 
     insert(moduleNames, signature)
@@ -820,15 +824,8 @@ local function Return()
     hasModuleReturn = true
   end
 
-  if currentToken == '(' then
-    local exprOk, exprResult = Try(Expr)
-    if exprOk then
-      insert(compileLines, exprResult)
-    else
-      insert(compileLines, weave(SurroundList('(', ')', Expr)))
-    end
-  elseif currentToken and currentToken ~= '}' then
-    insert(compileLines, weave(List(Expr)))
+  if currentToken and currentToken ~= '}' then
+    insert(compileLines, ReturnList())
   end
 
   if blockDepth == 1 and currentToken then
@@ -892,7 +889,7 @@ function Block(isLoopBlock)
       end
     elseif currentToken == 'goto' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw("cannot use 'goto' when targeting 5.1 or 5.1+", true)
+        throw("cannot use 'goto' when targeting 5.1 or 5.1+")
       end
 
       insert(compileLines, currentTokenLine)
@@ -901,7 +898,7 @@ function Block(isLoopBlock)
       insert(compileLines, Name())
     elseif currentToken == '::' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw("cannot use 'goto' when targeting 5.1 or 5.1+", true)
+        throw("cannot use 'goto' when targeting 5.1 or 5.1+")
       end
 
       insert(compileLines, currentTokenLine)
