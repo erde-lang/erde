@@ -35,42 +35,37 @@ local function runRepl()
 
   while true do
     local runOk, runResult
-
     local source = readLine(PROMPT)
     if not source then break end
 
     repeat
       -- Try input as an expression first! This way we can still print the value
       -- in the case that the expression is also a valid block (i.e. function calls).
-      local runOk, runResult = pcall(function()
+      runOk, runResult = pcall(function()
         return lib.run('return ' .. source, 'stdin')
       end)
 
       if not runOk and runResult.type == 'compile' and not runResult.message:find('unexpected eof') then
         -- Try input as a block
-        local runOk, runResult = pcall(function()
+        runOk, runResult = pcall(function()
           return lib.run(source, 'stdin')
         end)
       end
-
-      if not runOk then
-        if runResult.type ~= 'compile' then
-          print(runResult.stacktrace or runResult.message)
-        elseif runResult.message:find('unexpected eof') then
-          repeat
-            local subSource = readLine(SUB_PROMPT)
-            source = source .. (subSource or '')
-          until subSource
-        else
-          print('invalid syntax')
-        end
+       
+      if not runOk and runResult.type == 'compile' and runResult.message:find('unexpected eof') then
+        repeat
+          local subSource = readLine(SUB_PROMPT)
+          source = source .. (subSource or '')
+        until subSource
       end
-    until runOk
+    until runOk or runResult.type ~= 'compile'
 
-    if runResult ~= nil then
+    if not runOk then
+      print(runResult.stacktrace or runResult.message)
+    elseif runResult ~= nil then
       print(runResult)
     end
-       
+
     if HAS_READLINE then
       RL.add_history(source)
     end

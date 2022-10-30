@@ -79,7 +79,7 @@ local function ensure(isValid, message)
 end
 
 local function expect(token, preventConsume)
-  ensure(currentToken ~= nil, 'unexpected eof')
+  ensure(currentToken ~= nil, ('unexpected eof (expected %s)'):format(token))
   ensure(token == currentToken, ("expected '%s' got '%s'"):format(token, currentToken))
   if not preventConsume then return consume() end
 end
@@ -99,7 +99,7 @@ local function lookPastSurround(tokenStartIndex)
 
   while surroundDepth > 0 do
     if lookAheadToken == nil then
-      throw('unexpected eof')
+      throw(("unexpected eof (missing ending '%s')"):format(surroundEnd))
     elseif lookAheadToken == surroundStart then
       surroundDepth = surroundDepth + 1
     elseif lookAheadToken == surroundEnd then
@@ -379,7 +379,7 @@ local function ArrowFunction()
     insert(paramNames, 1, 'self')
     consume()
   elseif currentToken == nil then
-    throw('unexpected eof')
+    throw("unexpected eof (expected '->' or '=>')")
   else
     throw(("unexpected token '%s'"):format(currentToken))
   end

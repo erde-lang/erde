@@ -2,8 +2,6 @@
 
 # 0.3-2
 
-- refactor repl
-- remove need for backslash in repl. Instead, continue user input if error is EOL error
 - fix line numbers for compile errors (need to backtrack!)
 
 # 0.3-3
