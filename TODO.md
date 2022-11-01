@@ -2,8 +2,6 @@
 
 # 0.3-2
 
-- fix line numbers for compile errors (need to backtrack!)
-
 # 0.3-3
 
 - support column errors lines (also in source maps!)

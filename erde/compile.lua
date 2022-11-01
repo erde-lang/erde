@@ -63,18 +63,12 @@ local function branch(token)
   end
 end
 
-local function throw(message, tokenIndexOffset)
-  utils.erdeError({
-    message = message,
-    line = tokenIndexOffset
-      and tokenLines[currentTokenIndex + tokenIndexOffset]
-      or currentTokenLine,
-  })
-end
-
 local function ensure(isValid, message)
   if not isValid then
-    throw(message)
+    utils.erdeError({
+      message = message,
+      line = currentTokenLine,
+    })
   end
 end
 
@@ -99,7 +93,15 @@ local function lookPastSurround(tokenStartIndex)
 
   while surroundDepth > 0 do
     if lookAheadToken == nil then
-      throw(("unexpected eof (missing ending '%s')"):format(surroundEnd))
+      utils.erdeError({
+        line = tokenLines[lookAheadTokenIndex - 1],
+        -- TODO: include [line, column] for surroundStart
+        message = ("unexpected eof, missing ending '%s' for '%s' at [%d]"):format(
+          surroundEnd,
+          surroundStart,
+          tokenLines[tokenStartIndex]
+        ),
+      })
     elseif lookAheadToken == surroundStart then
       surroundDepth = surroundDepth + 1
     elseif lookAheadToken == surroundEnd then
@@ -379,9 +381,15 @@ local function ArrowFunction()
     insert(paramNames, 1, 'self')
     consume()
   elseif currentToken == nil then
-    throw("unexpected eof (expected '->' or '=>')")
+    utils.erdeError({
+      line = tokenLines[currentTokenIndex - 1],
+      message = "unexpected eof (expected '->' or '=>')",
+    })
   else
-    throw(("unexpected token '%s'"):format(currentToken))
+    utils.erdeError({
+      line = currentTokenLine,
+      message = ("unexpected token '%s' (expected '->' or '=>')"):format(currentToken),
+    })
   end
 
   insert(compileLines, 1, 'function(' .. concat(paramNames, ',') .. ')')
@@ -564,8 +572,11 @@ local function Unop()
 
   if unop.token == '~' then
     if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
-      -- TODO: provide documentation link for explanation here
-      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET)
+      utils.erdeError({
+        line = unopLine,
+        -- TODO: provide documentation link for explanation here
+        message = 'cannot use bitwise operators when targeting ' .. C.LUA_TARGET,
+      })
     end
 
     local bitOperation = ('require("%s").%s('):format(bitLib, 'bnot')
@@ -593,8 +604,11 @@ function Expr(minPrec)
     end
 
     if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
-      -- TODO: provide documentation link for explanation here
-      throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET)
+      utils.erdeError({
+        line = binopLine,
+        -- TODO: provide documentation link for explanation here
+        message = 'cannot use bitwise operators when targeting ' .. C.LUA_TARGET,
+      })
     end
 
     compileLines = compileBinop(binop.token, binopLine, compileLines, Expr(rhsMinPrec))
@@ -613,10 +627,14 @@ local function Assignment(firstId)
   local idList = { firstId }
 
   while branch(',') do
+    local indexChainLine = currentTokenLine
     local indexChain = IndexChain()
 
     if indexChain[#indexChain] == ')' then
-      throw('cannot assign value to function call')
+      utils.erdeError({
+        line = indexChainLine,
+        message = 'cannot assign value to function call',
+      })
     end
 
     insert(idList, indexChain)
@@ -624,8 +642,11 @@ local function Assignment(firstId)
 
   local opLine, opToken = currentTokenLine, C.BINOP_ASSIGNMENT_TOKENS[currentToken] and consume()
   if C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
-    -- TODO: provide documentation link for explanation here
-    throw('cannot use bitwise operators when targeting ' .. C.LUA_TARGET)
+    utils.erdeError({
+      line = opLine,
+      -- TODO: provide documentation link for explanation here
+      message = 'cannot use bitwise operators when targeting ' .. C.LUA_TARGET,
+    })
   end
 
   expect('=')
@@ -669,7 +690,10 @@ local function Declaration(scope)
   local names = {}
 
   if blockDepth > 1 and scope == 'module' then
-    throw('module declarations must appear at the top level')
+    utils.erdeError({
+      line = tokenLines[currentTokenIndex - 1],
+      message = 'module declarations must appear at the top level',
+    })
   end
   
   if scope ~= 'global' then
@@ -712,13 +736,20 @@ local function ForLoop()
     insert(compileLines, currentTokenLine)
     insert(compileLines, consume())
 
+    local exprListLine = currentTokenLine
     local exprList = List(Expr)
     local exprListLen = #exprList
 
     if exprListLen < 2 then
-      throw('missing loop parameters')
+      utils.erdeError({
+        line = exprListLine,
+        message = 'missing loop parameters (must supply 2-3 params)',
+      })
     elseif exprListLen > 3 then
-      throw('too many loop parameters')
+      utils.erdeError({
+        line = exprListLine,
+        message = 'too many loop parameters (must supply 2-3 params)',
+      })
     end
 
     insert(compileLines, weave(exprList))
@@ -751,6 +782,7 @@ local function ForLoop()
 end
 
 local function Function(scope)
+  local scopeLine = tokenLines[math.max(1, currentTokenLine - 1)]
   local compileLines = { consume() }
   local signature = Name()
   local isTableValue = currentToken == '.'
@@ -768,7 +800,10 @@ local function Function(scope)
 
   if isTableValue and scope ~= nil then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    throw('cannot use scopes for table values')
+    utils.erdeError({
+      line = scopeLine,
+      message = 'cannot use scopes for table values',
+    })
   end
 
   if not isTableValue and scope ~= 'global' then
@@ -778,7 +813,10 @@ local function Function(scope)
 
   if scope == 'module' then
     if blockDepth > 1 then
-      throw('module declarations must appear at the top level')
+      utils.erdeError({
+        line = scopeLine,
+        message = 'module declarations must appear at the top level',
+      })
     end
 
     insert(moduleNames, signature)
@@ -822,6 +860,12 @@ local function Return()
 
   if isModuleReturnBlock then
     hasModuleReturn = true
+    if #moduleNames > 0 then
+      utils.erdeError({
+        line = tokenLines[currentTokenIndex - 1],
+        message = "cannot use 'module' declarations w/ 'return'"
+      })
+    end
   end
 
   if currentToken and currentToken ~= '}' then
@@ -829,9 +873,15 @@ local function Return()
   end
 
   if blockDepth == 1 and currentToken then
-    throw(("expected '<eof>', got '%s'"):format(currentToken))
+    utils.erdeError({
+      line = currentTokenLine,
+      message = ("expected '<eof>', got '%s'"):format(currentToken),
+    })
   elseif blockDepth > 1 and currentToken ~= '}' then
-    throw(("expected '}', got '%s'"):format(currentToken))
+    utils.erdeError({
+      line = currentTokenLine,
+      message = ("expected '}', got '%s'"):format(currentToken),
+    })
   end
 
   return compileLines
@@ -889,7 +939,10 @@ function Block(isLoopBlock)
       end
     elseif currentToken == 'goto' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw("cannot use 'goto' when targeting 5.1 or 5.1+")
+        utils.erdeError({
+          line = currentTokenLine,
+          message = "cannot use 'goto' when targeting 5.1 or 5.1+",
+        })
       end
 
       insert(compileLines, currentTokenLine)
@@ -898,7 +951,10 @@ function Block(isLoopBlock)
       insert(compileLines, Name())
     elseif currentToken == '::' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw("cannot use 'goto' when targeting 5.1 or 5.1+")
+        utils.erdeError({
+          line = currentTokenLine,
+          message = "cannot use 'goto' when targeting 5.1 or 5.1+",
+        })
       end
 
       insert(compileLines, currentTokenLine)
@@ -928,12 +984,14 @@ function Block(isLoopBlock)
       insert(compileLines, Return())
     elseif currentToken == 'function' then
       insert(compileLines, Function())
+    elseif currentToken == 'module' and hasModuleReturn then
+      utils.erdeError({
+        line = currentTokenLine,
+        message = "cannot use 'module' declarations w/ 'return'"
+      })
     elseif currentToken == 'local' or currentToken == 'global' or currentToken == 'module' then
       local scope = consume()
-      insert(
-        compileLines,
-        currentToken == 'function' and Function(scope) or Declaration(scope)
-      )
+      insert(compileLines, currentToken == 'function' and Function(scope) or Declaration(scope))
     else
       local indexChain = IndexChain()
       if indexChain[#indexChain] == ')' then
@@ -1000,23 +1058,21 @@ return function(text)
   end
 
   insert(compileLines, Block())
-
   if currentToken then
-    throw('failed to parse statement')
+    utils.erdeError({
+      line = currentTokenLine,
+      message = ("unexpected token '%s'"):format(currentToken)
+    })
   end
 
   if #moduleNames > 0 then
-    if hasModuleReturn then
-      throw("cannot use 'module' declarations w/ 'return'")
-    else
-      local moduleTableElements = {}
+    local moduleTableElements = {}
 
-      for i, moduleName in ipairs(moduleNames) do
-        insert(moduleTableElements, moduleName .. '=' .. moduleName)
-      end
-
-      insert(compileLines, ('return { %s }'):format(concat(moduleTableElements, ',')))
+    for i, moduleName in ipairs(moduleNames) do
+      insert(moduleTableElements, moduleName .. '=' .. moduleName)
     end
+
+    insert(compileLines, ('return { %s }'):format(concat(moduleTableElements, ',')))
   end
 
   -- Free resources (potentially large tables)

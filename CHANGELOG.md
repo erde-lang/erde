@@ -27,6 +27,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed `C.BITLIB` vs `C.BIT_LIB` inconsistencies
 - Fixed empty file compilation
 - Erde now substitutes variable names that are keywords in Lua but not in Erde (previously produced invalid Lua code)
+- Erde now reports error lines at the start of the error (previously reported _after_)
 
 ## [0.3-1] - August 26, 2022
 
