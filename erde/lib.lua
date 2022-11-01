@@ -5,7 +5,7 @@ local C = require('erde.constants')
 local compile = require('erde.compile')
 local utils = require('erde.utils')
 
-local load = loadstring or load
+local loadLua = loadstring or load
 local unpack = table.unpack or unpack
 
 -- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
@@ -219,7 +219,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
 
-  local sourceLoader, err = load(compiled, erdeSourceId)
+  local sourceLoader, err = loadLua(compiled, erdeSourceId)
 
   if err ~= nil then
     utils.erdeError({

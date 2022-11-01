@@ -58,7 +58,7 @@ local function runRepl()
           source = source .. (subSource or '')
         until subSource
       end
-    until runOk or runResult.type ~= 'compile'
+    until runOk or runResult.type ~= 'compile' or not runResult.message:find('unexpected eof')
 
     if not runOk then
       print(runResult.stacktrace or runResult.message)
