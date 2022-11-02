@@ -11,7 +11,8 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Added
 - Added __tostring metamethod for thrown table errors (especially useful for sandboxed, embedded lua such as neovim)
 - Added line numbers for errors when using `erde compile`
-- Added basic REPL support
+- Added REPL support
+- Throw error when `return` statement is not the last statement in a block
 
 ### Changed
 - `erde run` no longer uses a subcommand
@@ -20,7 +21,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ### Fixed
 - Fix assignment operator compiled operation
-- Throw error when `return` statement is not the last statement in a block
 - Fixed compilation error rewriting for asserts
 - Fixed compilation of exponentiation operator for pre Lua5.3
 - Fixed empty message when error does not have stacktrace

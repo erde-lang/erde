@@ -27,7 +27,6 @@ end
 
 local function runRepl()
   print(('Erde %s on %s -- Copyright (C) 2021-2022 bsuth'):format(C.VERSION, _VERSION))
-  print('Use trailing backslashes for multiline inputs.')
 
   if not HAS_READLINE then
     print('Install the `readline` Lua library to get support for arrow keys, keyboard shortcuts, history, etc.')
