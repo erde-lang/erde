@@ -195,6 +195,8 @@ describe('strings #5.1+', function()
     assert.eval(' hello\nworld', '[[ hello\nworld]]')
     assert.eval('a{bc}d', '[[a\\{bc}d]]')
     assert.eval('a[[b', '[=[a[[b]=]')
+    assert.eval('a', '[[\na]]')
+    assert.eval('3\na', '[[{1 + 2}\na]]')
   end)
 
   spec('interpolation', function()

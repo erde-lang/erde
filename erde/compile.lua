@@ -470,6 +470,7 @@ end
 local function InterpolationString(startQuote, endQuote)
   local compileLines = {}
   local contentLine, content = currentTokenLine, consume()
+  local isLongString = startQuote:sub(1, 1) == '['
 
   if currentToken == endQuote then
     -- Handle empty string case exceptionally so we can make assumptions at the
@@ -487,6 +488,14 @@ local function InterpolationString(startQuote, endQuote)
 
       insert(compileLines, { 'tostring(', Surround('{', '}', Expr), ')' })
       contentLine, content = currentTokenLine, startQuote
+
+      if isLongString and currentToken:sub(1, 1) == '\n' then
+        -- Lua ignores the first character in a long string when it is a
+        -- newline! We need to make sure we preserve any newline following
+        -- an interpolation by inserting a second newline in the compiled code.
+        -- @see http://www.lua.org/pil/2.4.html
+        content = content .. '\n' .. consume()
+      end
     else
       content = content .. consume()
     end
