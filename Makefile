@@ -8,7 +8,7 @@ LUA_TARGET_TAGS_5.3 := "5.3,$(LUA_TARGET_TAGS_5.3+)"
 LUA_TARGET_TAGS_5.4+ := "5.4%+,$(LUA_TARGET_TAGS_5.3+)"
 LUA_TARGET_TAGS_5.4 := "5.4,$(LUA_TARGET_TAGS_5.4+)"
 
-.PHONY: test
+.PHONY: test release
 
 define runtest
 	$(eval LUA_EXECUTABLE = $(1))
@@ -18,6 +18,9 @@ define runtest
   @LUA_TARGET="$(LUA_TARGET)" busted --lua="/usr/bin/$(LUA_EXECUTABLE)" --tags="$(LUA_TARGET_TAGS)"
   @echo
 endef
+
+usage:
+	@echo "available targets: test release"
 
 test:
 	@echo
@@ -37,3 +40,16 @@ test:
 	$(call runtest,lua5.4,5.2+)
 	$(call runtest,lua5.4,5.3+)
 	$(call runtest,lua5.4,5.4+)
+
+release:
+	@echo '- update version:'
+	@echo '    `mv erde-a.b-c.rockspec erde-x.y-z.rockspec`'
+	@echo '    `sed -iE "s/a.b-c/x.y-z/" erde/constants.lua erde-a.b-c.rockspec`'
+	@echo '- update changelog UNRELEASED => today'
+	@echo '- commit version update changes'
+	@echo '- create git tag:'
+	@echo '    `git tag -a x.y-z -m x.y-z`'
+	@echo '    `git push origin x.y-z`'
+	@echo '- create rock: `luarocks pack erde-x.y-z.rockspec`'
+	@echo '- upload rock: `luarocks upload erde-x.y-z.rockspec --api-key=<your API key>`'
+	@echo '- create github release'
