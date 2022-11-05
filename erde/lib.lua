@@ -247,7 +247,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
       -- Do not unnecessarily wrap an error we have already handled!
       return message
     else
-      message = rewrite(message, sourceMap, sourceAlias)
+      message = rewrite(message)
       return {
         type = 'run',
         message = message,
