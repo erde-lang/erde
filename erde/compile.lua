@@ -218,6 +218,7 @@ local function Name(allowKeywords)
 end
 
 local function Destructure()
+  local names = {}
   local compileLines = {}
   local compileName = newTmpName()
 
@@ -227,6 +228,7 @@ local function Destructure()
       local nameLine, name = currentTokenLine, Name()
       arrayIndex = arrayIndex + 1
 
+      insert(names, name)
       insert(compileLines, nameLine)
       insert(compileLines, ('local %s = %s[%s]'):format(name, compileName, arrayIndex))
 
@@ -241,6 +243,7 @@ local function Destructure()
       local keyLine, key = currentTokenLine, Name()
       local name = branch(':') and Name() or key
 
+      insert(names, name)
       insert(compileLines, keyLine)
       insert(compileLines, ('local %s = %s.%s'):format(name, compileName, key))
 
@@ -252,7 +255,11 @@ local function Destructure()
     end)
   end
 
-  return { compileName = compileName, compileLines = compileLines }
+  return {
+    names = names,
+    compileName = compileName,
+    compileLines = compileLines,
+  }
 end
 
 local function Var()
@@ -694,9 +701,10 @@ local function Assignment(firstId)
 end
 
 local function Declaration(scope)
+  local names = {}
+  local compileNames = {}
   local compileLines = {}
   local destructureCompileLines = {}
-  local names = {}
 
   if blockDepth > 1 and scope == 'module' then
     utils.erdeError({
@@ -709,12 +717,16 @@ local function Declaration(scope)
     insert(compileLines, 'local')
   end
 
-  for i, var in ipairs(List(Var)) do
+  for _, var in ipairs(List(Var)) do
     if type(var) == 'string' then
       insert(names, var)
+      insert(compileNames, var)
     else
-      insert(names, var.compileName)
+      insert(compileNames, var.compileName)
       insert(destructureCompileLines, var.compileLines)
+      for _, name in ipairs(var.names) do
+        insert(names, name)
+      end
     end
   end
 
@@ -724,7 +736,7 @@ local function Declaration(scope)
     end
   end
 
-  insert(compileLines, weave(names))
+  insert(compileLines, weave(compileNames))
 
   if currentToken == '=' then
     insert(compileLines, consume())

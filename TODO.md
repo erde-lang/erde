@@ -2,6 +2,7 @@
 
 # 0.3-3
 
+- allow specifying lua version in `erde` interpreter / repl
 - support column errors lines (also in source maps!)
 - Use `do` expression as IIFE syntactic sugar
 

@@ -361,6 +361,10 @@ describe('declaration #5.1+', function()
 
   spec('module', function()
     assert.run({ a = 1 }, 'module a = 1')
+    assert.run({ b = 1 }, [[
+      local a = { b = 1 }
+      module { b } = a
+    ]])
   end)
 
   spec('multiple', function()

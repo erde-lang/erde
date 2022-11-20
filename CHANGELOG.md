@@ -3,6 +3,11 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
+## [] - UNRELEASED
+
+### Fixed
+- Fixed `module` declarations with destructuring
+
 ## [0.3-2] - November 7, 2022
 
 ### Removed
