@@ -219,7 +219,7 @@ end
 
 local function Destructure()
   local compileLines = {}
-  local varName = newTmpName()
+  local compileName = newTmpName()
 
   if currentToken == '[' then
     local arrayIndex = 0
@@ -228,7 +228,7 @@ local function Destructure()
       arrayIndex = arrayIndex + 1
 
       insert(compileLines, nameLine)
-      insert(compileLines, ('local %s = %s[%s]'):format(name, varName, arrayIndex))
+      insert(compileLines, ('local %s = %s[%s]'):format(name, compileName, arrayIndex))
 
       if branch('=') then
         insert(compileLines, ('if %s == nil then %s = '):format(name, name))
@@ -242,7 +242,7 @@ local function Destructure()
       local name = branch(':') and Name() or key
 
       insert(compileLines, keyLine)
-      insert(compileLines, ('local %s = %s.%s'):format(name, varName, key))
+      insert(compileLines, ('local %s = %s.%s'):format(name, compileName, key))
 
       if branch('=') then
         insert(compileLines, ('if %s == nil then %s = '):format(name, name))
@@ -252,7 +252,7 @@ local function Destructure()
     end)
   end
 
-  return { name = varName, compileLines = compileLines }
+  return { compileName = compileName, compileLines = compileLines }
 end
 
 local function Var()
@@ -305,7 +305,7 @@ local function Params()
       expect(')', true)
     else
       local var = Var()
-      local name = type(var) == 'string' and var or var.name
+      local name = type(var) == 'string' and var or var.compileName
       insert(names, name)
 
       if branch('=') then
@@ -370,7 +370,7 @@ local function ArrowFunction()
     if type(var) == 'string' then
       insert(paramNames, var)
     else
-      insert(paramNames, var.name)
+      insert(paramNames, var.compileName)
       insert(compileLines, var.compileLines)
     end
   end
@@ -713,7 +713,7 @@ local function Declaration(scope)
     if type(var) == 'string' then
       insert(names, var)
     else
-      insert(names, var.name)
+      insert(names, var.compileName)
       insert(destructureCompileLines, var.compileLines)
     end
   end
@@ -769,7 +769,7 @@ local function ForLoop()
       if type(var) == 'string' then
         insert(names, var)
       else
-        insert(names, var.name)
+        insert(names, var.compileName)
         insert(preBodyCompileLines, var.compileLines)
       end
     end
@@ -913,7 +913,7 @@ local function TryCatch()
     if type(errorVar) == 'string' then
       insert(compileLines, ('local %s = %s'):format(errorVar, errorName))
     else
-      insert(compileLines, ('local %s = %s'):format(errorVar.name, errorName))
+      insert(compileLines, ('local %s = %s'):format(errorVar.compileName, errorName))
       insert(compileLines, errorVar.compileLines)
     end
   end
