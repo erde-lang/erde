@@ -22,8 +22,8 @@ Options:
                           Must be one of: %s
 
 Compile Options:
-   -o, --outDir <DIR>     Output directory for compiled files.
-   -b, --bitLib <LIB>     Library to use for compiled bit operations.
+   -o, --outdir <DIR>     Output directory for compiled files.
+   -b, --bitlib <LIB>     Library to use for compiled bit operations.
    -w, --watch            Watch files and recompile on change.
 
 Examples:
@@ -249,9 +249,9 @@ while cliInputsIndex <= #cliInputs do
         'Must be one of: ' .. table.concat(C.VALID_LUA_TARGETS, ', '),
       }, '\n'))
     end
-  elseif cliInput == '-o' or cliInput == '--outDir' then
+  elseif cliInput == '-o' or cliInput == '--outdir' then
     outDir = cliOption(cliInput)
-  elseif cliInput == '-b' or cliInput == '--bitLib' then
+  elseif cliInput == '-b' or cliInput == '--bitlib' then
     C.BITLIB = cliOption(cliInput)
   elseif cliInput:sub(1, 1) == '-' then
     terminate('Unrecognized option: ' .. cliInput)

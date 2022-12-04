@@ -2,8 +2,7 @@
 
 # 0.3-3
 
-- fix casing to be more "standard" w/ lua conventions
-- allow specifying lua version in `erde` interpreter / repl
+- supply `erde`, `erde5.1`, `erde5.2`, etc version scripts
 - support column errors lines (also in source maps!)
 - Use `do` expression as IIFE syntactic sugar
 

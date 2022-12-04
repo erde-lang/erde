@@ -5,6 +5,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ## [] - UNRELEASED
 
+### Changed
+- Cli options now use all lowercase (more standard)
+  - `--outDir` is now `--outdir`
+  - `--bitLib` is now `--bitlib`
+
 ### Fixed
 - Fixed `module` declarations with destructuring
 - Long strings no longer throw errors for unrecognized escape chars (same behavior as Lua)
