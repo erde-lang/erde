@@ -1,0 +1,3 @@
+#!/usr/bin/env luajit
+require('erde.constants').LUA_TARGET = 'jit'
+require('erde.cli')

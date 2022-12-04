@@ -28,6 +28,11 @@ build = {
   install = {
     bin = {
       ['erde'] = 'bin/erde',
+      ['erde5.1'] = 'bin/erde5.1',
+      ['erde5.2'] = 'bin/erde5.2',
+      ['erde5.3'] = 'bin/erde5.3',
+      ['erde5.4'] = 'bin/erde5.4',
+      ['erdejit'] = 'bin/erdejit',
     }
   },
 }

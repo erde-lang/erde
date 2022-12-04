@@ -14,6 +14,14 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed `module` declarations with destructuring
 - Long strings no longer throw errors for unrecognized escape chars (same behavior as Lua)
 
+### Added
+- Added versioned executables to allow specifying the underlying lua executable version. Each additionally sets `--target` appropriately.
+  - `erde5.1` - sets `--target 5.1` and uses `lua5.1` executable
+  - `erde5.2` - sets `--target 5.2` and uses `lua5.2` executable
+  - `erde5.3` - sets `--target 5.3` and uses `lua5.3` executable
+  - `erde5.4` - sets `--target 5.4` and uses `lua5.4` executable
+  - `erdejit` - sets `--target jit` and uses `luajit` executable
+
 ## [0.3-2] - November 7, 2022
 
 ### Removed

@@ -2,9 +2,9 @@
 
 # 0.3-3
 
-- supply `erde`, `erde5.1`, `erde5.2`, etc version scripts
+- allow args to be passed to interpreter script (like lua, replace `arg` global)
 - support column errors lines (also in source maps!)
-- Use `do` expression as IIFE syntactic sugar
+- Use `eval` expression as IIFE syntactic sugar
 
 # 1.0-1
 
