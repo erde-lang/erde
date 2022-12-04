@@ -7,6 +7,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 
 ### Fixed
 - Fixed `module` declarations with destructuring
+- Long strings no longer throw errors for unrecognized escape chars (same behavior as Lua)
 
 ## [0.3-2] - November 7, 2022
 

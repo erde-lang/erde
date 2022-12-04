@@ -98,7 +98,14 @@ describe('escape chars', function()
     assertTokens('"\\{"', { '"', '{', '"' })
     assertTokens('"\\123"', { '"', '\\123', '"' })
 
+    -- Erde does not allow for interpolation in single quote strings
     assert.has_error(function() tokenize("'\\{'") end)
+
+    -- Lua single / double quote strings will throw for unrecognized escape chars
+    assert.has_error(function() tokenize("'\\o'") end)
+
+    -- Lua allows backslashes in long strings to precede any character
+    assertTokens('[[\\o]]', { '[[', '\\o', ']]' })
   end)
 
   spec('#jit #5.2+', function()
