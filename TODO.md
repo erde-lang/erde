@@ -2,7 +2,6 @@
 
 # 0.3-3
 
-- allow args to be passed to interpreter script (like lua, replace `arg` global)
 - support column errors lines (also in source maps!)
 - Use `eval` expression as IIFE syntactic sugar
 

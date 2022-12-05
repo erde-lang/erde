@@ -21,6 +21,8 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - `erde5.3` - sets `--target 5.3` and uses `lua5.3` executable
   - `erde5.4` - sets `--target 5.4` and uses `lua5.4` executable
   - `erdejit` - sets `--target jit` and uses `luajit` executable
+- Any arguments following a script to be run are now accessible in the script via the `arg` global (same behavior as Lua)
+  - ex) `erde myscript.erde "myscript_arg1"`
 
 ## [0.3-2] - November 7, 2022
 

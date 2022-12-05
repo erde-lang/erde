@@ -51,6 +51,8 @@ local subCommand = nil
 local outDir = nil
 local watch = false
 local args = {}
+local script = nil
+local scriptIndex = nil
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -231,7 +233,11 @@ end
 while cliInputsIndex <= #cliInputs do
   local cliInput = cliInputs[cliInputsIndex]
 
-  if cliInput == '-h' or cliInput == '--help' then
+  if script then
+    -- Proxy all arguments after the script to the script itself
+    -- (same as Lua interpreter behavior)
+    table.insert(args, cliInput)
+  elseif cliInput == '-h' or cliInput == '--help' then
     terminate(HELP, 0)
   elseif cliInput == '-v' or cliInput == '--version' then
     terminate(C.VERSION, 0)
@@ -253,6 +259,9 @@ while cliInputsIndex <= #cliInputs do
     C.BITLIB = cliOption(cliInput)
   elseif cliInput:sub(1, 1) == '-' then
     terminate('Unrecognized option: ' .. cliInput)
+  elseif not subCommand and cliInput:match('%.erde$') then
+    script = cliInput 
+    scriptIndex = cliInputsIndex
   else
     table.insert(args, cliInput)
   end
@@ -289,11 +298,18 @@ elseif subCommand == 'clean' then
       print(filePath .. ' => DELETED')
     end
   end)
-elseif #args == 0 then
+elseif not script then
   repl()
-elseif not utils.fileExists(args[1]) then
-  terminate('File does not exist: ' .. args[1])
+elseif not utils.fileExists(script) then
+  terminate('File does not exist: ' .. script)
 else
+  arg = args
+  arg[-scriptIndex] = 'erde'
+
+  for i = scriptIndex, 1, -1 do
+    arg[i - scriptIndex] = cliInputs[i]
+  end
+
   lib.load()
-  runFile(args[1])
+  runFile(script)
 end
