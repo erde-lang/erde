@@ -88,7 +88,7 @@ local function lookPastSurround(tokenStartIndex)
   local surroundEnd = C.SURROUND_ENDS[surroundStart]
   local surroundDepth = 1
 
-  local lookAheadTokenIndex = currentTokenIndex + 1
+  local lookAheadTokenIndex = tokenStartIndex + 1
   local lookAheadToken = tokens[lookAheadTokenIndex]
 
   while surroundDepth > 0 do
@@ -270,27 +270,32 @@ end
 local function ReturnList(requireListParens)
   local compileLines = {}
   local surroundCounts = {}
-  
-  if currentToken == '(' then
-    local isList = false
-    local _, lookAheadTokenIndexLimit = lookPastSurround()
 
-    for lookAheadTokenIndex = currentTokenIndex + 1, lookAheadTokenIndexLimit do
-      local lookAheadToken = tokens[lookAheadTokenIndex]
-
-      if C.SURROUND_ENDS[lookAheadToken] then
-        _, lookAheadTokenIndex = lookPastSurround()
-      elseif lookAheadToken == ',' then
-        isList = true
-        break
-      end
-    end
-
-    insert(compileLines, isList and weave(SurroundList('(', ')', Expr)) or Expr())
-  elseif requireListParens then
-    insert(compileLines, Expr())
+  if currentToken ~= '(' then
+    insert(compileLines, requireListParens and Expr() or weave(List(Expr)))
   else
-    insert(compileLines, weave(List(Expr)))
+    local lookAheadLimitToken, lookAheadLimitTokenIndex = lookPastSurround()
+
+    if lookAheadLimitToken == '->' or lookAheadLimitToken == '=>' then
+      insert(compileLines, Expr())
+    else
+      local isList = false
+
+      for lookAheadTokenIndex = currentTokenIndex + 1, lookAheadLimitTokenIndex - 1 do
+        local lookAheadToken = tokens[lookAheadTokenIndex]
+
+        if C.SURROUND_ENDS[lookAheadToken] then
+          lookAheadToken, lookAheadTokenIndex = lookPastSurround(lookAheadTokenIndex)
+        end
+
+        if lookAheadToken == ',' then
+          isList = true
+          break
+        end
+      end
+
+      insert(compileLines, isList and weave(SurroundList('(', ')', Expr)) or Expr())
+    end
   end
 
   return compileLines

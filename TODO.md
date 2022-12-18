@@ -2,22 +2,26 @@
 
 # 0.3-3
 
+- fix: erde_history in repl
+- fix: varargs outside function throws internal error
 - support column errors lines (also in source maps!)
-- Use `eval` expression as IIFE syntactic sugar
 
 # 1.0-1
 
 - rewrite erde in erde
 
-# 1.0-2
+# Future Plans
 
+- separate parser from compiler (for other subprojects)
 - formatter
+- pretty compile
+  - will lose sourcemaps
+  - nice for hand debugging
+- emit sourcemaps
+  - need to make more compact first
+- debug mode for `erde.load`
+  - wrap anonymous functions with pcalls to sourcemap (since may be run in lua context)
 
 # Possible Language Features (needs further discussion)
 - Allow strings as index chain bases
   - ex) `"hello %s":format(name)`
-- Limited walrus operator
-  - only allowed in branches (if, elseif, while, until)
-  - ex) `if myvar = someFunc() { ... }` => `do { local myvar = someFunc() if myvar { ... } }`
-- Nested breaks using numbers (-1 for break all)
-  - ex) `break 2`, `break -1`

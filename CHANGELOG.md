@@ -13,6 +13,8 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Fixed
 - Fixed `module` declarations with destructuring
 - Long strings no longer throw errors for unrecognized escape chars (same behavior as Lua)
+- Fixed determining ReturnList variants
+- Fixed compile error when return arrow function `return () -> { ... }`
 
 ### Added
 - Added versioned executables to allow specifying the underlying lua executable version. Each additionally sets `--target` appropriately.
