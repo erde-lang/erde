@@ -35,7 +35,11 @@ local function runRepl()
   while true do
     local runOk, runResult
     local source = readLine(PROMPT)
-    if not source then break end
+
+    -- Readline returns the string '(null)' on <C-d> for some reason.
+    if not source or (HAS_READLINE and source == '(null)') then
+      break
+    end
 
     repeat
       -- Try input as an expression first! This way we can still print the value
@@ -65,7 +69,7 @@ local function runRepl()
       print(runResult)
     end
 
-    if HAS_READLINE then
+    if HAS_READLINE and utils.trim(source) ~= '' then
       RL.add_history(source)
     end
   end
@@ -75,4 +79,7 @@ return function()
   -- Protect runRepl so we don't show stacktraces when the user uses Control+c
   -- without readline.
   pcall(runRepl)
+  if HAS_READLINE then
+    RL.save_history()
+  end
 end

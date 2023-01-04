@@ -9,12 +9,14 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Cli options now use all lowercase (more standard)
   - `--outDir` is now `--outdir`
   - `--bitLib` is now `--bitlib`
+- Readline history no longer saves empty lines
 
 ### Fixed
 - Fixed `module` declarations with destructuring
 - Long strings no longer throw errors for unrecognized escape chars (same behavior as Lua)
 - Fixed determining ReturnList variants
 - Fixed compile error when return arrow function `return () -> { ... }`
+- Fixed readline history not saving
 
 ### Added
 - Added versioned executables to allow specifying the underlying lua executable version. Each additionally sets `--target` appropriately.

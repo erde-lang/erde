@@ -4,6 +4,7 @@
 
 - fix: erde_history in repl
 - fix: varargs outside function throws internal error
+- fix: destructuring non table module error
 - support column errors lines (also in source maps!)
 
 # 1.0-1
