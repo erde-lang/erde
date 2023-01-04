@@ -15,6 +15,12 @@ local function split(s, separator)
   return parts
 end
 
+-- Remove leading / trailing whitespace from a string.
+-- Taken from: https://www.lua.org/pil/20.3.html
+local function trim(s)
+  return (s:gsub('^%s*(.*)%s*$', '%1'))
+end
+
 -- -----------------------------------------------------------------------------
 -- Files
 -- -----------------------------------------------------------------------------
@@ -81,6 +87,7 @@ end
 
 return {
   split = split,
+  trim = trim,
   fileExists = fileExists,
   readFile = readFile,
   joinPaths = joinPaths,
