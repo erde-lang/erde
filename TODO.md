@@ -2,10 +2,9 @@
 
 # 0.3-3
 
-- fix: erde_history in repl
-- fix: varargs outside function throws internal error
-- fix: destructuring non table module error
 - support column errors lines (also in source maps!)
+- support printing compiled code
+- support force compiling to overwrite files
 
 # 1.0-1
 
@@ -22,6 +21,8 @@
   - need to make more compact first
 - debug mode for `erde.load`
   - wrap anonymous functions with pcalls to sourcemap (since may be run in lua context)
+  - wrap imports to provide error if try to destructure nontable
+- converter (lua -> erde)
 
 # Possible Language Features (needs further discussion)
 - Allow strings as index chain bases

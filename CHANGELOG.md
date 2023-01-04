@@ -10,6 +10,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - `--outDir` is now `--outdir`
   - `--bitLib` is now `--bitlib`
 - Readline history no longer saves empty lines
+- Parser now properly checks varargs scope (cannot be used outside vararg function)
 
 ### Fixed
 - Fixed `module` declarations with destructuring
@@ -17,6 +18,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed determining ReturnList variants
 - Fixed compile error when return arrow function `return () -> { ... }`
 - Fixed readline history not saving
+- Fixed ambiguous iife syntax in compiled Lua (inject semicolon)
 
 ### Added
 - Added versioned executables to allow specifying the underlying lua executable version. Each additionally sets `--target` appropriately.

@@ -751,6 +751,26 @@ spec('ambiguous syntax 5.1+', function()
     local x = a(() -> 2)()
     return x
   ]])
+  assert.run(1, [[
+    local a = 1
+    local b = a
+    (() -> { local c = 2 })()
+  ]])
+end)
+
+spec('no varargs outside vararg function', function()
+  assert.has_error(function()
+    compile('local x = () -> { print(...) }')
+  end)
+  assert.has_error(function()
+    compile('local x = () -> ({ ... })')
+  end)
+  assert.has_error(function()
+    compile('function x() { print(...) }')
+  end)
+  assert.has_no.errors(function()
+    compile('print(...)') -- varargs allowed at top level in Lua!
+  end)
 end)
 
 spec('retain throwaway parens', function()

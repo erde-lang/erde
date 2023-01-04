@@ -32,6 +32,11 @@ local moduleNames
 -- developer if they try to combine `return` with `module` scopes.
 local isModuleReturnBlock, hasModuleReturn
 
+-- Keeps track of whether the current block can use varargs as an expression.
+-- Required since the Lua _parser_ will throw an error if varargs are used
+-- outside a vararg function.
+local isVarargsBlock
+
 -- Resolved bit library to use for compiling bit operations. Undefined when
 -- compiling to Lua 5.3+ native operators.
 local bitLib
@@ -304,9 +309,11 @@ end
 local function Params()
   local compileLines = {}
   local names = {}
+  local hasVarargs = false
 
   SurroundList('(', ')', function()
     if branch('...') then
+      hasVarargs = true
       insert(names, '...')
 
       if currentToken ~= ')' then
@@ -332,7 +339,7 @@ local function Params()
     end
   end, true)
 
-  return { names = names, compileLines = compileLines }
+  return { names = names, compileLines = compileLines, hasVarargs = hasVarargs }
 end
 
 local function FunctionBlock()
@@ -372,9 +379,11 @@ end
 local function ArrowFunction()
   local compileLines = {}
   local paramNames = {}
+  local oldIsVarargsBlock = isVarargsBlock
 
   if currentToken == '(' then
     local params = Params()
+    isVarargsBlock = params.hasVarargs
     paramNames = params.names
     insert(compileLines, params.compileLines)
   else
@@ -407,12 +416,13 @@ local function ArrowFunction()
   insert(compileLines, 1, 'function(' .. concat(paramNames, ',') .. ')')
 
   if currentToken == '{' then
-    insert(compileLines, FunctionBlock())
+    insert(compileLines, FunctionBlock(hasVarargs))
   else
     insert(compileLines, 'return')
     insert(compileLines, ReturnList(true))
   end
 
+  isVarargsBlock = oldIsVarargsBlock
   insert(compileLines, 'end')
   return compileLines
 end
@@ -464,7 +474,8 @@ local function IndexChain(allowArbitraryExpr)
       local args = SurroundList('(', ')', Expr, true)
       if args then insert(compileLines, weave(args)) end
 
-      insert(compileLines, ')')
+      -- Add semi-colon to prevent ambiguous Lua code
+      insert(compileLines, currentToken == '(' and ');' or ')')
     else
       break
     end
@@ -545,6 +556,7 @@ end
 
 local function Terminal()
   ensure(currentToken ~= nil, 'unexpected eof')
+  ensure(currentToken ~= '...' or isVarargsBlock, "cannot use '...' outside a vararg function")
 
   for _, terminal in pairs(C.TERMINALS) do
     if currentToken == terminal then
@@ -852,7 +864,11 @@ local function Function(scope)
   insert(compileLines, '(' .. concat(params.names, ',') .. ')')
   insert(compileLines, params.compileLines)
 
-  insert(compileLines, FunctionBlock())
+  local oldIsVarargsBlock = isVarargsBlock
+  isVarargsBlock = params.hasVarargs
+  insert(compileLines, FunctionBlock(params.hasVarargs))
+  isVarargsBlock = oldIsVarargsBlock
+
   insert(compileLines, 'end')
   return compileLines
 end
@@ -1020,7 +1036,9 @@ function Block(isLoopBlock)
       insert(compileLines, currentToken == 'function' and Function(scope) or Declaration(scope))
     else
       local indexChain = IndexChain()
-      if indexChain[#indexChain] == ')' then
+      local lastIndexChainToken = indexChain[#indexChain]
+
+      if lastIndexChainToken == ')' or lastIndexChainToken == ');' then
         -- Allow function calls as standalone statements
         insert(compileLines, indexChain)
       else
@@ -1064,6 +1082,7 @@ return function(text)
   isModuleReturnBlock = true
   hasModuleReturn = false
   hasContinue = false
+  isVarargsBlock = true
   tmpNameCounter = 1
   moduleNames = {}
 
