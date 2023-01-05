@@ -31,6 +31,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Any arguments following a script to be run are now accessible in the script via the `arg` global (same behavior as Lua)
   - ex) `erde myscript.erde "myscript_arg1"`
 - CLI now supports overwriting existing Lua files when compiling with `-f, --force`
+- CLI now supports printing compiled code instead of writing to files with `-p, --print` (useful for debugging)
 
 ## [0.3-2] - November 7, 2022
 

@@ -24,6 +24,7 @@ Compile Options:
    -b, --bitlib <LIB>     Library to use for compiled bit operations.
    -w, --watch            Watch files and recompile on change.
    -f, --force            Force rewrite existing Lua files with compiled files.
+   -p, --print            Print compiled code instead of writing to files.
 
 Examples:
    erde
@@ -52,6 +53,7 @@ local subCommand = nil
 local outDir = nil
 local watch = false
 local force = false
+local printCompiled = false
 local args = {}
 local script = nil
 local scriptIndex = nil
@@ -119,10 +121,12 @@ local function compileFile(srcFilePath, includeTimestamp)
     destFilePath = outDir .. '/' .. destFilePath
   end
 
-  if not force and utils.fileExists(destFilePath) and not isCompiledFile(destFilePath) then
-    print(srcFilePath .. ' => ERROR')
-    print('Cannot write to ' .. destFilePath .. ': File already exists')
-    return false
+  if not printCompiled and not force then
+    if utils.fileExists(destFilePath) and not isCompiledFile(destFilePath) then
+      print(srcFilePath .. ' => ERROR')
+      print('Cannot write to ' .. destFilePath .. ': File already exists')
+      return false
+    end
   end
 
   local srcFile = io.open(srcFilePath, 'r')
@@ -145,14 +149,20 @@ local function compileFile(srcFilePath, includeTimestamp)
     return false
   end
 
-  local destFile = io.open(destFilePath, 'w')
-  destFile:write(result)
-  destFile:close()
-
-  if includeTimestamp then
-    print(('[%s] %s => %s'):format(os.date('%X'), srcFilePath, destFilePath))
+  if printCompiled then
+    print(srcFilePath)
+    print(('-'):rep(#srcFilePath))
+    print(result)
   else
-    print(('%s => %s'):format(srcFilePath, destFilePath))
+    local destFile = io.open(destFilePath, 'w')
+    destFile:write(result)
+    destFile:close()
+
+    if includeTimestamp then
+      print(('[%s] %s => %s'):format(os.date('%X'), srcFilePath, destFilePath))
+    else
+      print(('%s => %s'):format(srcFilePath, destFilePath))
+    end
   end
 
   return true
@@ -253,6 +263,8 @@ while cliInputsIndex <= #cliInputs do
     watch = true
   elseif cliInput == '-f' or cliInput == '--force' then
     force = true
+  elseif cliInput == '-p' or cliInput == '--print' then
+    printCompiled = true
   elseif cliInput == '-t' or cliInput == '--target' then
     C.LUA_TARGET = cliOption(cliInput)
     if not C.VALID_LUA_TARGETS[C.LUA_TARGET] then
