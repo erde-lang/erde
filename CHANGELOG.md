@@ -30,6 +30,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - `erdejit` - sets `--target jit` and uses `luajit` executable
 - Any arguments following a script to be run are now accessible in the script via the `arg` global (same behavior as Lua)
   - ex) `erde myscript.erde "myscript_arg1"`
+- CLI now supports overwriting existing Lua files when compiling with `-f, --force`
 
 ## [0.3-2] - November 7, 2022
 

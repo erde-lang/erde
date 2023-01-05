@@ -23,6 +23,7 @@ Compile Options:
    -o, --outdir <DIR>     Output directory for compiled files.
    -b, --bitlib <LIB>     Library to use for compiled bit operations.
    -w, --watch            Watch files and recompile on change.
+   -f, --force            Force rewrite existing Lua files with compiled files.
 
 Examples:
    erde
@@ -50,6 +51,7 @@ Examples:
 local subCommand = nil
 local outDir = nil
 local watch = false
+local force = false
 local args = {}
 local script = nil
 local scriptIndex = nil
@@ -117,7 +119,7 @@ local function compileFile(srcFilePath, includeTimestamp)
     destFilePath = outDir .. '/' .. destFilePath
   end
 
-  if utils.fileExists(destFilePath) and not isCompiledFile(destFilePath) then
+  if not force and utils.fileExists(destFilePath) and not isCompiledFile(destFilePath) then
     print(srcFilePath .. ' => ERROR')
     print('Cannot write to ' .. destFilePath .. ': File already exists')
     return false
@@ -249,6 +251,8 @@ while cliInputsIndex <= #cliInputs do
     C.DEBUG = true
   elseif cliInput == '-w' or cliInput == '--watch' then
     watch = true
+  elseif cliInput == '-f' or cliInput == '--force' then
+    force = true
   elseif cliInput == '-t' or cliInput == '--target' then
     C.LUA_TARGET = cliOption(cliInput)
     if not C.VALID_LUA_TARGETS[C.LUA_TARGET] then
