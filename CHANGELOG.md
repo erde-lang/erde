@@ -6,7 +6,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ## [] - UNRELEASED
 
 ### Changed
-- Cli options now use all lowercase (more standard)
+- CLI options now use all lowercase (more standard)
   - `--outDir` is now `--outdir`
   - `--bitLib` is now `--bitlib`
 - Readline history no longer saves empty lines
@@ -19,6 +19,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed compile error when return arrow function `return () -> { ... }`
 - Fixed readline history not saving
 - Fixed ambiguous iife syntax in compiled Lua (inject semicolon)
+- CLI now checks one extra character when looking for the compiled footer comment (handle trailing newlines injected by editor)
 
 ### Added
 - Added versioned executables to allow specifying the underlying lua executable version. Each additionally sets `--target` appropriately.

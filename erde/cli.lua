@@ -72,11 +72,15 @@ local function isCompiledFile(filePath)
     return false
   end
 
-  file:seek('end', -C.COMPILED_FOOTER_COMMENT_LEN)
-  local footer = file:read(C.COMPILED_FOOTER_COMMENT_LEN)
+  -- Some editors save an invisible trailing newline, so read an extra char just
+  -- in case.
+  local readLen = #C.COMPILED_FOOTER_COMMENT + 1
+
+  file:seek('end', -readLen)
+  local footer = file:read(readLen)
   file:close()
 
-  return footer == C.COMPILED_FOOTER_COMMENT
+  return footer:find(C.COMPILED_FOOTER_COMMENT)
 end
 
 local function traverseFiles(paths, fileMatch, callback)
