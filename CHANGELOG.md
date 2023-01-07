@@ -3,7 +3,7 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [] - UNRELEASED
+## [0.4-1] - January 7, 2023
 
 ### Changed
 - CLI options now use all lowercase (more standard)
