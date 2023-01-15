@@ -87,6 +87,23 @@ spec('decimal #5.1+', function()
   assert.has_error(function() tokenize('9e-') end)
 end)
 
+describe('binary', function()
+  spec('#jit', function()
+    assertToken('0b0')
+    assertToken('0B0')
+    assertToken('0b1')
+    assertToken('0B1')
+    assertToken('0b0100')
+    assertToken('0B1100')
+
+    assert.has_error(function() tokenize('0b') end)
+    assert.has_error(function() tokenize('0B') end)
+    assert.has_error(function() tokenize('0b3') end)
+    assert.has_error(function() tokenize('0Ba') end)
+    assert.has_error(function() tokenize('0b.') end)
+  end)
+end)
+
 describe('escape chars', function()
   spec('#5.1+', function()
     for escapeChar in pairs(C.STANDARD_ESCAPE_CHARS) do

@@ -176,6 +176,24 @@ local function Hex()
   commit(token)
 end
 
+local function Binary()
+  local token = consume(2) -- 0[bB]
+
+  if C.LUA_TARGET ~= 'jit' then
+    throw('binary literals only compatible w/ lua target jit')
+  end
+
+  if char ~= '0' and char ~= '1' then
+    throw('malformed hex')
+  end
+
+  repeat
+    token = token .. consume()
+  until char ~= '0' and char ~= '1'
+
+  commit(token)
+end
+
 local function Decimal()
   local token = ''
 
@@ -369,6 +387,8 @@ function Token()
     Word()
   elseif peekTwo:match('0[xX]') then
     Hex()
+  elseif peekTwo:match('0[bB]') then
+    Binary()
   elseif C.DIGIT[char] or (char == '.' and C.DIGIT[lookAhead(1)]) then
     Decimal()
   elseif char == "'" then

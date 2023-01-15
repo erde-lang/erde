@@ -3,6 +3,11 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
+## [0.4-2] - UNRELEASED
+
+### Added
+- Allow binary literals when targeting jit (ex. `print(0b100)`)
+
 ## [0.4-1] - January 7, 2023
 
 ### Changed

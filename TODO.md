@@ -2,7 +2,6 @@
 
 # 0.4-2
 
-- allow binary numbers when targeting luajit
 - add autocompletions + command to install / uninstall autocompletions
 - separate parser from compiler
 - make source maps more compact
