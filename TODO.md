@@ -2,8 +2,9 @@
 
 # 0.4-2
 
-- separate parser from compiler
+- allow binary numbers when targeting luajit
 - add autocompletions + command to install / uninstall autocompletions
+- separate parser from compiler
 - make source maps more compact
 - support column errors lines (also in source maps!)
 

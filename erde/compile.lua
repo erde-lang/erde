@@ -983,7 +983,7 @@ function Block(isLoopBlock)
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
         utils.erdeError({
           line = currentTokenLine,
-          message = "cannot use 'goto' when targeting 5.1 or 5.1+",
+          message = "'goto' statements only compatibly with lua targets 5.2+, jit",
         })
       end
 
@@ -995,7 +995,7 @@ function Block(isLoopBlock)
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
         utils.erdeError({
           line = currentTokenLine,
-          message = "cannot use 'goto' when targeting 5.1 or 5.1+",
+          message = "'goto' statements only compatibly with lua targets 5.2+, jit",
         })
       end
 

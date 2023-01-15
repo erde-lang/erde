@@ -64,12 +64,12 @@ local function EscapeChar(preventInterpolation, preventInvalidEscape)
     return '\\' .. consume()
   elseif char == 'z' then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      throw('escape sequence \\z not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('escape sequence \\z only compatible w/ lua targets 5.2+, jit')
     end
     return '\\' .. consume()
   elseif char == 'x' then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      throw('escape sequence \\xXX not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('escape sequence \\xXX only compatible w/ lua targets 5.2+, jit')
     end
 
     local escapeChar = '\\' .. consume()
@@ -88,7 +88,7 @@ local function EscapeChar(preventInterpolation, preventInvalidEscape)
     if char ~= '{' then
       throw('missing { in escape sequence \\u{XXX}')
     elseif C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2' or C.LUA_TARGET == '5.2+' then
-      throw('escape sequence \\u{XXX} not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('escape sequence \\u{XXX} only compatible w/ lua targets 5.3+, jit')
     end
 
     escapeChar = escapeChar .. consume()
@@ -145,7 +145,7 @@ local function Hex()
 
   if char == '.' and C.HEX[lookAhead(1)] then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      throw('hex fractional parts not compatible w/ lua target ' .. C.LUA_TARGET)
+      throw('hex fractional parts only compatible w/ lua targets 5.2+, jit')
     end
 
     token = token .. consume(2)
@@ -159,7 +159,7 @@ local function Hex()
 
     if char == '+' or char == '-' then
       if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw('hex exponent sign not compatible w/ lua target ' .. C.LUA_TARGET)
+        throw('hex exponent sign only compatible w/ lua targets 5.2+, jit')
       end
       token = token .. consume()
     end
