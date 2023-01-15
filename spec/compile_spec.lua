@@ -1,4 +1,5 @@
 local compile = require('erde.compile')
+local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Expressions
@@ -222,21 +223,48 @@ spec('tables #5.1+', function()
 end)
 
 describe('unop', function()
-  spec('#5.1+', function()
+  spec('arithmetic ops #5.1+', function()
+    assert.eval(-6, '-6')
+    assert.eval(5, '#("hello")')
+    assert.eval(false, '!true')
+  end)
+
+  if C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+' then
+    spec('bitops', function()
+      assert.has_error(function() compile('print(~4)') end)
+    end)
+  else
+    spec('bitops', function()
+      assert.eval(-5, '~4')
+    end)
+  end
+end)
+
+describe('binop #5.1+', function()
+  spec('arithmetic ops', function()
     assert.eval(-6, '2 * -3')
     assert.eval(-6, '-2 * 3')
     assert.eval(-8, '-2 ^ 3')
   end)
-  spec('#jit #5.1 #5.2 #5.3+', function()
-    assert.eval(6, '4 | 2')
-    assert.eval(5, '6 ~ 3')
-    assert.eval(2, '6 & 3')
-    assert.eval(2, '1 << 1')
-    assert.eval(1, '2 >> 1')
-  end)
-end)
 
-describe('binop #5.1+', function()
+  if C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+' then
+    spec('bitops', function()
+      assert.has_error(function() compile('print(4 | 2)') end)
+      assert.has_error(function() compile('print(6 ~ 3)') end)
+      assert.has_error(function() compile('print(6 & 3)') end)
+      assert.has_error(function() compile('print(1 << 1)') end)
+      assert.has_error(function() compile('print(2 >> 1)') end)
+    end)
+  else
+    spec('bitops', function()
+      assert.eval(6, '4 | 2')
+      assert.eval(5, '6 ~ 3')
+      assert.eval(2, '6 & 3')
+      assert.eval(2, '1 << 1')
+      assert.eval(1, '2 >> 1')
+    end)
+  end
+
   spec('left associative', function()
     assert.eval(5, '1 * 2 + 3')
     assert.eval(7, '1 + 2 * 3')

@@ -69,6 +69,13 @@ describe('hex', function()
     assertToken('0xfp+1')
     assertToken('0xfp-1')
   end)
+
+  spec('#5.1', function()
+    assert.has_error(function() tokenize('0x.1') end)
+    assert.has_error(function() tokenize('0xd.a') end)
+    assert.has_error(function() tokenize('0xfp+1') end)
+    assert.has_error(function() tokenize('0xfp-1') end)
+  end)
 end)
 
 spec('decimal #5.1+', function()
@@ -102,6 +109,15 @@ describe('binary', function()
     assert.has_error(function() tokenize('0Ba') end)
     assert.has_error(function() tokenize('0b.') end)
   end)
+
+  spec('#5.1 #5.2+', function()
+    assert.has_error(function() tokenize('0b0') end)
+    assert.has_error(function() tokenize('0B0') end)
+    assert.has_error(function() tokenize('0b1') end)
+    assert.has_error(function() tokenize('0B1') end)
+    assert.has_error(function() tokenize('0b0100') end)
+    assert.has_error(function() tokenize('0B1100') end)
+  end)
 end)
 
 describe('escape chars', function()
@@ -118,7 +134,7 @@ describe('escape chars', function()
     -- Erde does not allow for interpolation in single quote strings
     assert.has_error(function() tokenize("'\\{'") end)
 
-    -- Lua single / double quote strings will throw for unrecognized escape chars
+    -- Lua 5.2+ single / double quote strings will throw for unrecognized escape chars
     assert.has_error(function() tokenize("'\\o'") end)
 
     -- Lua allows backslashes in long strings to precede any character
@@ -133,6 +149,11 @@ describe('escape chars', function()
     assert.has_error(function() tokenize('"\\x1G"') end)
   end)
 
+  spec('#5.1', function()
+    assert.has_error(function() tokenize('"\\z"') end)
+    assert.has_error(function() tokenize('"\\x1f"') end)
+  end)
+
   spec('#jit #5.3+', function()
     assertTokens('"\\u{a}"', { '"', '\\u{a}', '"' })
     assertTokens('"\\u{abc}"', { '"', '\\u{abc}', '"' })
@@ -142,6 +163,11 @@ describe('escape chars', function()
     assert.has_error(function() tokenize('"\\uabc}"') end)
     assert.has_error(function() tokenize('"\\u{}"') end)
     assert.has_error(function() tokenize('"\\u{g}"') end)
+  end)
+
+  spec('#5.1 #5.2', function()
+    assert.has_error(function() tokenize('"\\u{a}"') end)
+    assert.has_error(function() tokenize('"\\u{abc}"') end)
   end)
 end)
 
