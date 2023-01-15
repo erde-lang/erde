@@ -112,14 +112,6 @@ C.BITOPS = {
   ['>>'] = { prec = 9, assoc = C.LEFT_ASSOCIATIVE },
 }
 
--- Compiling bit operations for these targets are dangerous, since Mike Pall's
--- LuaBitOp only works on 5.1 + 5.2, bit32 only works on 5.2, and 5.3 + 5.4 have
--- built-in bit operator support.
-C.INVALID_BITOP_LUA_TARGETS = {
-  ['5.1+'] = true,
-  ['5.2+'] = true,
-}
-
 -- User specified library to use for bit operations.
 C.BITLIB = nil
 

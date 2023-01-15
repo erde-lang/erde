@@ -604,11 +604,10 @@ local function Unop()
   local operandLine, operand = currentTokenLine, Expr(unop.prec + 1)
 
   if unop.token == '~' then
-    if C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
+    if (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
       utils.erdeError({
         line = unopLine,
-        -- TODO: provide documentation link for explanation here
-        message = 'cannot use bitwise operators when targeting ' .. C.LUA_TARGET,
+        message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
       })
     end
 
@@ -636,11 +635,10 @@ function Expr(minPrec)
       rhsMinPrec = rhsMinPrec + 1
     end
 
-    if C.BITOPS[binop.token] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
+    if C.BITOPS[binop.token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
       utils.erdeError({
         line = binopLine,
-        -- TODO: provide documentation link for explanation here
-        message = 'cannot use bitwise operators when targeting ' .. C.LUA_TARGET,
+        message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
       })
     end
 
@@ -674,11 +672,10 @@ local function Assignment(firstId)
   end
 
   local opLine, opToken = currentTokenLine, C.BINOP_ASSIGNMENT_TOKENS[currentToken] and consume()
-  if C.BITOPS[opToken] and C.INVALID_BITOP_LUA_TARGETS[C.LUA_TARGET] and not C.BITLIB then
+  if C.BITOPS[opToken] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
     utils.erdeError({
       line = opLine,
-      -- TODO: provide documentation link for explanation here
-      message = 'cannot use bitwise operators when targeting ' .. C.LUA_TARGET,
+      message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
     })
   end
 
