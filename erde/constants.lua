@@ -63,8 +63,6 @@ C.KEYWORDS = {
   'true',
   'nil',
   'return',
-  'try',
-  'catch',
   'break',
   'continue',
 }

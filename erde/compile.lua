@@ -926,33 +926,6 @@ local function Return()
   return compileLines
 end
 
-local function TryCatch()
-  local compileLines = {}
-  local okName = newTmpName()
-  local errorName = newTmpName()
-
-  consume() -- 'try'
-  insert(compileLines, ('local %s, %s = pcall(function()'):format(okName, errorName))
-  insert(compileLines, Surround('{', '}', Block))
-  insert(compileLines, 'end) if ' .. okName .. ' == false then')
-
-  expect('catch')
-
-  if currentToken ~= '{' or lookPastSurround() == '{' then
-    local errorVar = Var()
-    if type(errorVar) == 'string' then
-      insert(compileLines, ('local %s = %s'):format(errorVar, errorName))
-    else
-      insert(compileLines, ('local %s = %s'):format(errorVar.compileName, errorName))
-      insert(compileLines, errorVar.compileLines)
-    end
-  end
-
-  insert(compileLines, Surround('{', '}', Block))
-  insert(compileLines, 'end')
-  return compileLines
-end
-
 -- -----------------------------------------------------------------------------
 -- Block
 -- -----------------------------------------------------------------------------
@@ -1017,8 +990,6 @@ function Block(isLoopBlock)
       insert(compileLines, LoopBlock())
       insert(compileLines, expect('until'))
       insert(compileLines, Expr())
-    elseif currentToken == 'try' then
-      insert(compileLines, TryCatch())
     elseif currentToken == 'return' then
       insert(compileLines, Return())
     elseif currentToken == 'function' then

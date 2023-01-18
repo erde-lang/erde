@@ -715,39 +715,6 @@ spec('return #5.1+', function()
   end)
 end)
 
-spec('try catch #5.1+', function()
-  assert.run(1, [[
-    try {
-      error('some error')
-    } catch {
-      return 1
-    }
-    return 2
-  ]])
-  assert.run(2, [[
-    try {
-      -- no error
-    } catch {
-      return 1
-    }
-    return 2
-  ]])
-  assert.run('some error', [[
-    try {
-      error({ value = 'some error' })
-    } catch err {
-      return err.value
-    }
-  ]])
-  assert.run('some error', [[
-    try {
-      error({ value = 'some error' })
-    } catch { value } {
-      return value
-    }
-  ]])
-end)
-
 spec('while loop  #5.1+', function()
   assert.run(10, [[
     local x = 0
