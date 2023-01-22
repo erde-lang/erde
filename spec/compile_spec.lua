@@ -24,7 +24,7 @@ describe('arrow function #5.1+', function()
       return a(1, 2)
     ]])
     assert.run({ 2, 3 }, [[
-      local a = (x, ...) -> ({ ... }) 
+      local a = (x, ...) -> ({ ... })
       return a(1, 2, 3)
     ]])
     assert.run({ 1, 2 }, [[
@@ -729,7 +729,7 @@ end)
 -- Misc
 -- -----------------------------------------------------------------------------
 
-spec('ambiguous syntax 5.1+', function()
+spec('ambiguous syntax #5.1+', function()
   assert.run(1, [[
     local a = 1
     local x = a;(() -> 2)()
@@ -750,10 +750,11 @@ spec('ambiguous syntax 5.1+', function()
     local a = 1
     local b = a
     (() -> { local c = 2 })()
+    return b
   ]])
 end)
 
-spec('no varargs outside vararg function', function()
+spec('no varargs outside vararg function #5.1+', function()
   assert.has_error(function()
     compile('local x = () -> { print(...) }')
   end)
@@ -768,7 +769,7 @@ spec('no varargs outside vararg function', function()
   end)
 end)
 
-spec('retain throwaway parens', function()
+spec('retain throwaway parens #5.1+', function()
   assert.run(true, [[
     local a = () -> (1, 2)
     local x, y = (a())

@@ -466,16 +466,14 @@ local function IndexChain(allowArbitraryExpr)
       end
 
       -- Include function call parens on same line as function name to prevent
-      -- parsing errors in Lua5.1: 
+      -- parsing errors in Lua5.1:
       --    `ambiguous syntax (function call x new statement) near '('`
-      precedingCompileLines[precedingCompileLinesLen] = 
+      precedingCompileLines[precedingCompileLinesLen] =
         precedingCompileLines[precedingCompileLinesLen] .. '('
 
       local args = SurroundList('(', ')', Expr, true)
       if args then insert(compileLines, weave(args)) end
-
-      -- Add semi-colon to prevent ambiguous Lua code
-      insert(compileLines, currentToken == '(' and ');' or ')')
+      insert(compileLines,  ')')
     else
       break
     end
@@ -582,7 +580,7 @@ local function Terminal()
   local isArrowFunction = nextToken == '->' or nextToken == '=>'
 
   -- First do a quick check for isArrowFunction (in case of implicit params),
-  -- otherwise if surroundEnd is truthy (possible params), need to check the 
+  -- otherwise if surroundEnd is truthy (possible params), need to check the
   -- next token after. This is _much_ faster than backtracking.
   if not isArrowFunction and C.SURROUND_ENDS[currentToken] then
     local pastSurroundToken = lookPastSurround()
@@ -726,7 +724,7 @@ local function Declaration(scope)
       message = 'module declarations must appear at the top level',
     })
   end
-  
+
   if scope ~= 'global' then
     insert(compileLines, 'local')
   end
@@ -1016,6 +1014,9 @@ function Block(isLoopBlock)
 
     if currentToken == ';' then
       insert(compileLines, consume())
+    elseif currentToken == '(' then
+      -- Add semi-colon to prevent ambiguous Lua code
+      insert(compileLines, ';')
     end
   end
 
@@ -1054,7 +1055,7 @@ return function(text)
   tmpNameCounter = 1
   moduleNames = {}
 
-  bitLib = C.BITLIB 
+  bitLib = C.BITLIB
     or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == 'jit' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library

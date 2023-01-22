@@ -11,6 +11,9 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Do not want to split code styles on `pcall` vs `try...catch`
   - Previous implementation buggy, did not respect `return` statements (since `try` block was wrapped in an anonymous function)
 
+### Fixed
+- Fixed compiling of chained function calls (ex. `myfunc()()`)
+
 ### Added
 - Allow binary literals when targeting jit (ex. `print(0b100)`)
 
