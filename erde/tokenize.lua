@@ -53,7 +53,7 @@ local function Newline()
   return consume()
 end
 
-local function EscapeChar(preventInterpolation, preventInvalidEscape)
+local function EscapeChar(preventInterpolation)
   consume() -- backslash
 
   if not preventInterpolation and (char == '{' or char == '}') then
@@ -105,8 +105,6 @@ local function EscapeChar(preventInterpolation, preventInvalidEscape)
     end
 
     return escapeChar .. consume()
-  elseif preventInvalidEscape then
-    return '\\' .. consume()
   else
     throw('invalid escape sequence \\' .. char)
   end
@@ -321,7 +319,12 @@ local function LongString()
     elseif char == '\n' then
       content = content .. Newline()
     elseif char == '\\' then
-      content = content .. EscapeChar(false, true)
+      consume()
+      if char == '{' or char == '}' then
+        content = content .. consume()
+      else
+        content = content .. '\\' .. consume()
+      end
     elseif char == '{' then
       if content ~= '' then
         commit(content)

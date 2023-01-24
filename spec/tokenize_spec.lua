@@ -137,8 +137,10 @@ describe('escape chars', function()
     -- Lua 5.2+ single / double quote strings will throw for unrecognized escape chars
     assert.has_error(function() tokenize("'\\o'") end)
 
-    -- Lua allows backslashes in long strings to precede any character
+    -- Lua does not process escape chars in long strings
     assertTokens('[[\\o]]', { '[[', '\\o', ']]' })
+    assertTokens('[[\\n]]', { '[[', '\\n', ']]' })
+    assertTokens('[[\\x]]', { '[[', '\\x', ']]' })
   end)
 
   spec('#jit #5.2+', function()
