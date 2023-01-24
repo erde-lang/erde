@@ -199,7 +199,7 @@ describe('strings #5.1+', function()
     assert.eval('\\', '"\\\\"')
   end)
 
-  spec('long', function()
+  spec('block', function()
     assert.eval('hello world', '[[hello world]]')
     assert.eval(' hello\nworld', '[[ hello\nworld]]')
     assert.eval('a{bc}d', '[[a\\{bc}d]]')

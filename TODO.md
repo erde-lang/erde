@@ -2,10 +2,10 @@
 
 # 0.4-2
 
-- add autocompletions + command to install / uninstall autocompletions
 - separate parser from compiler
-- make source maps more compact
-- support column errors lines (also in source maps!)
+- readd `try...catch`, fix previous implementation of nested `return`!
+- replace source maps with placing compiled code on same line
+- add autocompletions + command to install / uninstall autocompletions
 
 # 1.0-1
 

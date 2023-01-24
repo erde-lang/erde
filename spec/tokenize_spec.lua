@@ -134,10 +134,10 @@ describe('escape chars', function()
     -- Erde does not allow for interpolation in single quote strings
     assert.has_error(function() tokenize("'\\{'") end)
 
-    -- Lua 5.2+ single / double quote strings will throw for unrecognized escape chars
+    -- Lua 5.2+ single / double quote strings will throw for unrecognized escape sequences
     assert.has_error(function() tokenize("'\\o'") end)
 
-    -- Lua does not process escape chars in long strings
+    -- Lua does not process escape sequences in block strings
     assertTokens('[[\\o]]', { '[[', '\\o', ']]' })
     assertTokens('[[\\n]]', { '[[', '\\n', ']]' })
     assertTokens('[[\\x]]', { '[[', '\\x', ']]' })
@@ -202,7 +202,7 @@ spec('double quote strings #5.1+', function()
   assert.has_error(function() tokenize('"hello\nworld"') end)
 end)
 
-spec('long strings #5.1+', function()
+spec('block strings #5.1+', function()
   assertTokens('[[]]', { '[[', ']]' })
   assertTokens('[[ hello world ]]', { '[[', ' hello world ', ']]' })
   assertTokens('[[hello\nworld]]', { '[[', 'hello\nworld', ']]' })
