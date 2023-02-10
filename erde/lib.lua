@@ -5,15 +5,15 @@ local C = require('erde.constants')
 local compile = require('erde.compile')
 local utils = require('erde.utils')
 
-local loadLua = loadstring or load
+local loadlua = loadstring or load
 local unpack = table.unpack or unpack
 
 -- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
 -- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 local searchers = package.loaders or package.searchers
 
-local erdeSourceIdCounter = 1
-local erdeSourceCache = {}
+local erde_source_id_counter = 1
+local erde_source_cache = {}
 
 -- -----------------------------------------------------------------------------
 -- Debug
@@ -25,33 +25,33 @@ local ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE = table.concat({
   '[^\n]*\n',
 })
 
-local function rewrite(message, sourceMap, sourceAlias)
+local function rewrite(message, source_map, alias)
   -- Only rewrite strings! Other thrown values (including nil) do not get source
   -- and line number information added.
   if type(message) ~= 'string' then return message end
-  local sourceFile, errLine, content = message:match('^(.*):(%d+): (.*)$')
+  local source, line, content = message:match('^(.*):(%d+): (.*)$')
 
-  -- Explicitly check for these! Error messages may not contain source or line 
+  -- Explicitly check for these! Error messages may not contain source or line
   -- number, for example if they are called w/ error level 0.
   -- see: https://www.lua.org/manual/5.1/manual.html#pdf-error
-  if not sourceFile or not errLine then return message end
+  if not source or not line then return message end
 
-  -- Use cached alias + sourceMap as a backup if they are not provided
-  local erdeSourceId = sourceFile:match('^%[string "(__erde_source_%d+__)"]$')
-  if erdeSourceId and erdeSourceCache[erdeSourceId] then
-    sourceAlias = sourceAlias or erdeSourceCache[erdeSourceId].alias
-    sourceMap = sourceMap or erdeSourceCache[erdeSourceId].sourceMap
+  -- Use cached alias + source_map as a backup if they are not provided
+  local erde_source_id = source:match('^%[string "(__erde_source_%d+__)"]$')
+  if erde_source_id and erde_source_cache[erde_source_id] then
+    alias = alias or erde_source_cache[erde_source_id].alias
+    source_map = source_map or erde_source_cache[erde_source_id].source_map
   end
 
-  -- If we have don't have a sourceMap for erde code, we need to indiciate that
+  -- If we have don't have a source_map for erde code, we need to indiciate that
   -- the error line is for the generated Lua.
-  if erdeSourceId and not sourceMap then
-    errLine = ('(compiled: %s)'):format(errLine)
+  if erde_source_id and not source_map then
+    line = ('(compiled: %s)'):format(line)
   end
 
   return ('%s:%s: %s'):format(
-    sourceAlias or sourceFile,
-    sourceMap and sourceMap[tonumber(errLine)] or errLine,
+    alias or source,
+    source_map and source_map[tonumber(line)] or line,
     content:gsub('__ERDE_SUBSTITUTE_([a-zA-Z]+)__', '%1')
   )
 end
@@ -75,7 +75,7 @@ local function traceback(message, level)
 
   local stack = { message, 'stack traceback:' }
   local info = debug.getinfo(level, 'nSl')
-  local committedTailCallTrace = false
+  local committed_tail_call_trace = false
 
   while info do
     local trace
@@ -97,7 +97,7 @@ local function traceback(message, level)
       -- Group tail calls to prevent long stack traces. This matches the
       -- behavior in 5.2+, but will only ever happen in 5.1, since tail calls
       -- are not included in `debug.getinfo` levels in 5.2+.
-      if not committedTailCallTrace then
+      if not committed_tail_call_trace then
         table.insert(stack, '\t(...tail calls...)')
       end
     elseif info.name then
@@ -115,7 +115,7 @@ local function traceback(message, level)
       )))
     end
 
-    committedTailCallTrace = info.what == 'tail'
+    committed_tail_call_trace = info.what == 'tail'
     level = level + 1
     info = debug.getinfo(level, 'nSl')
   end
@@ -123,12 +123,12 @@ local function traceback(message, level)
   if C.IS_CLI_RUNTIME and not C.DEBUG then
     -- Remove following from stack trace (caused by the CLI):
     -- [C]: in function 'xpcall'
-    -- erde/bin/erde:xxx: in function 'runFile'
+    -- erde/bin/erde:xxx: in function 'run_file'
     -- erde/bin/erde:xxx: in main chunk
-    local stackLen = #stack
-    table.remove(stack, stackLen - 1)
-    table.remove(stack, stackLen - 2)
-    table.remove(stack, stackLen - 3)
+    local stacklen = #stack
+    table.remove(stack, stacklen - 1)
+    table.remove(stack, stacklen - 2)
+    table.remove(stack, stacklen - 3)
   end
 
   local stacktrace = table.concat(stack, '\n')
@@ -146,12 +146,12 @@ end
 -- Source Loaders
 -- -----------------------------------------------------------------------------
 
--- Load a chunk of Erde code. This caches the generated sourceMap / sourceAlias
--- (see `erdeSourceCache`) so we can fetch them later during error rewrites.
+-- Load a chunk of Erde code. This caches the generated source_map / alias
+-- (see `erde_source_cache`) so we can fetch them later during error rewrites.
 --
--- The sourceAlias is _not_ used as the chunkname in the underlying Lua `load`
+-- The alias is _not_ used as the chunkname in the underlying Lua `load`
 -- call. Instead, a unique ID is generated and inserted instead. During error
--- rewrites, this ID will be extracted and replaced with the cached sourceAlias.
+-- rewrites, this ID will be extracted and replaced with the cached alias.
 --
 -- This function is also given a unique function name so that it is reliably
 -- searchable in stacktraces. During stracetrace rewrites (see `traceback`), the
@@ -183,26 +183,26 @@ end
 -- Currently there are three ways for the user to load Erde code:
 --
 -- 1. Via the CLI (ex. `erde myfile.erde`)
--- 2. Via `erdeSearcher`
--- 3. Via `runString`
+-- 2. Via `erde_searcher`
+-- 3. Via `run_string`
 --
 -- Any changes to these functions and their stack calls should be done w/ great
 -- precaution.
-local function __erde_internal_load_source__(sourceCode, sourceAlias)
-  local erdeSourceId = ('__erde_source_%d__'):format(erdeSourceIdCounter)
-  erdeSourceIdCounter = erdeSourceIdCounter + 1
+local function __erde_internal_load_source__(source, alias)
+  local erde_source_id = ('__erde_source_%d__'):format(erde_source_id_counter)
+  erde_source_id_counter = erde_source_id_counter + 1
 
   -- No xpcall here, we want the traceback to start from this stack!
-  local ok, compiled, sourceMap = pcall(function()
-    return compile(sourceCode)
+  local ok, compiled, source_map = pcall(function()
+    return compile(source)
   end)
 
   if not ok then
-    local message = type(compiled) == 'table' and compiled.__is_erde_error__ 
-      and ('%s:%d: %s'):format(sourceAlias, compiled.line or 0, compiled.message)
+    local message = type(compiled) == 'table' and compiled.__is_erde_error__
+      and ('%s:%d: %s'):format(alias, compiled.line or 0, compiled.message)
       or compiled
 
-    utils.erdeError({
+    utils.erde_error({
       type = 'compile',
       message = message,
       -- Use 3 levels to the traceback to account for the wrapping anonymous
@@ -214,15 +214,15 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
   -- TODO: provide an option to disable source maps? Caching them prevents them
   -- from getting freed, and the tables (which may be potentially large) may
   -- have excessive memory usage on extremely constrained systems?
-  erdeSourceCache[erdeSourceId] = { alias = sourceAlias, sourceMap = sourceMap }
+  erde_source_cache[erde_source_id] = { alias = alias, source_map = source_map }
 
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
 
-  local sourceLoader, err = loadLua(compiled, erdeSourceId)
+  local loader, err = loadlua(compiled, erde_source_id)
 
   if err ~= nil then
-    utils.erdeError({
+    utils.erde_error({
       type = 'run',
       message = table.concat({
         'Failed to load compiled code:',
@@ -233,7 +233,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
         '',
         'erde',
         '----',
-        sourceCode,
+        source,
         '',
         'lua',
         '---',
@@ -242,7 +242,7 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
     })
   end
 
-  local ok, result = xpcall(sourceLoader, function(message)
+  local ok, result = xpcall(loader, function(message)
     if type(message) == 'table' and message.__is_erde_error__ then
       -- Do not unnecessarily wrap an error we have already handled!
       return message
@@ -258,24 +258,24 @@ local function __erde_internal_load_source__(sourceCode, sourceAlias)
     end
   end)
 
-  if not ok then utils.erdeError(result) end
+  if not ok then utils.erde_error(result) end
   return result
 end
 
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
-local function runErdeString(sourceCode, sourceAlias)
-  if sourceAlias == nil then
-    sourceAlias = sourceCode:sub(1, 6)
+local function run_string(source, alias)
+  if alias == nil then
+    alias = source:sub(1, 6)
 
-    if #sourceAlias > 5 then
-      sourceAlias = sourceAlias:sub(1, 5) .. '...'
+    if #alias > 5 then
+      alias = alias:sub(1, 5) .. '...'
     end
 
-    sourceAlias = ('[string "%s"]'):format(sourceAlias)
+    alias = ('[string "%s"]'):format(alias)
   end
 
-  local result = __erde_internal_load_source__(sourceCode, sourceAlias)
+  local result = __erde_internal_load_source__(source, alias)
   return result
 end
 
@@ -283,27 +283,27 @@ end
 -- Package Loader
 -- -----------------------------------------------------------------------------
 
-local function erdeSearcher(moduleName)
-  local modulePath = moduleName:gsub('%.', C.PATH_SEPARATOR)
+local function erde_searcher(module)
+  local path = module:gsub('%.', C.PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') do
-    local fullModulePath = path:gsub('%.lua$', '.erde'):gsub('?', modulePath)
+    local fullpath = path:gsub('%.lua$', '.erde'):gsub('?', path)
 
-    if utils.fileExists(fullModulePath) then
+    if utils.file_exists(fullpath) then
       -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
       -- `__erde_internal_load_source__`!
       return function()
-        local sourceCode = utils.readFile(fullModulePath)
-        local result = __erde_internal_load_source__(sourceCode, fullModulePath)
+        local source = utils.read_file(fullpath)
+        local result = __erde_internal_load_source__(source, fullpath)
         return result
       end
     end
   end
 end
 
-local function load(newLuaTarget, options)
-  if newLuaTarget ~= nil and C.VALID_LUA_TARGETS[newLuaTarget] then
-    C.LUA_TARGET = newLuaTarget
+local function load(new_lua_target, options)
+  if new_lua_target ~= nil and C.VALID_LUA_TARGETS[new_lua_target] then
+    C.LUA_TARGET = new_lua_target
   end
 
   if options then
@@ -313,7 +313,7 @@ local function load(newLuaTarget, options)
   end
 
   for i, searcher in ipairs(searchers) do
-    if searcher == erdeSearcher then
+    if searcher == erde_searcher then
       return
     end
   end
@@ -322,12 +322,12 @@ local function load(newLuaTarget, options)
   -- modules over Lua modules. If the user has compiled an Erde project before
   -- but the compiled files are out of date, we need to avoid loading the
   -- outdated modules.
-  table.insert(searchers, 2, erdeSearcher)
+  table.insert(searchers, 2, erde_searcher)
 end
 
 local function unload()
   for i, searcher in ipairs(searchers) do
-    if searcher == erdeSearcher then
+    if searcher == erde_searcher then
       table.remove(searchers, i)
       return
     end
@@ -342,7 +342,7 @@ return {
   __erde_internal_load_source__ = __erde_internal_load_source__,
   rewrite = rewrite,
   traceback = traceback,
-  run = runErdeString,
+  run = run_string,
   load = load,
   unload = unload,
 }

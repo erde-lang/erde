@@ -49,14 +49,14 @@ Examples:
       Remove all generated *.lua files under the current directory.
 ]]):format(table.concat(C.VALID_LUA_TARGETS, ', '))
 
-local subCommand = nil
-local outDir = nil
+local subcommand = nil
+local outdir = nil
 local watch = false
 local force = false
-local printCompiled = false
+local print_compiled = false
 local args = {}
 local script = nil
-local scriptIndex = nil
+local script_index = nil
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -69,8 +69,8 @@ end
 
 -- Check whether a file has been generated from `erde` by checking if the file
 -- ends with `C.COMPILED_FOOTER_COMMENT`.
-local function isCompiledFile(filePath)
-  local file = io.open(filePath, 'r')
+local function is_compiled_file(path)
+  local file = io.open(path, 'r')
 
   if file == nil then
     return false
@@ -78,34 +78,34 @@ local function isCompiledFile(filePath)
 
   -- Some editors save an invisible trailing newline, so read an extra char just
   -- in case.
-  local readLen = #C.COMPILED_FOOTER_COMMENT + 1
+  local read_len = #C.COMPILED_FOOTER_COMMENT + 1
 
-  file:seek('end', -readLen)
-  local footer = file:read(readLen)
+  file:seek('end', -read_len)
+  local footer = file:read(read_len)
   file:close()
 
   return footer:find(C.COMPILED_FOOTER_COMMENT)
 end
 
-local function traverseFiles(paths, fileMatch, callback)
+local function traverse(paths, pattern, callback)
   for i, path in ipairs(paths) do
     local attributes = lfs.attributes(path)
 
     if attributes ~= nil then
       if attributes.mode == 'file' then
-        if fileMatch == nil or path:match(fileMatch) then
+        if pattern == nil or path:match(pattern) then
           callback(path, attributes)
         end
       elseif attributes.mode == 'directory' then
-        local subPaths = {}
+        local subpaths = {}
 
-        for fileName in lfs.dir(path) do
-          if fileName ~= '.' and fileName ~= '..' then
-            table.insert(subPaths, utils.joinPaths(path, fileName))
+        for filename in lfs.dir(path) do
+          if filename ~= '.' and filename ~= '..' then
+            table.insert(subpaths, utils.join_paths(path, filename))
           end
         end
 
-        traverseFiles(subPaths, fileMatch, callback)
+        traverse(subpaths, pattern, callback)
       end
     end
   end
@@ -115,30 +115,28 @@ end
 -- Actions
 -- -----------------------------------------------------------------------------
 
-local function compileFile(srcFilePath, includeTimestamp)
-  local destFilePath = srcFilePath:gsub('%.erde$', '.lua')
-  if outDir then
-    destFilePath = outDir .. '/' .. destFilePath
-  end
+local function compile_file(src_path, show_timestamp)
+  local dest_path = src_path:gsub('%.erde$', '.lua')
+  if outdir then dest_path = outdir .. '/' .. dest_path end
 
-  if not printCompiled and not force then
-    if utils.fileExists(destFilePath) and not isCompiledFile(destFilePath) then
-      print(srcFilePath .. ' => ERROR')
-      print('Cannot write to ' .. destFilePath .. ': File already exists')
+  if not print_compiled and not force then
+    if utils.file_exists(dest_path) and not is_compiled_file(dest_path) then
+      print(src_path .. ' => ERROR')
+      print('Cannot write to ' .. dest_path .. ': _file already exists')
       return false
     end
   end
 
-  local srcFile = io.open(srcFilePath, 'r')
-  local src = srcFile:read('*a')
-  srcFile:close()
+  local src_file = io.open(src_path, 'r')
+  local src = src_file:read('*a')
+  src_file:close()
 
   local ok, result = pcall(function()
     return compile(src)
   end)
 
   if not ok then
-    print(srcFilePath .. ' => ERROR')
+    print(src_path .. ' => ERROR')
 
     if type(result == 'table') and result.line then
       print(('erde:%d: %s'):format(result.line, result.message))
@@ -149,32 +147,32 @@ local function compileFile(srcFilePath, includeTimestamp)
     return false
   end
 
-  if printCompiled then
-    print(srcFilePath)
-    print(('-'):rep(#srcFilePath))
+  if print_compiled then
+    print(src_path)
+    print(('-'):rep(#src_path))
     print(result)
   else
-    local destFile = io.open(destFilePath, 'w')
-    destFile:write(result)
-    destFile:close()
+    local dest_file = io.open(dest_path, 'w')
+    dest_file:write(result)
+    dest_file:close()
 
-    if includeTimestamp then
-      print(('[%s] %s => %s'):format(os.date('%X'), srcFilePath, destFilePath))
+    if show_timestamp then
+      print(('[%s] %s => %s'):format(os.date('%X'), src_path, dest_path))
     else
-      print(('%s => %s'):format(srcFilePath, destFilePath))
+      print(('%s => %s'):format(src_path, dest_path))
     end
   end
 
   return true
 end
 
-local function watchFiles(paths)
+local function watch_files(paths)
   local modifications = {}
-  local pollIntervalSeconds = 1
+  local poll_interval = 1 -- seconds
 
-  local hasSocket, socket = pcall(function() return require('socket') end)
-  local hasPosix, posix = pcall(function() return require('posix.unistd') end)
-  if not hasSocket and not hasPosix then
+  local has_socket, socket = pcall(function() return require('socket') end)
+  local has_posix, posix = pcall(function() return require('posix.unistd') end)
+  if not has_socket and not has_posix then
     print(table.concat({
       'WARNING: No libraries with sleep functionality found. This will ',
       'cause high CPU usage while watching. To fix this, you can install ',
@@ -184,30 +182,30 @@ local function watchFiles(paths)
   end
 
   while true do
-    traverseFiles(paths, '%.erde$', function(filePath, attributes)
-      if not modifications[filePath] or modifications[filePath] ~= attributes.modification then
-        modifications[filePath] = attributes.modification
-        compileFile(filePath, true)
+    traverse(paths, '%.erde$', function(path, attributes)
+      if not modifications[path] or modifications[path] ~= attributes.modification then
+        modifications[path] = attributes.modification
+        compile_file(path, true)
       end
     end)
 
-    if hasSocket then
-      socket.sleep(pollIntervalSeconds)
-    elseif hasPosix then
-      posix.sleep(pollIntervalSeconds)
+    if has_socket then
+      socket.sleep(poll_interval)
+    elseif has_posix then
+      posix.sleep(poll_interval)
     else
-      local lastTimeout = os.time()
-      repeat until os.time() - lastTimeout > pollIntervalSeconds
+      local last_timeout = os.time()
+      repeat until os.time() - last_timeout > poll_interval
     end
   end
 end
 
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
-local function runFile(filePath)
+local function run_file(path)
   local ok, result = pcall(function()
-    local sourceCode = utils.readFile(filePath)
-    local result = lib.__erde_internal_load_source__(sourceCode, filePath)
+    local source = utils.read_file(path)
+    local result = lib.__erde_internal_load_source__(source, path)
     return result
   end)
 
@@ -227,66 +225,66 @@ end
 -- CLI Parsing
 -- -----------------------------------------------------------------------------
 
-local cliInputs = arg
-local cliInputsIndex = 1
+local cli_inputs = arg
+local cli_inputs_index = 1
 
-local function cliOption(label)
-  cliInputsIndex = cliInputsIndex + 1
-  local optionValue = cliInputs[cliInputsIndex]
+local function cli_option(label)
+  cli_inputs_index = cli_inputs_index + 1
+  local option_value = cli_inputs[cli_inputs_index]
 
-  if not optionValue then
+  if not option_value then
     terminate('Missing argument for ' .. label)
   end
 
-  return optionValue
+  return option_value
 end
 
-if cliInputs[1] == 'compile' or cliInputs[1] == 'clean' then
-  subCommand = cliInputs[1]
-  cliInputsIndex = cliInputsIndex + 1
+if cli_inputs[1] == 'compile' or cli_inputs[1] == 'clean' then
+  subcommand = cli_inputs[1]
+  cli_inputs_index = cli_inputs_index + 1
 end
 
-while cliInputsIndex <= #cliInputs do
-  local cliInput = cliInputs[cliInputsIndex]
+while cli_inputs_index <= #cli_inputs do
+  local cli_input = cli_inputs[cli_inputs_index]
 
   if script then
     -- Proxy all arguments after the script to the script itself
     -- (same as Lua interpreter behavior)
-    table.insert(args, cliInput)
-  elseif cliInput == '-h' or cliInput == '--help' then
+    table.insert(args, cli_input)
+  elseif cli_input == '-h' or cli_input == '--help' then
     terminate(HELP, 0)
-  elseif cliInput == '-v' or cliInput == '--version' then
+  elseif cli_input == '-v' or cli_input == '--version' then
     terminate(C.VERSION, 0)
-  elseif cliInput == '-d' or cliInput == '--debug' then
+  elseif cli_input == '-d' or cli_input == '--debug' then
     C.DEBUG = true
-  elseif cliInput == '-w' or cliInput == '--watch' then
+  elseif cli_input == '-w' or cli_input == '--watch' then
     watch = true
-  elseif cliInput == '-f' or cliInput == '--force' then
+  elseif cli_input == '-f' or cli_input == '--force' then
     force = true
-  elseif cliInput == '-p' or cliInput == '--print' then
-    printCompiled = true
-  elseif cliInput == '-t' or cliInput == '--target' then
-    C.LUA_TARGET = cliOption(cliInput)
+  elseif cli_input == '-p' or cli_input == '--print' then
+    print_compiled = true
+  elseif cli_input == '-t' or cli_input == '--target' then
+    C.LUA_TARGET = cli_option(cli_input)
     if not C.VALID_LUA_TARGETS[C.LUA_TARGET] then
       terminate(table.concat({
         'Invalid Lua target: ' .. C.LUA_TARGET,
         'Must be one of: ' .. table.concat(C.VALID_LUA_TARGETS, ', '),
       }, '\n'))
     end
-  elseif cliInput == '-o' or cliInput == '--outdir' then
-    outDir = cliOption(cliInput)
-  elseif cliInput == '-b' or cliInput == '--bitlib' then
-    C.BITLIB = cliOption(cliInput)
-  elseif cliInput:sub(1, 1) == '-' then
-    terminate('Unrecognized option: ' .. cliInput)
-  elseif not subCommand and cliInput:match('%.erde$') then
-    script = cliInput 
-    scriptIndex = cliInputsIndex
+  elseif cli_input == '-o' or cli_input == '--outdir' then
+    outdir = cli_option(cli_input)
+  elseif cli_input == '-b' or cli_input == '--bitlib' then
+    C.BITLIB = cli_option(cli_input)
+  elseif cli_input:sub(1, 1) == '-' then
+    terminate('Unrecognized option: ' .. cli_input)
+  elseif not subcommand and cli_input:match('%.erde$') then
+    script = cli_input
+    script_index = cli_inputs_index
   else
-    table.insert(args, cliInput)
+    table.insert(args, cli_input)
   end
 
-  cliInputsIndex = cliInputsIndex + 1
+  cli_inputs_index = cli_inputs_index + 1
 end
 
 -- -----------------------------------------------------------------------------
@@ -295,41 +293,41 @@ end
 
 C.IS_CLI_RUNTIME = true
 
-if subCommand == 'compile' then
+if subcommand == 'compile' then
   if #args == 0 then
     terminate('Missing arg')
   elseif watch then
     -- Use pcall to catch SIGINT
-    pcall(function() watchFiles(args) end)
+    pcall(function() watch_files(args) end)
   else
-    traverseFiles(args, '%.erde$', function(filePath)
-      if not compileFile(filePath) then
+    traverse(args, '%.erde$', function(path)
+      if not compile_file(path) then
         os.exit(1)
       end
     end)
   end
-elseif subCommand == 'clean' then
+elseif subcommand == 'clean' then
   if #args == 0 then
     terminate('Missing arg')
   end
-  traverseFiles(args, '%.lua$', function(filePath)
-    if isCompiledFile(filePath) then
-      os.remove(filePath)
-      print(filePath .. ' => DELETED')
+  traverse(args, '%.lua$', function(path)
+    if is_compiled_file(path) then
+      os.remove(path)
+      print(path .. ' => DELETED')
     end
   end)
 elseif not script then
   repl()
-elseif not utils.fileExists(script) then
+elseif not utils.file_exists(script) then
   terminate('File does not exist: ' .. script)
 else
   arg = args
-  arg[-scriptIndex] = 'erde'
+  arg[-script_index] = 'erde'
 
-  for i = scriptIndex, 1, -1 do
-    arg[i - scriptIndex] = cliInputs[i]
+  for i = script_index, 1, -1 do
+    arg[i - script_index] = cli_inputs[i]
   end
 
   lib.load()
-  runFile(script)
+  run_file(script)
 end

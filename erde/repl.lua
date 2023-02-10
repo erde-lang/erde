@@ -16,7 +16,7 @@ if HAS_READLINE then
   })
 end
 
-local function readLine(prompt)
+local function readline(prompt)
   if HAS_READLINE then
     return RL.readline(prompt)
   else
@@ -25,7 +25,7 @@ local function readLine(prompt)
   end
 end
 
-local function runRepl()
+local function repl()
   print(('Erde %s on %s -- Copyright (C) 2021-2022 bsuth'):format(C.VERSION, _VERSION))
 
   if not HAS_READLINE then
@@ -33,8 +33,8 @@ local function runRepl()
   end
 
   while true do
-    local runOk, runResult
-    local source = readLine(PROMPT)
+    local ok, result
+    local source = readline(PROMPT)
 
     -- Readline returns the string '(null)' on <C-d> for some reason.
     if not source or (HAS_READLINE and source == '(null)') then
@@ -44,29 +44,29 @@ local function runRepl()
     repeat
       -- Try input as an expression first! This way we can still print the value
       -- in the case that the expression is also a valid block (i.e. function calls).
-      runOk, runResult = pcall(function()
+      ok, result = pcall(function()
         return lib.run('return ' .. source, 'stdin')
       end)
 
-      if not runOk and runResult.type == 'compile' and not runResult.message:find('unexpected eof') then
+      if not ok and result.type == 'compile' and not result.message:find('unexpected eof') then
         -- Try input as a block
-        runOk, runResult = pcall(function()
+        ok, result = pcall(function()
           return lib.run(source, 'stdin')
         end)
       end
-       
-      if not runOk and runResult.type == 'compile' and runResult.message:find('unexpected eof') then
-        repeat
-          local subSource = readLine(SUB_PROMPT)
-          source = source .. (subSource or '')
-        until subSource
-      end
-    until runOk or runResult.type ~= 'compile' or not runResult.message:find('unexpected eof')
 
-    if not runOk then
-      print(runResult.stacktrace or runResult.message)
-    elseif runResult ~= nil then
-      print(runResult)
+      if not ok and result.type == 'compile' and result.message:find('unexpected eof') then
+        repeat
+          local subsource = readline(SUB_PROMPT)
+          source = source .. (subsource or '')
+        until subsource
+      end
+    until ok or result.type ~= 'compile' or not result.message:find('unexpected eof')
+
+    if not ok then
+      print(result.stacktrace or result.message)
+    elseif result ~= nil then
+      print(result)
     end
 
     if HAS_READLINE and utils.trim(source) ~= '' then
@@ -76,9 +76,9 @@ local function runRepl()
 end
 
 return function()
-  -- Protect runRepl so we don't show stacktraces when the user uses Control+c
+  -- Protect repl so we don't show stacktraces when the user uses Control+c
   -- without readline.
-  pcall(runRepl)
+  pcall(repl)
   if HAS_READLINE then
     RL.save_history()
   end

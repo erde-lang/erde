@@ -98,8 +98,8 @@ C.UNOPS = {
   ['~'] = { prec = 13 },
 }
 
-for opToken, op in pairs(C.UNOPS) do
-  op.token = opToken
+for token, op in pairs(C.UNOPS) do
+  op.token = token
 end
 
 C.BITOPS = {
@@ -140,12 +140,12 @@ C.BINOPS = {
   ['^'] = { prec = 14, assoc = C.RIGHT_ASSOCIATIVE },
 }
 
-for opToken, op in pairs(C.BITOPS) do
-  C.BINOPS[opToken] = op
+for token, op in pairs(C.BITOPS) do
+  C.BINOPS[token] = op
 end
 
-for opToken, op in pairs(C.BINOPS) do
-  op.token = opToken
+for token, op in pairs(C.BINOPS) do
+  op.token = token
 end
 
 C.BINOP_ASSIGNMENT_TOKENS = {
@@ -183,9 +183,9 @@ C.SYMBOLS = {
   ['::'] = true,
 }
 
-for opToken, op in pairs(C.BINOPS) do
-  if #opToken > 1 then
-    C.SYMBOLS[opToken] = true
+for token, op in pairs(C.BINOPS) do
+  if #token > 1 then
+    C.SYMBOLS[token] = true
   end
 end
 

@@ -2,13 +2,13 @@ local C = require('erde.constants')
 local utils = require('erde.utils')
 
 -- Foward declare
-local Token
+local token
 
 -- -----------------------------------------------------------------------------
 -- State
 -- -----------------------------------------------------------------------------
 
-local text, char, char_index, char_line
+local text, char, char_index, current_line
 local tokens, token_lines, num_tokens
 
 -- -----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ local tokens, token_lines, num_tokens
 local function commit(token, line)
   num_tokens = num_tokens + 1
   tokens[num_tokens] = token
-  token_lines[num_tokens] = line or char_line
+  token_lines[num_tokens] = line or current_line
 end
 
 local function peek(n)
@@ -38,7 +38,7 @@ local function consume(n)
 end
 
 local function throw(message, line)
-  utils.erdeError({ message = message, line = line or char_line })
+  utils.erde_error({ message = message, line = line or current_line })
 end
 
 -- -----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ end
 -- -----------------------------------------------------------------------------
 
 local function Newline()
-  char_line = char_line + 1
+  current_line = current_line + 1
   return consume()
 end
 
@@ -67,18 +67,18 @@ local function EscapeSequence()
       throw('escape sequence \\xXX only compatible w/ lua targets 5.2+, jit')
     end
 
-    local escape_sequence = consume()
+    local EscapeSequence = consume()
 
     for i = 1, 2 do
       if not C.HEX[char] then
         throw('escape sequence \\xXX must use exactly 2 hex characters')
       end
-      escape_sequence = escape_sequence .. consume()
+      EscapeSequence = EscapeSequence .. consume()
     end
 
-    return escape_sequence
+    return EscapeSequence
   elseif char == 'u' then
-    local escape_sequence = consume()
+    local EscapeSequence = consume()
 
     if char ~= '{' then
       throw('missing { in escape sequence \\u{XXX}')
@@ -86,20 +86,20 @@ local function EscapeSequence()
       throw('escape sequence \\u{XXX} only compatible w/ lua targets 5.3+, jit')
     end
 
-    escape_sequence = escape_sequence .. consume()
+    EscapeSequence = EscapeSequence .. consume()
     if not C.HEX[char] then
       throw('missing hex in escape sequence \\u{XXX}')
     end
 
     while C.HEX[char] do
-      escape_sequence = escape_sequence .. consume()
+      EscapeSequence = EscapeSequence .. consume()
     end
 
     if char ~= '}' then
       throw('missing } in escape sequence \\u{XXX}')
     end
 
-    return escape_sequence .. consume()
+    return EscapeSequence .. consume()
   else
     throw('invalid escape sequence \\' .. char)
   end
@@ -221,14 +221,14 @@ local function Interpolation()
 
   -- Keep track of brace depth to differentiate end of interpolation from
   -- nested braces
-  local braceDepth, interpolation_line = 0, char_line
+  local brace_depth, interpolation_line = 0, current_line
 
-  while char ~= '}' or braceDepth > 0 do
+  while char ~= '}' or brace_depth > 0 do
     if char == '{' then
-      braceDepth = braceDepth + 1
+      brace_depth = brace_depth + 1
       commit(consume())
     elseif char == '}' then
-      braceDepth = braceDepth - 1
+      brace_depth = brace_depth - 1
       commit(consume())
     elseif char == '\n' then
       Newline()
@@ -246,6 +246,7 @@ end
 
 local function SingleQuoteString()
   commit(consume()) -- quote
+
   local content = ''
 
   while char ~= "'" do
@@ -267,7 +268,9 @@ end
 
 local function DoubleQuoteString()
   commit(consume()) -- quote
-  local content = ''
+
+  -- Keep track of content_line in case interpolation has newline
+  local content, content_line = '', current_line
 
   while char ~= '"' do
     if char == '' or char == '\n' then
@@ -281,8 +284,8 @@ local function DoubleQuoteString()
       end
     elseif char == '{' then
       if content ~= '' then
-        commit(content)
-        content = ''
+        commit(content, content_line)
+        content, content_line = '', current_line
       end
       Interpolation()
     else
@@ -291,7 +294,7 @@ local function DoubleQuoteString()
   end
 
   if content ~= '' then
-    commit(content)
+    commit(content, content_line)
   end
 
   commit(consume()) -- quote
@@ -310,7 +313,7 @@ local function BlockString()
   end
 
   if char ~= '[' then
-    throw('unterminated block string opening', block_string_line)
+    throw('unterminated block string opening', content_line)
   else
     consume()
     open_quote = open_quote .. '['
@@ -319,11 +322,12 @@ local function BlockString()
   end
 
   commit(open_quote)
-  local content, block_string_line = '', char_line
+
+  local content, content_line = '', current_line
 
   while char ~= ']' or peek(quote_len) ~= close_quote do
     if char == '' then
-      throw('unterminated block string', block_string_line)
+      throw('unterminated block string', content_line)
     elseif char == '\n' then
       content = content .. Newline()
     elseif char == '\\' then
@@ -335,8 +339,8 @@ local function BlockString()
       end
     elseif char == '{' then
       if content ~= '' then
-        commit(content, block_string_line)
-        content = ''
+        commit(content, content_line)
+        content, content_line = '', current_line
       end
       Interpolation()
     else
@@ -345,7 +349,7 @@ local function BlockString()
   end
 
   if content ~= '' then
-    commit(content, block_string_line)
+    commit(content, content_line)
   end
 
   commit(consume(quote_len))
@@ -377,7 +381,7 @@ local function Comment()
       consume()
     end
   else
-    local comment_line = char_line
+    local comment_line = current_line
 
     while char ~= ']' or peek(close_quote_len) ~= close_quote do
       if char == '' then
@@ -415,8 +419,7 @@ function Token()
     elseif C.SYMBOLS[peek(3)] then
       commit(consume(3))
     elseif C.SYMBOLS[peek_two] then
-      commit(peek_two)
-      consume(2)
+      commit(consume(2))
     else
       commit(consume())
     end
@@ -424,11 +427,11 @@ function Token()
 end
 
 -- -----------------------------------------------------------------------------
--- Tokenize
+-- tokenize
 -- -----------------------------------------------------------------------------
 
-return function(input)
-  text, char, char_index, char_line = input, input:sub(1, 1), 1, 1
+return function(new_text)
+  text, char, char_index, current_line = new_text, new_text:sub(1, 1), 1, 1
   tokens, token_lines, num_tokens = {}, {}, 0
 
   if peek(2) == '#!' then

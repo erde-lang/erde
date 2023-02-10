@@ -25,8 +25,8 @@ end
 -- Files
 -- -----------------------------------------------------------------------------
 
-local function fileExists(filePath)
-  local file = io.open(filePath, 'r')
+local function file_exists(path)
+  local file = io.open(path, 'r')
 
   if file == nil then
     return false
@@ -36,11 +36,11 @@ local function fileExists(filePath)
   return true
 end
 
-local function readFile(filePath)
-  local file = io.open(filePath)
+local function read_file(path)
+  local file = io.open(path)
 
   if file == nil then
-    error('file does not exist: ' .. filePath)
+    error('file does not exist: ' .. path)
   end
 
   local contents = file:read('*a')
@@ -52,7 +52,7 @@ end
 -- Paths
 -- -----------------------------------------------------------------------------
 
-local function joinPaths(...)
+local function join_paths(...)
   return (table.concat({ ... }, C.PATH_SEPARATOR):gsub(C.PATH_SEPARATOR .. '+', C.PATH_SEPARATOR))
 end
 
@@ -66,19 +66,19 @@ local ERDE_ERROR_MT = {
   end
 }
 
-local function erdeError(err)
-  local newErdeError = { __is_erde_error__ = true }
+local function erde_error(err)
+  local new_erde_error = { __is_erde_error__ = true }
 
   if type(err) == 'table' then
     for key, value in pairs(err) do
-      newErdeError[key] = value
+      new_erde_error[key] = value
     end
   else
-    newErdeError.message = tostring(err)
+    new_erde_error.message = tostring(err)
   end
 
-  setmetatable(newErdeError, ERDE_ERROR_MT)
-  error(newErdeError)
+  setmetatable(new_erde_error, ERDE_ERROR_MT)
+  error(new_erde_error)
 end
 
 -- -----------------------------------------------------------------------------
@@ -88,8 +88,8 @@ end
 return {
   split = split,
   trim = trim,
-  fileExists = fileExists,
-  readFile = readFile,
-  joinPaths = joinPaths,
-  erdeError = erdeError,
+  file_exists = file_exists,
+  read_file = read_file,
+  join_paths = join_paths,
+  erde_error = erde_error,
 }
