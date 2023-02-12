@@ -2,13 +2,17 @@
 
 # 0.4-2
 
-- replace source maps with placing compiled code on same line
-- refactor / cleanup
-- fix assigning module to update table value
 - transpile numbers for different versions
 - require scope keywords for declarations
   - throw error on undeclared variables
   - global variables should be declared at top of file
+- debug compiling for `erde.load` and `erde` cli
+  - wrap function call bodies in pcall to rewrite errors.
+  - wrap destructures in case trying to destructure non table
+
+# 0.4-3
+- add columns to source maps
+- make source maps smaller?
 - add autocompletions + command to install / uninstall autocompletions
 
 # 1.0-1
@@ -17,10 +21,13 @@
 
 # Future Plans
 
-- formatter
+- formatter (unopiniated!)
+  - auto indent
+  - fix spaces
+  - delete trailing whitespace / newlines
+  - infer trailing commas
+  - infer single vs multi line lists
 - converter (lua -> erde)
-- debug mode for `erde.load`
-  - wrap imports to provide error if try to destructure nontable
 
 # Possible Language Features (needs further discussion)
 - Allow strings as index chain bases
