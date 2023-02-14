@@ -155,10 +155,6 @@ local function compile_binop(token, line, lhs, rhs)
     return { lhs, line, 'or', rhs }
   elseif token == '&&' then
     return { lhs, line, 'and', rhs }
-  elseif token == '^' then
-    return (C.LUA_TARGET == '5.3' or C.LUA_TARGET == '5.3+' or C.LUA_TARGET == '5.4' or C.LUA_TARGET == '5.4+')
-      and { lhs, line, token, rhs }
-      or { line, 'math.pow(', lhs, ',', rhs, line, ')' }
   elseif token == '//' then
     return (C.LUA_TARGET == '5.3' or C.LUA_TARGET == '5.3+' or C.LUA_TARGET == '5.4' or C.LUA_TARGET == '5.4+')
       and { lhs, line, token, rhs }
