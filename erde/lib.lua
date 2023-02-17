@@ -284,10 +284,10 @@ end
 -- -----------------------------------------------------------------------------
 
 local function erde_searcher(module)
-  local path = module:gsub('%.', C.PATH_SEPARATOR)
+  local module_path = module:gsub('%.', C.PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') do
-    local fullpath = path:gsub('%.lua$', '.erde'):gsub('?', path)
+    local fullpath = path:gsub('%.lua$', '.erde'):gsub('?', module_path)
 
     if utils.file_exists(fullpath) then
       -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF

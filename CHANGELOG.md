@@ -10,11 +10,10 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - `pcall` paradigm suffices, `try...catch` statement in practice was not _that_ useful
   - Do not want to split code styles on `pcall` vs `try...catch`
   - Previous implementation buggy, did not respect `return` statements (since `try` block was wrapped in an anonymous function)
-- Erde now properly ignores escape sequences in block strings (`[[ ... ]]`)
-  - interpolation braces are still escapable in block strings
 
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
+- Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
 
 ### Added
 - Allow binary literals when targeting jit (ex. `print(0b100)`)
