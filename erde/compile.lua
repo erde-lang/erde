@@ -268,6 +268,63 @@ local function variable()
     and destructure() or name()
 end
 
+local function index_chain(compile_lines, require_chain)
+  while true do
+    if current_token == '.' then
+      require_chain = false
+      insert(compile_lines, current_line)
+      insert(compile_lines, consume() .. name(true))
+    elseif current_token == '[' then
+      require_chain = false
+      insert(compile_lines, current_line)
+      insert(compile_lines, '[')
+      insert(compile_lines, surround('[', ']', expression))
+      insert(compile_lines, ']')
+    elseif branch(':') then
+      require_chain = false
+      insert(compile_lines, current_line)
+      insert(compile_lines, ':' .. name(true))
+      expect('(', true)
+    -- Use newlines to infer whether the parentheses belong to a function call
+    -- or the next statement.
+    elseif current_token == '(' and current_line == token_lines[current_token_index - 1] then
+      require_chain = false
+
+      local preceding_compile_lines = compile_lines
+      local preceding_compile_lines_len = #preceding_compile_lines
+      while type(preceding_compile_lines[preceding_compile_lines_len]) == 'table' do
+        preceding_compile_lines = preceding_compile_lines[preceding_compile_lines_len]
+        preceding_compile_lines_len = #preceding_compile_lines
+      end
+
+      -- Include function call parens on same line as function name to prevent
+      -- parsing errors in Lua5.1
+      --    `ambiguous syntax (function call x new statement) near '('`
+      preceding_compile_lines[preceding_compile_lines_len] =
+        preceding_compile_lines[preceding_compile_lines_len] .. '('
+
+      local args = surround_list('(', ')', expression, true)
+      if args then insert(compile_lines, weave(args)) end
+      insert(compile_lines,  ')')
+    else
+      break
+    end
+  end
+
+  if require_chain then
+    if not current_token then
+      utils.erde_error({ line = last_line, message = 'unexpected eof' })
+    else
+      utils.erde_error({
+        line = current_line,
+        message = ("expected index chain, found '%s'"):format(current_token),
+      })
+    end
+  end
+
+  return compile_lines
+end
+
 local function return_list(require_list_parens)
   local compile_lines = {}
 
@@ -338,7 +395,7 @@ local function parameters()
 end
 
 -- -----------------------------------------------------------------------------
--- expressionessions
+-- Expressions
 -- -----------------------------------------------------------------------------
 
 local function arrow_function_expression()
@@ -389,66 +446,6 @@ local function arrow_function_expression()
 
   is_varargs_block = old_is_varargs_block
   insert(compile_lines, 'end')
-  return compile_lines
-end
-
-local function index_chain_expression(allow_arbitrary_expr)
-  local compile_lines = {}
-  local is_trivial_chain = true
-  local has_expr_base = current_token == '('
-
-  if has_expr_base then
-    insert(compile_lines, '(')
-    insert(compile_lines, surround('(', ')', expression))
-    insert(compile_lines, ')')
-  else
-    insert(compile_lines, current_line)
-    insert(compile_lines, name())
-  end
-
-  while true do
-    if current_token == '.' then
-      insert(compile_lines, current_line)
-      insert(compile_lines, consume() .. name(true))
-    elseif current_token == '[' then
-      insert(compile_lines, current_line)
-      insert(compile_lines, '[')
-      insert(compile_lines, surround('[', ']', expression))
-      insert(compile_lines, ']')
-    elseif branch(':') then
-      insert(compile_lines, current_line)
-      insert(compile_lines, ':' .. name(true))
-      expect('(', true)
-    -- Use newlines to infer whether the parentheses belong to a function call
-    -- or the next statement.
-    elseif current_token == '(' and current_line == token_lines[current_token_index - 1] then
-      local preceding_compile_lines = compile_lines
-      local preceding_compile_lines_len = #preceding_compile_lines
-      while type(preceding_compile_lines[preceding_compile_lines_len]) == 'table' do
-        preceding_compile_lines = preceding_compile_lines[preceding_compile_lines_len]
-        preceding_compile_lines_len = #preceding_compile_lines
-      end
-
-      -- Include function call parens on same line as function name to prevent
-      -- parsing errors in Lua5.1:
-      --    `ambiguous syntax (function call x new statement) near '('`
-      preceding_compile_lines[preceding_compile_lines_len] =
-        preceding_compile_lines[preceding_compile_lines_len] .. '('
-
-      local args = surround_list('(', ')', expression, true)
-      if args then insert(compile_lines, weave(args)) end
-      insert(compile_lines,  ')')
-    else
-      break
-    end
-
-    is_trivial_chain = false
-  end
-
-  if has_expr_base and not allow_arbitrary_expr and is_trivial_chain then
-    error() -- internal error
-  end
-
   return compile_lines
 end
 
@@ -540,11 +537,11 @@ local function terminal_expression()
   if C.DIGIT[current_token:sub(1, 1)] then
     return { current_line, consume() }
   elseif current_token == "'" then
-    return single_quote_string_expression()
+    return index_chain({ '(', single_quote_string_expression(), ')' })
   elseif current_token == '"' then
-    return interpolation_string_expression('"', '"')
+    return index_chain({ '(', interpolation_string_expression('"', '"'), ')' })
   elseif current_token:match('^%[[[=]') then
-    return interpolation_string_expression(current_token, current_token:gsub('%[', ']'))
+    return index_chain({ '(', interpolation_string_expression(current_token, current_token:gsub('%[', ']')), ')' })
   end
 
   local next_token = look_ahead(1)
@@ -562,8 +559,10 @@ local function terminal_expression()
     return arrow_function_expression()
   elseif current_token == '{' then
     return table_expression()
+  elseif current_token == '(' then
+    return index_chain({ '(', surround('(', ')', expression), ')' })
   else
-    return index_chain_expression(true)
+    return index_chain({ name() })
   end
 end
 
@@ -628,7 +627,9 @@ local function assignment_statement(first_id)
 
   while branch(',') do
     local index_chain_line = current_line
-    local index_chain = index_chain_expression()
+    local index_chain = current_token == '('
+      and index_chain({ '(', surround('(', ')', expression), ')' }, true)
+      or index_chain({ name() })
 
     if index_chain[#index_chain] == ')' then
       utils.erde_error({
@@ -1024,10 +1025,12 @@ local function statement()
   elseif current_token == 'local' or current_token == 'global' or current_token == 'module' then
     insert(compile_lines, declaration_statement())
   else
-    local index_chain = index_chain_expression()
+    local index_chain = current_token == '('
+      and index_chain({ '(', surround('(', ')', expression), ')' }, true)
+      or index_chain({ name() })
     local last_index_chain_token = index_chain[#index_chain]
 
-    if last_index_chain_token == ')' or last_index_chain_token == ');' then
+    if last_index_chain_token == ')' then
       -- Allow function calls as standalone statements
       insert(compile_lines, index_chain)
     else

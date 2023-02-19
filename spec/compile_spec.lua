@@ -182,6 +182,12 @@ describe('index chain #5.1+', function()
   spec('nested parens', function()
     assert.eval(1, '((({ x = 1 }))).x')
   end)
+
+  spec('string base', function()
+    assert.eval('yourstring', '"mystring":gsub("my", "your")')
+    assert.eval('yourstring', "'mystring':gsub('my', 'your')")
+    assert.eval('yourstring', "[[mystring]]:gsub('my', 'your')")
+  end)
 end)
 
 describe('strings #5.1+', function()

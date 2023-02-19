@@ -17,10 +17,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
 - Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
-- Erde now properly handles `return` statements inside `try` blocks
 
 ### Added
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.
+- Allow strings to act as index chain bases without parentheses.
+  - ex) `'mystring':find('my')`
 
 ## [0.4-1] - January 7, 2023
 
