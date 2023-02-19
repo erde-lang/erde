@@ -22,6 +22,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.
 - Allow strings to act as index chain bases without parentheses.
   - ex) `'mystring':find('my')`
+- Compiled files now include the version of Erde used at the bottom of the compiled file.
 
 ## [0.4-1] - January 7, 2023
 

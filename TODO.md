@@ -6,12 +6,13 @@
   - make cli subdir (split commands into files)
   - make compile subdir (w/ tokenizer compile)
   - split lib (package.lua, errors.lua)
-- provide CLI option to lookup sourcemaps
+- provide CLI option to emit / lookup sourcemaps
+  - `erde sourcemap mymodule.erde` -> `mymodule.erde.map`
   - `erde sourcemap mymodule.erde 489` -> `128:73`
 - support thread arg for `traceback`
 - test / debug current error rewriting (kinda buggy)
 - add columns to source maps
-- add `api`, `new features`, and live editor in documentation
+- add `cli`, `api`, `stability promise`, `new features`, and live editor in documentation
 
 # 1.0-1
 

@@ -1197,6 +1197,7 @@ return function(text)
   end
 
   collect_lines(compile_lines)
+  insert(collapsed_compile_lines, '-- Compiled with Erde ' .. C.VERSION)
   insert(collapsed_compile_lines, C.COMPILED_FOOTER_COMMENT)
   return concat(collapsed_compile_lines, '\n'), source_map
 end
