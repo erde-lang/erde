@@ -122,35 +122,35 @@ local function Word()
 end
 
 local function Hex()
-  local token = consume(2) -- 0[xX]
+  consume(2) -- 0[xX]
+  local token = 0
 
   if not C.HEX[char] and not (char == '.' and C.HEX[look_ahead(1)]) then
     throw('malformed hex')
   end
 
   while C.HEX[char] do
-    token = token .. consume()
+    token = 16 * token + tonumber(consume(), 16)
   end
 
   if char == '.' and C.HEX[look_ahead(1)] then
-    if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-      throw('hex fractional parts only compatible w/ lua targets 5.2+, jit')
-    end
+    consume()
 
-    token = token .. consume(2)
+    local counter = 1
+    token = token + tonumber(consume(), 16) / (16 ^ counter)
+
     while C.HEX[char] do
-      token = token .. consume()
+      counter = counter + 1
+      token = token + tonumber(consume(), 16) / (16 ^ counter)
     end
   end
 
   if char == 'p' or char == 'P' then
-    token = token .. consume()
+    consume()
+    local exponent, sign = 0, 1
 
     if char == '+' or char == '-' then
-      if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-        throw('hex exponent sign only compatible w/ lua targets 5.2+, jit')
-      end
-      token = token .. consume()
+      sign = sign * tonumber(consume() .. '1')
     end
 
     if not C.DIGIT[char] then
@@ -158,29 +158,28 @@ local function Hex()
     end
 
     while C.DIGIT[char] do
-      token = token .. consume()
+      exponent = 10 * exponent + tonumber(consume())
     end
+
+    token = token * 2 ^ (sign * exponent)
   end
 
-  commit(token)
+  commit(tostring(token))
 end
 
 local function Binary()
-  if C.LUA_TARGET ~= 'jit' then
-    throw('binary literals only compatible w/ lua target jit')
-  end
-
-  local token = consume(2) -- 0[bB]
+  consume(2) -- 0[bB]
+  local token = 0
 
   if char ~= '0' and char ~= '1' then
-    throw('malformed hex')
+    throw('malformed binary')
   end
 
   repeat
-    token = token .. consume()
+    token = 2 * token + tonumber(consume())
   until char ~= '0' and char ~= '1'
 
-  commit(token)
+  commit(tostring(token))
 end
 
 local function Decimal()

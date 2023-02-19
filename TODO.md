@@ -1,8 +1,7 @@
 # TODO
 
-# 0.4-2
+# 0.5-1
 
-- transpile numbers for different versions
 - refactor file structure (more modular)
   - make cli subdir (split commands into files)
   - make compile subdir (w/ tokenizer compile)
@@ -16,13 +15,10 @@
     - maybe just keep `traceback` exposed in erde api and add documentation
     - `debug.traceback = require('erde').traceback`
 - test / debug current error rewriting (kinda buggy)
-
-# 0.4-3
-
-- add `api`, `new features`, and live editor in documentation
 - add columns to source maps
 - provide CLI option to lookup sourcemaps
   - `erde sourcemap mymodule.erde 489` -> `128:73`
+- add `api`, `new features`, and live editor in documentation
 
 # 1.0-1
 

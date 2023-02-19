@@ -10,13 +10,13 @@ C.LUA_TARGET = os.getenv('LUA_TARGET') or '5.1+'
 -- Helpers
 -- -----------------------------------------------------------------------------
 
-local function deepCompare(a, b)
+local function deep_compare(a, b)
   if type(a) ~= 'table' or type(b) ~= 'table' then
     return a == b
   end
 
   for key in pairs(a) do
-    if not deepCompare(a[key], b[key]) then
+    if not deep_compare(a[key], b[key]) then
       return false
     end
   end
@@ -28,12 +28,12 @@ end
 -- Globals
 -- -----------------------------------------------------------------------------
 
-function runErde(erdeCode)
-  local luaCode = erde.compile(erdeCode)
-  local runner = (loadstring or load)(luaCode)
+function run_erde(source)
+  local compiled = erde.compile(source)
+  local runner = (loadstring or load)(compiled)
 
   if runner == nil then
-    error('Invalid Lua code: ' .. luaCode)
+    error('Invalid Lua code: ' .. compiled)
   end
 
   return runner()
@@ -80,8 +80,8 @@ busted.assert:register(
 
 local function eval(state, args)
   local expected = args[1]
-  local got = runErde('return ' .. args[2])
-  local result = deepCompare(expected, got)
+  local got = run_erde('return ' .. args[2])
+  local result = deep_compare(expected, got)
 
   if not result then
     error(('Eval error.\n\nExpected: %s\nGot: %s'):format(
@@ -102,8 +102,8 @@ busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 
 local function run(state, args)
   local expected = args[1]
-  local got = runErde(args[2])
-  local result = deepCompare(expected, got)
+  local got = run_erde(args[2])
+  local result = deep_compare(expected, got)
 
   if not result then
     error(('Run error.\n\nExpected: %s\nGot: %s'):format(

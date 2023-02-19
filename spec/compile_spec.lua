@@ -105,7 +105,7 @@ describe('arrow function #5.1+', function()
       local a = x -> { return x }
       return a(1)
     ]])
-    local sum = runErde('return (a, b) -> a + b')
+    local sum = run_erde('return (a, b) -> a + b')
     assert.are.equal(3, sum(1, 2))
   end)
 
@@ -121,7 +121,7 @@ describe('arrow function #5.1+', function()
       a.c = x => { return self.b + x }
       return a:c(2)
     ]])
-    local sum = runErde('return (a, b) => a + b + self.c')
+    local sum = run_erde('return (a, b) => a + b + self.c')
     assert.are.equal(6, sum({ c = 3 }, 1, 2))
   end)
 
@@ -599,7 +599,7 @@ describe('function declaration #5.1+', function()
   end)
 
   spec('module', function()
-    local testModule = runErde([[
+    local testModule = run_erde([[
       module function test() {
         return 1
       }

@@ -3,20 +3,24 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [0.4-2] - UNRELEASED
+## [0.5-1] - UNRELEASED
 
 ### Removed
 - BREAKING CHANGE: Removed `try...catch` statements
   - `pcall` paradigm suffices, `try...catch` statement in practice was not _that_ useful
   - Do not want to split code styles on `pcall` vs `try...catch`
-  - Previous implementation buggy, did not respect `return` statements (since `try` block was wrapped in an anonymous function)
+  - Previous implementation buggy (did not respect `return` statements since `try` block was wrapped in an anonymous function)
+
+### Changed
+- Erde now allows all number forms for all Lua targets and will transpile numbers to decimal format (including newly added binary literals).
 
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
 - Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
+- Erde now properly handles `return` statements inside `try` blocks
 
 ### Added
-- Allow binary literals when targeting jit (ex. `print(0b100)`)
+- Allow binary literals (ex. `print(0b100)`) for all Lua targets.
 
 ## [0.4-1] - January 7, 2023
 

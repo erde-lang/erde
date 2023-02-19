@@ -495,7 +495,7 @@ local function interpolation_string_expression(start_quote, end_quote)
   return weave(compile_lines, '..')
 end
 
-local function single_quote_string()
+local function single_quote_string_expression()
   local content_line, content = current_line, consume()
 
   if current_token ~= "'" then
@@ -537,11 +537,10 @@ local function terminal_expression()
     end
   end
 
-  if current_token:match('^.?[0-9]') then
-    -- Only need to check first couple chars, rest is token care of by tokenizer
+  if C.DIGIT[current_token:sub(1, 1)] then
     return { current_line, consume() }
   elseif current_token == "'" then
-    return single_quote_string()
+    return single_quote_string_expression()
   elseif current_token == '"' then
     return interpolation_string_expression('"', '"')
   elseif current_token:match('^%[[[=]') then
