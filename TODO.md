@@ -26,6 +26,7 @@
   - delete trailing whitespace / newlines
   - infer trailing commas
   - infer single vs multi line lists
+- Add erde config file to configure defaults for compiler, formatter, etc.
 - converter? (lua -> erde)
 
 # Possible Language Features (needs further discussion)

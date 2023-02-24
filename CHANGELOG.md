@@ -9,14 +9,16 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - BREAKING CHANGE: Removed `try...catch` statements
   - `pcall` paradigm suffices, `try...catch` statement in practice was not _that_ useful
   - Do not want to split code styles on `pcall` vs `try...catch`
-  - Previous implementation buggy (did not respect `return` statements since `try` block was wrapped in an anonymous function)
 
 ### Changed
 - Erde now allows all number forms for all Lua targets and will transpile numbers to decimal format (including newly added binary literals).
+- `erde` cli no longer requires the subcommand to appear directly after `erde` (flags in between are accepted)
+- `erde` cli defaults `compile` and `clean` args to the current directory.
 
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
 - Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
+- `erde` compile / clean when checking empty Lua files (`is_compiled_file`)
 
 ### Added
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.
