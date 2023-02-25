@@ -1,5 +1,5 @@
-local tokenize = require('erde.tokenize')
-local C = require('erde.constants')
+local tokenize = require('erde.compile.tokenize')
+local CC = require('erde.compile.constants')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -25,7 +25,7 @@ end
 -- -----------------------------------------------------------------------------
 
 spec('symbols #5.1+', function()
-  for symbol in pairs(C.SYMBOLS) do
+  for symbol in pairs(CC.SYMBOLS) do
     assert_token(symbol)
   end
 end)
@@ -112,7 +112,7 @@ end)
 
 describe('escape chars', function()
   spec('#5.1+', function()
-    for escapeChar in pairs(C.STANDARD_ESCAPE_CHARS) do
+    for escapeChar in pairs(CC.STANDARD_ESCAPE_CHARS) do
       assert_tokens("'\\" .. escapeChar .. "'", { "'", '\\' .. escapeChar, "'" })
       assert_tokens('"\\' .. escapeChar .. '"', { '"', '\\' .. escapeChar, '"' })
       assert_tokens('[[\\' .. escapeChar .. ']]', { '[[', '\\' .. escapeChar, ']]' })

@@ -1,4 +1,5 @@
 local C = require('erde.constants')
+local CC = require('erde.compile.constants')
 local utils = require('erde.utils')
 
 -- Foward declare
@@ -53,9 +54,9 @@ local function Newline()
 end
 
 local function EscapeSequence()
-  if C.STANDARD_ESCAPE_CHARS[char] then
+  if CC.STANDARD_ESCAPE_CHARS[char] then
     return consume()
-  elseif C.DIGIT[char] then
+  elseif CC.DIGIT[char] then
     return consume()
   elseif char == 'z' then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
@@ -70,7 +71,7 @@ local function EscapeSequence()
     local EscapeSequence = consume()
 
     for i = 1, 2 do
-      if not C.HEX[char] then
+      if not CC.HEX[char] then
         throw('escape sequence \\xXX must use exactly 2 hex characters')
       end
       EscapeSequence = EscapeSequence .. consume()
@@ -87,11 +88,11 @@ local function EscapeSequence()
     end
 
     EscapeSequence = EscapeSequence .. consume()
-    if not C.HEX[char] then
+    if not CC.HEX[char] then
       throw('missing hex in escape sequence \\u{XXX}')
     end
 
-    while C.HEX[char] do
+    while CC.HEX[char] do
       EscapeSequence = EscapeSequence .. consume()
     end
 
@@ -114,7 +115,7 @@ end
 local function Word()
   local token = consume()
 
-  while C.WORD_BODY[char] do
+  while CC.WORD_BODY[char] do
     token = token .. consume()
   end
 
@@ -125,21 +126,21 @@ local function Hex()
   consume(2) -- 0[xX]
   local token = 0
 
-  if not C.HEX[char] and not (char == '.' and C.HEX[look_ahead(1)]) then
+  if not CC.HEX[char] and not (char == '.' and CC.HEX[look_ahead(1)]) then
     throw('malformed hex')
   end
 
-  while C.HEX[char] do
+  while CC.HEX[char] do
     token = 16 * token + tonumber(consume(), 16)
   end
 
-  if char == '.' and C.HEX[look_ahead(1)] then
+  if char == '.' and CC.HEX[look_ahead(1)] then
     consume()
 
     local counter = 1
     token = token + tonumber(consume(), 16) / (16 ^ counter)
 
-    while C.HEX[char] do
+    while CC.HEX[char] do
       counter = counter + 1
       token = token + tonumber(consume(), 16) / (16 ^ counter)
     end
@@ -153,11 +154,11 @@ local function Hex()
       sign = sign * tonumber(consume() .. '1')
     end
 
-    if not C.DIGIT[char] then
+    if not CC.DIGIT[char] then
       throw('missing exponent value')
     end
 
-    while C.DIGIT[char] do
+    while CC.DIGIT[char] do
       exponent = 10 * exponent + tonumber(consume())
     end
 
@@ -185,13 +186,13 @@ end
 local function Decimal()
   local token = ''
 
-  while C.DIGIT[char] do
+  while CC.DIGIT[char] do
     token = token .. consume()
   end
 
-  if char == '.' and C.DIGIT[look_ahead(1)] then
+  if char == '.' and CC.DIGIT[look_ahead(1)] then
     token = token .. consume(2)
-    while C.DIGIT[char] do
+    while CC.DIGIT[char] do
       token = token .. consume()
     end
   end
@@ -203,11 +204,11 @@ local function Decimal()
       token = token .. consume()
     end
 
-    if not C.DIGIT[char] then
+    if not CC.DIGIT[char] then
       throw('missing exponent value')
     end
 
-    while C.DIGIT[char] do
+    while CC.DIGIT[char] do
       token = token .. consume()
     end
   end
@@ -397,7 +398,7 @@ local function Comment()
 end
 
 function Token()
-  if C.WORD_HEAD[char] then
+  if CC.WORD_HEAD[char] then
     Word()
   elseif char == "'" then
     SingleQuoteString()
@@ -411,13 +412,13 @@ function Token()
       Hex()
     elseif peek_two == '0b' or peek_two == '0B' then
       Binary()
-    elseif C.DIGIT[char] or (char == '.' and C.DIGIT[look_ahead(1)]) then
+    elseif CC.DIGIT[char] or (char == '.' and CC.DIGIT[look_ahead(1)]) then
       Decimal()
     elseif peek_two == '[[' or peek_two == '[=' then
       BlockString()
-    elseif C.SYMBOLS[peek(3)] then
+    elseif CC.SYMBOLS[peek(3)] then
       commit(consume(3))
-    elseif C.SYMBOLS[peek_two] then
+    elseif CC.SYMBOLS[peek_two] then
       commit(consume(2))
     else
       commit(consume())

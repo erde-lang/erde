@@ -2,10 +2,6 @@
 
 # 0.5-1
 
-- refactor file structure (more modular)
-  - make cli subdir (split commands into files)
-  - make compile subdir (w/ tokenizer compile)
-  - split lib (package.lua, errors.lua)
 - provide CLI option to emit / lookup sourcemaps
   - `erde sourcemap mymodule.erde` -> `mymodule.erde.map`
   - `erde sourcemap mymodule.erde 489` -> `128:73`
