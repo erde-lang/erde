@@ -39,7 +39,7 @@ but the following are some such languages that Erde took inspiration from.
 
 ## License
 
-Copyright 2022 Brian Sutherland
+Copyright 2023 Brian Sutherland
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
