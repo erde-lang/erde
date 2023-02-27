@@ -122,13 +122,17 @@ local function traceback(message, level)
 
   if C.IS_CLI_RUNTIME and not C.DEBUG then
     -- Remove following from stack trace (caused by the CLI):
-    -- [C]: in function 'xpcall'
-    -- erde/bin/erde:xxx: in function 'run_file'
-    -- erde/bin/erde:xxx: in main chunk
+    --
+    -- [C]: in function 'pcall'
+    -- erde/cli/run.lua:xxx: in function 'run'
+    -- erde/cli/init.lua:xxx: in main chunk
+    -- [C]: in function 'require'
+    -- bin/erde5.2:xxx: in main chunk
+    --
+    -- Note, we do not remove the very last line of the stack (`stacklen`)!
+    -- This is the C entry point of the Lua VM.
     local stacklen = #stack
-    table.remove(stack, stacklen - 1)
-    table.remove(stack, stacklen - 2)
-    table.remove(stack, stacklen - 3)
+    for i = 1, 5 do table.remove(stack, stacklen - i) end
   end
 
   local stacktrace = table.concat(stack, '\n')
