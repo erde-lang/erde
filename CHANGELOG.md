@@ -19,6 +19,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
 - Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
 - `erde` compile / clean when checking empty Lua files (`is_compiled_file`)
+- Erde now properly rewrites source references in error messages
 
 ### Added
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.

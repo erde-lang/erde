@@ -25,35 +25,30 @@ local ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE = table.concat({
   '[^\n]*\n',
 })
 
-local function rewrite(message, source_map, alias)
+local function rewrite(message)
   -- Only rewrite strings! Other thrown values (including nil) do not get source
   -- and line number information added.
   if type(message) ~= 'string' then return message end
-  local source, line, content = message:match('^(.*):(%d+): (.*)$')
 
-  -- Explicitly check for these! Error messages may not contain source or line
-  -- number, for example if they are called w/ error level 0.
-  -- see: https://www.lua.org/manual/5.1/manual.html#pdf-error
-  if not source or not line then return message end
+  for erde_source_id, compiled_line in message:gmatch('%[string "(__erde_source_%d+__)"]:(%d+)') do
+    local erde_source_alias = '[string "(' .. erde_source_id .. ')"]'
+    local sourcemap = {}
 
-  -- Use cached alias + source_map as a backup if they are not provided
-  local erde_source_id = source:match('^%[string "(__erde_source_%d+__)"]$')
-  if erde_source_id and erde_source_cache[erde_source_id] then
-    alias = alias or erde_source_cache[erde_source_id].alias
-    source_map = source_map or erde_source_cache[erde_source_id].source_map
+    -- Use cached alias + sourcemap as a backup if they are not provided
+    if erde_source_cache[erde_source_id] then
+      erde_source_alias = erde_source_cache[erde_source_id].alias or erde_source_alias
+      sourcemap = erde_source_cache[erde_source_id].sourcemap or sourcemap
+    end
+
+    message = message:gsub(
+      '%[string "' .. erde_source_id .. '"]:' .. compiled_line,
+      -- If we have don't have a sourcemap for erde code, we need to indicate that
+      -- the error line is for the generated Lua.
+      erde_source_alias .. ':' .. (sourcemap and sourcemap[tonumber(compiled_line)]) or ('(lua:%s)'):format(compiled_line)
+    )
   end
 
-  -- If we have don't have a source_map for erde code, we need to indiciate that
-  -- the error line is for the generated Lua.
-  if erde_source_id and not source_map then
-    line = ('(compiled: %s)'):format(line)
-  end
-
-  return ('%s:%s: %s'):format(
-    alias or source,
-    source_map and source_map[tonumber(line)] or line,
-    content:gsub('__ERDE_SUBSTITUTE_([a-zA-Z]+)__', '%1')
-  )
+  return message:gsub('__ERDE_SUBSTITUTE_([a-zA-Z]+)__', '%1')
 end
 
 -- Mimic of Lua's native `debug.traceback` w/ file and line number rewrites.
@@ -150,7 +145,7 @@ end
 -- Source Loaders
 -- -----------------------------------------------------------------------------
 
--- Load a chunk of Erde code. This caches the generated source_map / alias
+-- Load a chunk of Erde code. This caches the generated sourcemap / alias
 -- (see `erde_source_cache`) so we can fetch them later during error rewrites.
 --
 -- The alias is _not_ used as the chunkname in the underlying Lua `load`
@@ -197,7 +192,7 @@ local function __erde_internal_load_source__(source, alias)
   erde_source_id_counter = erde_source_id_counter + 1
 
   -- No xpcall here, we want the traceback to start from this stack!
-  local ok, compiled, source_map = pcall(function()
+  local ok, compiled, sourcemap = pcall(function()
     return compile(source)
   end)
 
@@ -218,7 +213,7 @@ local function __erde_internal_load_source__(source, alias)
   -- TODO: provide an option to disable source maps? Caching them prevents them
   -- from getting freed, and the tables (which may be potentially large) may
   -- have excessive memory usage on extremely constrained systems?
-  erde_source_cache[erde_source_id] = { alias = alias, source_map = source_map }
+  erde_source_cache[erde_source_id] = { alias = alias, sourcemap = sourcemap }
 
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
