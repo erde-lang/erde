@@ -41,6 +41,7 @@ local function rewrite(message)
     end
 
     message = message:gsub(
+      -- Do not use format here! The escaped bracket will interfere with Lua patterns for `string.format`.
       '%[string "' .. erde_source_id .. '"]:' .. compiled_line,
       -- If we have don't have a sourcemap for erde code, we need to indicate that
       -- the error line is for the generated Lua.
@@ -187,13 +188,13 @@ end
 --
 -- Any changes to these functions and their stack calls should be done w/ great
 -- precaution.
-local function __erde_internal_load_source__(source, alias)
+local function __erde_internal_load_source__(source, alias, compile_options)
   local erde_source_id = ('__erde_source_%d__'):format(erde_source_id_counter)
   erde_source_id_counter = erde_source_id_counter + 1
 
   -- No xpcall here, we want the traceback to start from this stack!
   local ok, compiled, sourcemap = pcall(function()
-    return compile(source)
+    return compile(source, compile_options)
   end)
 
   if not ok then
@@ -293,7 +294,7 @@ local function erde_searcher(module)
       -- `__erde_internal_load_source__`!
       return function()
         local source = utils.read_file(fullpath)
-        local result = __erde_internal_load_source__(source, fullpath)
+        local result = __erde_internal_load_source__(source, fullpath, { rewrite_errors = true })
         return result
       end
     end

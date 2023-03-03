@@ -109,7 +109,7 @@ while arg_index <= num_args do
   elseif arg_value == '-o' or arg_value == '--outdir' then
     cli.outdir = parse_option(arg_value)
   elseif arg_value == '-b' or arg_value == '--bitlib' then
-    C.BITLIB = parse_option(arg_value)
+    cli.bitlib = parse_option(arg_value)
   elseif arg_value:sub(1, 1) == '-' then
     terminate('Unrecognized option: ' .. arg_value)
   elseif not cli.subcommand and arg_value:match('%.erde$') then

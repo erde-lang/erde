@@ -17,7 +17,12 @@ return function(cli, script_args)
 
   local ok, result = pcall(function()
     local source = read_file(cli.script)
-    local result = lib.__erde_internal_load_source__(source, cli.script)
+
+    local result = lib.__erde_internal_load_source__(source, cli.script, {
+      bitlib = cli.bitlib,
+      rewrite_errors = true,
+    })
+
     return result
   end)
 

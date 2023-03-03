@@ -7,11 +7,11 @@ local file_exists = utils.file_exists
 local cli_utils = require('erde.cli.utils')
 local is_compiled_file, traverse = cli_utils.is_compiled_file, cli_utils.traverse
 
-local function compile_file(path, options)
+local function compile_file(path, cli)
   local compile_path = path:gsub('%.erde$', '.lua')
-  if options.outdir then compile_path = options.outdir .. '/' .. compile_path end
+  if cli.outdir then compile_path = cli.outdir .. '/' .. compile_path end
 
-  if not options.print_compiled and not options.force then
+  if not cli.print_compiled and not cli.force then
     if file_exists(compile_path) and not is_compiled_file(compile_path) then
       print(path .. ' => ERROR')
       print('Cannot write to ' .. compile_path .. ': file already exists')
@@ -24,7 +24,7 @@ local function compile_file(path, options)
   src_file:close()
 
   local ok, result = pcall(function()
-    return compile(src)
+    return compile(src, cli)
   end)
 
   if not ok then
@@ -39,7 +39,7 @@ local function compile_file(path, options)
     return false
   end
 
-  if options.print_compiled then
+  if cli.print_compiled then
     print(path)
     print(('-'):rep(#path))
     print(result)
@@ -48,7 +48,7 @@ local function compile_file(path, options)
     dest_file:write(result)
     dest_file:close()
 
-    if options.show_timestamp then
+    if cli.watch then
       print(('[%s] %s => %s'):format(os.date('%X'), path, compile_path))
     else
       print(('%s => %s'):format(path, compile_path))
@@ -58,7 +58,7 @@ local function compile_file(path, options)
   return true
 end
 
-local function watch_files(paths, compile_options)
+local function watch_files(cli)
   local modifications = {}
   local poll_interval = 1 -- seconds
 
@@ -74,10 +74,10 @@ local function watch_files(paths, compile_options)
   end
 
   while true do
-    traverse(paths, '%.erde$', function(path, attributes)
+    traverse(cli, '%.erde$', function(path, attributes)
       if not modifications[path] or modifications[path] ~= attributes.modification then
         modifications[path] = attributes.modification
-        compile_file(path, compile_options)
+        compile_file(path, cli)
       end
     end)
 
@@ -97,19 +97,12 @@ return function(cli)
     table.insert(cli, '.')
   end
 
-  local compile_options = {
-    force = cli.force,
-    outdir = cli.outdir,
-    print_compiled = cli.print_compiled,
-    show_timestamp = cli.watch,
-  }
-
   if cli.watch then
     -- Use pcall to catch SIGINT
-    pcall(function() watch_files(cli, compile_options) end)
+    pcall(function() watch_files(cli) end)
   else
     traverse(cli, '%.erde$', function(path)
-      if not compile_file(path, compile_options) then
+      if not compile_file(path, cli) then
         os.exit(1)
       end
     end)

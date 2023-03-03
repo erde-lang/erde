@@ -19,9 +19,6 @@ C.IS_CLI_RUNTIME = false
 -- Flag to display more erde internals during error rewriting.
 C.DEBUG = false
 
--- User specified library to use for bit operations.
-C.BITLIB = nil
-
 -- -----------------------------------------------------------------------------
 -- Lua Target
 -- -----------------------------------------------------------------------------

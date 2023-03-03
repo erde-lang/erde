@@ -2,13 +2,22 @@
 
 # 0.5-1
 
+- refactor rewriting to happen completely in compiled code (not in __erde_internal_load_source__)
+- support cli args for repl (target, bitlib, etc)
+- infer version automatically for `erde.load`
+- override traceback on `erde.load`
+- check error rewriting for run_string
+- provide tests for error rewriting
 - provide CLI option to emit / lookup sourcemaps
   - `erde sourcemap mymodule.erde` -> `mymodule.erde.map`
   - `erde sourcemap mymodule.erde 489` -> `128:73`
-- support thread arg for `traceback`
-- test / debug current error rewriting (kinda buggy)
-- add columns to source maps
+- support thread arg for `traceback` (support complete Lua compatability)
+
+# 0.5-2
 - add `cli`, `api`, `stability promise`, `new features`, and live editor in documentation
+- add columns to source maps
+- readd optional chaining
+  - avoid iife when possible (be careful of conditional expressions)
 
 # 1.0-1
 
@@ -26,8 +35,6 @@
 - converter? (lua -> erde)
 
 # Possible Language Features (needs further discussion)
-- optional chaining?
-  - avoid iife when possible (be careful of conditional expressions)
 - function decorators (too non-lua-esque?)
 - add autocompletions + command to install / uninstall autocompletions?
   - not tracked by luarocks

@@ -20,6 +20,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
 - `erde` compile / clean when checking empty Lua files (`is_compiled_file`)
 - Erde now properly rewrites source references in error messages
+- Erde now properly rewrites errors originating from `.erde` files that happen _after_ the module has ran (ex. Erde functions that get called from a main Lua script)
 
 ### Added
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.

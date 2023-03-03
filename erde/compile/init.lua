@@ -43,6 +43,16 @@ local is_varargs_block
 -- compiling to Lua 5.3+ native operators.
 local bitlib
 
+-- Options to customize compile behavior
+local options = {
+  -- User specified library to use for bit operations.
+  bitlib = nil,
+
+  -- Capture and rewrite errors produced from compiled code. Assumes that Erde
+  -- is in the LUA_PATH.
+  rewrite_errors = nil,
+}
+
 -- -----------------------------------------------------------------------------
 -- General Helpers
 -- -----------------------------------------------------------------------------
@@ -439,7 +449,7 @@ local function arrow_function_expression()
   insert(compile_lines, 1, 'function(' .. concat(param_names, ',') .. ')')
 
   if current_token == '{' then
-    insert(compile_lines, function_block(has_varargs))
+    insert(compile_lines, surround('{', '}', function_block))
   else
     insert(compile_lines, 'return')
     insert(compile_lines, return_list(true))
@@ -573,7 +583,7 @@ local function unop_expression()
   local operand_line, operand = current_line, expression(unop.prec + 1)
 
   if unop.token == '~' then
-    if (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
+    if (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not options.bitlib then
       utils.erde_error({
         line = unop_line,
         message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
@@ -604,7 +614,7 @@ function expression(min_prec)
       rhs_min_prec = rhs_min_prec + 1
     end
 
-    if CC.BITOPS[binop.token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
+    if CC.BITOPS[binop.token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not options.bitlib then
       utils.erde_error({
         line = binop_line,
         message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
@@ -643,7 +653,7 @@ local function assignment_statement(first_id)
   end
 
   local op_line, op_token = current_line, CC.BINOP_ASSIGNMENT_TOKENS[current_token] and consume()
-  if CC.BITOPS[op_token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
+  if CC.BITOPS[op_token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not options.bitlib then
     utils.erde_error({
       line = op_line,
       message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
@@ -810,7 +820,7 @@ local function for_loop_statement()
 
   insert(compile_lines, 'do')
   insert(compile_lines, pre_body_compile_lines)
-  insert(compile_lines, loop_block())
+  insert(compile_lines, surround('{', '}', loop_block))
   insert(compile_lines, 'end')
 
   return compile_lines
@@ -876,7 +886,7 @@ local function function_statement()
 
   local old_is_varargs_block = is_varargs_block
   is_varargs_block = params.has_varargs
-  insert(compile_lines, function_block(params.has_varargs))
+  insert(compile_lines, surround('{', '}', function_block))
   is_varargs_block = old_is_varargs_block
 
   insert(compile_lines, 'end')
@@ -945,7 +955,7 @@ local function repeat_until_statement()
   local compile_lines = {}
 
   insert(compile_lines, consume())
-  insert(compile_lines, loop_block())
+  insert(compile_lines, surround('{', '}', loop_block))
   insert(compile_lines, expect('until'))
   insert(compile_lines, expression())
 
@@ -992,7 +1002,7 @@ local function while_loop_statement()
   insert(compile_lines, consume())
   insert(compile_lines, expression())
   insert(compile_lines, 'do')
-  insert(compile_lines, loop_block())
+  insert(compile_lines, surround('{', '}', loop_block))
   insert(compile_lines, 'end')
 
   return compile_lines
@@ -1065,6 +1075,18 @@ function block()
   return compile_lines
 end
 
+local function rewrite_block()
+  local ok, result = new_tmp_name(), new_tmp_name()
+  return {
+    ('local %s = { pcall(function()'):format(result),
+    surround('{', '}', block),
+    'end) }',
+    ('local %s = table.remove(%s, 1)'):format(ok, result),
+    ('if %s == false then error(require("erde").rewrite(%s[1])) end'):format(ok, result),
+    ('return (unpack or table.unpack)(%s)'):format(result),
+  }
+end
+
 function loop_block()
   local old_break_name = break_name
   local old_has_continue = has_continue
@@ -1072,7 +1094,7 @@ function loop_block()
   break_name = new_tmp_name()
   has_continue = false
 
-  local compile_lines = surround('{', '}', block)
+  local compile_lines = block()
 
   if has_continue then
     if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
@@ -1099,7 +1121,9 @@ function function_block()
   is_module_return_block = false
   break_name = nil
 
-  local compile_lines = surround('{', '}', block)
+  local compile_lines = options.rewrite_errors
+    and rewrite_block()
+    or block()
 
   is_module_return_block = old_is_module_return_block
   break_name = old_break_name
@@ -1142,7 +1166,7 @@ end
 -- Main
 -- -----------------------------------------------------------------------------
 
-return function(text)
+return function(text, new_options)
   tokens, token_lines, num_tokens = tokenize(text)
 
   -- Check for empty file or file w/ only comments
@@ -1158,8 +1182,9 @@ return function(text)
   is_varargs_block = true
   tmp_name_counter = 1
   module_names = {}
+  options = new_options or {}
 
-  bitlib = C.BITLIB
+  bitlib = options.bitlib
     or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == 'jit' and 'bit') -- Mike Pall's LuaBitOp
     or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
