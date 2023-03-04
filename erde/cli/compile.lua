@@ -2,7 +2,7 @@ local C = require('erde.constants')
 local compile = require('erde.compile')
 
 local utils = require('erde.utils')
-local file_exists = utils.file_exists
+local file_exists, read_file = utils.file_exists, utils.read_file
 
 local cli_utils = require('erde.cli.utils')
 local is_compiled_file, traverse = cli_utils.is_compiled_file, cli_utils.traverse
@@ -19,12 +19,8 @@ local function compile_file(path, cli)
     end
   end
 
-  local src_file = io.open(path, 'r')
-  local src = src_file:read('*a')
-  src_file:close()
-
   local ok, result = pcall(function()
-    return compile(src, cli)
+    return compile(read_file(path))
   end)
 
   if not ok then

@@ -3,6 +3,7 @@ local clean = require('erde.cli.clean')
 local compile = require('erde.cli.compile')
 local repl = require('erde.cli.repl')
 local run = require('erde.cli.run')
+local sourcemap = require('erde.cli.sourcemap')
 
 local utils = require('erde.utils')
 local file_exists = utils.file_exists
@@ -57,6 +58,7 @@ Examples:
 local SUBCOMMANDS = {
   compile = true,
   clean = true,
+  sourcemap = true,
 }
 
 -- -----------------------------------------------------------------------------
@@ -129,6 +131,8 @@ if cli.subcommand == 'compile' then
   compile(cli)
 elseif cli.subcommand == 'clean' then
   clean(cli)
+elseif cli.subcommand == 'sourcemap' then
+  sourcemap(cli)
 elseif not cli.script then
   repl(cli)
 elseif not file_exists(cli.script) then

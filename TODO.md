@@ -2,9 +2,6 @@
 
 # 0.5-1
 
-- provide CLI option to emit / lookup sourcemaps
-  - `erde sourcemap mymodule.erde` -> `mymodule.erde.map`
-  - `erde sourcemap mymodule.erde 489` -> `128:73`
 - provide tests for error rewriting
 - support thread arg for `traceback` (support complete Lua compatability)
 

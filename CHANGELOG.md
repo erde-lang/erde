@@ -35,6 +35,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Compiled files now include the version of Erde used at the bottom of the compiled file.
 - Allow specifying bitlib in `load` options
 - Allow specifying rewriting errors in `load` options (default: `true`)
+- Added `sourcemap` subcommand for debugging
 
 ## [0.4-1] - January 7, 2023
 
