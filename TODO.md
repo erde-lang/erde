@@ -2,15 +2,10 @@
 
 # 0.5-1
 
-- refactor rewriting to happen completely in compiled code (not in __erde_internal_load_source__)
-- support cli args for repl (target, bitlib, etc)
-- infer version automatically for `erde.load`
-- override traceback on `erde.load`
-- check error rewriting for run_string
-- provide tests for error rewriting
 - provide CLI option to emit / lookup sourcemaps
   - `erde sourcemap mymodule.erde` -> `mymodule.erde.map`
   - `erde sourcemap mymodule.erde 489` -> `128:73`
+- provide tests for error rewriting
 - support thread arg for `traceback` (support complete Lua compatability)
 
 # 0.5-2

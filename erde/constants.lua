@@ -19,6 +19,16 @@ C.IS_CLI_RUNTIME = false
 -- Flag to display more erde internals during error rewriting.
 C.DEBUG = false
 
+-- Flag to display more erde internals during error rewriting.
+C.DEBUG = false
+
+  -- User specified library to use for bit operations.
+C.BITLIB = nil
+
+-- Flag to capture and rewrite errors produced from compiled code. Assumes that
+-- Erde is in LUA_PATH.
+C.REWRITE_ERRORS = true
+
 -- -----------------------------------------------------------------------------
 -- Lua Target
 -- -----------------------------------------------------------------------------

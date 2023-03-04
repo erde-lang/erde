@@ -7,6 +7,7 @@ local utils = require('erde.utils')
 
 local loadlua = loadstring or load
 local unpack = table.unpack or unpack
+local native_traceback = debug.traceback
 
 -- https://www.lua.org/manual/5.1/manual.html#pdf-package.loaders
 -- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
@@ -188,13 +189,13 @@ end
 --
 -- Any changes to these functions and their stack calls should be done w/ great
 -- precaution.
-local function __erde_internal_load_source__(source, alias, compile_options)
+local function __erde_internal_load_source__(source, alias)
   local erde_source_id = ('__erde_source_%d__'):format(erde_source_id_counter)
   erde_source_id_counter = erde_source_id_counter + 1
 
   -- No xpcall here, we want the traceback to start from this stack!
   local ok, compiled, sourcemap = pcall(function()
-    return compile(source, compile_options)
+    return compile(source)
   end)
 
   if not ok then
@@ -294,7 +295,7 @@ local function erde_searcher(module)
       -- `__erde_internal_load_source__`!
       return function()
         local source = utils.read_file(fullpath)
-        local result = __erde_internal_load_source__(source, fullpath, { rewrite_errors = true })
+        local result = __erde_internal_load_source__(source, fullpath)
         return result
       end
     end
@@ -302,14 +303,41 @@ local function erde_searcher(module)
 end
 
 local function load(new_lua_target, options)
-  if new_lua_target ~= nil and C.VALID_LUA_TARGETS[new_lua_target] then
-    C.LUA_TARGET = new_lua_target
+  options = options or {}
+
+  if new_lua_target ~= nil then
+    if C.VALID_LUA_TARGETS[new_lua_target] then
+      C.LUA_TARGET = new_lua_target
+    else
+      error(table.concat({
+        'Invalid Lua target: ' .. new_lua_target,
+        'Must be one of: ' .. table.concat(C.VALID_LUA_TARGETS, ', '),
+      }, '\n'))
+    end
+  elseif jit ~= nil then
+    C.LUA_TARGET = jit
+  else
+    new_lua_target = _VERSION:match('Lua (%d%.%d)')
+    if C.VALID_LUA_TARGETS[new_lua_target] then
+      C.LUA_TARGET = new_lua_target
+    end
   end
 
-  if options then
-    if options.debug then
-      C.DEBUG = true
-    end
+  if options.bitlib then
+    C.BITLIB = options.bitlib
+  end
+
+  if options.rewrite_errors == false then
+    C.REWRITE_ERRORS = false
+  end
+
+  if options.keep_traceback ~= true then
+    -- Override Lua's native traceback with our own to rewrite Erde paths.
+    debug.traceback = traceback
+  end
+
+  if options.debug == true then
+    C.DEBUG = true
   end
 
   for i, searcher in ipairs(searchers) do
@@ -326,6 +354,9 @@ local function load(new_lua_target, options)
 end
 
 local function unload()
+  -- Restore Lua's native traceback
+  debug.traceback = native_traceback
+
   for i, searcher in ipairs(searchers) do
     if searcher == erde_searcher then
       table.remove(searchers, i)

@@ -21,12 +21,12 @@ Options:
    -h, --help             Show this help message and exit.
    -v, --version          Show version and exit.
    -d, --debug            Expose internal stack calls in tracebacks.
+   -b, --bitlib <LIB>     Library to use for bit operations.
    -t, --target <TARGET>  Lua target for version compatability.
                           Must be one of: %s
 
 Compile Options:
    -o, --outdir <DIR>     Output directory for compiled files.
-   -b, --bitlib <LIB>     Library to use for compiled bit operations.
    -w, --watch            Watch files and recompile on change.
    -f, --force            Force rewrite existing Lua files with compiled files.
    -p, --print            Print compiled code instead of writing to files.
@@ -109,7 +109,7 @@ while arg_index <= num_args do
   elseif arg_value == '-o' or arg_value == '--outdir' then
     cli.outdir = parse_option(arg_value)
   elseif arg_value == '-b' or arg_value == '--bitlib' then
-    cli.bitlib = parse_option(arg_value)
+    C.BITLIB = parse_option(arg_value)
   elseif arg_value:sub(1, 1) == '-' then
     terminate('Unrecognized option: ' .. arg_value)
   elseif not cli.subcommand and arg_value:match('%.erde$') then

@@ -14,6 +14,11 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Erde now allows all number forms for all Lua targets and will transpile numbers to decimal format (including newly added binary literals).
 - `erde` cli no longer requires the subcommand to appear directly after `erde` (flags in between are accepted)
 - `erde` cli defaults `compile` and `clean` args to the current directory.
+- Erde now throws an error when trying to call `load` with an invalid Lua target.
+- Erde now overrides traceback to do error rewriting automatically on `load`.
+  - Can be disabled in `load` options using `keep_traceback`
+  - Lua's native `debug.traceback` is restored when calling `unload`
+- Erde now infers a version for `load` automatically based on `_VERSION` when one is not specified.
 
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
@@ -21,12 +26,15 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `erde` compile / clean when checking empty Lua files (`is_compiled_file`)
 - Erde now properly rewrites source references in error messages
 - Erde now properly rewrites errors originating from `.erde` files that happen _after_ the module has ran (ex. Erde functions that get called from a main Lua script)
+- Erde now properly checks for invalid varargs for arrow functions with implicit params
 
 ### Added
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.
 - Allow strings to act as index chain bases without parentheses.
   - ex) `'mystring':find('my')`
 - Compiled files now include the version of Erde used at the bottom of the compiled file.
+- Allow specifying bitlib in `load` options
+- Allow specifying rewriting errors in `load` options (default: `true`)
 
 ## [0.4-1] - January 7, 2023
 
