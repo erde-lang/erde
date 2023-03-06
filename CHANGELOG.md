@@ -9,6 +9,10 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - BREAKING CHANGE: Removed `try...catch` statements
   - `pcall` paradigm suffices, `try...catch` statement in practice was not _that_ useful
   - Do not want to split code styles on `pcall` vs `try...catch`
+- Removed `erdeXXX` executables (`erdejit`, `erde5.1`, etc).
+  - Did not realize luarocks wraps these Lua scripts and forces their running Lua version
+  - Not as useful now that `erde.load` automatically infers the target
+  - Polluted path a little bit (lots of executables, especially when installing for multiple versions)
 
 ### Changed
 - Erde now allows all number forms for all Lua targets and will transpile numbers to decimal format (including newly added binary literals).

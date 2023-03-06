@@ -11,6 +11,8 @@ local file_exists = utils.file_exists
 local cli_utils = require('erde.cli.utils')
 local terminate = cli_utils.terminate
 
+C.IS_CLI_RUNTIME = true
+
 local HELP = ([[
 Usage: erde [command] [args]
 

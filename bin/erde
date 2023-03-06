@@ -1,3 +1,0 @@
-#!/usr/bin/env lua
-require('erde.constants').IS_CLI_RUNTIME = true
-require('erde.cli')
