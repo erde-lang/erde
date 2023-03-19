@@ -20,7 +20,7 @@ local function compile_file(path, cli)
   end
 
   local ok, result = pcall(function()
-    return compile(read_file(path))
+    return compile(read_file(path), path)
   end)
 
   if not ok then
@@ -89,9 +89,6 @@ local function watch_files(cli)
 end
 
 return function(cli)
-  -- Do not include rewrite error code for production compiled code
-  C.REWRITE_ERRORS = false
-
   if #cli == 0 then
     table.insert(cli, '.')
   end

@@ -2,8 +2,9 @@
 
 # 0.5-1
 
+- change: remove debug cli option
+- fix: load erde in repl
 - provide tests for error rewriting
-- support thread arg for `traceback` (support complete Lua compatability)
 
 # 0.5-2
 - add `cli`, `api`, `stability promise`, `new features`, and live editor in documentation

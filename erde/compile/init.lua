@@ -14,8 +14,11 @@ local tokens, token_lines, num_tokens
 local current_token, current_token_index
 local current_line, last_line
 
+-- Name for the current source being compiled (used in error messages)
+local source_name
+
 -- Current block depth during parsing
-local block_depth = 0
+local block_depth
 
 -- Counter for generating unique names in compiled code.
 local tmp_name_counter
@@ -51,6 +54,11 @@ local unpack = table.unpack or unpack
 local insert = table.insert
 local concat = table.concat
 
+local function throw(message, line)
+  -- Use error level 0 since we already include source_name
+  error(('%s:%d: %s'):format(source_name, line or current_line or last_line, message), 0)
+end
+
 -- -----------------------------------------------------------------------------
 -- Parse Helpers
 -- -----------------------------------------------------------------------------
@@ -72,10 +80,7 @@ end
 
 local function ensure(is_valid, message)
   if not is_valid then
-    utils.erde_error({
-      message = message,
-      line = current_line,
-    })
+    throw(message)
   end
 end
 
@@ -100,14 +105,14 @@ local function look_past_surround(token_start_index)
 
   while surround_depth > 0 do
     if look_ahead_token == nil then
-      utils.erde_error({
-        line = token_lines[look_ahead_token_index - 1],
-        message = ("unexpected eof, missing ending '%s' for '%s' at [%d]"):format(
+      throw(
+        ("unexpected eof, missing ending '%s' for '%s' at [%d]"):format(
           surround_end,
           surround_start,
           token_lines[token_start_index]
         ),
-      })
+        token_lines[look_ahead_token_index - 1]
+      )
     elseif look_ahead_token == surround_start then
       surround_depth = surround_depth + 1
     elseif look_ahead_token == surround_end then
@@ -163,22 +168,6 @@ local function compile_binop(token, line, lhs, rhs)
   else
     return { lhs, line, token, rhs }
   end
-end
-
-local function rewrite_errors(compile_lines)
-  local ok, result = new_tmp_name(), new_tmp_name()
-  local has_erde, erde = new_tmp_name(), new_tmp_name()
-
-  return {
-    ('local %s = { pcall(function(%s)'):format(result, is_varargs_block and '...' or ''),
-    compile_lines,
-    is_varargs_block and 'end, ...) }' or 'end) }',
-    ('local %s = table.remove(%s, 1)'):format(ok, result),
-    ('if %s == true then return (unpack or table.unpack)(%s) end'):format(ok, result),
-    ('local %s, %s = pcall(function() return require("erde") end)'):format(has_erde, erde),
-    ('if not %s then error(%s[1]) end'):format(has_erde, result),
-    ('error(%s.rewrite(%s[1]))'):format(erde, result),
-  }
 end
 
 -- -----------------------------------------------------------------------------
@@ -330,12 +319,9 @@ local function index_chain(compile_lines, require_chain)
 
   if require_chain then
     if not current_token then
-      utils.erde_error({ line = last_line, message = 'unexpected eof' })
+      throw('unexpected eof', last_line)
     else
-      utils.erde_error({
-        line = current_line,
-        message = ("expected index chain, found '%s'"):format(current_token),
-      })
+      throw(("expected index chain, found '%s'"):format(current_token))
     end
   end
 
@@ -442,15 +428,9 @@ local function arrow_function_expression()
     insert(param_names, 1, 'self')
     consume()
   elseif current_token == nil then
-    utils.erde_error({
-      line = token_lines[current_token_index - 1],
-      message = "unexpected eof (expected '->' or '=>')",
-    })
+    throw("unexpected eof (expected '->' or '=>')", token_lines[current_token_index - 1])
   else
-    utils.erde_error({
-      line = current_line,
-      message = ("unexpected token '%s' (expected '->' or '=>')"):format(current_token),
-    })
+    throw("unexpected token '%s' (expected '->' or '=>')")
   end
 
   insert(compile_lines, 1, 'function(' .. concat(param_names, ',') .. ')')
@@ -458,7 +438,7 @@ local function arrow_function_expression()
   if current_token == '{' then
     insert(compile_lines, surround('{', '}', function_block))
   else
-    insert(compile_lines, rewrite_errors({ 'return', return_list(true) }))
+    insert(compile_lines, { 'return', return_list(true) })
   end
 
   is_varargs_block = old_is_varargs_block
@@ -590,10 +570,7 @@ local function unop_expression()
 
   if unop.token == '~' then
     if (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
-      utils.erde_error({
-        line = unop_line,
-        message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
-      })
+      throw('must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+', unop_line)
     end
 
     local bitop = ('require("%s").%s('):format(bitlib, 'bnot')
@@ -621,10 +598,7 @@ function expression(min_prec)
     end
 
     if CC.BITOPS[binop.token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
-      utils.erde_error({
-        line = binop_line,
-        message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
-      })
+      throw('must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+', binop_line)
     end
 
     compile_lines = compile_binop(binop.token, binop_line, compile_lines, expression(rhs_min_prec))
@@ -649,10 +623,7 @@ local function assignment_statement(first_id)
       or index_chain({ name() })
 
     if index_chain[#index_chain] == ')' then
-      utils.erde_error({
-        line = index_chain_line,
-        message = 'cannot assign value to function call',
-      })
+      throw('cannot assign value to function call', index_chain_line)
     end
 
     insert(id_list, index_chain)
@@ -660,10 +631,7 @@ local function assignment_statement(first_id)
 
   local op_line, op_token = current_line, CC.BINOP_ASSIGNMENT_TOKENS[current_token] and consume()
   if CC.BITOPS[op_token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
-    utils.erde_error({
-      line = op_line,
-      message = 'must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+',
-    })
+    throw('must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+', op_line)
   end
 
   expect('=')
@@ -725,10 +693,7 @@ local function declaration_statement()
   local destructure_compile_lines = {}
 
   if block_depth > 1 and scope == 'module' then
-    utils.erde_error({
-      line = token_lines[current_token_index - 1],
-      message = 'module declarations must appear at the top level',
-    })
+    throw('module declarations must appear at the top level', token_lines[current_token_index - 1])
   end
 
   if scope ~= 'global' then
@@ -791,15 +756,9 @@ local function for_loop_statement()
     local expr_list_len = #expr_list
 
     if expr_list_len < 2 then
-      utils.erde_error({
-        line = expr_list_line,
-        message = 'missing loop parameters (must supply 2-3 params)',
-      })
+      throw('missing loop parameters (must supply 2-3 params)', expr_list_line)
     elseif expr_list_len > 3 then
-      utils.erde_error({
-        line = expr_list_line,
-        message = 'too many loop parameters (must supply 2-3 params)',
-      })
+      throw('too many loop parameters (must supply 2-3 params)', expr_list_line)
     end
 
     insert(compile_lines, weave(expr_list))
@@ -842,10 +801,7 @@ local function function_statement()
   elseif current_token == 'function' then
     insert(compile_lines, consume())
   else
-    utils.erde_error({
-      line = current_line,
-      message = ("unexpected token '%s' (expected scope)"):format(current_token),
-    })
+    throw(("unexpected token '%s' (expected scope)"):format(current_token))
   end
 
   local signature = name()
@@ -864,10 +820,7 @@ local function function_statement()
 
   if is_table_value and scope ~= nil then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    utils.erde_error({
-      line = scope_line,
-      message = 'cannot use scopes for table values',
-    })
+    throw('cannot use scopes for table values', scope_line)
   end
 
   if not is_table_value and scope ~= 'global' then
@@ -877,10 +830,7 @@ local function function_statement()
 
   if scope == 'module' then
     if block_depth > 1 then
-      utils.erde_error({
-        line = scope_line,
-        message = 'module declarations must appear at the top level',
-      })
+      throw('module declarations must appear at the top level', scope_line)
     end
 
     insert(module_names, signature)
@@ -903,10 +853,7 @@ local function goto_jump_statement()
   local compile_lines = {}
 
   if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-    utils.erde_error({
-      line = current_line,
-      message = "'goto' statements only compatibly with lua targets 5.2+, jit",
-    })
+    throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   end
 
   insert(compile_lines, current_line)
@@ -921,10 +868,7 @@ local function goto_label_statement()
   local compile_lines = {}
 
   if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
-    utils.erde_error({
-      line = current_line,
-      message = "'goto' statements only compatibly with lua targets 5.2+, jit",
-    })
+    throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   end
 
   insert(compile_lines, current_line)
@@ -981,10 +925,7 @@ local function return_statement()
     end
 
     if current_token then
-      utils.erde_error({
-        line = current_line,
-        message = ("expected '<eof>', got '%s'"):format(current_token),
-      })
+      throw(("expected '<eof>', got '%s'"):format(current_token))
     end
   else
     if current_token ~= '}' then
@@ -992,10 +933,7 @@ local function return_statement()
     end
 
     if current_token ~= '}' then
-      utils.erde_error({
-        line = current_line,
-        message = ("expected '}', got '%s'"):format(current_token),
-      })
+      throw(("expected '}', got '%s'"):format(current_token))
     end
   end
 
@@ -1115,7 +1053,7 @@ function function_block()
   is_module_return_block = false
   break_name = nil
 
-  local compile_lines = not C.REWRITE_ERRORS and block() or rewrite_errors(block())
+  local compile_lines = block()
 
   is_module_return_block = old_is_module_return_block
   break_name = old_break_name
@@ -1136,10 +1074,7 @@ local function module_block()
 
   if #module_names > 0 then
     if has_module_return then
-      utils.erde_error({
-        line = last_line,
-        message = "cannot use 'module' declarations w/ 'return'"
-      })
+      throw("cannot use 'module' declarations w/ 'return'", last_line)
     else
       local module_table_elements = {}
 
@@ -1158,8 +1093,8 @@ end
 -- Main
 -- -----------------------------------------------------------------------------
 
-return function(text, new_options)
-  tokens, token_lines, num_tokens = tokenize(text)
+return function(text, new_source_name)
+  tokens, token_lines, num_tokens = tokenize(text, new_source_name)
 
   -- Check for empty file or file w/ only comments
   if num_tokens == 0 then return '', {} end
@@ -1167,6 +1102,7 @@ return function(text, new_options)
   current_token, current_token_index = tokens[1], 1
   current_line, last_line = token_lines[1], token_lines[num_tokens]
 
+  source_name = new_source_name or ('[string "%s"]'):format(text:sub(1, 6) .. (#text > 6 and '...' or ''))
   block_depth = 1
   is_module_return_block = true
   has_module_return = false
@@ -1174,7 +1110,6 @@ return function(text, new_options)
   is_varargs_block = true
   tmp_name_counter = 1
   module_names = {}
-  options = new_options or {}
 
   bitlib = C.BITLIB
     or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp

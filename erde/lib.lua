@@ -20,12 +20,6 @@ local erde_source_cache = {}
 -- Debug
 -- -----------------------------------------------------------------------------
 
-local ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE = table.concat({
-  "[^\n]*%[C]: in function 'xpcall'\n",
-  "[^\n]*: in function '__erde_internal_load_source__'\n",
-  '[^\n]*\n',
-})
-
 local function rewrite(message)
   -- Only rewrite strings! Other thrown values (including nil) do not get source
   -- and line number information added.
@@ -50,97 +44,53 @@ local function rewrite(message)
     )
   end
 
-  return message:gsub('__ERDE_SUBSTITUTE_([a-zA-Z]+)__', '%1')
+  -- When compiling, we translate words that are keywords in Lua but not in
+  -- Erde. When reporting errors, we need to transform them back.
+  message = message:gsub('__ERDE_SUBSTITUTE_([a-zA-Z]+)__', '%1')
+
+  return message
 end
 
--- Mimic of Lua's native `debug.traceback` w/ file and line number rewrites.
---
--- Unlike Lua's standard library, we do not accept a thread argument. See
--- https://www.lua.org/manual/5.4/manual.html#pdf-debug.traceback for behavior
--- specs.
---
--- TODO: Support thread argument?
-local function traceback(message, level)
-  -- Add an extra level to account for this traceback function itself!
-  level = (level or 1) + 1
+local function traceback(arg1, arg2, arg3)
+  local stacktrace, level
 
-  if message and type(message) ~= 'string' then
-    -- Do not do any processing if message is non-null and not a string. This
-    -- mimics the standard `debug.traceback` behavior.
-    return message
+  -- Follows native_traceback behavior for determining args.
+  if type(arg1) == 'thread' then
+    level = arg3 or 1
+    -- Add an extra level to account for this traceback function itself!
+    stacktrace = native_traceback(arg1, arg2, level + 1)
+  else
+    level = arg2 or 1
+    -- Add an extra level to account for this traceback function itself!
+    stacktrace = native_traceback(arg1, level + 1)
   end
 
-  local stack = { message, 'stack traceback:' }
-  local info = debug.getinfo(level, 'nSl')
-  local committed_tail_call_trace = false
-
-  while info do
-    local trace
-    if info.what == 'C' then
-      if info.name then
-        table.insert(stack, ("\t[C]: in function '%s'"):format(info.name))
-      else
-        -- Use just '?' (matches Lua 5.1 behavior). Prefer not to use 'in ?'
-        -- for consistency, since LuaJIT replaces this w/ the memory address,
-        -- which takes the form 'at 0xXXX'.
-        table.insert(stack, ('\t[C]: ?'):format(info.name))
-      end
-    elseif info.what == 'main' then
-      table.insert(stack, '\t' .. rewrite(('%s:%d: in main chunk'):format(
-        info.short_src,
-        info.currentline
-      )))
-    elseif info.what == 'tail' then
-      -- Group tail calls to prevent long stack traces. This matches the
-      -- behavior in 5.2+, but will only ever happen in 5.1, since tail calls
-      -- are not included in `debug.getinfo` levels in 5.2+.
-      if not committed_tail_call_trace then
-        table.insert(stack, '\t(...tail calls...)')
-      end
-    elseif info.name then
-      table.insert(stack, '\t' .. rewrite(("%s:%d: in function '%s'"):format(
-        info.short_src,
-        info.currentline,
-        info.name
-      )))
-    else
-      table.insert(stack, '\t' .. rewrite(('%s:%d: in function <%s:%d>'):format(
-        info.short_src,
-        info.currentline,
-        info.short_src,
-        info.linedefined
-      )))
-    end
-
-    committed_tail_call_trace = info.what == 'tail'
-    level = level + 1
-    info = debug.getinfo(level, 'nSl')
-  end
-
-  if C.IS_CLI_RUNTIME and not C.DEBUG then
-    -- Remove following from stack trace (caused by the CLI):
+  if level > -1 and C.IS_CLI_RUNTIME and not C.DEBUG then
+    -- Remove following from stack trace caused by the cli:
     --
     -- [C]: in function 'pcall'
     -- erde/cli/run.lua:xxx: in function 'run'
     -- erde/cli/init.lua:xxx: in main chunk
-    -- [C]: in function 'require'
-    -- bin/erde5.2:xxx: in main chunk
     --
-    -- Note, we do not remove the very last line of the stack (`stacklen`)!
-    -- This is the C entry point of the Lua VM.
+    -- Note, we do not remove the very last line of the stack, this is the C
+    -- entry point of the Lua VM.
+    local stack = utils.split(stacktrace, '\n')
     local stacklen = #stack
-    for i = 1, 5 do table.remove(stack, stacklen - i) end
+    for i = 1, 3 do table.remove(stack, stacklen - i) end
+    stacktrace = table.concat(stack, '\n')
   end
-
-  local stacktrace = table.concat(stack, '\n')
 
   if not C.DEBUG then
     -- Remove any lines from `__erde_internal_load_source__` calls.
     -- See `__erde_internal_load_source__` for more details.
-    stacktrace = stacktrace:gsub(ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE, '')
+    stacktrace = stacktrace:gsub(table.concat({
+      '[^\n]*\n',
+      '[^\n]*__erde_internal_load_source__[^\n]*\n',
+      '[^\n]*\n',
+    }), '')
   end
 
-  return stacktrace
+  return rewrite(stacktrace)
 end
 
 -- -----------------------------------------------------------------------------
@@ -156,9 +106,9 @@ end
 --
 -- This function is also given a unique function name so that it is reliably
 -- searchable in stacktraces. During stracetrace rewrites (see `traceback`), the
--- presence of this name dictates which lines we need to remove (see `ERDE_INTERNAL_LOAD_SOURCE_STACKTRACE`).
--- Otherwise, the resulting stacktraces will include function calls from this
--- file, which will be quite confusing and noisy for the end user.
+-- presence of this name dictates which lines we need to remove. Otherwise, the
+-- resulting stacktraces will include function calls from this file, which will
+-- be quite confusing and noisy for the end user.
 --
 -- IMPORTANT: THIS FUNCTION MUST NOT BE TAIL CALLED NOR DIRECTLY CALLED BY THE
 -- USER AND IS ASSUMED TO BE CALLED AT THE TOP LEVEL OF LOADING ERDE SOURCE CODE.
@@ -194,23 +144,7 @@ local function __erde_internal_load_source__(source, alias)
   erde_source_id_counter = erde_source_id_counter + 1
 
   -- No xpcall here, we want the traceback to start from this stack!
-  local ok, compiled, sourcemap = pcall(function()
-    return compile(source)
-  end)
-
-  if not ok then
-    local message = type(compiled) == 'table' and compiled.__is_erde_error__
-      and ('%s:%d: %s'):format(alias, compiled.line or 0, compiled.message)
-      or compiled
-
-    utils.erde_error({
-      type = 'compile',
-      message = message,
-      -- Use 3 levels to the traceback to account for the wrapping anonymous
-      -- function above (in pcall) as well as the erde loader itself.
-      stacktrace = traceback(message, 3),
-    })
-  end
+  local compiled, sourcemap = compile(source, alias)
 
   -- TODO: provide an option to disable source maps? Caching them prevents them
   -- from getting freed, and the tables (which may be potentially large) may
@@ -220,14 +154,14 @@ local function __erde_internal_load_source__(source, alias)
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
 
-  local loader, err = loadlua(compiled, erde_source_id)
+  local loader, load_error = loadlua(compiled, erde_source_id)
 
-  if err ~= nil then
-    utils.erde_error({
+  if load_error ~= nil then
+    error({
       type = 'run',
       message = table.concat({
         'Failed to load compiled code:',
-        tostring(err),
+        tostring(load_error),
         '',
         'This is an internal error that should never happen.',
         'Please report this at: https://github.com/erde-lang/erde/issues',
@@ -243,39 +177,12 @@ local function __erde_internal_load_source__(source, alias)
     })
   end
 
-  local ok, result = xpcall(loader, function(message)
-    if type(message) == 'table' and message.__is_erde_error__ then
-      -- Do not unnecessarily wrap an error we have already handled!
-      return message
-    else
-      message = rewrite(message)
-      return {
-        type = 'run',
-        message = message,
-        -- Add an extra level to the traceback to account for the wrapping
-        -- anonymous function above (in xpcall).
-        stacktrace = traceback(message, 2),
-      }
-    end
-  end)
-
-  if not ok then utils.erde_error(result) end
-  return result
+  return loader()
 end
 
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 local function run_string(source, alias)
-  if alias == nil then
-    alias = source:sub(1, 6)
-
-    if #alias > 5 then
-      alias = alias:sub(1, 5) .. '...'
-    end
-
-    alias = ('[string "%s"]'):format(alias)
-  end
-
   local result = __erde_internal_load_source__(source, alias)
   return result
 end
@@ -325,10 +232,6 @@ local function load(new_lua_target, options)
 
   if options.bitlib then
     C.BITLIB = options.bitlib
-  end
-
-  if options.rewrite_errors == false then
-    C.REWRITE_ERRORS = false
   end
 
   if options.keep_traceback ~= true then

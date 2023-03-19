@@ -15,20 +15,13 @@ return function(cli, script_args)
   -- from the Lua VM directly.
   arg = script_args
 
-  local ok, result = pcall(function()
+  local ok, result = xpcall(function()
     local source = read_file(cli.script)
     local result = lib.__erde_internal_load_source__(source, cli.script)
     return result
-  end)
+  end, lib.traceback)
 
   if not ok then
-    if type(result) == 'table' and result.__is_erde_error__ then
-      terminate('erde: ' .. (result.stacktrace or result.message))
-    else
-      terminate(table.concat({
-        'Internal error: ' .. tostring(result),
-        'Please report this at: https://github.com/erde-lang/erde/issues',
-      }, '\n'))
-    end
+    terminate('erde: ' .. result)
   end
 end

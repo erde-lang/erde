@@ -12,6 +12,9 @@ local token
 local text, char, char_index, current_line
 local tokens, token_lines, num_tokens
 
+-- Name for the current source being compiled (used in error messages)
+local source_name
+
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
@@ -39,7 +42,8 @@ local function consume(n)
 end
 
 local function throw(message, line)
-  utils.erde_error({ message = message, line = line or current_line })
+  -- Use error level 0 since we already include source_name
+  error(('%s:%d: %s'):format(source_name, line or current_line, message), 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -430,9 +434,10 @@ end
 -- tokenize
 -- -----------------------------------------------------------------------------
 
-return function(new_text)
+return function(new_text, new_source_name)
   text, char, char_index, current_line = new_text, new_text:sub(1, 1), 1, 1
   tokens, token_lines, num_tokens = {}, {}, 0
+  source_name = new_source_name or ('[string "%s"]'):format(text:sub(1, 6) .. (#text > 6 and '...' or ''))
 
   if peek(2) == '#!' then
     local token = consume(2)
