@@ -13,6 +13,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Did not realize luarocks wraps these Lua scripts and forces their running Lua version
   - Not as useful now that `erde.load` automatically infers the target
   - Polluted path a little bit (lots of executables, especially when installing for multiple versions)
+- Removed `-d`, `--debug` cli option
 
 ### Changed
 - Erde now allows all number forms for all Lua targets and will transpile numbers to decimal format (including newly added binary literals).
@@ -23,6 +24,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - Can be disabled in `load` options using `keep_traceback`
   - Lua's native `debug.traceback` is restored when calling `unload`
 - Erde now infers a version for `load` automatically based on `_VERSION` when one is not specified.
+- Erde now properly injects the erde package loader when using the repl.
 
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)

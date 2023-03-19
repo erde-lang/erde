@@ -65,7 +65,7 @@ local function traceback(arg1, arg2, arg3)
     stacktrace = native_traceback(arg1, level + 1)
   end
 
-  if level > -1 and C.IS_CLI_RUNTIME and not C.DEBUG then
+  if level > -1 and C.IS_CLI_RUNTIME then
     -- Remove following from stack trace caused by the cli:
     --
     -- [C]: in function 'pcall'
@@ -80,15 +80,13 @@ local function traceback(arg1, arg2, arg3)
     stacktrace = table.concat(stack, '\n')
   end
 
-  if not C.DEBUG then
-    -- Remove any lines from `__erde_internal_load_source__` calls.
-    -- See `__erde_internal_load_source__` for more details.
-    stacktrace = stacktrace:gsub(table.concat({
-      '[^\n]*\n',
-      '[^\n]*__erde_internal_load_source__[^\n]*\n',
-      '[^\n]*\n',
-    }), '')
-  end
+  -- Remove any lines from `__erde_internal_load_source__` calls.
+  -- See `__erde_internal_load_source__` for more details.
+  stacktrace = stacktrace:gsub(table.concat({
+    '[^\n]*\n',
+    '[^\n]*__erde_internal_load_source__[^\n]*\n',
+    '[^\n]*\n',
+  }), '')
 
   return rewrite(stacktrace)
 end
@@ -237,10 +235,6 @@ local function load(new_lua_target, options)
   if options.keep_traceback ~= true then
     -- Override Lua's native traceback with our own to rewrite Erde paths.
     debug.traceback = traceback
-  end
-
-  if options.debug == true then
-    C.DEBUG = true
   end
 
   for i, searcher in ipairs(searchers) do

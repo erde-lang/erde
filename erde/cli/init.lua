@@ -23,7 +23,6 @@ Commands:
 Options:
    -h, --help             Show this help message and exit.
    -v, --version          Show version and exit.
-   -d, --debug            Expose internal stack calls in tracebacks.
    -b, --bitlib <LIB>     Library to use for bit operations.
    -t, --target <TARGET>  Lua target for version compatability.
                           Must be one of: %s
@@ -94,8 +93,6 @@ while arg_index <= num_args do
     terminate(HELP, 0)
   elseif arg_value == '-v' or arg_value == '--version' then
     terminate(C.VERSION, 0)
-  elseif arg_value == '-d' or arg_value == '--debug' then
-    C.DEBUG = true
   elseif arg_value == '-w' or arg_value == '--watch' then
     cli.watch = true
   elseif arg_value == '-f' or arg_value == '--force' then
