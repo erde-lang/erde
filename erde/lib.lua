@@ -68,7 +68,8 @@ local function traceback(arg1, arg2, arg3)
   if level > -1 and C.IS_CLI_RUNTIME then
     -- Remove following from stack trace caused by the cli:
     --
-    -- [C]: in function 'pcall'
+    -- [C]: in function <erde/cli/run.lua:xxx>
+    -- [C]: in function 'xpcall'
     -- erde/cli/run.lua:xxx: in function 'run'
     -- erde/cli/init.lua:xxx: in main chunk
     --
@@ -76,7 +77,7 @@ local function traceback(arg1, arg2, arg3)
     -- entry point of the Lua VM.
     local stack = utils.split(stacktrace, '\n')
     local stacklen = #stack
-    for i = 1, 3 do table.remove(stack, stacklen - i) end
+    for i = 1, 4 do table.remove(stack, stacklen - i) end
     stacktrace = table.concat(stack, '\n')
   end
 
@@ -140,6 +141,16 @@ end
 local function __erde_internal_load_source__(source, alias)
   local erde_source_id = ('__erde_source_%d__'):format(erde_source_id_counter)
   erde_source_id_counter = erde_source_id_counter + 1
+
+  if alias == nil then
+    alias = utils.trim(source):sub(1, 6)
+
+    if #alias > 5 then
+      alias = alias:sub(1, 5) .. '...'
+    end
+
+    alias = ('[string "%s"]'):format(alias)
+  end
 
   -- No xpcall here, we want the traceback to start from this stack!
   local compiled, sourcemap = compile(source, alias)

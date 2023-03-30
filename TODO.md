@@ -1,9 +1,5 @@
 # TODO
 
-# 0.5-1
-
-- provide tests for error rewriting
-
 # 0.5-2
 - add `cli`, `api`, `stability promise`, `new features`, and live editor in documentation
 - add columns to source maps

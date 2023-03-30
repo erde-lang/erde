@@ -20,18 +20,25 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - `erde` cli no longer requires the subcommand to appear directly after `erde` (flags in between are accepted)
 - `erde` cli defaults `compile` and `clean` args to the current directory.
 - Erde now throws an error when trying to call `load` with an invalid Lua target.
-- Erde now overrides traceback to do error rewriting automatically on `load`.
+- Erde now overrides Lua's `debug.traceback` on `load`.
   - Can be disabled in `load` options using `keep_traceback`
   - Lua's native `debug.traceback` is restored when calling `unload`
 - Erde now infers a version for `load` automatically based on `_VERSION` when one is not specified.
-- Erde now properly injects the erde package loader when using the repl.
+- Erde no longer catches and rethrows errors internally.
+  - Previously used custom rethrown data type w/ `__tostring` metamethod, (overcomplicated, not user friendly)
+  - Catching and rethrowing _changes the call stack_. Want to avoid this, as it causes confusion when debugging.
+  - Still cannot handle the case when _callbacks_ written in Erde but run in Lua throw errors.
+  - Easier / simplest to have user handle error rewriting themselves at top level
+    - Often times this will be automatically handled since we override `debug.traceback` on `load`
+  - `erde` cli will still rewrite errors (repl and `erde run`)
 
 ### Fixed
 - Fixed compiling of chained function calls (ex. `myfunc()()`)
 - Erde now properly ignores escape sequences (except interpolation) in block strings (`[[ ... ]]`)
-- `erde` compile / clean when checking empty Lua files (`is_compiled_file`)
-- Erde now properly rewrites source _references_ in error messages
+- Fixed `erde` compile / clean checks for empty Lua files (`is_compiled_file`)
+- Erde now properly rewrites source _references_ in error messages (ex. `xxx: in function <my_erde_file.erde:174>`)
 - Erde now properly checks for invalid varargs for arrow functions with implicit params
+- Erde now properly injects the erde package loader when using the repl.
 
 ### Added
 - Allow binary literals (ex. `print(0b100)`) for all Lua targets.
@@ -39,7 +46,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - ex) `'mystring':find('my')`
 - Compiled files now include the version of Erde used at the bottom of the compiled file.
 - Allow specifying bitlib in `load` options
-- Allow specifying rewriting errors in `load` options (default: `true`)
 - Added `sourcemap` subcommand for debugging
 
 ## [0.4-1] - January 7, 2023

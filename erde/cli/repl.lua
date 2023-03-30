@@ -48,23 +48,23 @@ local function repl()
         return lib.run('return ' .. source, 'stdin')
       end)
 
-      if not ok and result.type == 'compile' and not result.message:find('unexpected eof') then
+      if not ok and type(result) == 'string' and not result:find('unexpected eof') then
         -- Try input as a block
         ok, result = pcall(function()
           return lib.run(source, 'stdin')
         end)
       end
 
-      if not ok and result.type == 'compile' and result.message:find('unexpected eof') then
+      if not ok and type(result) == 'string' and result:find('unexpected eof') then
         repeat
           local subsource = readline(SUB_PROMPT)
           source = source .. (subsource or '')
         until subsource
       end
-    until ok or result.type ~= 'compile' or not result.message:find('unexpected eof')
+    until ok or type(result) ~= 'string' or not result:find('unexpected eof')
 
     if not ok then
-      print(result.stacktrace or result.message)
+      print(lib.rewrite(result))
     elseif result ~= nil then
       print(result)
     end
