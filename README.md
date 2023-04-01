@@ -12,14 +12,16 @@ The recommended way to install is through [luarocks](https://luarocks.org/module
 luarocks install erde
 ```
 
-Alternatively you can clone this repo and update your PATH and
+Alternatively you can clone this repo and update your
 [LUA_PATH](https://www.lua.org/pil/8.1.html) accordingly:
 
 ```bash
 git clone https://github.com/erde-lang/erde.git
 ERDE_ROOT="$(pwd)/erde"
-export PATH="$ERDE_ROOT/bin:$PATH"
 export LUA_PATH="$ERDE_ROOT/?.lua;$ERDE_ROOT/?/init.lua;$LUA_PATH"
+
+# To use the CLI:
+alias erde="lua $ERDE_ROOT/cli/init.lua"
 ```
 
 You can check whether Erde is installed correctly by running:
