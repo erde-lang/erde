@@ -3,7 +3,7 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [0.5-1] - UNRELEASED
+## [0.5-1] - April 01, 2023
 
 ### Removed
 - BREAKING CHANGE: Removed `try...catch` statements
