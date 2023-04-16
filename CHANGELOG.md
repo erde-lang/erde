@@ -3,6 +3,17 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
+## [0.5-2] - UNRELEASED
+
+### Changed
+- Erde now throws an error if `require('erde').load` cannot correctly infer the Lua target (for future Lua versions)
+
+### Fixed
+- Fixed incorrectly inferred Lua target when using `require('erde').load` with LuaJIT.
+
+### Added
+- Erde now properly supports calling `require('erde').load` multiple times (to change `load` options dynamically)
+
 ## [0.5-1] - April 01, 2023
 
 ### Removed

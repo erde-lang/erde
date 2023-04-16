@@ -221,6 +221,15 @@ end
 local function load(new_lua_target, options)
   options = options or {}
 
+  C.BITLIB = options.bitlib
+
+  -- Always set `debug.traceback`, in case this is called multiple times
+  -- with different arguments. By default we override Lua's native traceback
+  -- with our own to rewrite Erde paths.
+  debug.traceback = options.keep_traceback == true
+    and native_traceback
+    or traceback
+
   if new_lua_target ~= nil then
     if C.VALID_LUA_TARGETS[new_lua_target] then
       C.LUA_TARGET = new_lua_target
@@ -231,21 +240,14 @@ local function load(new_lua_target, options)
       }, '\n'))
     end
   elseif jit ~= nil then
-    C.LUA_TARGET = jit
+    C.LUA_TARGET = 'jit'
   else
     new_lua_target = _VERSION:match('Lua (%d%.%d)')
     if C.VALID_LUA_TARGETS[new_lua_target] then
       C.LUA_TARGET = new_lua_target
+    else
+      error('Unsupported Lua version: ' .. _VERSION)
     end
-  end
-
-  if options.bitlib then
-    C.BITLIB = options.bitlib
-  end
-
-  if options.keep_traceback ~= true then
-    -- Override Lua's native traceback with our own to rewrite Erde paths.
-    debug.traceback = traceback
   end
 
   for i, searcher in ipairs(searchers) do
