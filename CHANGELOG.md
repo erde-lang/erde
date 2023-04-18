@@ -1,20 +1,11 @@
 # Changelog
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [0.5-2] - UNRELEASED
+Versioning based on [Semantic Versioning](https://semver.org/), with suffix
+based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-### Changed
-- Erde now throws an error if `require('erde').load` cannot correctly infer the Lua target (for future Lua versions)
-
-### Fixed
-- Fixed incorrectly inferred Lua target when using `require('erde').load` with LuaJIT.
-
-### Added
-- Erde now properly supports calling `require('erde').load` multiple times (to change `load` options dynamically)
-
-## [0.5-1] - April 01, 2023
+## [0.5.0-1] - April 01, 2023
 
 ### Removed
 - BREAKING CHANGE: Removed `try...catch` statements
@@ -59,7 +50,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Allow specifying bitlib in `load` options
 - Added `sourcemap` subcommand for debugging
 
-## [0.4-1] - January 7, 2023
+## [0.4.0-1] - January 7, 2023
 
 ### Changed
 - CLI options now use all lowercase (more standard)
@@ -89,16 +80,10 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - CLI now supports overwriting existing Lua files when compiling with `-f, --force`
 - CLI now supports printing compiled code instead of writing to files with `-p, --print` (useful for debugging)
 
-## [0.3-2] - November 7, 2022
+## [0.3.0-2] - November 7, 2022
 
 ### Removed
 - Erde no longer depends on [argparse](https://luarocks.org/modules/argparse/argparse)
-
-### Added
-- Added __tostring metamethod for thrown table errors (especially useful for sandboxed, embedded lua such as neovim)
-- Added line numbers for errors when using `erde compile`
-- Added REPL support
-- Throw error when `return` statement is not the last statement in a block
 
 ### Changed
 - `erde run` no longer uses a subcommand
@@ -117,13 +102,24 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Erde now correctly preserves newlines following interpolations in long strings.
 - Erde now correctly rewrites top level errors (previously always used main file source map)
 
-## [0.3-1] - August 26, 2022
+### Added
+- Added __tostring metamethod for thrown table errors (especially useful for sandboxed, embedded lua such as neovim)
+- Added line numbers for errors when using `erde compile`
+- Added REPL support
+- Throw error when `return` statement is not the last statement in a block
+
+## [0.3.0-1] - August 26, 2022
 
 ### Removed
 - Removed `do` expressions.
 - Removed spread operator.
 - Removed optional chaining.
 - Removed `erde.loader` (replaced by `require('erde').load` api)
+
+### Changed
+- Reverted split of `erde` and `erdec` in favor of more `pacman` like "main flags".
+- Improved `erde --help` output.
+- `erde` now runs with the regular lua shebang (`#!/usr/bin/env lua` instead of `#!/usr/bin/env luajit`)
 
 ### Added
 - Erde now supports running on Lua 5.1+
@@ -139,12 +135,7 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
   - `erde.unload` - api to remove the injected erde loader (from a previous call
     to `erde.load`).
 
-### Changed
-- Reverted split of `erde` and `erdec` in favor of more `pacman` like "main flags".
-- Improved `erde --help` output.
-- `erde` now runs with the regular lua shebang (`#!/usr/bin/env lua` instead of `#!/usr/bin/env luajit`)
-
-## [0.2-1] - June 03, 2022
+## [0.2.0-1] - June 03, 2022
 
 ### Removed
 - Removed `self` shorthand `$`. Completely unnecessary and confusing.
@@ -180,6 +171,6 @@ Versioning based on [LuaRocks rockspec](https://github.com/luarocks/luarocks/wik
 - Fixed void `return` (i.e. no expressions)
 - Parser / compiler no longer crash when the ast is empty
 
-## [0.1-1] - March 3, 2022
+## [0.1.0-1] - March 3, 2022
 
 Initial Release
