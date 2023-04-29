@@ -559,7 +559,7 @@ local function terminal_expression()
   elseif current_token == '(' then
     return index_chain({ '(', surround('(', ')', expression), ')' })
   else
-    return index_chain({ name() })
+    return index_chain({ current_line, name() })
   end
 end
 
@@ -981,8 +981,8 @@ local function statement()
     insert(compile_lines, declaration_statement())
   else
     local index_chain = current_token == '('
-      and index_chain({ '(', surround('(', ')', expression), ')' }, true)
-      or index_chain({ name() })
+      and index_chain({ current_line, '(', surround('(', ')', expression), ')' }, true)
+      or index_chain({ current_line, name() })
     local last_index_chain_token = index_chain[#index_chain]
 
     if last_index_chain_token == ')' then
@@ -1119,9 +1119,6 @@ return function(text, new_source_name)
 
   local compile_lines = module_block()
 
-  -- Free resources (potentially large tables)
-  tokens, token_lines = nil, nil
-
   local collapsed_compile_lines = {}
   local collapsed_compile_line_counter = 0
   local source_map = {}
@@ -1133,7 +1130,7 @@ return function(text, new_source_name)
   --   local x = nil
   --   print(x.a
   --   )
-  local source_line = 1
+  local source_line = token_lines[1]
 
   local function collect_lines(lines)
     for _, line in ipairs(lines) do
@@ -1152,5 +1149,9 @@ return function(text, new_source_name)
   collect_lines(compile_lines)
   insert(collapsed_compile_lines, '-- Compiled with Erde ' .. C.VERSION)
   insert(collapsed_compile_lines, C.COMPILED_FOOTER_COMMENT)
+
+  -- Free resources (potentially large tables)
+  tokens, token_lines = nil, nil
+
   return concat(collapsed_compile_lines, '\n'), source_map
 end

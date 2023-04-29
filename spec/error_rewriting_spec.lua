@@ -1,5 +1,6 @@
 local lib = require('erde.lib')
 
+
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
@@ -32,6 +33,15 @@ describe('error rewriting', function()
         'a' + 1)]],
       [[[string "print..."]:2: attempt to perform arithmetic on a string value]]
     )
+    assert_rewrite(
+      [[
+
+
+
+      error('myerror')
+      ]],
+      [[[string "error..."]:4: myerror]]
+    )
   end)
 
   spec('#5.4', function()
@@ -50,6 +60,15 @@ describe('error rewriting', function()
       [[print(
         'a' + 1)]],
       [[[string "print..."]:2: attempt to add a 'string' with a 'number']]
+    )
+    assert_rewrite(
+      [[
+
+
+
+      error('myerror')
+      ]],
+      [[[string "error..."]:4: myerror]]
     )
   end)
 end)

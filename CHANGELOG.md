@@ -5,6 +5,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [Semantic Versioning](https://semver.org/), with suffix
 based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
+## [0.5.1-1] - UNRELEASED
+
+### Removed
+
+### Changed
+
+### Fixed
+
+- Fixed incorrect source map when code starts with newlines
+- Fixed incorrect source map for function call statements
+
+### Added
+
+
 ## [0.5.0-1] - April 01, 2023
 
 ### Removed
