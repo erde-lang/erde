@@ -14,9 +14,6 @@ local tokens, token_lines, num_tokens
 local current_token, current_token_index
 local current_line, last_line
 
--- Name for the current source being compiled (used in error messages)
-local source_name
-
 -- Current block depth during parsing
 local block_depth
 
@@ -42,6 +39,12 @@ local is_module_return_block, has_module_return
 -- outside a vararg function.
 local is_varargs_block
 
+-- Name for the current source being compiled (used in error messages)
+local alias
+
+-- Lua target
+local lua_target
+
 -- Resolved bit library to use for compiling bit operations. Undefined when
 -- compiling to Lua 5.3+ native operators.
 local bitlib
@@ -55,8 +58,8 @@ local insert = table.insert
 local concat = table.concat
 
 local function throw(message, line)
-  -- Use error level 0 since we already include source_name
-  error(('%s:%d: %s'):format(source_name, line or current_line or last_line, message), 0)
+  -- Use error level 0 since we already include alias
+  error(('%s:%d: %s'):format(alias, line or current_line or last_line, message), 0)
 end
 
 -- -----------------------------------------------------------------------------
@@ -162,7 +165,7 @@ local function compile_binop(token, line, lhs, rhs)
   elseif token == '&&' then
     return { lhs, line, 'and', rhs }
   elseif token == '//' then
-    return (C.LUA_TARGET == '5.3' or C.LUA_TARGET == '5.3+' or C.LUA_TARGET == '5.4' or C.LUA_TARGET == '5.4+')
+    return (lua_target == '5.3' or lua_target == '5.3+' or lua_target == '5.4' or lua_target == '5.4+')
       and { lhs, line, token, rhs }
       or { line, 'math.floor(', lhs, line, '/', rhs, line, ')' }
   else
@@ -569,12 +572,14 @@ local function unop_expression()
   local operand_line, operand = current_line, expression(unop.prec + 1)
 
   if unop.token == '~' then
-    if (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
-      throw('must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+', unop_line)
+    if bitlib then
+      local bitop = ('require("%s").%s('):format(bitlib, 'bnot')
+      return { unop_line, bitop, operand_line, operand, unop_line, ')' }
+    elseif lua_target == '5.1+' or lua_target == '5.2+' then
+      throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', unop_line)
+    else
+      return { unop_line, unop.token, operand_line, operand }
     end
-
-    local bitop = ('require("%s").%s('):format(bitlib, 'bnot')
-    return { unop_line, bitop, operand_line, operand, unop_line, ')' }
   elseif unop.token == '!' then
     return { unop_line, 'not', operand_line, operand }
   else
@@ -597,8 +602,8 @@ function expression(min_prec)
       rhs_min_prec = rhs_min_prec + 1
     end
 
-    if CC.BITOPS[binop.token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
-      throw('must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+', binop_line)
+    if CC.BITOPS[binop.token] and (lua_target == '5.1+' or lua_target == '5.2+') and not bitlib then
+      throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', binop_line)
     end
 
     compile_lines = compile_binop(binop.token, binop_line, compile_lines, expression(rhs_min_prec))
@@ -630,8 +635,8 @@ local function assignment_statement(first_id)
   end
 
   local op_line, op_token = current_line, CC.BINOP_ASSIGNMENT_TOKENS[current_token] and consume()
-  if CC.BITOPS[op_token] and (C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+') and not C.BITLIB then
-    throw('must use --bitlib for compiling bit operations when targeting 5.1+ or 5.2+', op_line)
+  if CC.BITOPS[op_token] and (lua_target == '5.1+' or lua_target == '5.2+') and not bitlib then
+    throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', op_line)
   end
 
   expect('=')
@@ -680,7 +685,7 @@ local function continue_statement()
   has_continue = true
   consume()
 
-  return (C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+')
+  return (lua_target == '5.1' or lua_target == '5.1+')
     and { break_name .. ' = false break' }
     or { 'goto ' .. break_name }
 end
@@ -852,7 +857,7 @@ end
 local function goto_jump_statement()
   local compile_lines = {}
 
-  if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+  if lua_target == '5.1' or lua_target == '5.1+' then
     throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   end
 
@@ -867,7 +872,7 @@ end
 local function goto_label_statement()
   local compile_lines = {}
 
-  if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+  if lua_target == '5.1' or lua_target == '5.1+' then
     throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   end
 
@@ -1029,7 +1034,7 @@ function loop_block()
   local compile_lines = block()
 
   if has_continue then
-    if C.LUA_TARGET == '5.1' or C.LUA_TARGET == '5.1+' then
+    if lua_target == '5.1' or lua_target == '5.1+' then
       insert(compile_lines, 1, ('local %s = true repeat'):format(break_name))
       insert(
         compile_lines,
@@ -1093,8 +1098,9 @@ end
 -- Main
 -- -----------------------------------------------------------------------------
 
-return function(text, new_source_name)
-  tokens, token_lines, num_tokens = tokenize(text, new_source_name)
+return function(source, options)
+  options = options or {}
+  tokens, token_lines, num_tokens = tokenize(source, options.alias)
 
   -- Check for empty file or file w/ only comments
   if num_tokens == 0 then return '', {} end
@@ -1102,7 +1108,6 @@ return function(text, new_source_name)
   current_token, current_token_index = tokens[1], 1
   current_line, last_line = token_lines[1], token_lines[num_tokens]
 
-  source_name = new_source_name or ('[string "%s"]'):format(text:sub(1, 6) .. (#text > 6 and '...' or ''))
   block_depth = 1
   is_module_return_block = true
   has_module_return = false
@@ -1111,10 +1116,12 @@ return function(text, new_source_name)
   tmp_name_counter = 1
   module_names = {}
 
-  bitlib = C.BITLIB
-    or (C.LUA_TARGET == '5.1' and 'bit') -- Mike Pall's LuaBitOp
-    or (C.LUA_TARGET == 'jit' and 'bit') -- Mike Pall's LuaBitOp
-    or (C.LUA_TARGET == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
+  alias = options.alias or utils.get_source_alias(source)
+  lua_target = options.lua_target or C.LUA_TARGET
+  bitlib = options.bitlib or C.BITLIB
+    or (lua_target == '5.1' and 'bit') -- Mike Pall's LuaBitOp
+    or (lua_target == 'jit' and 'bit') -- Mike Pall's LuaBitOp
+    or (lua_target == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
 
 
   local compile_lines = module_block()

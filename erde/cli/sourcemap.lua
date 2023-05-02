@@ -16,7 +16,7 @@ return function(cli)
   end
 
   local ok, result, sourcemap = pcall(function()
-    return compile(read_file(path), path)
+    return compile(read_file(path), { alias = path })
   end)
 
   if ok then

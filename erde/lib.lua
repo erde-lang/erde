@@ -26,10 +26,9 @@ local function rewrite(message)
   if type(message) ~= 'string' then return message end
 
   for erde_source_id, compiled_line in message:gmatch('%[string "(__erde_source_%d+__)"]:(%d+)') do
-    local erde_source_alias = '[string "(' .. erde_source_id .. ')"]'
+    local erde_source_alias = '[string "' .. erde_source_id .. '"]'
     local sourcemap = {}
 
-    -- Use cached alias + sourcemap as a backup if they are not provided
     if erde_source_cache[erde_source_id] then
       erde_source_alias = erde_source_cache[erde_source_id].alias or erde_source_alias
       sourcemap = erde_source_cache[erde_source_id].sourcemap or sourcemap
@@ -40,7 +39,7 @@ local function rewrite(message)
       '%[string "' .. erde_source_id .. '"]:' .. compiled_line,
       -- If we have don't have a sourcemap for erde code, we need to indicate that
       -- the error line is for the generated Lua.
-      erde_source_alias .. ':' .. (sourcemap and sourcemap[tonumber(compiled_line)]) or ('(lua:%s)'):format(compiled_line)
+      erde_source_alias .. ':' .. (sourcemap[tonumber(compiled_line)] or ('(compiled:%s)'):format(compiled_line))
     )
   end
 
@@ -63,6 +62,10 @@ local function traceback(arg1, arg2, arg3)
     level = arg2 or 1
     -- Add an extra level to account for this traceback function itself!
     stacktrace = native_traceback(arg1, level + 1)
+  end
+
+  if type(stacktrace) ~= 'string' then
+    return stacktrace
   end
 
   if level > -1 and C.IS_CLI_RUNTIME then
@@ -138,27 +141,28 @@ end
 --
 -- Any changes to these functions and their stack calls should be done w/ great
 -- precaution.
-local function __erde_internal_load_source__(source, alias)
+local function __erde_internal_load_source__(source, options)
+  options = options or {}
+  local alias = options.alias or utils.get_source_alias(source)
+
   local erde_source_id = ('__erde_source_%d__'):format(erde_source_id_counter)
   erde_source_id_counter = erde_source_id_counter + 1
 
-  if alias == nil then
-    alias = utils.trim(source):sub(1, 6)
-
-    if #alias > 5 then
-      alias = alias:sub(1, 5) .. '...'
-    end
-
-    alias = ('[string "%s"]'):format(alias)
-  end
-
   -- No xpcall here, we want the traceback to start from this stack!
-  local compiled, sourcemap = compile(source, alias)
+  local compiled, sourcemap = compile(source, {
+    alias = alias,
+    lua_target = options.lua_target,
+    bitlib = options.bitlib,
+  })
 
-  -- TODO: provide an option to disable source maps? Caching them prevents them
-  -- from getting freed, and the tables (which may be potentially large) may
-  -- have excessive memory usage on extremely constrained systems?
-  erde_source_cache[erde_source_id] = { alias = alias, sourcemap = sourcemap }
+  -- Cache alias. Required for rewriting errors.
+  erde_source_cache[erde_source_id] = { alias = alias }
+
+  if not C.DISABLE_SOURCE_MAPS and not options.disable_source_maps then
+    -- Cache source maps. Allow user to specify whether to disallow this, as the
+    -- source map tables can be potentially large.
+    erde_source_cache[erde_source_id].sourcemap = sourcemap
+  end
 
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
@@ -166,24 +170,21 @@ local function __erde_internal_load_source__(source, alias)
   local loader, load_error = loadlua(compiled, erde_source_id)
 
   if load_error ~= nil then
-    error({
-      type = 'run',
-      message = table.concat({
-        'Failed to load compiled code:',
-        tostring(load_error),
-        '',
-        'This is an internal error that should never happen.',
-        'Please report this at: https://github.com/erde-lang/erde/issues',
-        '',
-        'erde',
-        '----',
-        source,
-        '',
-        'lua',
-        '---',
-        compiled,
-      }, '\n'),
-    })
+    error(table.concat({
+      'Failed to load compiled code:',
+      tostring(load_error),
+      '',
+      'This is an internal error that should never happen.',
+      'Please report this at: https://github.com/erde-lang/erde/issues',
+      '',
+      'erde',
+      '----',
+      source,
+      '',
+      'lua',
+      '---',
+      compiled,
+    }, '\n'))
   end
 
   return loader()
@@ -191,9 +192,9 @@ end
 
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
-local function run_string(source, alias)
-  local result = __erde_internal_load_source__(source, alias)
-  return result
+local function run_string(source, options)
+  local result = { __erde_internal_load_source__(source, options) }
+  return unpack(result)
 end
 
 -- -----------------------------------------------------------------------------
@@ -211,17 +212,28 @@ local function erde_searcher(module)
       -- `__erde_internal_load_source__`!
       return function()
         local source = utils.read_file(fullpath)
-        local result = __erde_internal_load_source__(source, fullpath)
-        return result
+        local result = { __erde_internal_load_source__(source, { alias = fullpath }) }
+        return unpack(result)
       end
     end
   end
 end
 
-local function load(new_lua_target, options)
-  options = options or {}
+local function load(arg1, arg2)
+  local new_lua_target, options = nil, {}
+
+  if type(arg1) == 'string' then
+    new_lua_target = arg1
+  end
+
+  if type(arg1) == 'table' then
+    options = arg1
+  elseif type(arg2) == 'table'  then
+    options = arg2
+  end
 
   C.BITLIB = options.bitlib
+  C.DISABLE_SOURCE_MAPS = options.disable_source_maps
 
   -- Always set `debug.traceback`, in case this is called multiple times
   -- with different arguments. By default we override Lua's native traceback

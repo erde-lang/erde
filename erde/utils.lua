@@ -21,6 +21,18 @@ local function trim(s)
   return (s:gsub('^%s*(.*)%s*$', '%1'))
 end
 
+-- Remove leading / trailing whitespace from a string.
+-- Taken from: https://www.lua.org/pil/20.3.html
+local function get_source_alias(source)
+  local summary = trim(source):sub(1, 5)
+
+  if #source > 5 then
+    summary = summary .. '...'
+  end
+
+  return ('[string "%s"]'):format(summary)
+end
+
 -- -----------------------------------------------------------------------------
 -- Files
 -- -----------------------------------------------------------------------------
@@ -63,6 +75,7 @@ end
 return {
   split = split,
   trim = trim,
+  get_source_alias = get_source_alias,
   file_exists = file_exists,
   read_file = read_file,
   join_paths = join_paths,

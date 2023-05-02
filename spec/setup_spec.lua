@@ -1,7 +1,7 @@
 local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
 local inspect = require('inspect')
-local erde = require('erde')
+local lib = require('erde.lib')
 local C = require('erde.constants')
 
 C.LUA_TARGET = os.getenv('LUA_TARGET') or '5.1+'
@@ -22,21 +22,6 @@ local function deep_compare(a, b)
   end
 
   return true
-end
-
--- -----------------------------------------------------------------------------
--- Globals
--- -----------------------------------------------------------------------------
-
-function run_erde(source)
-  local compiled = erde.compile(source)
-  local runner = (loadstring or load)(compiled)
-
-  if runner == nil then
-    error('Invalid Lua code: ' .. compiled)
-  end
-
-  return runner()
 end
 
 -- -----------------------------------------------------------------------------
@@ -80,7 +65,7 @@ busted.assert:register(
 
 local function eval(state, args)
   local expected = args[1]
-  local got = run_erde('return ' .. args[2])
+  local got = lib.run('return ' .. args[2])
   local result = deep_compare(expected, got)
 
   if not result then
@@ -102,7 +87,7 @@ busted.assert:register('assertion', 'eval', eval, 'assertion.eval.positive')
 
 local function run(state, args)
   local expected = args[1]
-  local got = run_erde(args[2])
+  local got = lib.run(args[2])
   local result = deep_compare(expected, got)
 
   if not result then

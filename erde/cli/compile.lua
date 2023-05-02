@@ -20,7 +20,7 @@ local function compile_file(path, cli)
   end
 
   local ok, result = pcall(function()
-    return compile(read_file(path), path)
+    return compile(read_file(path), { alias = path })
   end)
 
   if not ok then

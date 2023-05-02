@@ -17,7 +17,7 @@ return function(cli, script_args)
 
   local ok, result = xpcall(function()
     local source = read_file(cli.script)
-    local result = lib.__erde_internal_load_source__(source, cli.script)
+    local result = lib.__erde_internal_load_source__(source, { alias = cli.script })
     return result
   end, lib.traceback)
 

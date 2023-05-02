@@ -16,8 +16,12 @@ C.COMPILED_FOOTER_COMMENT = '-- __ERDE_COMPILED__'
 -- precise error rewriting.
 C.IS_CLI_RUNTIME = false
 
-  -- User specified library to use for bit operations.
+-- User specified library to use for bit operations.
 C.BITLIB = nil
+
+-- Flag for whether we should disable caching source maps for loaded sources.
+-- See `__erde_internal_load_source__`
+C.DISABLE_SOURCE_MAPS = false
 
 -- -----------------------------------------------------------------------------
 -- Lua Target

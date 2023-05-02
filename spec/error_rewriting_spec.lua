@@ -1,14 +1,13 @@
 local lib = require('erde.lib')
 
-
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
 
 local function assert_rewrite(source, expected)
   local ok, result = xpcall(function() lib.run(source) end, lib.rewrite)
-  assert.are.equal(ok, false)
-  assert.are.equal(result, expected)
+  assert.are.equal(false, ok)
+  assert.are.equal(expected, result)
 end
 
 -- -----------------------------------------------------------------------------

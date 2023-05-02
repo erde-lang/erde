@@ -10,14 +10,22 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 ### Removed
 
 ### Changed
+- Allow excluding target from `load` (i.e. allow options table as only argument)
 
 ### Fixed
-
+- Fixed thrown error when failing to load compiled code
+- Fixed erde loaders not handling multiple returns (package loader && `erde.run`)
 - Fixed incorrect source map when code starts with newlines
 - Fixed incorrect source map for function call statements
+- `erde.traceback` now properly handles non-string messages
+  - message is returned immediately without further processing
+  - same behavior as Lua's native `debug.traceback`
+- The bitwise unary `~` operator now properly uses native Lua for 5.3+ (previously always used bitlib)
+- Erde now properly reports error lines as compiled error lines when there is no sourcemap
 
 ### Added
-
+- Allow passing in options in `erde.compile`
+- Allow disabling caching source maps
 
 ## [0.5.0-1] - April 01, 2023
 
