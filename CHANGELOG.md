@@ -27,6 +27,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 ### Added
 - Allow passing in options in `erde.compile`
 - Allow disabling caching source maps
+- Added `erde sourcemap` command to CLI help
 
 ## [0.5.0-1] - April 01, 2023
 

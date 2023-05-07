@@ -5,8 +5,6 @@
   - avoid iife when possible (be careful of conditional expressions)
 - improve source map memory size
 - add `_MODULE` constant for modules?
-- fix `module` + `return` error not firing
-- add sourcemap to cli help
 - add production compiler
   - format compiled code for readability
   - no sourcemap support

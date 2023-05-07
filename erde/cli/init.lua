@@ -19,6 +19,7 @@ Usage: erde [command] [args]
 Commands:
    compile                Compile Erde files into Lua.
    clean                  Remove generated Lua files.
+   sourcemap              Map a compiled (Lua) line to a source (Erde) line.
 
 Options:
    -h, --help             Show this help message and exit.
@@ -54,6 +55,9 @@ Examples:
 
    erde clean .
       Remove all generated *.lua files under the current directory.
+
+   erde sourcemap my_script.erde 114
+      Lookup which line in my_script.erde generated line 114 in my_script.lua.
 ]]):format(table.concat(C.VALID_LUA_TARGETS, ', '))
 
 local SUBCOMMANDS = {
