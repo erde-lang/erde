@@ -22,6 +22,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
   - same behavior as Lua's native `debug.traceback`
 - The bitwise unary `~` operator now properly uses native Lua for 5.3+ (previously always used bitlib)
 - Erde now properly reports error lines as compiled error lines when there is no sourcemap
+- Erde now properly injects the compile footer for empty files
 
 ### Added
 - Allow passing in options in `erde.compile`

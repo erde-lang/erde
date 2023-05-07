@@ -1103,7 +1103,12 @@ return function(source, options)
   tokens, token_lines, num_tokens = tokenize(source, options.alias)
 
   -- Check for empty file or file w/ only comments
-  if num_tokens == 0 then return '', {} end
+  if num_tokens == 0 then
+    return table.concat({
+      '-- Compiled with Erde ' .. C.VERSION,
+      C.COMPILED_FOOTER_COMMENT,
+    }, '\n'), {}
+  end
 
   current_token, current_token_index = tokens[1], 1
   current_line, last_line = token_lines[1], token_lines[num_tokens]
