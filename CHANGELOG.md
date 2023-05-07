@@ -11,9 +11,12 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 
 ### Changed
 - Allow excluding target from `load` (i.e. allow options table as only argument)
+- Erde modules now return a table by default, which is accessible via `_MODULE`.
+  - The return is overridden when the user manually specifies a return
+  - The `module` keyword now manipulates this table
 
 ### Fixed
-- Fixed thrown error when failing to load compiled code
+- Fixed throwing object when failing to load compiled code
 - Fixed erde loaders not handling multiple returns (package loader && `erde.run`)
 - Fixed incorrect source map when code starts with newlines
 - Fixed incorrect source map for function call statements
@@ -23,6 +26,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 - The bitwise unary `~` operator now properly uses native Lua for 5.3+ (previously always used bitlib)
 - Erde now properly reports error lines as compiled error lines when there is no sourcemap
 - Erde now properly injects the compile footer for empty files
+- Fixed not throwing error when using both `return` and `module`
 
 ### Added
 - Allow passing in options in `erde.compile`

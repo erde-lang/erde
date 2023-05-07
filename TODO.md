@@ -4,7 +4,6 @@
 - readd optional chaining
   - avoid iife when possible (be careful of conditional expressions)
 - improve source map memory size
-- add `_MODULE` constant for modules?
 - add production compiler
   - format compiled code for readability
   - no sourcemap support

@@ -1052,7 +1052,7 @@ function loop_block()
 end
 
 function function_block()
-  local old_is_in_module_return_block = is_module_return_block
+  local old_is_module_return_block = is_module_return_block
   local old_break_name = break_name
 
   is_module_return_block = false
@@ -1073,22 +1073,21 @@ local function module_block()
     insert(compile_lines, consume())
   end
 
+  insert(compile_lines, 'local _MODULE = {}')
+
   while current_token ~= nil do
     insert(compile_lines, statement())
   end
 
-  if #module_names > 0 then
-    if has_module_return then
+  if has_module_return then
+    if #module_names > 0 then
       throw("cannot use 'module' declarations w/ 'return'", last_line)
-    else
-      local module_table_elements = {}
-
-      for i, module_name in ipairs(module_names) do
-        insert(module_table_elements, module_name .. '=' .. module_name)
-      end
-
-      insert(compile_lines, ('return { %s }'):format(concat(module_table_elements, ',')))
     end
+  else
+    for i, name in ipairs(module_names) do
+      insert(compile_lines, ('_MODULE["%s"] = %s'):format(name, name))
+    end
+    insert(compile_lines, 'return _MODULE')
   end
 
   return compile_lines
