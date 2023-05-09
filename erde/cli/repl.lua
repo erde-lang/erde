@@ -45,13 +45,13 @@ local function repl()
       -- Try input as an expression first! This way we can still print the value
       -- in the case that the expression is also a valid block (i.e. function calls).
       ok, result = pcall(function()
-        return lib.run('return ' .. source, 'stdin')
+        return lib.run('return ' .. source, { alias = 'stdin' })
       end)
 
       if not ok and type(result) == 'string' and not result:find('unexpected eof') then
         -- Try input as a block
         ok, result = pcall(function()
-          return lib.run(source, 'stdin')
+          lib.run(source, { alias = 'stdin' })
         end)
       end
 
