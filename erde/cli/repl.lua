@@ -84,8 +84,8 @@ local function repl()
   end
 end
 
-return function()
-  lib.load()
+return function(cli)
+  lib.load(cli.target)
   -- Protect repl so we don't show stacktraces when the user uses Control+c
   -- without readline.
   pcall(repl)

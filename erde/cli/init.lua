@@ -104,7 +104,8 @@ while arg_index <= num_args do
   elseif arg_value == '-p' or arg_value == '--print' then
     cli.print_compiled = true
   elseif arg_value == '-t' or arg_value == '--target' then
-    C.LUA_TARGET = parse_option(arg_value)
+    cli.target = parse_option(arg_value)
+    C.LUA_TARGET = cli.target
     if not C.VALID_LUA_TARGETS[C.LUA_TARGET] then
       terminate(table.concat({
         'Invalid Lua target: ' .. C.LUA_TARGET,

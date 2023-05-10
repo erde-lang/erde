@@ -9,7 +9,7 @@ local terminate = cli_utils.terminate
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 return function(cli, script_args)
-  lib.load()
+  lib.load(cli.target)
 
   -- Replace Lua's global args with what the script expects as if it were run
   -- from the Lua VM directly.
