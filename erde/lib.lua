@@ -193,8 +193,7 @@ end
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 local function run_string(source, options)
-  local result = { __erde_internal_load_source__(source, options) }
-  return unpack(result)
+  return __erde_internal_load_source__(source, options)
 end
 
 -- -----------------------------------------------------------------------------
