@@ -27,6 +27,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 - Erde now properly reports error lines as compiled error lines when there is no sourcemap
 - Erde now properly injects the compile footer for empty files
 - Fixed not throwing error when using both `return` and `module`
+- Fixed `erde` (REPL) and `erde run` not respecting `--target`
 
 ### Added
 - Allow passing in options in `erde.compile`
