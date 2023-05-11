@@ -190,11 +190,14 @@ local function __erde_internal_load_source__(source, options)
   return loader()
 end
 
+local function source_loader_wrapper(...)
+  return ...
+end
+
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 local function run_string(source, options)
-  local result = { __erde_internal_load_source__(source, options) }
-  return unpack(result)
+  return source_loader_wrapper(__erde_internal_load_source__(source, options))
 end
 
 -- -----------------------------------------------------------------------------
