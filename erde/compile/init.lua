@@ -240,7 +240,7 @@ local function destructure()
 
       insert(names, name)
       insert(compile_lines, name_line)
-      insert(compile_lines, ('local %s = %s[%s]'):format(name, compile_name, array_index))
+      insert(compile_lines, ('%s = %s[%s]'):format(name, compile_name, array_index))
 
       if branch('=') then
         insert(compile_lines, ('if %s == nil then %s = '):format(name, name))
@@ -255,7 +255,7 @@ local function destructure()
 
       insert(names, name)
       insert(compile_lines, key_line)
-      insert(compile_lines, ('local %s = %s.%s'):format(name, compile_name, key))
+      insert(compile_lines, ('%s = %s.%s'):format(name, compile_name, key))
 
       if branch('=') then
         insert(compile_lines, ('if %s == nil then %s = '):format(name, name))
@@ -392,6 +392,7 @@ local function parameters()
       end
 
       if type(var) == 'table' then
+        insert(compile_lines, 'local ' .. table.concat(var.names, ','))
         insert(compile_lines, var.compile_lines)
       end
     end
@@ -421,6 +422,7 @@ local function arrow_function_expression()
       insert(param_names, var)
     else
       insert(param_names, var.compile_name)
+      insert(compile_lines, 'local ' .. table.concat(var.names, ','))
       insert(compile_lines, var.compile_lines)
     end
   end
@@ -692,46 +694,59 @@ end
 
 local function declaration_statement()
   local scope = consume()
-  local names = {}
-  local compile_names = {}
+
   local compile_lines = {}
   local destructure_compile_lines = {}
+
+  local declaration_names = {}
+  local destructure_compile_names = {}
+  local assignment_names = {}
 
   if block_depth > 1 and scope == 'module' then
     throw('module declarations must appear at the top level', token_lines[current_token_index - 1])
   end
 
-  if scope ~= 'global' then
-    insert(compile_lines, 'local')
-  end
-
   for _, var in ipairs(list(variable)) do
     if type(var) == 'string' then
-      insert(names, var)
-      insert(compile_names, var)
+      insert(declaration_names, var)
+      insert(assignment_names, var)
     else
-      insert(compile_names, var.compile_name)
+      insert(assignment_names, var.compile_name)
+      insert(destructure_compile_names, var.compile_name)
       insert(destructure_compile_lines, var.compile_lines)
+
       for _, name in ipairs(var.names) do
-        insert(names, name)
+        insert(declaration_names, name)
       end
     end
   end
 
   if scope == 'module' then
-    for _, name in ipairs(names) do
-      insert(module_names, name)
+    for _, declaration_name in ipairs(declaration_names) do
+      insert(module_names, declaration_name)
     end
   end
 
-  insert(compile_lines, weave(compile_names))
+  if #destructure_compile_names > 0 then
+    if scope ~= 'global' then
+      insert(compile_lines, 'local ' .. table.concat(declaration_names, ','))
+    end
 
-  if current_token == '=' then
-    insert(compile_lines, consume())
+    if branch('=') then
+      insert(compile_lines, 'do')
+      insert(compile_lines, 'local ' .. table.concat(destructure_compile_names, ','))
+      insert(compile_lines, table.concat(assignment_names, ',') .. '=')
+      insert(compile_lines, weave(list(expression)))
+      insert(compile_lines, destructure_compile_lines)
+      insert(compile_lines, 'end')
+    end
+  elseif branch('=') then
+    insert(compile_lines, ('%s%s='):format(scope == 'global' and '' or 'local ', table.concat(declaration_names, ',')))
     insert(compile_lines, weave(list(expression)))
+  elseif scope ~= 'global' then
+    insert(compile_lines, 'local ' .. table.concat(declaration_names, ','))
   end
 
-  insert(compile_lines, destructure_compile_lines)
   return compile_lines
 end
 
@@ -775,6 +790,7 @@ local function for_loop_statement()
         insert(names, var)
       else
         insert(names, var.compile_name)
+        insert(pre_body_compile_lines, 'local ' .. table.concat(var.names, ','))
         insert(pre_body_compile_lines, var.compile_lines)
       end
     end

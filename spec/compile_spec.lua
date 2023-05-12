@@ -398,7 +398,9 @@ describe('declaration #5.1+', function()
   spec('global', function()
     assert.run(1, [[
       global a = 1
-      return a
+      local result = _G.a
+      _G.a = nil
+      return result
     ]])
   end)
 
@@ -417,7 +419,7 @@ describe('declaration #5.1+', function()
     ]])
   end)
 
-  spec('destructure', function()
+  spec('local destructure', function()
     assert.run(1, [[
       local a = { x = 1 }
       local { x } = a
@@ -427,6 +429,34 @@ describe('declaration #5.1+', function()
       local a = { 'hello', 'world' }
       local [ hello ] = a
       return hello
+    ]])
+  end)
+
+  spec('global destructure', function()
+    assert.run(1, [[
+      local a = { x = 1 }
+      global { x } = a
+      local result = _G.x
+      _G.x = nil
+      return result
+    ]])
+    assert.run('hello', [[
+      local a = { 'hello', 'world' }
+      global [ hello ] = a
+      local result = _G.hello
+      _G.hello = nil
+      return result
+    ]])
+  end)
+
+  spec('module destructure', function()
+    assert.run({ x = 1 }, [[
+      local a = { x = 1 }
+      module { x } = a
+    ]])
+    assert.run({ hello = 'hello' }, [[
+      local a = { 'hello', 'world' }
+      module [ hello ] = a
     ]])
   end)
 end)
