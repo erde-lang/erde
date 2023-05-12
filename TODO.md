@@ -1,8 +1,6 @@
 # TODO
 
 # 0.5.1-2
-- readd optional chaining
-  - avoid iife when possible (be careful of conditional expressions)
 - improve source map memory size
 - add production compiler
   - format compiled code for readability
@@ -32,3 +30,5 @@
 - add autocompletions + command to install / uninstall autocompletions?
   - not tracked by luarocks
   - need to be installed / uninstalled manually by user...
+- optional chaining
+  - really hard to do properly without IIFE...

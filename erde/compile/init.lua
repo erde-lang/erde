@@ -723,7 +723,7 @@ local function declaration_statement()
 
   if scope == 'module' then
     for _, declaration_name in ipairs(declaration_names) do
-      insert(module_names, declaration_name)
+      module_names[declaration_name] = true
     end
   end
 
@@ -854,7 +854,7 @@ local function function_statement()
       throw('module declarations must appear at the top level', scope_line)
     end
 
-    insert(module_names, signature)
+    module_names[signature] = true
   end
 
   local params = parameters()
@@ -1100,7 +1100,7 @@ local function module_block()
       throw("cannot use 'module' declarations w/ 'return'", last_line)
     end
   else
-    for i, name in ipairs(module_names) do
+    for name in pairs(module_names) do
       insert(compile_lines, ('_MODULE["%s"] = %s'):format(name, name))
     end
     insert(compile_lines, 'return _MODULE')
