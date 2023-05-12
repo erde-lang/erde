@@ -393,33 +393,6 @@ describe('declaration #5.1+', function()
       local a = 1
       return a
     ]])
-  end)
-
-  spec('global', function()
-    assert.run(1, [[
-      global a = 1
-      local result = _G.a
-      _G.a = nil
-      return result
-    ]])
-  end)
-
-  spec('module', function()
-    assert.run({ a = 1 }, 'module a = 1')
-    assert.run({ b = 1 }, [[
-      local a = { b = 1 }
-      module { b } = a
-    ]])
-  end)
-
-  spec('multiple', function()
-    assert.run(3, [[
-      local a, b = 1, 2
-      return a + b
-    ]])
-  end)
-
-  spec('local destructure', function()
     assert.run(1, [[
       local a = { x = 1 }
       local { x } = a
@@ -430,9 +403,33 @@ describe('declaration #5.1+', function()
       local [ hello ] = a
       return hello
     ]])
+    assert.run(3, [[
+      local a, b = 1, 2
+      return a + b
+    ]])
   end)
 
-  spec('global destructure', function()
+  spec('global', function()
+    assert.run(1, [[
+      global a = 1
+      local result = _G.a
+      _G.a = nil
+      return result
+    ]])
+    assert.run(1, [[
+      local a = 1
+      global a = 2
+      local result = a
+      _G.a = nil
+      return result
+    ]])
+    assert.run(2, [[
+      local a = 1
+      global a = 2
+      local result = _G.a
+      _G.a = nil
+      return result
+    ]])
     assert.run(1, [[
       local a = { x = 1 }
       global { x } = a
@@ -447,9 +444,22 @@ describe('declaration #5.1+', function()
       _G.hello = nil
       return result
     ]])
+    assert.run(1, [[
+      local a = { 'hello', 'world' }
+      global b, [ hello ] = 1, a
+      local result = _G.b
+      _G.b = nil
+      _G.hello = nil
+      return result
+    ]])
   end)
 
-  spec('module destructure', function()
+  spec('module', function()
+    assert.run({ a = 1 }, 'module a = 1')
+    assert.run({ b = 1 }, [[
+      local a = { b = 1 }
+      module { b } = a
+    ]])
     assert.run({ x = 1 }, [[
       local a = { x = 1 }
       module { x } = a
@@ -620,6 +630,21 @@ describe('function declaration #5.1+', function()
   end)
 
   spec('global', function()
+    assert.run(2, [[
+      function test() {
+        return 2
+      }
+
+      do {
+        global function test() {
+          return 1
+        }
+      }
+
+      local result = test()
+      _G.test = nil
+      return result
+    ]])
     assert.run(1, [[
       function test() {
         return 2
@@ -631,7 +656,9 @@ describe('function declaration #5.1+', function()
         }
       }
 
-      return test()
+      local result = _G.test()
+      _G.test = nil
+      return result
     ]])
   end)
 

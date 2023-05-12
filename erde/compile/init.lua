@@ -227,23 +227,26 @@ local function name(allow_keywords)
   return consume()
 end
 
-local function destructure()
+local function destructure(scope)
   local names = {}
   local compile_lines = {}
   local compile_name = new_tmp_name()
+  local assignment_prefix = scope == 'global' and '_G.' or ''
 
   if current_token == '[' then
     local array_index = 0
     surround_list('[', ']', function()
       local name_line, name = current_line, name()
+      local assignment_name = assignment_prefix .. name
       array_index = array_index + 1
 
       insert(names, name)
+
       insert(compile_lines, name_line)
-      insert(compile_lines, ('%s = %s[%s]'):format(name, compile_name, array_index))
+      insert(compile_lines, ('%s = %s[%s]'):format(assignment_name, compile_name, array_index))
 
       if branch('=') then
-        insert(compile_lines, ('if %s == nil then %s = '):format(name, name))
+        insert(compile_lines, ('if %s == nil then %s = '):format(assignment_name, assignment_name))
         insert(compile_lines, expression())
         insert(compile_lines, 'end')
       end
@@ -252,13 +255,15 @@ local function destructure()
     surround_list('{', '}', function()
       local key_line, key = current_line, name()
       local name = branch(':') and name() or key
+      local assignment_name = assignment_prefix .. name
 
       insert(names, name)
+
       insert(compile_lines, key_line)
-      insert(compile_lines, ('%s = %s.%s'):format(name, compile_name, key))
+      insert(compile_lines, ('%s = %s.%s'):format(assignment_name, compile_name, key))
 
       if branch('=') then
-        insert(compile_lines, ('if %s == nil then %s = '):format(name, name))
+        insert(compile_lines, ('if %s == nil then %s = '):format(assignment_name, assignment_name))
         insert(compile_lines, expression())
         insert(compile_lines, 'end')
       end
@@ -706,10 +711,10 @@ local function declaration_statement()
     throw('module declarations must appear at the top level', token_lines[current_token_index - 1])
   end
 
-  for _, var in ipairs(list(variable)) do
+  for _, var in ipairs(list(function() return variable(scope) end)) do
     if type(var) == 'string' then
       insert(declaration_names, var)
-      insert(assignment_names, var)
+      insert(assignment_names, (scope == 'global' and '_G.' or '') .. var)
     else
       insert(assignment_names, var.compile_name)
       insert(destructure_compile_names, var.compile_name)
@@ -727,24 +732,25 @@ local function declaration_statement()
     end
   end
 
-  if #destructure_compile_names > 0 then
-    if scope ~= 'global' then
-      insert(compile_lines, 'local ' .. table.concat(declaration_names, ','))
-    end
+  if scope ~= 'global' then
+    insert(compile_lines, 'local ' .. table.concat(declaration_names, ','))
+  end
 
-    if branch('=') then
+  if branch('=') then
+    if #destructure_compile_names > 0 then
       insert(compile_lines, 'do')
       insert(compile_lines, 'local ' .. table.concat(destructure_compile_names, ','))
       insert(compile_lines, table.concat(assignment_names, ',') .. '=')
       insert(compile_lines, weave(list(expression)))
       insert(compile_lines, destructure_compile_lines)
       insert(compile_lines, 'end')
+    elseif scope == 'global' then
+      insert(compile_lines, table.concat(assignment_names, ',') .. '=')
+      insert(compile_lines, weave(list(expression)))
+    else
+      insert(compile_lines, '=')
+      insert(compile_lines, weave(list(expression)))
     end
-  elseif branch('=') then
-    insert(compile_lines, ('%s%s='):format(scope == 'global' and '' or 'local ', table.concat(declaration_names, ',')))
-    insert(compile_lines, weave(list(expression)))
-  elseif scope ~= 'global' then
-    insert(compile_lines, 'local ' .. table.concat(declaration_names, ','))
   end
 
   return compile_lines
@@ -828,6 +834,11 @@ local function function_statement()
   local signature = name()
   local is_table_value = current_token == '.'
 
+  if scope == 'global' then
+    signature = '_G.' .. signature
+    is_table_value = true
+  end
+
   while branch('.') do
     signature = signature .. '.' .. name()
   end
@@ -837,16 +848,12 @@ local function function_statement()
     signature = signature .. ':' .. name()
   end
 
-  insert(compile_lines, signature)
-
-  if is_table_value and scope ~= nil then
+  if not is_table_value then
+    -- Default to local scope (this includes when scope is undefined!)
+    insert(compile_lines, 1, 'local')
+  elseif scope == 'local' or scope == 'module' then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
     throw('cannot use scopes for table values', scope_line)
-  end
-
-  if not is_table_value and scope ~= 'global' then
-    -- Note: This includes when scope is undefined! Default to local scope.
-    insert(compile_lines, 1, 'local')
   end
 
   if scope == 'module' then
@@ -856,6 +863,8 @@ local function function_statement()
 
     module_names[signature] = true
   end
+
+  insert(compile_lines, signature)
 
   local params = parameters()
   insert(compile_lines, '(' .. concat(params.names, ',') .. ')')

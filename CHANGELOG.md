@@ -29,6 +29,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 - Fixed not throwing error when using both `return` and `module`
 - Fixed `erde` (REPL) and `erde run` not respecting `--target` (https://github.com/erde-lang/erde/issues/11)
 - Fixed global destructuring (https://github.com/erde-lang/erde/issues/14)
+- Global declarations now directly mutate `_G` (https://github.com/erde-lang/erde/issues/15)
 
 ### Added
 - Allow passing in options in `erde.compile`
