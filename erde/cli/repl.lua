@@ -11,6 +11,11 @@ local PROMPT = '> '
 local SUB_PROMPT = '>> '
 local HAS_READLINE, RL = pcall(function() return require('readline') end)
 
+local RUN_OPTIONS = {
+  alias = 'stdin',
+  no_module = true,
+}
+
 if HAS_READLINE then
   RL.set_readline_name('erde')
   RL.set_options({
@@ -51,13 +56,13 @@ local function repl()
       -- in the case that the expression is also a valid block (i.e. function calls).
       ok, result = pcall(function()
         -- pack results so we know how many were actually returned even if there are nils among them
-        return pack(lib.run('return ' .. source, { alias = 'stdin' }))
+        return pack(lib.run('return ' .. source, RUN_OPTIONS))
       end)
 
       if not ok and type(result) == 'string' and not result:find('unexpected eof') then
         -- Try input as a block
         ok, result = pcall(function()
-          return pack(lib.run(source, { alias = 'stdin' }))
+          return pack(lib.run(source, RUN_OPTIONS))
         end)
       end
 
