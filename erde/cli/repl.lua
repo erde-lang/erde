@@ -2,6 +2,11 @@ local C = require('erde.constants')
 local lib = require('erde.lib')
 local utils = require('erde.utils')
 
+local unpack = table.unpack or unpack
+local pack = table.pack or function(...)
+  return { n =  select("#", ...), ... }
+end
+
 local PROMPT = '> '
 local SUB_PROMPT = '>> '
 local HAS_READLINE, RL = pcall(function() return require('readline') end)
@@ -45,13 +50,14 @@ local function repl()
       -- Try input as an expression first! This way we can still print the value
       -- in the case that the expression is also a valid block (i.e. function calls).
       ok, result = pcall(function()
-        return lib.run('return ' .. source, { alias = 'stdin' })
+        -- pack results so we know how many were actually returned even if there are nils among them
+        return pack(lib.run('return ' .. source, { alias = 'stdin' }))
       end)
 
       if not ok and type(result) == 'string' and not result:find('unexpected eof') then
         -- Try input as a block
         ok, result = pcall(function()
-          lib.run(source, { alias = 'stdin' })
+          return pack(lib.run(source, { alias = 'stdin' }))
         end)
       end
 
@@ -65,8 +71,12 @@ local function repl()
 
     if not ok then
       print(lib.rewrite(result))
-    elseif result ~= nil then
-      print(result)
+    elseif result.n > 0 then
+      for i = 1, result.n do
+        -- explicitly call `tostring()` so nils are also stringified
+        result[i] = tostring(result[i])
+      end
+      print(unpack(result))
     end
 
     if HAS_READLINE and utils.trim(source) ~= '' then
