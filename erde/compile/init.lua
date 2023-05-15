@@ -1091,14 +1091,12 @@ function function_block()
   return compile_lines
 end
 
-local function module_block()
+local function module_block(options)
   local compile_lines = {}
 
   if current_token:match('^#!') then
     insert(compile_lines, consume())
   end
-
-  insert(compile_lines, 'local _MODULE = {}')
 
   while current_token ~= nil do
     insert(compile_lines, statement())
@@ -1108,10 +1106,13 @@ local function module_block()
     if #module_names > 0 then
       throw("cannot use 'module' declarations w/ 'return'", last_line)
     end
-  else
+  elseif not options.no_module then
+    insert(compile_lines, 1, 'local _MODULE = {}')
+
     for name in pairs(module_names) do
       insert(compile_lines, ('_MODULE["%s"] = %s'):format(name, name))
     end
+
     insert(compile_lines, 'return _MODULE')
   end
 
@@ -1153,7 +1154,7 @@ return function(source, options)
     or (lua_target == '5.2' and 'bit32') -- Lua 5.2's builtin bit32 library
 
 
-  local compile_lines = module_block()
+  local compile_lines = module_block(options)
 
   local collapsed_compile_lines = {}
   local collapsed_compile_line_counter = 0

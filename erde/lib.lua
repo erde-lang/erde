@@ -132,15 +132,6 @@ end
 -- 1. The `xpcall` in `__erde_internal_load_source__`
 -- 2. The call to `__erde_internal_load_source__` itself
 -- 3. The call that invoked `__erde_internal_load_source__`
---
--- Currently there are three ways for the user to load Erde code:
---
--- 1. Via the CLI (ex. `erde myfile.erde`)
--- 2. Via `erde_searcher`
--- 3. Via `run_string`
---
--- Any changes to these functions and their stack calls should be done w/ great
--- precaution.
 local function __erde_internal_load_source__(source, options)
   options = options or {}
   local alias = options.alias or utils.get_source_alias(source)
@@ -153,6 +144,7 @@ local function __erde_internal_load_source__(source, options)
     alias = alias,
     lua_target = options.lua_target,
     bitlib = options.bitlib,
+    no_module = options.no_module,
   })
 
   -- Cache alias. Required for rewriting errors.
@@ -192,9 +184,8 @@ end
 
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
-local function run_string(source, options)
-  local result = { __erde_internal_load_source__(source, options) }
-  return unpack(result)
+local function run(source, options)
+  return utils.echo(__erde_internal_load_source__(source, options))
 end
 
 -- -----------------------------------------------------------------------------
@@ -295,7 +286,7 @@ return {
   __erde_internal_load_source__ = __erde_internal_load_source__,
   rewrite = rewrite,
   traceback = traceback,
-  run = run_string,
+  run = run,
   load = load,
   unload = unload,
 }
