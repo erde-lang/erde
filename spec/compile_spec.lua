@@ -853,3 +853,50 @@ spec('_MODULE #5.1+', function()
     module y = 2
   ]])
 end)
+
+spec('Lua keywords that are not Erde keywords #5.1+', function()
+  assert.run(1, [[
+    local end = 1
+    return end
+  ]])
+  assert.eval({ ['end'] = 1 }, "{ end = 1 }")
+  assert.run(1, [[
+    local t = {}
+    t.end = 1
+    return t.end
+  ]])
+  assert.run(1, [[
+    local t = { end = 1 }
+    local key = 'end'
+    return t[key]
+  ]])
+  assert.run(1, [[
+    local t = { end = () -> 1 }
+    return t.end()
+  ]])
+  assert.run(1, [[
+    local a = { b = { end = () -> 1 } }
+    return a.b.end()
+  ]])
+  assert.run(1, [[
+    local a = { x = 1, end = () => self.x }
+    return a:end()
+  ]])
+  assert.run(1, [[
+    local a = { b = { x = 1, end = () => self.x } }
+    return a.b:end()
+  ]])
+  assert.run(2, [[
+    local a = { end = 1 }
+    local b = { end = 2 }
+    return (b || a).end
+  ]])
+  assert.run(1, [[
+    local a = { end = 1 }
+    local { end } = a
+    return end
+  ]])
+  assert.has_no.error(function()
+    compile('print(a.b:end())')
+  end)
+end)

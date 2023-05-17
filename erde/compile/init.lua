@@ -197,7 +197,7 @@ end
 
 local function surround_list(open_char, close_char, callback, allow_empty)
   return surround(open_char, close_char, function()
-    if not allow_empty or current_token ~= close_char then
+    if current_token ~= close_char or not allow_empty then
       return list(callback, close_char)
     end
   end)
@@ -207,21 +207,21 @@ end
 -- Partials
 -- -----------------------------------------------------------------------------
 
-local function name(allow_keywords)
+local function name(no_transform, allow_keywords)
   ensure(current_token ~= nil, 'unexpected eof')
   ensure(
     current_token:match('^[_a-zA-Z][_a-zA-Z0-9]*$'),
     ("unexpected token '%s'"):format(current_token)
   )
 
-  if not allow_keywords then
+  if allow_keywords then
     for i, keyword in pairs(CC.KEYWORDS) do
       ensure(current_token ~= keyword, ("unexpected keyword '%s'"):format(current_token))
     end
+  end
 
-    if CC.LUA_KEYWORDS[current_token] then
-      return ('__ERDE_SUBSTITUTE_%s__'):format(consume())
-    end
+  if CC.LUA_KEYWORDS[current_token] and not no_transform then
+    return ('__ERDE_SUBSTITUTE_%s__'):format(consume())
   end
 
   return consume()
@@ -253,14 +253,15 @@ local function destructure(scope)
     end)
   else
     surround_list('{', '}', function()
-      local key_line, key = current_line, name()
+      -- Save `raw_key` in case `name()` transforms the word (Lua keywords)
+      local key_line, raw_key, key = current_line, current_token, name()
       local name = branch(':') and name() or key
       local assignment_name = assignment_prefix .. name
 
       insert(names, name)
 
       insert(compile_lines, key_line)
-      insert(compile_lines, ('%s = %s.%s'):format(assignment_name, compile_name, key))
+      insert(compile_lines, ('%s = %s["%s"]'):format(assignment_name, compile_name, raw_key))
 
       if branch('=') then
         insert(compile_lines, ('if %s == nil then %s = '):format(assignment_name, assignment_name))
@@ -282,50 +283,109 @@ local function variable()
     and destructure() or name()
 end
 
-local function index_chain(compile_lines, require_chain)
-  while true do
-    if current_token == '.' then
-      require_chain = false
-      insert(compile_lines, current_line)
-      insert(compile_lines, consume() .. name(true))
-    elseif current_token == '[' then
-      require_chain = false
-      insert(compile_lines, current_line)
-      insert(compile_lines, '[')
-      insert(compile_lines, surround('[', ']', expression))
-      insert(compile_lines, ']')
-    elseif branch(':') then
-      require_chain = false
-      insert(compile_lines, current_line)
-      insert(compile_lines, ':' .. name(true))
-      expect('(', true)
-    -- Use newlines to infer whether the parentheses belong to a function call
-    -- or the next statement.
-    elseif current_token == '(' and current_line == token_lines[current_token_index - 1] then
-      require_chain = false
+local function index_chain(base_compile_lines, has_trivial_base, require_chain)
+  local chain = {}
+  local is_function_call = false
+  local has_trivial_chain = false
 
-      local preceding_compile_lines = compile_lines
-      local preceding_compile_lines_len = #preceding_compile_lines
-      while type(preceding_compile_lines[preceding_compile_lines_len]) == 'table' do
-        preceding_compile_lines = preceding_compile_lines[preceding_compile_lines_len]
-        preceding_compile_lines_len = #preceding_compile_lines
+  -- Variables for when we must compile to a Lua block.
+  --
+  -- There are cases where we cannot keep the compiled code as an expression and
+  -- must compile to a block (such as a `do` block or an IIFE). One such case is
+  -- when compiling a method index with a nontrivial base when the method name
+  -- is a Lua keyword, but not an Erde keyword.
+  local needs_block_compile = false
+  local block_compile_name = new_tmp_name()
+  local block_compile_lines = { 'local ' .. block_compile_name }
+
+  while true do
+    if current_token == '[' then
+      has_trivial_chain = false
+      insert(chain, { current_line, '[', surround('[', ']', expression), ']' })
+    elseif current_token == '.' then
+      has_trivial_chain = false
+
+      local field_line = current_line
+      consume()
+      local field_name = name(true, true)
+
+      if CC.LUA_KEYWORDS[field_name] then
+        insert(chain, { field_line, '["' .. field_name .. '"]' })
+      else
+        insert(chain, { field_line, '.' .. field_name })
       end
+    elseif branch(':') then
+      has_trivial_chain = false
+      is_function_call = true
+
+      local link = { current_line }
+      local method_name = name(true, true)
+      expect('(', true)
+
+      if not CC.LUA_KEYWORDS[method_name] then
+        insert(link, ':' .. method_name)
+      else
+        local arg_compile_lines = surround_list('(', ')', expression, true)
+
+        if has_trivial_base and has_trivial_chain then
+          insert(link, '["' .. method_name .. '"](')
+          insert(link, base_compile_lines)
+        else
+          needs_block_compile = true
+          link.needs_intermediate = true
+          insert(link, ('["%s"](%s'):format(method_name, block_compile_name))
+        end
+
+        if arg_compile_lines then
+          insert(link, ',')
+          insert(link, weave(arg_compile_lines))
+        end
+
+        insert(link, ')')
+      end
+
+      insert(chain, link)
+    elseif current_token == '(' and current_line == token_lines[current_token_index - 1] then
+      -- Use newlines to infer whether the parentheses belong to a function call
+      -- or the next statement.
+      has_trivial_chain = false
+      is_function_call = true
+
+      local chain_len = #chain
+      local preceding_compile_lines, preceding_compile_lines_len
+
+      if chain_len > 0 then
+        preceding_compile_lines = chain[chain_len]
+        preceding_compile_lines_len = #preceding_compile_lines
+      else
+        preceding_compile_lines = base_compile_lines
+        preceding_compile_lines_len = #base_compile_lines
+
+        while type(preceding_compile_lines[preceding_compile_lines_len]) == 'table' do
+          preceding_compile_lines = preceding_compile_lines[preceding_compile_lines_len]
+          preceding_compile_lines_len = #preceding_compile_lines
+        end
+      end
+
+      local arg_compile_lines = surround_list('(', ')', expression, true)
 
       -- Include function call parens on same line as function name to prevent
       -- parsing errors in Lua5.1
       --    `ambiguous syntax (function call x new statement) near '('`
-      preceding_compile_lines[preceding_compile_lines_len] =
-        preceding_compile_lines[preceding_compile_lines_len] .. '('
-
-      local args = surround_list('(', ')', expression, true)
-      if args then insert(compile_lines, weave(args)) end
-      insert(compile_lines,  ')')
+      if not arg_compile_lines then
+        preceding_compile_lines[preceding_compile_lines_len] =
+          preceding_compile_lines[preceding_compile_lines_len] .. '()'
+      else
+        preceding_compile_lines[preceding_compile_lines_len] =
+          preceding_compile_lines[preceding_compile_lines_len] .. '('
+        insert(chain, { weave(arg_compile_lines), ')' })
+      end
     else
       break
     end
   end
 
-  if require_chain then
+  if require_chain and has_trivial_chain then
     if not current_token then
       throw('unexpected eof', last_line)
     else
@@ -333,7 +393,23 @@ local function index_chain(compile_lines, require_chain)
     end
   end
 
-  return compile_lines
+  for _, link in ipairs(chain) do
+    if link.needs_intermediate then
+      insert(block_compile_lines, block_compile_name .. '=')
+      insert(block_compile_lines, base_compile_lines)
+      base_compile_lines = { block_compile_name }
+    end
+
+    insert(base_compile_lines, link)
+  end
+
+  return {
+    base_compile_lines = base_compile_lines,
+    is_function_call = is_function_call,
+    needs_block_compile = needs_block_compile,
+    block_compile_name  = block_compile_name,
+    block_compile_lines = block_compile_lines,
+  }
 end
 
 local function return_list(require_list_parens)
@@ -456,6 +532,22 @@ local function arrow_function_expression()
   return compile_lines
 end
 
+local function index_chain_expression(...)
+  local index_chain = index_chain(...)
+
+  if not index_chain.needs_block_compile then
+    return index_chain.base_compile_lines
+  else
+    return {
+      '(function()',
+      index_chain.block_compile_lines,
+      'return',
+      index_chain.base_compile_lines,
+      'end)()',
+    }
+  end
+end
+
 local function interpolation_string_expression(start_quote, end_quote)
   local compile_lines = {}
   local content_line, content = current_line, consume()
@@ -520,8 +612,12 @@ local function table_expression()
       insert(compile_lines, ']')
       insert(compile_lines, expect('='))
     elseif look_ahead(1) == '=' then
-      insert(compile_lines, name())
-      insert(compile_lines, consume()) -- '='
+      local key = name(true)
+      if CC.LUA_KEYWORDS[key] then
+        insert(compile_lines, '["' .. key .. '"]' .. consume())
+      else
+        insert(compile_lines, key .. consume())
+      end
     end
 
     insert(compile_lines, expression())
@@ -544,11 +640,21 @@ local function terminal_expression()
   if CC.DIGIT[current_token:sub(1, 1)] then
     return { current_line, consume() }
   elseif current_token == "'" then
-    return index_chain({ '(', single_quote_string_expression(), ')' })
+    local terminal_line = current_line
+    local string_line, erde_string = current_line, consume()
+
+    if current_token ~= "'" then
+      erde_string = erde_string .. consume()
+    end
+
+    erde_string = erde_string .. consume()
+    return index_chain_expression({ '(', erde_string, ')' }, true)
   elseif current_token == '"' then
-    return index_chain({ '(', interpolation_string_expression('"', '"'), ')' })
+    -- TODO: check for interpolation to determine index_chain.has_trivial_base?
+    return index_chain_expression({ '(', interpolation_string_expression('"', '"'), ')' }, false)
   elseif current_token:match('^%[[[=]') then
-    return index_chain({ '(', interpolation_string_expression(current_token, current_token:gsub('%[', ']')), ')' })
+    -- TODO: check for interpolation to determine index_chain.has_trivial_base?
+    return index_chain_expression({ '(', interpolation_string_expression(current_token, current_token:gsub('%[', ']')), ')' }, false)
   end
 
   local next_token = look_ahead(1)
@@ -567,9 +673,9 @@ local function terminal_expression()
   elseif current_token == '{' then
     return table_expression()
   elseif current_token == '(' then
-    return index_chain({ '(', surround('(', ')', expression), ')' })
+    return index_chain_expression({ '(', surround('(', ')', expression), ')' }, false)
   else
-    return index_chain({ current_line, name() })
+    return index_chain_expression({ current_line, name() }, true)
   end
 end
 
@@ -626,19 +732,23 @@ end
 
 local function assignment_statement(first_id)
   local compile_lines = {}
-  local id_list = { first_id }
+  local index_chains = { first_id }
+  local base_compile_lines = { first_id.base_compile_lines }
+  local needs_block_compile = first_id.needs_block_compile
 
   while branch(',') do
     local index_chain_line = current_line
     local index_chain = current_token == '('
-      and index_chain({ '(', surround('(', ')', expression), ')' }, true)
-      or index_chain({ name() })
+      and index_chain({ '(', surround('(', ')', expression), ')' }, false, true)
+      or index_chain({ name() }, true)
 
-    if index_chain[#index_chain] == ')' then
+    if index_chain.is_function_call then
       throw('cannot assign value to function call', index_chain_line)
     end
 
-    insert(id_list, index_chain)
+    needs_block_compile = needs_block_compile or index_chain.needs_block_compile
+    insert(index_chains, index_chain)
+    insert(base_compile_lines, index_chain.base_compile_lines)
   end
 
   local op_line, op_token = current_line, CC.BINOP_ASSIGNMENT_TOKENS[current_token] and consume()
@@ -649,33 +759,43 @@ local function assignment_statement(first_id)
   expect('=')
   local expr_list = list(expression)
 
-  if not op_token then
-    insert(compile_lines, weave(id_list))
+  -- Optimize most common use cases
+  if not needs_block_compile and not op_token then
+    insert(compile_lines, weave(base_compile_lines))
     insert(compile_lines, '=')
     insert(compile_lines, weave(expr_list))
-  elseif #id_list == 1 then
-    -- Optimize most common use case
-    insert(compile_lines, first_id)
+  elseif not needs_block_compile and #index_chains == 1 then
+    insert(compile_lines, first_id.base_compile_lines)
     insert(compile_lines, op_line)
     insert(compile_lines, '=')
-    insert(compile_lines, compile_binop(op_token, op_line, first_id, expr_list[1]))
+    insert(compile_lines, compile_binop(op_token, op_line, first_id.base_compile_lines, expr_list[1]))
   else
     local assignment_names = {}
     local assignment_compile_lines = {}
 
-    for i, id in ipairs(id_list) do
+    for i, id in ipairs(index_chains) do
       local assignment_name = new_tmp_name()
       insert(assignment_names, assignment_name)
-      insert(assignment_compile_lines, id)
+
+      if id.needs_block_compile then
+        insert(assignment_compile_lines, id.block_compile_lines)
+      end
+
+      insert(assignment_compile_lines, id.base_compile_lines)
       insert(assignment_compile_lines, '=')
-      insert(assignment_compile_lines, compile_binop(op_token, op_line, id, assignment_name))
+      insert(assignment_compile_lines, op_token
+        and compile_binop(op_token, op_line, id.base_compile_lines, assignment_name)
+        or assignment_name
+      )
     end
 
+    insert(compile_lines, 'do')
     insert(compile_lines, 'local')
     insert(compile_lines, concat(assignment_names, ','))
     insert(compile_lines, '=')
     insert(compile_lines, weave(expr_list))
     insert(compile_lines, assignment_compile_lines)
+    insert(compile_lines, 'end')
   end
 
   return compile_lines
@@ -1011,15 +1131,21 @@ local function statement()
     insert(compile_lines, declaration_statement())
   else
     local index_chain = current_token == '('
-      and index_chain({ current_line, '(', surround('(', ')', expression), ')' }, true)
-      or index_chain({ current_line, name() })
-    local last_index_chain_token = index_chain[#index_chain]
+      and index_chain({ current_line, '(', surround('(', ')', expression), ')' }, false, true)
+      or index_chain({ current_line, name() }, true)
 
-    if last_index_chain_token == ')' then
-      -- Allow function calls as standalone statements
-      insert(compile_lines, index_chain)
-    else
+    if not index_chain.is_function_call then
       insert(compile_lines, assignment_statement(index_chain))
+    elseif not index_chain.needs_block_compile then
+      insert(compile_lines, index_chain.base_compile_lines)
+    else
+      insert(compile_lines, {
+        '(function()',
+        index_chain.block_compile_lines,
+        'return',
+        index_chain.base_compile_lines,
+        'end)()',
+      })
     end
   end
 
