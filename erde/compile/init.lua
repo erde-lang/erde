@@ -1,7 +1,7 @@
 local C = require('erde.constants')
 local CC = require('erde.compile.constants')
 local utils = require('erde.utils')
-local tokenize = require('erde.compile.tokenize')
+local tokenize = require('erde.tokenize')
 
 -- Foward declare
 local expression, block, loop_block, function_block
@@ -1251,7 +1251,11 @@ end
 
 return function(source, options)
   options = options or {}
-  tokens, token_lines, num_tokens = tokenize(source, options.alias)
+
+  local tokenize_state = tokenize(source, options.alias)
+  tokens = tokenize_state.tokens
+  token_lines = tokenize_state.token_lines
+  num_tokens = tokenize_state.num_tokens
 
   -- Check for empty file or file w/ only comments
   if num_tokens == 0 then

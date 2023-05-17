@@ -1,23 +1,28 @@
-local tokenize = require('erde.compile.tokenize')
 local CC = require('erde.compile.constants')
+local tokenize = require('erde.tokenize')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
 
 local function assert_token(token, expected)
-  local tokens = tokenize(token)
-  assert.are.equal(expected or token, tokens[1])
+  local tokenize_state = tokenize(token)
+  assert.are.equal(expected or token, tokenize_state.tokens[1])
 end
 
 local function assert_tokens(text, expected)
-  local tokens = tokenize(text)
-  assert.subtable(expected, tokens)
+  local tokenize_state = tokenize(text)
+  assert.subtable(expected, tokenize_state.tokens)
+end
+
+local function assert_num_tokens(text, expected)
+  local tokenize_state = tokenize(text)
+  assert.are.equal(expected, tokenize_state.num_tokens)
 end
 
 local function assert_token_lines(text, expected)
-  local tokens, token_lines = tokenize(text)
-  assert.subtable(expected, token_lines)
+  local tokenize_state = tokenize(text)
+  assert.subtable(expected, tokenize_state.token_lines)
 end
 
 -- -----------------------------------------------------------------------------
@@ -204,14 +209,14 @@ spec('block strings #5.1+', function()
 end)
 
 spec('comments #5.1+', function()
-  assert.are.equal(0, #tokenize('--hello world'))
-  assert.are.equal(0, #tokenize('-- hello world'))
-  assert.are.equal(0, #tokenize('--[[hello world]] '))
-  assert.are.equal(0, #tokenize('--[[ hello world ]] '))
-  assert.are.equal(0, #tokenize('--[[hello\nworld]] '))
-  assert.are.equal(0, #tokenize('--[[ hello world ]] '))
-  assert.are.equal(0, #tokenize('--[=[hello ]]]=] '))
-  assert.are.equal(3, #tokenize('x + --[[hi]] 4'))
+  assert_num_tokens('-- hello world', 0)
+  assert_num_tokens('--[[hello world]] ', 0)
+  assert_num_tokens('--[[ hello world ]] ', 0)
+  assert_num_tokens('--[[hello\nworld]] ', 0)
+  assert_num_tokens('--[[ hello world ]] ', 0)
+  assert_num_tokens('--[=[hello ]]]=] ', 0)
+  assert_num_tokens('x + --[[hi]] 4', 3)
+
   assert_tokens('--hello\nworld', { 'world' })
   assert_tokens('-- [[hello\nworld]]', { 'world', ']', ']' })
 
