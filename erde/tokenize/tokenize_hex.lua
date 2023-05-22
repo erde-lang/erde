@@ -21,14 +21,12 @@ return function()
 
   if state.char == '.' and CC.HEX[look_ahead(1)] then
     consume()
-
     local counter = 1
-    token = token + tonumber(consume(), 16) / (16 ^ counter)
 
-    while CC.HEX[state.char] do
-      counter = counter + 1
+    repeat
       token = token + tonumber(consume(), 16) / (16 ^ counter)
-    end
+      counter = counter + 1
+    until not CC.HEX[state.char]
   end
 
   if state.char == 'p' or state.char == 'P' then
@@ -43,9 +41,9 @@ return function()
       throw('missing exponent value')
     end
 
-    while CC.DIGIT[state.char] do
+    repeat
       exponent = 10 * exponent + tonumber(consume())
-    end
+    until not CC.DIGIT[state.char]
 
     token = token * 2 ^ (sign * exponent)
   end

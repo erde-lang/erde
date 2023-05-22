@@ -9,49 +9,41 @@ local consume = tokenize_utils.consume
 local peek = tokenize_utils.peek
 local throw = tokenize_utils.throw
 
-return function()
+local function tokenize_block_string_quote()
   consume() -- '['
 
-  local open_quote, close_quote, quote_len = '[', ']', 1
-
+  local equals = ''
   while state.char == '=' do
-    consume()
-    open_quote = open_quote .. '='
-    close_quote = close_quote .. '='
-    quote_len = quote_len + 1
+    equals = equals .. consume()
   end
 
   if state.char ~= '[' then
-    throw('unterminated block string opening', content_line)
-  else
-    consume()
-    open_quote = open_quote .. '['
-    close_quote = close_quote .. ']'
-    quote_len = quote_len + 1
+    throw('unterminated block string opening', state.current_line)
   end
 
-  commit(open_quote)
+  consume() -- '['
+  commit('[' .. equals .. '[')
 
-  local content, content_line = '', state.current_line
+  return ']' .. equals .. ']'
+end
 
-  while state.char ~= ']' or peek(quote_len) ~= close_quote do
+return function()
+  local close_quote = tokenize_block_string_quote()
+  local close_quote_len = #close_quote
+  local content_line, content = state.current_line, ''
+
+  -- Check `state.char ~= ']'` first as slight optimization
+  while state.char ~= ']' or peek(close_quote_len) ~= close_quote do
     if state.char == '' then
       throw('unterminated block string', content_line)
     elseif state.char == '\n' then
       content = content .. tokenize_newline()
     elseif state.char == '\\' then
       consume()
-      if state.char == '{' or state.char == '}' then
-        content = content .. consume()
-      else
-        content = content .. '\\' .. consume()
-      end
+      content = content .. ((state.char == '{' or state.char == '}') and consume() or '\\')
     elseif state.char == '{' then
-      if content ~= '' then
-        commit(content, content_line)
-        content, content_line = '', state.current_line
-      end
-
+      if content ~= '' then commit(content, content_line) end
+      content_line, content = state.current_line, ''
       tokenize_interpolation(tokenize_token)
     else
       content = content .. consume()
@@ -62,5 +54,5 @@ return function()
     commit(content, content_line)
   end
 
-  commit(consume(quote_len))
+  commit(consume(close_quote_len))
 end

@@ -12,24 +12,17 @@ return function(tokenize_token)
   commit(consume()) -- quote
 
   -- Keep track of content_line in case interpolation has newline
-  local content, content_line = '', state.current_line
+  local content_line, content = state.current_line, ''
 
   while state.char ~= '"' do
     if state.char == '' or state.char == '\n' then
       throw('unterminated string')
     elseif state.char == '\\' then
       consume()
-      if state.char == '{' or state.char == '}' then
-        content = content .. consume()
-      else
-        content = content .. '\\' .. tokenize_escape_sequence()
-      end
+      content = content .. ((state.char == '{' or state.char == '}') and consume() or '\\' .. tokenize_escape_sequence())
     elseif state.char == '{' then
-      if content ~= '' then
-        commit(content, content_line)
-        content, content_line = '', state.current_line
-      end
-
+      if content ~= '' then commit(content, content_line) end
+      content_line, content = state.current_line, ''
       tokenize_interpolation(tokenize_token)
     else
       content = content .. consume()

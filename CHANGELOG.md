@@ -31,6 +31,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 - Fixed global destructuring (https://github.com/erde-lang/erde/issues/14)
 - Global declarations now directly mutate `_G` (https://github.com/erde-lang/erde/issues/15)
 - Fixed compilation of Lua (but not Erde) keyword (https://github.com/erde-lang/erde/issues/8)
+- Fixed greedy tokenization of `\` in block strings (error when tokenizing `[[\]]`)
 
 ### Added
 - Allow passing in options in `erde.compile`
