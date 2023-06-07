@@ -1,5 +1,4 @@
 local busted = require('busted')
-local tokenize = require('erde.tokenize')
 local lib = require('erde.lib')
 
 -- -----------------------------------------------------------------------------
@@ -21,30 +20,6 @@ local function assert_subtable(expected, got)
   end
 
   return true
-end
-
--- -----------------------------------------------------------------------------
--- Tokenize Asserts
--- -----------------------------------------------------------------------------
-
-local function assert_token(expected, token)
-  local tokenize_state = tokenize(token or expected)
-  busted.assert.are.equal(expected, tokenize_state.tokens[1])
-end
-
-local function assert_tokens(expected, text)
-  local tokenize_state = tokenize(text)
-  busted.assert.subtable(expected, tokenize_state.tokens)
-end
-
-local function assert_num_tokens(expected, text)
-  local tokenize_state = tokenize(text)
-  busted.assert.are.equal(expected, tokenize_state.num_tokens)
-end
-
-local function assert_token_lines(expected, text)
-  local tokenize_state = tokenize(text)
-  busted.assert.subtable(expected, tokenize_state.token_lines)
 end
 
 -- -----------------------------------------------------------------------------

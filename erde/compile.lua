@@ -1,5 +1,4 @@
 local C = require('erde.constants')
-local CC = require('erde.compile.constants')
 local utils = require('erde.utils')
 local tokenize = require('erde.tokenize')
 
@@ -100,7 +99,7 @@ end
 local function look_past_surround(token_start_index)
   token_start_index = token_start_index or current_token_index
   local surround_start = tokens[token_start_index]
-  local surround_end = CC.SURROUND_ENDS[surround_start]
+  local surround_end = C.SURROUND_ENDS[surround_start]
   local surround_depth = 1
 
   local look_ahead_token_index = token_start_index + 1
@@ -155,8 +154,8 @@ local function weave(t, separator)
 end
 
 local function compile_binop(token, line, lhs, rhs)
-  if bitlib and CC.BITOPS[token] then
-    local bitop = ('require("%s").%s('):format(bitlib, CC.BITLIB_METHODS[token])
+  if bitlib and C.BITOPS[token] then
+    local bitop = ('require("%s").%s('):format(bitlib, C.BITLIB_METHODS[token])
     return { line, bitop, lhs, line, ',', rhs, line, ')' }
   elseif token == '!=' then
     return { lhs, line, '~=', rhs }
@@ -215,12 +214,12 @@ local function name(no_transform, allow_keywords)
   )
 
   if allow_keywords then
-    for i, keyword in pairs(CC.KEYWORDS) do
+    for i, keyword in pairs(C.KEYWORDS) do
       ensure(current_token ~= keyword, ("unexpected keyword '%s'"):format(current_token))
     end
   end
 
-  if CC.LUA_KEYWORDS[current_token] and not no_transform then
+  if C.LUA_KEYWORDS[current_token] and not no_transform then
     return ('__ERDE_SUBSTITUTE_%s__'):format(consume())
   end
 
@@ -309,7 +308,7 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
       consume()
       local field_name = name(true, true)
 
-      if CC.LUA_KEYWORDS[field_name] then
+      if C.LUA_KEYWORDS[field_name] then
         insert(chain, { field_line, '["' .. field_name .. '"]' })
       else
         insert(chain, { field_line, '.' .. field_name })
@@ -322,7 +321,7 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
       local method_name = name(true, true)
       expect('(', true)
 
-      if not CC.LUA_KEYWORDS[method_name] then
+      if not C.LUA_KEYWORDS[method_name] then
         insert(link, ':' .. method_name)
       else
         local arg_compile_lines = surround_list('(', ')', expression, true)
@@ -428,7 +427,7 @@ local function return_list(require_list_parens)
       for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
         local look_ahead_token = tokens[look_ahead_token_index]
 
-        if CC.SURROUND_ENDS[look_ahead_token] then
+        if C.SURROUND_ENDS[look_ahead_token] then
           look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
         end
 
@@ -613,7 +612,7 @@ local function table_expression()
       insert(compile_lines, expect('='))
     elseif look_ahead(1) == '=' then
       local key = name(true)
-      if CC.LUA_KEYWORDS[key] then
+      if C.LUA_KEYWORDS[key] then
         insert(compile_lines, '["' .. key .. '"]' .. consume())
       else
         insert(compile_lines, key .. consume())
@@ -631,13 +630,13 @@ local function terminal_expression()
   ensure(current_token ~= nil, 'unexpected eof')
   ensure(current_token ~= '...' or is_varargs_block, "cannot use '...' outside a vararg function")
 
-  for _, terminal in pairs(CC.TERMINALS) do
+  for _, terminal in pairs(C.TERMINALS) do
     if current_token == terminal then
       return { current_line, consume() }
     end
   end
 
-  if CC.DIGIT[current_token:sub(1, 1)] then
+  if C.DIGIT[current_token:sub(1, 1)] then
     return { current_line, consume() }
   elseif current_token == "'" then
     local terminal_line = current_line
@@ -663,7 +662,7 @@ local function terminal_expression()
   -- First do a quick check for is_arrow_function (in case of implicit params),
   -- otherwise if surround_end is truthy (possible params), need to check the
   -- next token after. This is _much_ faster than backtracking.
-  if not is_arrow_function and CC.SURROUND_ENDS[current_token] then
+  if not is_arrow_function and C.SURROUND_ENDS[current_token] then
     local past_surround_token = look_past_surround()
     is_arrow_function = past_surround_token == '->' or past_surround_token == '=>'
   end
@@ -681,7 +680,7 @@ end
 
 local function unop_expression()
   local compile_lines  = {}
-  local unop_line, unop = current_line, CC.UNOPS[consume()]
+  local unop_line, unop = current_line, C.UNOPS[consume()]
   local operand_line, operand = current_line, expression(unop.prec + 1)
 
   if unop.token == '~' then
@@ -703,24 +702,24 @@ end
 function expression(min_prec)
   min_prec = min_prec or 1
 
-  local compile_lines = CC.UNOPS[current_token] and unop_expression() or terminal_expression()
-  local binop = CC.BINOPS[current_token]
+  local compile_lines = C.UNOPS[current_token] and unop_expression() or terminal_expression()
+  local binop = C.BINOPS[current_token]
 
   while binop and binop.prec >= min_prec do
     local binop_line = current_line
     consume()
 
     local rhs_min_prec = binop.prec
-    if binop.assoc == CC.LEFT_ASSOCIATIVE then
+    if binop.assoc == C.LEFT_ASSOCIATIVE then
       rhs_min_prec = rhs_min_prec + 1
     end
 
-    if CC.BITOPS[binop.token] and (lua_target == '5.1+' or lua_target == '5.2+') and not bitlib then
+    if C.BITOPS[binop.token] and (lua_target == '5.1+' or lua_target == '5.2+') and not bitlib then
       throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', binop_line)
     end
 
     compile_lines = compile_binop(binop.token, binop_line, compile_lines, expression(rhs_min_prec))
-    binop = CC.BINOPS[current_token]
+    binop = C.BINOPS[current_token]
   end
 
   return compile_lines
@@ -751,8 +750,8 @@ local function assignment_statement(first_id)
     insert(base_compile_lines, index_chain.base_compile_lines)
   end
 
-  local op_line, op_token = current_line, CC.BINOP_ASSIGNMENT_TOKENS[current_token] and consume()
-  if CC.BITOPS[op_token] and (lua_target == '5.1+' or lua_target == '5.2+') and not bitlib then
+  local op_line, op_token = current_line, C.BINOP_ASSIGNMENT_TOKENS[current_token] and consume()
+  if C.BITOPS[op_token] and (lua_target == '5.1+' or lua_target == '5.2+') and not bitlib then
     throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', op_line)
   end
 
