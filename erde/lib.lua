@@ -144,7 +144,6 @@ local function __erde_internal_load_source__(source, options)
     alias = alias,
     lua_target = options.lua_target,
     bitlib = options.bitlib,
-    no_module = options.no_module,
   })
 
   -- Cache alias. Required for rewriting errors.

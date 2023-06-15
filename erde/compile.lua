@@ -26,8 +26,8 @@ local break_name
 -- Flag to keep track of whether the current block has any `continue` statements.
 local has_continue
 
--- Table for declarations to register `module` scope variables.
-local module_names
+-- Keeps track of whether the module has any `module` declarations.
+local has_module_declarations
 
 -- Keeps track of whether the module has a `return` statement. Used to warn the
 -- developer if they try to combine `return` with `module` scopes.
@@ -826,8 +826,12 @@ local function declaration_statement()
   local destructure_compile_names = {}
   local assignment_names = {}
 
-  if block_depth > 1 and scope == 'module' then
-    throw('module declarations must appear at the top level', token_lines[current_token_index - 1])
+  if scope == 'module' then
+    if block_depth > 1 then
+      throw('module declarations must appear at the top level', token_lines[current_token_index - 1])
+    end
+
+    has_module_declarations = true
   end
 
   for _, var in ipairs(list(function() return variable(scope) end)) do
@@ -842,12 +846,6 @@ local function declaration_statement()
       for _, name in ipairs(var.names) do
         insert(declaration_names, name)
       end
-    end
-  end
-
-  if scope == 'module' then
-    for _, declaration_name in ipairs(declaration_names) do
-      module_names[declaration_name] = true
     end
   end
 
@@ -869,6 +867,19 @@ local function declaration_statement()
     else
       insert(compile_lines, '=')
       insert(compile_lines, weave(list(expression)))
+    end
+
+    if scope == 'module' then
+      local module_names = {}
+
+      for _, declaration_name in ipairs(declaration_names) do
+        table.insert(module_names, '_MODULE.' .. declaration_name)
+      end
+
+      insert(compile_lines, ('%s = %s'):format(
+        table.concat(module_names, ','),
+        table.concat(declaration_names, ',')
+      ))
     end
   end
 
@@ -954,6 +965,14 @@ local function function_statement()
     throw(("unexpected token '%s' (expected scope)"):format(current_token))
   end
 
+  if scope == 'module' then
+    if block_depth > 1 then
+      throw('module declarations must appear at the top level', scope_line)
+    end
+
+    has_module_declarations = true
+  end
+
   local signature = name()
   local is_table_value = current_token == '.'
 
@@ -976,14 +995,6 @@ local function function_statement()
     throw('cannot use scopes for table values', scope_line)
   end
 
-  if scope == 'module' then
-    if block_depth > 1 then
-      throw('module declarations must appear at the top level', scope_line)
-    end
-
-    module_names[signature] = true
-  end
-
   insert(compile_lines, signature)
 
   local params = parameters()
@@ -996,6 +1007,11 @@ local function function_statement()
   is_varargs_block = old_is_varargs_block
 
   insert(compile_lines, 'end')
+
+  if scope == 'module' then
+    insert(compile_lines, ('_MODULE.%s = %s'):format(signature, signature))
+  end
+
   return compile_lines
 end
 
@@ -1228,17 +1244,10 @@ local function module_block(options)
     insert(compile_lines, statement())
   end
 
-  if has_module_return then
-    if #module_names > 0 then
-      throw("cannot use 'module' declarations w/ 'return'", last_line)
-    end
-  elseif not options.no_module then
+  if has_module_return and has_module_declarations then
+    throw("cannot use 'module' declarations w/ 'return'", last_line)
+  elseif has_module_declarations then
     insert(compile_lines, 1, 'local _MODULE = {}')
-
-    for name in pairs(module_names) do
-      insert(compile_lines, ('_MODULE["%s"] = %s'):format(name, name))
-    end
-
     insert(compile_lines, 'return _MODULE')
   end
 
@@ -1274,7 +1283,7 @@ return function(source, options)
   has_continue = false
   is_varargs_block = true
   tmp_name_counter = 1
-  module_names = {}
+  has_module_declarations = false
 
   alias = options.alias or utils.get_source_alias(source)
   lua_target = options.lua_target or C.LUA_TARGET

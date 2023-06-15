@@ -850,10 +850,10 @@ spec('retain throwaway parens #5.1+', function()
 end)
 
 spec('_MODULE #5.1+', function()
-  assert.run({ x = 1 }, [[ _MODULE.x = 1 ]])
+  assert.run(nil, [[ return _MODULE ]])
   assert.run({ x = 1, y = 2 }, [[
-    _MODULE.x = 1
     module y = 2
+    _MODULE.x = 1
   ]])
 end)
 

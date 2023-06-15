@@ -90,7 +90,7 @@ describe('api run #5.1+', function()
     end, erde.rewrite)
 
     assert.are.equal(false, ok)
-    assert.are.equal('myalias:(compiled:2): myerror', result)
+    assert.are.equal('myalias:(compiled:1): myerror', result)
   end)
   spec('handles multiple returns', function()
     local a, b, c = erde.run('return 1, 2, 3')
@@ -151,7 +151,7 @@ describe('api load / unload #5.1+', function()
     end, erde.rewrite)
 
     assert.are.equal(false, ok)
-    assert.are.equal('myalias:(compiled:2): myerror', result)
+    assert.are.equal('myalias:(compiled:1): myerror', result)
   end)
   spec('can unload', function()
     erde.load() -- reset any flags

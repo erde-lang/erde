@@ -15,9 +15,9 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
   - Unexpected behavior, especially for newer users
   - More confusing than helpful
 - Allow excluding target from `load` (i.e. allow options table as only argument)
-- Erde modules now return a table by default, which is accessible via `_MODULE`.
-  - The return is overridden when the user manually specifies a return
-  - The `module` keyword now manipulates this table
+- When using the `module` keyword, users can now access the module table via `_MODULE`.
+  - `_MODULE` is declared at the top of the module (accessible anywhere)
+  - `module` declarations are immediately added to the `_MODULE` table
 
 ### Fixed
 - Fixed throwing object when failing to load compiled code
