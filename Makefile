@@ -19,9 +19,6 @@ define runtest
   @echo
 endef
 
-usage:
-	@echo "available targets: test release"
-
 test:
 	@echo
 	$(call runtest,luajit,jit)
