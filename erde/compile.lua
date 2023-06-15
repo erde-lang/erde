@@ -941,7 +941,11 @@ local function function_statement()
   local compile_lines = {}
   local scope_line, scope = current_line, nil
 
-  if current_token == 'local' or current_token == 'global' or current_token == 'module' then
+  if current_token == 'local' or current_token == 'module' then
+    scope = consume()
+    insert(compile_lines, 'local')
+    insert(compile_lines, consume()) -- 'function'
+  elseif current_token == 'global' then
     scope = consume()
     insert(compile_lines, consume()) -- 'function'
   elseif current_token == 'function' then
@@ -967,10 +971,7 @@ local function function_statement()
     signature = signature .. ':' .. name()
   end
 
-  if not is_table_value then
-    -- Default to local scope (this includes when scope is undefined!)
-    insert(compile_lines, 1, 'local')
-  elseif scope == 'local' or scope == 'module' then
+  if is_table_value and (scope == 'local' or scope == 'module') then
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
     throw('cannot use scopes for table values', scope_line)
   end

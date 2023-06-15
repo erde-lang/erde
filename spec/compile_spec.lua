@@ -324,13 +324,13 @@ spec('assignment #5.1+', function()
     return a + b
   ]])
   assert.run({ 1, 2 }, [[
-    function test() { return 1, 2 }
+    local function test() { return 1, 2 }
     local x, y = 0, 0
     x, y += test()
     return { x, y }
   ]])
   assert.run({ 1, 2, 3 }, [[
-    function test() { return 2, 3 }
+    local function test() { return 2, 3 }
     local x, y, z = 0, 0, 0
     x, y, z += 1, test()
     return { x, y, z }
@@ -533,67 +533,67 @@ end)
 describe('function declaration #5.1+', function()
   spec('params', function()
     assert.run(1, [[
-      function a(x) {
+      local function a(x) {
         return x
       }
       return a(1)
     ]])
     assert.run(3, [[
-      function a(x, y = 2) {
+      local function a(x, y = 2) {
         return x + y
       }
       return a(1)
     ]])
     assert.run(3, [[
-      function a(x = 3, y) {
+      local function a(x = 3, y) {
         return x + y
       }
       return a(1, 2)
     ]])
     assert.run({ 1, 2 }, [[
-      function a(...) {
+      local function a(...) {
         return { ... }
       }
       return a(1, 2)
     ]])
     assert.run({ 2, 3 }, [[
-      function a(x, ...) {
+      local function a(x, ...) {
         return { ... }
       }
       return a(1, 2, 3)
     ]])
     assert.run({ 1, 2 }, [[
-      function a(...x) {
+      local function a(...x) {
         return x
       }
       return a(1, 2)
     ]])
     assert.run({ 2, 3 }, [[
-      function a(x, ...y) {
+      local function a(x, ...y) {
         return y
       }
       return a(1, 2, 3)
     ]])
     assert.run({ 1, 2, { 3, 4 } }, [[
-      function a(x, y = 2, ...) {
+      local function a(x, y = 2, ...) {
         return { x, y, { ... } }
       }
       return a(1, 2, 3, 4)
     ]])
     assert.run({ 1, 2, { 3, 4 } }, [[
-      function a(x, y = 2, ...z) {
+      local function a(x, y = 2, ...z) {
         return { x, y, z }
       }
       return a(1, 2, 3, 4)
     ]])
     assert.run(2, [[
-      function a([ x ]) {
+      local function a([ x ]) {
         return x + 1
       }
       return a({ 1 })
     ]])
     assert.run(2, [[
-      function a({ x }) {
+      local function a({ x }) {
         return x + 1
       }
       return a({ x = 1 })
@@ -614,8 +614,8 @@ describe('function declaration #5.1+', function()
 
       return test()
     ]])
-    assert.run(2, [[
-      function test() {
+    assert.run(1, [[
+      local function test() {
         return 2
       }
 
@@ -627,11 +627,14 @@ describe('function declaration #5.1+', function()
 
       return test()
     ]])
+    assert.has_error(function()
+      compile('local function a.b() {}')
+    end)
   end)
 
   spec('global', function()
     assert.run(2, [[
-      function test() {
+      local function test() {
         return 2
       }
 
@@ -646,7 +649,7 @@ describe('function declaration #5.1+', function()
       return result
     ]])
     assert.run(1, [[
-      function test() {
+      local function test() {
         return 2
       }
 

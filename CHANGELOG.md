@@ -10,6 +10,10 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 ### Removed
 
 ### Changed
+- BREAKING CHANGE: Functions no longer default to `local`
+  - Differs too much from vanilla Lua
+  - Unexpected behavior, especially for newer users
+  - More confusing than helpful
 - Allow excluding target from `load` (i.e. allow options table as only argument)
 - Erde modules now return a table by default, which is accessible via `_MODULE`.
   - The return is overridden when the user manually specifies a return
