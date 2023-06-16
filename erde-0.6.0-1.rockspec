@@ -1,5 +1,5 @@
 package = 'erde'
-version = '0.5-1'
+version = '0.6.0-1'
 rockspec_format = '3.0'
 
 description = {
@@ -20,14 +20,14 @@ dependencies = {
 
 source = {
    url = 'git://github.com/erde-lang/erde',
-   tag = '0.5-1',
+   tag = '0.6.0-1',
 }
 
 build = {
   type = 'builtin',
   install = {
     bin = {
-      ['erde'] = 'erde/cli/init.lua',
+      ['erde'] = 'erde/cli.lua',
     }
   },
 }
