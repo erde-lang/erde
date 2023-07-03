@@ -1,0 +1,70 @@
+local C = require('erde.constants')
+
+module function echo(...) {
+  return ...
+}
+
+-- -----------------------------------------------------------------------------
+-- Strings
+-- -----------------------------------------------------------------------------
+
+module function split(s, separator = '%s') {
+  local parts = {}
+
+  for part in s:gmatch("([^{ separator }]+)") {
+    table.insert(parts, part)
+  }
+
+  return parts
+}
+
+-- Remove leading / trailing whitespace from a string.
+-- Taken from: https://www.lua.org/pil/20.3.html
+module function trim(s) {
+  return (s:gsub('^%s*(.*)%s*$', '%1'))
+}
+
+module function get_source_alias(source) {
+  local summary = trim(source):sub(1, 5)
+
+  if #source > 5 {
+    summary ..= '...'
+  }
+
+  return "[string \"{ summary }\"]"
+}
+
+-- -----------------------------------------------------------------------------
+-- Files
+-- -----------------------------------------------------------------------------
+
+module function file_exists(path) {
+  local file = io.open(path, 'r')
+
+  if file == nil {
+    return false
+  }
+
+  file:close()
+  return true
+}
+
+module function read_file(path) {
+  local file = io.open(path)
+
+  if file == nil {
+    error("file does not exist: { path }")
+  }
+
+  local contents = file:read('*a')
+  file:close()
+  return contents
+}
+
+-- -----------------------------------------------------------------------------
+-- Paths
+-- -----------------------------------------------------------------------------
+
+module function join_paths(...) {
+  return (table.concat({ ... }, C.PATH_SEPARATOR):gsub(C.PATH_SEPARATOR .. '+', C.PATH_SEPARATOR))
+}

@@ -1,85 +1,57 @@
-local C = require('erde.constants')
-
+local _MODULE = {}
+local C = require("erde.constants")
 local function echo(...)
-  return ...
+	return ...
 end
-
--- -----------------------------------------------------------------------------
--- Strings
--- -----------------------------------------------------------------------------
-
+_MODULE.echo = echo
 local function split(s, separator)
-  separator = separator or '%s'
-  local parts = {}
-
-  for part in s:gmatch('([^' .. separator .. ']+)') do
-    table.insert(parts, part)
-  end
-
-  return parts
+	if separator == nil then
+		separator = "%s"
+	end
+	local parts = {}
+	for part in s:gmatch(("([^" .. tostring(separator) .. "]+)")) do
+		table.insert(parts, part)
+	end
+	return parts
 end
-
--- Remove leading / trailing whitespace from a string.
--- Taken from: https://www.lua.org/pil/20.3.html
+_MODULE.split = split
 local function trim(s)
-  return (s:gsub('^%s*(.*)%s*$', '%1'))
+	return s:gsub("^%s*(.*)%s*$", "%1")
 end
-
+_MODULE.trim = trim
 local function get_source_alias(source)
-  local summary = trim(source):sub(1, 5)
-
-  if #source > 5 then
-    summary = summary .. '...'
-  end
-
-  return ('[string "%s"]'):format(summary)
+	local summary = trim(source):sub(1, 5)
+	if #source > 5 then
+		summary = summary .. "..."
+	end
+	return ('[string "' .. tostring(summary) .. '"]')
 end
-
--- -----------------------------------------------------------------------------
--- Files
--- -----------------------------------------------------------------------------
-
+_MODULE.get_source_alias = get_source_alias
 local function file_exists(path)
-  local file = io.open(path, 'r')
-
-  if file == nil then
-    return false
-  end
-
-  file:close()
-  return true
+	local file = io.open(path, "r")
+	if file == nil then
+		return false
+	end
+	file:close()
+	return true
 end
-
+_MODULE.file_exists = file_exists
 local function read_file(path)
-  local file = io.open(path)
-
-  if file == nil then
-    error('file does not exist: ' .. path)
-  end
-
-  local contents = file:read('*a')
-  file:close()
-  return contents
+	local file = io.open(path)
+	if file == nil then
+		error(("file does not exist: " .. tostring(path)))
+	end
+	local contents = file:read("*a")
+	file:close()
+	return contents
 end
-
--- -----------------------------------------------------------------------------
--- Paths
--- -----------------------------------------------------------------------------
-
+_MODULE.read_file = read_file
 local function join_paths(...)
-  return (table.concat({ ... }, C.PATH_SEPARATOR):gsub(C.PATH_SEPARATOR .. '+', C.PATH_SEPARATOR))
+	return table.concat({
+		...,
+	}, C.PATH_SEPARATOR):gsub(C.PATH_SEPARATOR .. "+", C.PATH_SEPARATOR)
 end
-
--- -----------------------------------------------------------------------------
--- Return
--- -----------------------------------------------------------------------------
-
-return {
-  echo = echo,
-  split = split,
-  trim = trim,
-  get_source_alias = get_source_alias,
-  file_exists = file_exists,
-  read_file = read_file,
-  join_paths = join_paths,
-}
+_MODULE.join_paths = join_paths
+return _MODULE
+-- Compiled with Erde 0.6.0-1
+-- __ERDE_COMPILED__

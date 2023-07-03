@@ -8,7 +8,7 @@ LUA_TARGET_TAGS_5.3 := "5.3,$(LUA_TARGET_TAGS_5.3+)"
 LUA_TARGET_TAGS_5.4+ := "5.4%+,$(LUA_TARGET_TAGS_5.3+)"
 LUA_TARGET_TAGS_5.4 := "5.4,$(LUA_TARGET_TAGS_5.4+)"
 
-.PHONY: test release
+.PHONY: default build test release
 
 define runtest
 	$(eval LUA_EXECUTABLE = $(1))
@@ -18,6 +18,12 @@ define runtest
   @LUA_TARGET="$(LUA_TARGET)" busted --lua="/usr/bin/$(LUA_EXECUTABLE)" --tags="$(LUA_TARGET_TAGS)"
   @echo
 endef
+
+default: | build test
+
+build:
+	erde compile .
+	stylua .
 
 test:
 	@echo
