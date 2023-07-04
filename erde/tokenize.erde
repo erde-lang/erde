@@ -1,0 +1,468 @@
+local C = require('erde.constants')
+local utils = require('erde.utils')
+
+-- Foward declare
+local tokenize_token
+
+-- -----------------------------------------------------------------------------
+-- State
+-- -----------------------------------------------------------------------------
+
+-- The source text to tokenize (erde)
+local text = ''
+
+-- The current character we are processing
+local current_char = ''
+
+-- The index of `current_char` in `text`
+local current_char_index = 1
+
+-- The line number of `current_char` in `text`
+local current_line = 1
+
+-- `local text` as an array of tokens
+local tokens = {}
+
+-- Equivalent to `#tokens`, but selfd separately purely as optimization.
+local num_tokens = 0
+
+-- Table for looking up the line number for any token.
+--
+-- For example, `token_lines[3]` gives the line number of the third token.
+local token_lines = {}
+
+-- The name to use when referencing `store.text`. Used for error reporting.
+local source_name = ''
+
+-- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function peek(n) {
+  return text:sub(current_char_index, current_char_index + n - 1)
+}
+
+local function look_ahead(n) {
+  return text:sub(current_char_index + n, current_char_index + n)
+}
+
+local function throw(message, line = current_line) {
+  -- Use error level 0 since we already include `source_name`
+  error("{ source_name }:{ line }: { message }", 0)
+}
+
+local function commit(token, line) {
+  num_tokens = num_tokens + 1
+  tokens[num_tokens] = token
+  token_lines[num_tokens] = line || current_line
+}
+
+local function consume(n = 1) {
+  local consumed = n == 1 && current_char || peek(n)
+  current_char_index += n
+  current_char = text:sub(current_char_index, current_char_index)
+  return consumed
+}
+
+-- -----------------------------------------------------------------------------
+-- Partials
+--
+-- These functions do not commit anything, and instead have non-trivial returns.
+-- -----------------------------------------------------------------------------
+
+local function newline() {
+  current_line += 1
+  return consume()
+}
+
+local function escape_sequence() {
+  if C.STANDARD_ESCAPE_CHARS[current_char] {
+    return consume()
+  } elseif C.DIGIT[current_char] {
+    return consume()
+  } elseif current_char == 'z' {
+    if C.LUA_TARGET == '5.1' || C.LUA_TARGET == '5.1+' {
+      throw('escape sequence \\z not compatible w/ lua targets 5.1, 5.1+')
+    }
+
+    return consume()
+  } elseif current_char == 'x' {
+    if C.LUA_TARGET == '5.1' || C.LUA_TARGET == '5.1+' {
+      throw('escape sequence \\xXX not compatible w/ lua targets 5.1, 5.1+')
+    }
+
+    if !C.HEX[look_ahead(1)] || !C.HEX[look_ahead(2)] {
+      throw('escape sequence \\xXX must use exactly 2 hex characters')
+    }
+
+    return consume(3)
+  } elseif current_char == 'u' {
+    local sequence = consume() -- u
+
+    if C.LUA_TARGET == '5.1' || C.LUA_TARGET == '5.1+' || C.LUA_TARGET == '5.2' || C.LUA_TARGET == '5.2+' {
+      throw('escape sequence \\u{XXX} not compatible w/ lua targets 5.1, 5.1+, 5.2, 5.2+')
+    } elseif current_char != '{' {
+      throw('missing { in escape sequence \\u{XXX}')
+    }
+
+    sequence ..= consume()
+
+    if !C.HEX[current_char] {
+      throw('missing hex in escape sequence \\u{XXX}')
+    }
+
+    while C.HEX[current_char] {
+      sequence ..= consume()
+    }
+
+    if current_char != '}' {
+      throw('missing } in escape sequence \\u{XXX}')
+    }
+
+    return sequence .. consume()
+  } else {
+    throw("invalid escape sequence \\{ current_char }")
+  }
+}
+
+-- -----------------------------------------------------------------------------
+-- Number Tokenizers
+-- -----------------------------------------------------------------------------
+
+local function tokenize_binary() {
+  consume(2) -- 0[bB]
+  local token = 0
+
+  if current_char != '0' && current_char != '1' {
+    throw('malformed binary')
+  }
+
+  repeat {
+    token = 2 * token + tonumber(consume())
+  } until current_char != '0' && current_char != '1'
+
+  commit(tostring(token))
+}
+
+local function tokenize_decimal() {
+  local token = ''
+
+  while C.DIGIT[current_char] {
+    token ..= consume()
+  }
+
+  if current_char == '.' && C.DIGIT[look_ahead(1)] {
+    token ..= consume(2)
+    while C.DIGIT[current_char] {
+      token ..= consume()
+    }
+  }
+
+  if current_char == 'e' || current_char == 'E' {
+    token ..= consume()
+
+    if current_char == '+' || current_char == '-' {
+      token ..= consume()
+    }
+
+    if !C.DIGIT[current_char] {
+      throw('missing exponent value')
+    }
+
+    while C.DIGIT[current_char] {
+      token ..= consume()
+    }
+  }
+
+  commit(token)
+}
+
+local function tokenize_hex() {
+  consume(2) -- 0[xX]
+  local token = 0
+
+  if !C.HEX[current_char] && !(current_char == '.' && C.HEX[look_ahead(1)]) {
+    throw('malformed hex')
+  }
+
+  while C.HEX[current_char] {
+    token = 16 * token + tonumber(consume(), 16)
+  }
+
+  if current_char == '.' && C.HEX[look_ahead(1)] {
+    consume()
+    local counter = 1
+
+    repeat {
+      token += tonumber(consume(), 16) / (16 ^ counter)
+      counter += 1
+    } until !C.HEX[current_char]
+  }
+
+  if current_char == 'p' || current_char == 'P' {
+    consume()
+    local exponent, sign = 0, 1
+
+    if current_char == '+' || current_char == '-' {
+      sign *= tonumber(consume() .. '1')
+    }
+
+    if !C.DIGIT[current_char] {
+      throw('missing exponent value')
+    }
+
+    repeat {
+      exponent = 10 * exponent + tonumber(consume())
+    } until !C.DIGIT[current_char]
+
+    token = token * 2 ^ (sign * exponent)
+  }
+
+  commit(tostring(token))
+}
+
+-- -----------------------------------------------------------------------------
+-- String Tokenizers
+-- -----------------------------------------------------------------------------
+
+local function tokenize_interpolation() {
+  commit(consume()) -- '{'
+
+  -- Keep track of brace depth to differentiate end of interpolation from
+  -- nested braces
+  local brace_depth, interpolation_line = 0, current_line
+
+  while current_char != '}' || brace_depth > 0 {
+    if current_char == '{' {
+      brace_depth += 1
+      commit(consume())
+    } elseif current_char == '}' {
+      brace_depth -= 1
+      commit(consume())
+    } elseif current_char == '' {
+      throw('unterminated interpolation', interpolation_line)
+    } else {
+      tokenize_token()
+    }
+  }
+
+  commit(consume()) -- '}'
+}
+
+local function tokenize_single_quote_string() {
+  commit(consume()) -- quote
+
+  local content = ''
+
+  while current_char != "'" {
+    if current_char == '' || current_char == '\n' {
+      throw('unterminated string')
+    } elseif current_char == '\\' {
+      content ..= consume() .. escape_sequence()
+    } else {
+      content ..= consume()
+    }
+  }
+
+  if content != '' {
+    commit(content)
+  }
+
+  commit(consume()) -- quote
+}
+
+local function tokenize_double_quote_string() {
+  commit(consume()) -- quote
+
+  -- Keep track of content_line in case interpolation has newline
+  local content_line, content = current_line, ''
+
+  while current_char != '"' {
+    if current_char == '' || current_char == '\n' {
+      throw('unterminated string')
+    } elseif current_char == '\\' {
+      consume()
+      content ..= ((current_char == '{' || current_char == '}') && consume() || '\\' .. escape_sequence())
+    } elseif current_char == '{' {
+      if content != '' { commit(content, content_line) }
+      content_line, content = current_line, ''
+      tokenize_interpolation(tokenize_token)
+    } else {
+      content ..= consume()
+    }
+  }
+
+  if content != '' {
+    commit(content, content_line)
+  }
+
+  commit(consume()) -- quote
+}
+
+local function tokenize_block_string() {
+  consume() -- '['
+
+  local equals = ''
+  while current_char == '=' {
+    equals ..= consume()
+  }
+
+  if current_char != '[' {
+    throw('unterminated block string opening', current_line)
+  }
+
+  consume() -- '['
+  commit('[' .. equals .. '[')
+
+  local close_quote = ']' .. equals .. ']'
+  local close_quote_len = #close_quote
+  local content_line, content = current_line, ''
+
+  -- Check `current_char ~= ']'` first as slight optimization
+  while current_char != ']' || peek(close_quote_len) != close_quote {
+    if current_char == '' {
+      throw('unterminated block string', content_line)
+    } elseif current_char == '\n' {
+      content ..= newline()
+    } elseif current_char == '\\' {
+      consume()
+      content ..= ((current_char == '{' || current_char == '}') && consume() || '\\')
+    } elseif current_char == '{' {
+      if content != '' { commit(content, content_line) }
+      content_line, content = current_line, ''
+      tokenize_interpolation(tokenize_token)
+    } else {
+      content ..= consume()
+    }
+  }
+
+  if content != '' {
+    commit(content, content_line)
+  }
+
+  commit(consume(close_quote_len))
+}
+
+-- -----------------------------------------------------------------------------
+-- Misc Tokenizers
+-- -----------------------------------------------------------------------------
+
+local function tokenize_word() {
+  local token = consume()
+
+  while C.WORD_BODY[current_char] {
+    token ..= consume()
+  }
+
+  commit(token)
+}
+
+local function tokenize_comment() {
+  consume(2) -- '--'
+
+  local is_block_comment, equals = false, ''
+
+  if current_char == '[' {
+    consume()
+
+    while current_char == '=' {
+      equals ..= consume()
+    }
+
+    if current_char == '[' {
+      consume()
+      is_block_comment = true
+    }
+  }
+
+  if !is_block_comment {
+    while current_char != '' && current_char != '\n' {
+      consume()
+    }
+  } else {
+    local close_quote = ']' .. equals .. ']'
+    local close_quote_len = #close_quote
+    local comment_line = current_line
+
+    -- Check `current_char ~= ']'` first as slight optimization
+    while current_char != ']' || peek(close_quote_len) != close_quote {
+      if current_char == '' {
+        throw('unterminated comment', comment_line)
+      } elseif current_char == '\n' {
+        newline()
+      } else {
+        consume()
+      }
+    }
+
+    consume(close_quote_len)
+  }
+}
+
+function tokenize_token() {
+  if current_char == '\n' {
+    newline()
+  } elseif current_char == ' ' || current_char == '\t' {
+    consume()
+  } elseif C.WORD_HEAD[current_char] {
+    tokenize_word()
+  } elseif current_char == "'" {
+    tokenize_single_quote_string()
+  } elseif current_char == '"' {
+    tokenize_double_quote_string(tokenize_token)
+  } else {
+    local peek_two = peek(2)
+    if peek_two == '--' {
+      tokenize_comment()
+    } elseif peek_two == '0x' || peek_two == '0X' {
+      tokenize_hex()
+    } elseif peek_two == '0b' || peek_two == '0B' {
+      tokenize_binary()
+    } elseif C.DIGIT[current_char] || (current_char == '.' && C.DIGIT[look_ahead(1)]) {
+      tokenize_decimal()
+    } elseif peek_two == '[[' || peek_two == '[=' {
+      tokenize_block_string(tokenize_token)
+    } elseif C.SYMBOLS[peek(3)] {
+      commit(consume(3))
+    } elseif C.SYMBOLS[peek_two] {
+      commit(consume(2))
+    } else {
+      commit(consume())
+    }
+  }
+}
+
+-- -----------------------------------------------------------------------------
+-- Main
+-- -----------------------------------------------------------------------------
+
+return (new_text, new_source_name) -> {
+  text = new_text
+  current_char = text:sub(1, 1)
+  current_char_index = 1
+  current_line = 1
+  tokens = {}
+  num_tokens = 0
+  token_lines = {}
+  source_name = new_source_name || utils.get_source_alias(text)
+
+  if peek(2) == '#!' {
+    local token = consume(2)
+
+    while current_char != '' && current_char != '\n' {
+      token ..= consume()
+    }
+
+    commit(token)
+  }
+
+  while current_char != '' {
+    tokenize_token()
+  }
+
+  return {
+    tokens = tokens,
+    num_tokens = num_tokens,
+    token_lines = token_lines,
+  }
+}
