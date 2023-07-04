@@ -1,4 +1,15 @@
-local C = require("erde.constants")
+local config = require("erde.config")
+local DIGIT, HEX, STANDARD_ESCAPE_CHARS, SYMBOLS, WORD_BODY, WORD_HEAD
+do
+	local __ERDE_TMP_4__
+	__ERDE_TMP_4__ = require("erde.constants")
+	DIGIT = __ERDE_TMP_4__["DIGIT"]
+	HEX = __ERDE_TMP_4__["HEX"]
+	STANDARD_ESCAPE_CHARS = __ERDE_TMP_4__["STANDARD_ESCAPE_CHARS"]
+	SYMBOLS = __ERDE_TMP_4__["SYMBOLS"]
+	WORD_BODY = __ERDE_TMP_4__["WORD_BODY"]
+	WORD_HEAD = __ERDE_TMP_4__["WORD_HEAD"]
+end
 local utils = require("erde.utils")
 local tokenize_token
 local text = ""
@@ -40,35 +51,40 @@ local function newline()
 	return consume()
 end
 local function escape_sequence()
-	if C.STANDARD_ESCAPE_CHARS[current_char] then
+	if STANDARD_ESCAPE_CHARS[current_char] then
 		return consume()
-	elseif C.DIGIT[current_char] then
+	elseif DIGIT[current_char] then
 		return consume()
 	elseif current_char == "z" then
-		if C.LUA_TARGET == "5.1" or C.LUA_TARGET == "5.1+" then
+		if config.lua_target == "5.1" or config.lua_target == "5.1+" then
 			throw("escape sequence \\z not compatible w/ lua targets 5.1, 5.1+")
 		end
 		return consume()
 	elseif current_char == "x" then
-		if C.LUA_TARGET == "5.1" or C.LUA_TARGET == "5.1+" then
+		if config.lua_target == "5.1" or config.lua_target == "5.1+" then
 			throw("escape sequence \\xXX not compatible w/ lua targets 5.1, 5.1+")
 		end
-		if not C.HEX[look_ahead(1)] or not C.HEX[look_ahead(2)] then
+		if not HEX[look_ahead(1)] or not HEX[look_ahead(2)] then
 			throw("escape sequence \\xXX must use exactly 2 hex characters")
 		end
 		return consume(3)
 	elseif current_char == "u" then
 		local sequence = consume()
-		if C.LUA_TARGET == "5.1" or C.LUA_TARGET == "5.1+" or C.LUA_TARGET == "5.2" or C.LUA_TARGET == "5.2+" then
+		if
+			config.lua_target == "5.1"
+			or config.lua_target == "5.1+"
+			or config.lua_target == "5.2"
+			or config.lua_target == "5.2+"
+		then
 			throw("escape sequence \\u{XXX} not compatible w/ lua targets 5.1, 5.1+, 5.2, 5.2+")
 		elseif current_char ~= "{" then
 			throw("missing { in escape sequence \\u{XXX}")
 		end
 		sequence = sequence .. consume()
-		if not C.HEX[current_char] then
+		if not HEX[current_char] then
 			throw("missing hex in escape sequence \\u{XXX}")
 		end
-		while C.HEX[current_char] do
+		while HEX[current_char] do
 			sequence = sequence .. consume()
 		end
 		if current_char ~= "}" then
@@ -92,12 +108,12 @@ local function tokenize_binary()
 end
 local function tokenize_decimal()
 	local token = ""
-	while C.DIGIT[current_char] do
+	while DIGIT[current_char] do
 		token = token .. consume()
 	end
-	if current_char == "." and C.DIGIT[look_ahead(1)] then
+	if current_char == "." and DIGIT[look_ahead(1)] then
 		token = token .. consume(2)
-		while C.DIGIT[current_char] do
+		while DIGIT[current_char] do
 			token = token .. consume()
 		end
 	end
@@ -106,10 +122,10 @@ local function tokenize_decimal()
 		if current_char == "+" or current_char == "-" then
 			token = token .. consume()
 		end
-		if not C.DIGIT[current_char] then
+		if not DIGIT[current_char] then
 			throw("missing exponent value")
 		end
-		while C.DIGIT[current_char] do
+		while DIGIT[current_char] do
 			token = token .. consume()
 		end
 	end
@@ -118,19 +134,19 @@ end
 local function tokenize_hex()
 	consume(2)
 	local token = 0
-	if not C.HEX[current_char] and not (current_char == "." and C.HEX[look_ahead(1)]) then
+	if not HEX[current_char] and not (current_char == "." and HEX[look_ahead(1)]) then
 		throw("malformed hex")
 	end
-	while C.HEX[current_char] do
+	while HEX[current_char] do
 		token = 16 * token + tonumber(consume(), 16)
 	end
-	if current_char == "." and C.HEX[look_ahead(1)] then
+	if current_char == "." and HEX[look_ahead(1)] then
 		consume()
 		local counter = 1
 		repeat
 			token = token + tonumber(consume(), 16) / (16 ^ counter)
 			counter = counter + 1
-		until not C.HEX[current_char]
+		until not HEX[current_char]
 	end
 	if current_char == "p" or current_char == "P" then
 		consume()
@@ -138,12 +154,12 @@ local function tokenize_hex()
 		if current_char == "+" or current_char == "-" then
 			sign = sign * tonumber(consume() .. "1")
 		end
-		if not C.DIGIT[current_char] then
+		if not DIGIT[current_char] then
 			throw("missing exponent value")
 		end
 		repeat
 			exponent = 10 * exponent + tonumber(consume())
-		until not C.DIGIT[current_char]
+		until not DIGIT[current_char]
 		token = token * 2 ^ (sign * exponent)
 	end
 	commit(tostring(token))
@@ -247,7 +263,7 @@ local function tokenize_block_string()
 end
 local function tokenize_word()
 	local token = consume()
-	while C.WORD_BODY[current_char] do
+	while WORD_BODY[current_char] do
 		token = token .. consume()
 	end
 	commit(token)
@@ -290,7 +306,7 @@ function tokenize_token()
 		newline()
 	elseif current_char == " " or current_char == "\t" then
 		consume()
-	elseif C.WORD_HEAD[current_char] then
+	elseif WORD_HEAD[current_char] then
 		tokenize_word()
 	elseif current_char == "'" then
 		tokenize_single_quote_string()
@@ -304,13 +320,13 @@ function tokenize_token()
 			tokenize_hex()
 		elseif peek_two == "0b" or peek_two == "0B" then
 			tokenize_binary()
-		elseif C.DIGIT[current_char] or (current_char == "." and C.DIGIT[look_ahead(1)]) then
+		elseif DIGIT[current_char] or (current_char == "." and DIGIT[look_ahead(1)]) then
 			tokenize_decimal()
 		elseif peek_two == "[[" or peek_two == "[=" then
 			tokenize_block_string(tokenize_token)
-		elseif C.SYMBOLS[peek(3)] then
+		elseif SYMBOLS[peek(3)] then
 			commit(consume(3))
-		elseif C.SYMBOLS[peek_two] then
+		elseif SYMBOLS[peek_two] then
 			commit(consume(2))
 		else
 			commit(consume())

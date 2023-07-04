@@ -1,6 +1,6 @@
 local compile = require('erde.compile')
+local config = require('erde.config')
 local lib = require('erde.lib')
-local C = require('erde.constants')
 
 -- -----------------------------------------------------------------------------
 -- Expressions
@@ -236,7 +236,7 @@ describe('unop', function()
     assert.eval(false, '!true')
   end)
 
-  if C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+' then
+  if config.lua_target == '5.1+' or config.lua_target == '5.2+' then
     spec('bitops', function()
       assert.has_error(function() compile('print(~4)') end)
     end)
@@ -254,7 +254,7 @@ describe('binop #5.1+', function()
     assert.eval(-8, '-2 ^ 3')
   end)
 
-  if C.LUA_TARGET == '5.1+' or C.LUA_TARGET == '5.2+' then
+  if config.lua_target == '5.1+' or config.lua_target == '5.2+' then
     spec('bitops', function()
       assert.has_error(function() compile('print(4 | 2)') end)
       assert.has_error(function() compile('print(6 ~ 3)') end)

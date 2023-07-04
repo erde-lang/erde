@@ -1,4 +1,5 @@
-local C = require('erde.constants')
+local config = require('erde.config')
+local { DIGIT, HEX, STANDARD_ESCAPE_CHARS, SYMBOLS, WORD_BODY, WORD_HEAD } = require('erde.constants')
 local utils = require('erde.utils')
 
 -- Foward declare
@@ -76,22 +77,22 @@ local function newline() {
 }
 
 local function escape_sequence() {
-  if C.STANDARD_ESCAPE_CHARS[current_char] {
+  if STANDARD_ESCAPE_CHARS[current_char] {
     return consume()
-  } elseif C.DIGIT[current_char] {
+  } elseif DIGIT[current_char] {
     return consume()
   } elseif current_char == 'z' {
-    if C.LUA_TARGET == '5.1' || C.LUA_TARGET == '5.1+' {
+    if config.lua_target == '5.1' || config.lua_target == '5.1+' {
       throw('escape sequence \\z not compatible w/ lua targets 5.1, 5.1+')
     }
 
     return consume()
   } elseif current_char == 'x' {
-    if C.LUA_TARGET == '5.1' || C.LUA_TARGET == '5.1+' {
+    if config.lua_target == '5.1' || config.lua_target == '5.1+' {
       throw('escape sequence \\xXX not compatible w/ lua targets 5.1, 5.1+')
     }
 
-    if !C.HEX[look_ahead(1)] || !C.HEX[look_ahead(2)] {
+    if !HEX[look_ahead(1)] || !HEX[look_ahead(2)] {
       throw('escape sequence \\xXX must use exactly 2 hex characters')
     }
 
@@ -99,7 +100,7 @@ local function escape_sequence() {
   } elseif current_char == 'u' {
     local sequence = consume() -- u
 
-    if C.LUA_TARGET == '5.1' || C.LUA_TARGET == '5.1+' || C.LUA_TARGET == '5.2' || C.LUA_TARGET == '5.2+' {
+    if config.lua_target == '5.1' || config.lua_target == '5.1+' || config.lua_target == '5.2' || config.lua_target == '5.2+' {
       throw('escape sequence \\u{XXX} not compatible w/ lua targets 5.1, 5.1+, 5.2, 5.2+')
     } elseif current_char != '{' {
       throw('missing { in escape sequence \\u{XXX}')
@@ -107,11 +108,11 @@ local function escape_sequence() {
 
     sequence ..= consume()
 
-    if !C.HEX[current_char] {
+    if !HEX[current_char] {
       throw('missing hex in escape sequence \\u{XXX}')
     }
 
-    while C.HEX[current_char] {
+    while HEX[current_char] {
       sequence ..= consume()
     }
 
@@ -147,13 +148,13 @@ local function tokenize_binary() {
 local function tokenize_decimal() {
   local token = ''
 
-  while C.DIGIT[current_char] {
+  while DIGIT[current_char] {
     token ..= consume()
   }
 
-  if current_char == '.' && C.DIGIT[look_ahead(1)] {
+  if current_char == '.' && DIGIT[look_ahead(1)] {
     token ..= consume(2)
-    while C.DIGIT[current_char] {
+    while DIGIT[current_char] {
       token ..= consume()
     }
   }
@@ -165,11 +166,11 @@ local function tokenize_decimal() {
       token ..= consume()
     }
 
-    if !C.DIGIT[current_char] {
+    if !DIGIT[current_char] {
       throw('missing exponent value')
     }
 
-    while C.DIGIT[current_char] {
+    while DIGIT[current_char] {
       token ..= consume()
     }
   }
@@ -181,22 +182,22 @@ local function tokenize_hex() {
   consume(2) -- 0[xX]
   local token = 0
 
-  if !C.HEX[current_char] && !(current_char == '.' && C.HEX[look_ahead(1)]) {
+  if !HEX[current_char] && !(current_char == '.' && HEX[look_ahead(1)]) {
     throw('malformed hex')
   }
 
-  while C.HEX[current_char] {
+  while HEX[current_char] {
     token = 16 * token + tonumber(consume(), 16)
   }
 
-  if current_char == '.' && C.HEX[look_ahead(1)] {
+  if current_char == '.' && HEX[look_ahead(1)] {
     consume()
     local counter = 1
 
     repeat {
       token += tonumber(consume(), 16) / (16 ^ counter)
       counter += 1
-    } until !C.HEX[current_char]
+    } until !HEX[current_char]
   }
 
   if current_char == 'p' || current_char == 'P' {
@@ -207,13 +208,13 @@ local function tokenize_hex() {
       sign *= tonumber(consume() .. '1')
     }
 
-    if !C.DIGIT[current_char] {
+    if !DIGIT[current_char] {
       throw('missing exponent value')
     }
 
     repeat {
       exponent = 10 * exponent + tonumber(consume())
-    } until !C.DIGIT[current_char]
+    } until !DIGIT[current_char]
 
     token = token * 2 ^ (sign * exponent)
   }
@@ -350,7 +351,7 @@ local function tokenize_block_string() {
 local function tokenize_word() {
   local token = consume()
 
-  while C.WORD_BODY[current_char] {
+  while WORD_BODY[current_char] {
     token ..= consume()
   }
 
@@ -404,7 +405,7 @@ function tokenize_token() {
     newline()
   } elseif current_char == ' ' || current_char == '\t' {
     consume()
-  } elseif C.WORD_HEAD[current_char] {
+  } elseif WORD_HEAD[current_char] {
     tokenize_word()
   } elseif current_char == "'" {
     tokenize_single_quote_string()
@@ -418,13 +419,13 @@ function tokenize_token() {
       tokenize_hex()
     } elseif peek_two == '0b' || peek_two == '0B' {
       tokenize_binary()
-    } elseif C.DIGIT[current_char] || (current_char == '.' && C.DIGIT[look_ahead(1)]) {
+    } elseif DIGIT[current_char] || (current_char == '.' && DIGIT[look_ahead(1)]) {
       tokenize_decimal()
     } elseif peek_two == '[[' || peek_two == '[=' {
       tokenize_block_string(tokenize_token)
-    } elseif C.SYMBOLS[peek(3)] {
+    } elseif SYMBOLS[peek(3)] {
       commit(consume(3))
-    } elseif C.SYMBOLS[peek_two] {
+    } elseif SYMBOLS[peek_two] {
       commit(consume(2))
     } else {
       commit(consume())

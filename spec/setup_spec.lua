@@ -1,10 +1,10 @@
 local busted = require('busted') -- Explicit import required for helper scripts
 local say = require('say')
 local inspect = require('inspect')
+local config = require('erde.config')
 local lib = require('erde.lib')
-local C = require('erde.constants')
 
-C.LUA_TARGET = os.getenv('LUA_TARGET') or '5.1+'
+config.lua_target = os.getenv('LUA_TARGET') or '5.1+'
 
 -- -----------------------------------------------------------------------------
 -- Helpers

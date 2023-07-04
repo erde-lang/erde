@@ -22,8 +22,8 @@ endef
 default: | build test
 
 build:
-	erde compile .
-	stylua .
+	erde compile erde
+	stylua erde
 
 test:
 	@echo

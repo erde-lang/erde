@@ -1,8 +1,9 @@
 -- This module contains higher level functions for use either via API or
 -- internally (mostly in the CLI).
 
-local C = require('erde.constants')
 local compile = require('erde.compile')
+local config = require('erde.config')
+local { PATH_SEPARATOR, VALID_LUA_TARGETS } = require('erde.constants')
 local utils = require('erde.utils')
 
 local loadlua = loadstring || load
@@ -69,7 +70,7 @@ module function traceback(arg1, arg2, arg3) {
     return stacktrace
   }
 
-  if level > -1 && C.IS_CLI_RUNTIME {
+  if level > -1 && config.is_cli_runtime {
     -- Remove following from stack trace caused by the cli:
     --
     -- [C]: in function <erde/cli/run.lua:xxx>
@@ -149,7 +150,7 @@ module function __erde_internal_load_source__(source, options = {}) {
   -- Cache alias. Required for rewriting errors.
   erde_source_cache[erde_source_id] = { alias = alias }
 
-  if !C.DISABLE_SOURCE_MAPS && !options.disable_source_maps {
+  if !config.disable_source_maps && !options.disable_source_maps {
     -- Cache source maps. Allow user to specify whether to disallow this, as the
     -- source map tables can be potentially large.
     erde_source_cache[erde_source_id].sourcemap = sourcemap
@@ -192,7 +193,7 @@ module function run(source, options) {
 -- -----------------------------------------------------------------------------
 
 local function erde_searcher(module_name) {
-  local module_path = module_name:gsub('%.', C.PATH_SEPARATOR)
+  local module_path = module_name:gsub('%.', PATH_SEPARATOR)
 
   for path in package.path:gmatch('[^;]+') {
     local fullpath = path:gsub('%.lua$', '.erde'):gsub('?', module_path)
@@ -222,8 +223,8 @@ module function load(arg1, arg2) {
     options = arg2
   }
 
-  C.BITLIB = options.bitlib
-  C.DISABLE_SOURCE_MAPS = options.disable_source_maps
+  config.bitlib = options.bitlib
+  config.disable_source_maps = options.disable_source_maps
 
   -- Always set `debug.traceback`, in case this is called multiple times
   -- with different arguments. By default we override Lua's native traceback
@@ -231,20 +232,20 @@ module function load(arg1, arg2) {
   debug.traceback = options.keep_traceback == true && native_traceback || traceback
 
   if new_lua_target != nil {
-    if C.VALID_LUA_TARGETS[new_lua_target] {
-      C.LUA_TARGET = new_lua_target
+    if VALID_LUA_TARGETS[new_lua_target] {
+      config.lua_target = new_lua_target
     } else {
       error(table.concat({
         "Invalid Lua target: { new_lua_target }",
-        "Must be one of: { table.concat(C.VALID_LUA_TARGETS, ', ') }",
+        "Must be one of: { table.concat(VALID_LUA_TARGETS, ', ') }",
       }, '\n'))
     }
   } elseif jit != nil {
-    C.LUA_TARGET = 'jit'
+    config.lua_target = 'jit'
   } else {
     new_lua_target = _VERSION:match('Lua (%d%.%d)')
-    if C.VALID_LUA_TARGETS[new_lua_target] {
-      C.LUA_TARGET = new_lua_target
+    if VALID_LUA_TARGETS[new_lua_target] {
+      config.lua_target = new_lua_target
     } else {
       error("Unsupported Lua version: { _VERSION }")
     }

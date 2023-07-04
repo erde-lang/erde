@@ -1,6 +1,14 @@
 local lfs = require("lfs")
-local C = require("erde.constants")
 local compile = require("erde.compile")
+local config = require("erde.config")
+local COMPILED_FOOTER_COMMENT, VALID_LUA_TARGETS, VERSION
+do
+	local __ERDE_TMP_8__
+	__ERDE_TMP_8__ = require("erde.constants")
+	COMPILED_FOOTER_COMMENT = __ERDE_TMP_8__["COMPILED_FOOTER_COMMENT"]
+	VALID_LUA_TARGETS = __ERDE_TMP_8__["VALID_LUA_TARGETS"]
+	VERSION = __ERDE_TMP_8__["VERSION"]
+end
 local lib = require("erde.lib")
 local utils = require("erde.utils")
 local unpack = table.unpack or unpack
@@ -10,7 +18,6 @@ local pack = table.pack or function(...)
 		...,
 	}
 end
-C.IS_CLI_RUNTIME = true
 local REPL_PROMPT = "> "
 local REPL_SUB_PROMPT = ">> "
 local HAS_READLINE, RL = pcall(function()
@@ -32,13 +39,21 @@ local function terminate(message, status)
 	print(message)
 	os.exit(status)
 end
+local function parse_option(label)
+	current_arg_index = current_arg_index + 1
+	local arg_value = arg[current_arg_index]
+	if not arg_value then
+		terminate(("Missing argument for " .. tostring(label)))
+	end
+	return arg_value
+end
 local function traverse(paths, pattern, callback)
 	for _, path in ipairs(paths) do
-		local __ERDE_TMP_30__ = true
+		local __ERDE_TMP_41__ = true
 		repeat
 			local attributes = lfs.attributes(path)
 			if attributes == nil then
-				__ERDE_TMP_30__ = false
+				__ERDE_TMP_41__ = false
 				break
 			end
 			if attributes.mode == "file" then
@@ -54,9 +69,9 @@ local function traverse(paths, pattern, callback)
 				end
 				traverse(subpaths, pattern, callback)
 			end
-			__ERDE_TMP_30__ = false
+			__ERDE_TMP_41__ = false
 		until true
-		if __ERDE_TMP_30__ then
+		if __ERDE_TMP_41__ then
 			break
 		end
 	end
@@ -66,11 +81,11 @@ local function is_compiled_file(path)
 	if file == nil then
 		return false
 	end
-	local read_len = #C.COMPILED_FOOTER_COMMENT + 1
+	local read_len = #COMPILED_FOOTER_COMMENT + 1
 	file:seek("end", -read_len)
 	local footer = file:read(read_len)
 	file:close()
-	return not not (footer and footer:find(C.COMPILED_FOOTER_COMMENT))
+	return not not (footer and footer:find(COMPILED_FOOTER_COMMENT))
 end
 local HELP = (
 	[[
@@ -87,7 +102,7 @@ Options:
    -b, --bitlib <LIB>     Library to use for bit operations.
    -t, --target <TARGET>  Lua target for version compatability.
                           Must be one of: ]]
-	.. tostring(table.concat(C.VALID_LUA_TARGETS, ", "))
+	.. tostring(table.concat(VALID_LUA_TARGETS, ", "))
 	.. [[
 
 
@@ -273,7 +288,7 @@ local function readline(prompt)
 	end
 end
 local function repl()
-	print(("Erde " .. tostring(C.VERSION) .. " on " .. tostring(_VERSION) .. " -- Copyright (C) 2021-2023 bsuth"))
+	print(("Erde " .. tostring(VERSION) .. " on " .. tostring(_VERSION) .. " -- Copyright (C) 2021-2023 bsuth"))
 	if not HAS_READLINE then
 		print("Install the `readline` Lua library to get support for arrow keys, keyboard shortcuts, history, etc.")
 	end
@@ -332,14 +347,7 @@ local function repl_command()
 		RL.save_history()
 	end
 end
-local function parse_option(label)
-	current_arg_index = current_arg_index + 1
-	local arg_value = arg[current_arg_index]
-	if not arg_value then
-		terminate(("Missing argument for " .. tostring(label)))
-	end
-	return arg_value
-end
+config.is_cli_runtime = true
 while current_arg_index <= num_args do
 	local arg_value = arg[current_arg_index]
 	if cli.script then
@@ -349,7 +357,7 @@ while current_arg_index <= num_args do
 	elseif arg_value == "-h" or arg_value == "--help" then
 		terminate(HELP, 0)
 	elseif arg_value == "-v" or arg_value == "--version" then
-		terminate(C.VERSION, 0)
+		terminate(VERSION, 0)
 	elseif arg_value == "-w" or arg_value == "--watch" then
 		cli.watch = true
 	elseif arg_value == "-f" or arg_value == "--force" then
@@ -358,17 +366,17 @@ while current_arg_index <= num_args do
 		cli.print_compiled = true
 	elseif arg_value == "-t" or arg_value == "--target" then
 		cli.target = parse_option(arg_value)
-		C.LUA_TARGET = cli.target
-		if not C.VALID_LUA_TARGETS[C.LUA_TARGET] then
+		config.lua_target = cli.target
+		if not VALID_LUA_TARGETS[config.lua_target] then
 			terminate(table.concat({
-				("Invalid Lua target: " .. tostring(C.LUA_TARGET)),
-				("Must be one of: " .. tostring(table.concat(C.VALID_LUA_TARGETS, ", "))),
+				("Invalid Lua target: " .. tostring(config.lua_target)),
+				("Must be one of: " .. tostring(table.concat(VALID_LUA_TARGETS, ", "))),
 			}, "\n"))
 		end
 	elseif arg_value == "-o" or arg_value == "--outdir" then
 		cli.outdir = parse_option(arg_value)
 	elseif arg_value == "-b" or arg_value == "--bitlib" then
-		C.BITLIB = parse_option(arg_value)
+		config.bitlib = parse_option(arg_value)
 	elseif arg_value:sub(1, 1) == "-" then
 		terminate(("Unrecognized option: " .. tostring(arg_value)))
 	elseif not cli.subcommand and arg_value:match("%.erde$") then

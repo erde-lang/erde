@@ -1,13 +1,12 @@
 local lfs = require('lfs')
-local C = require('erde.constants')
 local compile = require('erde.compile')
+local config = require('erde.config')
+local { COMPILED_FOOTER_COMMENT, VALID_LUA_TARGETS, VERSION } = require('erde.constants')
 local lib = require('erde.lib')
 local utils = require('erde.utils')
 
 local unpack = table.unpack || unpack
 local pack = table.pack || (...) -> ({ n =  select("#", ...), ... })
-
-C.IS_CLI_RUNTIME = true
 
 local REPL_PROMPT = '> '
 local REPL_SUB_PROMPT = '>> '
@@ -47,6 +46,17 @@ local function terminate(message, status = 1) {
   os.exit(status)
 }
 
+local function parse_option(label) {
+  current_arg_index = current_arg_index + 1
+  local arg_value = arg[current_arg_index]
+
+  if !arg_value {
+    terminate("Missing argument for { label }")
+  }
+
+  return arg_value
+}
+
 local function traverse(paths, pattern, callback) {
   for _, path in ipairs(paths) {
     local attributes = lfs.attributes(path)
@@ -74,7 +84,7 @@ local function traverse(paths, pattern, callback) {
 }
 
 -- Check whether a file has been generated from `erde` by checking if the file
--- ends with `C.COMPILED_FOOTER_COMMENT`.
+-- ends with `COMPILED_FOOTER_COMMENT`.
 local function is_compiled_file(path) {
   local file = io.open(path, 'r')
 
@@ -84,13 +94,13 @@ local function is_compiled_file(path) {
 
   -- Some editors save an invisible trailing newline, so read an extra char just
   -- in case.
-  local read_len = #C.COMPILED_FOOTER_COMMENT + 1
+  local read_len = #COMPILED_FOOTER_COMMENT + 1
 
   file:seek('end', -read_len)
   local footer = file:read(read_len)
   file:close()
 
-  return !!(footer && footer:find(C.COMPILED_FOOTER_COMMENT))
+  return !!(footer && footer:find(COMPILED_FOOTER_COMMENT))
 }
 
 -- -----------------------------------------------------------------------------
@@ -110,7 +120,7 @@ Options:
    -v, --version          Show version and exit.
    -b, --bitlib <LIB>     Library to use for bit operations.
    -t, --target <TARGET>  Lua target for version compatability.
-                          Must be one of: { table.concat(C.VALID_LUA_TARGETS, ', ') }
+                          Must be one of: { table.concat(VALID_LUA_TARGETS, ', ') }
 
 Compile Options:
    -o, --outdir <DIR>     Output directory for compiled files.
@@ -331,7 +341,7 @@ local function readline(prompt) {
 }
 
 local function repl() {
-  print("Erde { C.VERSION } on { _VERSION } -- Copyright (C) 2021-2023 bsuth")
+  print("Erde { VERSION } on { _VERSION } -- Copyright (C) 2021-2023 bsuth")
 
   if !HAS_READLINE {
     print('Install the `readline` Lua library to get support for arrow keys, keyboard shortcuts, history, etc.')
@@ -409,16 +419,7 @@ local function repl_command() {
 -- Main
 -- -----------------------------------------------------------------------------
 
-local function parse_option(label) {
-  current_arg_index = current_arg_index + 1
-  local arg_value = arg[current_arg_index]
-
-  if !arg_value {
-    terminate("Missing argument for { label }")
-  }
-
-  return arg_value
-}
+config.is_cli_runtime = true
 
 while current_arg_index <= num_args {
   local arg_value = arg[current_arg_index]
@@ -432,7 +433,7 @@ while current_arg_index <= num_args {
   } elseif arg_value == '-h' || arg_value == '--help' {
     terminate(HELP, 0)
   } elseif arg_value == '-v' || arg_value == '--version' {
-    terminate(C.VERSION, 0)
+    terminate(VERSION, 0)
   } elseif arg_value == '-w' || arg_value == '--watch' {
     cli.watch = true
   } elseif arg_value == '-f' || arg_value == '--force' {
@@ -441,17 +442,17 @@ while current_arg_index <= num_args {
     cli.print_compiled = true
   } elseif arg_value == '-t' || arg_value == '--target' {
     cli.target = parse_option(arg_value)
-    C.LUA_TARGET = cli.target
-    if !C.VALID_LUA_TARGETS[C.LUA_TARGET] {
+    config.lua_target = cli.target
+    if !VALID_LUA_TARGETS[config.lua_target] {
       terminate(table.concat({
-        "Invalid Lua target: { C.LUA_TARGET }",
-        "Must be one of: { table.concat(C.VALID_LUA_TARGETS, ', ') }",
+        "Invalid Lua target: { config.lua_target }",
+        "Must be one of: { table.concat(VALID_LUA_TARGETS, ', ') }",
       }, '\n'))
     }
   } elseif arg_value == '-o' || arg_value == '--outdir' {
     cli.outdir = parse_option(arg_value)
   } elseif arg_value == '-b' || arg_value == '--bitlib' {
-    C.BITLIB = parse_option(arg_value)
+    config.bitlib = parse_option(arg_value)
   } elseif arg_value:sub(1, 1) == '-' {
     terminate("Unrecognized option: { arg_value }")
   } elseif !cli.subcommand && arg_value:match('%.erde$') {

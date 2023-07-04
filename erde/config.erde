@@ -1,0 +1,13 @@
+-- Lua targets to support when generating compiled code.
+module lua_target = '5.1+'
+
+-- Flag to know whether or not we are running under the cli. Required for more
+-- precise error rewriting.
+module is_cli_runtime = false
+
+-- User specified library to use for bit operations.
+module bitlib = nil
+
+-- Flag for whether we should disable caching source maps for loaded sources.
+-- See `__erde_internal_load_source__`
+module disable_source_maps = false

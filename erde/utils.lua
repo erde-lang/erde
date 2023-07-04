@@ -1,5 +1,10 @@
 local _MODULE = {}
-local C = require("erde.constants")
+local PATH_SEPARATOR
+do
+	local __ERDE_TMP_2__
+	__ERDE_TMP_2__ = require("erde.constants")
+	PATH_SEPARATOR = __ERDE_TMP_2__["PATH_SEPARATOR"]
+end
 local function echo(...)
 	return ...
 end
@@ -49,7 +54,7 @@ _MODULE.read_file = read_file
 local function join_paths(...)
 	return table.concat({
 		...,
-	}, C.PATH_SEPARATOR):gsub(C.PATH_SEPARATOR .. "+", C.PATH_SEPARATOR)
+	}, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. "+", PATH_SEPARATOR)
 end
 _MODULE.join_paths = join_paths
 return _MODULE

@@ -1,6 +1,13 @@
 local _MODULE = {}
-local C = require("erde.constants")
 local compile = require("erde.compile")
+local config = require("erde.config")
+local PATH_SEPARATOR, VALID_LUA_TARGETS
+do
+	local __ERDE_TMP_6__
+	__ERDE_TMP_6__ = require("erde.constants")
+	PATH_SEPARATOR = __ERDE_TMP_6__["PATH_SEPARATOR"]
+	VALID_LUA_TARGETS = __ERDE_TMP_6__["VALID_LUA_TARGETS"]
+end
 local utils = require("erde.utils")
 local loadlua = loadstring or load
 local unpack = table.unpack or unpack
@@ -42,7 +49,7 @@ local function traceback(arg1, arg2, arg3)
 	if type(stacktrace) ~= "string" then
 		return stacktrace
 	end
-	if level > -1 and C.IS_CLI_RUNTIME then
+	if level > -1 and config.is_cli_runtime then
 		local stack = utils.split(stacktrace, "\n")
 		local stacklen = #stack
 		for i = 1, 4 do
@@ -76,7 +83,7 @@ local function __erde_internal_load_source__(source, options)
 	erde_source_cache[erde_source_id] = {
 		alias = alias,
 	}
-	if not C.DISABLE_SOURCE_MAPS and not options.disable_source_maps then
+	if not config.disable_source_maps and not options.disable_source_maps then
 		erde_source_cache[erde_source_id].sourcemap = sourcemap
 	end
 	compiled = compiled:gsub("^#![^\n]+", "")
@@ -106,7 +113,7 @@ local function run(source, options)
 end
 _MODULE.run = run
 local function erde_searcher(module_name)
-	local module_path = module_name:gsub("%.", C.PATH_SEPARATOR)
+	local module_path = module_name:gsub("%.", PATH_SEPARATOR)
 	for path in package.path:gmatch("[^;]+") do
 		local fullpath = path:gsub("%.lua$", ".erde"):gsub("?", module_path)
 		if utils.file_exists(fullpath) then
@@ -132,24 +139,24 @@ local function load(arg1, arg2)
 	elseif type(arg2) == "table" then
 		options = arg2
 	end
-	C.BITLIB = options.bitlib
-	C.DISABLE_SOURCE_MAPS = options.disable_source_maps
+	config.bitlib = options.bitlib
+	config.disable_source_maps = options.disable_source_maps
 	debug.traceback = options.keep_traceback == true and native_traceback or traceback
 	if new_lua_target ~= nil then
-		if C.VALID_LUA_TARGETS[new_lua_target] then
-			C.LUA_TARGET = new_lua_target
+		if VALID_LUA_TARGETS[new_lua_target] then
+			config.lua_target = new_lua_target
 		else
 			error(table.concat({
 				("Invalid Lua target: " .. tostring(new_lua_target)),
-				("Must be one of: " .. tostring(table.concat(C.VALID_LUA_TARGETS, ", "))),
+				("Must be one of: " .. tostring(table.concat(VALID_LUA_TARGETS, ", "))),
 			}, "\n"))
 		end
 	elseif jit ~= nil then
-		C.LUA_TARGET = "jit"
+		config.lua_target = "jit"
 	else
 		new_lua_target = _VERSION:match("Lua (%d%.%d)")
-		if C.VALID_LUA_TARGETS[new_lua_target] then
-			C.LUA_TARGET = new_lua_target
+		if VALID_LUA_TARGETS[new_lua_target] then
+			config.lua_target = new_lua_target
 		else
 			error(("Unsupported Lua version: " .. tostring(_VERSION)))
 		end
