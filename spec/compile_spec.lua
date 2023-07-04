@@ -3,56 +3,76 @@ local config = require('erde.config')
 local lib = require('erde.lib')
 
 -- -----------------------------------------------------------------------------
+-- Helpers
+-- -----------------------------------------------------------------------------
+
+local function assert_eval(expected, source)
+  if expected == nil then
+    assert.is_nil(lib.run('return ' .. source))
+  else
+    assert.are.same(expected, lib.run('return ' .. source))
+  end
+end
+
+local function assert_run(expected, source)
+  if expected == nil then
+    assert.is_nil(lib.run(source))
+  else
+    assert.are.same(expected, lib.run(source))
+  end
+end
+
+-- -----------------------------------------------------------------------------
 -- Expressions
 -- -----------------------------------------------------------------------------
 
 describe('arrow function #5.1+', function()
   spec('params', function()
-    assert.run(1, [[
+    assert_run(1, [[
       local a = (x) -> x
       return a(1)
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local a = (x, y = 2) -> x + y
       return a(1)
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local a = (x = 3, y) -> x + y
       return a(1, 2)
     ]])
-    assert.run({ 1, 2 }, [[
+    assert_run({ 1, 2 }, [[
       local a = (...) -> ({ ... })
       return a(1, 2)
     ]])
-    assert.run({ 2, 3 }, [[
+    assert_run({ 2, 3 }, [[
       local a = (x, ...) -> ({ ... })
       return a(1, 2, 3)
     ]])
-    assert.run({ 1, 2 }, [[
+    assert_run({ 1, 2 }, [[
       local a = (...x) -> x
       return a(1, 2)
     ]])
-    assert.run({ 2, 3 }, [[
+    assert_run({ 2, 3 }, [[
       local a = (x, ...y) -> y
       return a(1, 2, 3)
     ]])
-    assert.run({ 1, 2, { 3, 4 } }, [[
+    assert_run({ 1, 2, { 3, 4 } }, [[
       local a = (x, y = 2, ...) -> ({ x, y, { ... } })
       return a(1, 2, 3, 4)
     ]])
-    assert.run({ 1, 2, { 3, 4 } }, [[
+    assert_run({ 1, 2, { 3, 4 } }, [[
       local a = (x, y = 2, ...z) -> ({ x, y, z })
       return a(1, 2, 3, 4)
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local a = x -> x + 1
       return a(1)
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local a = [ x ] -> x + 1
       return a({ 1 })
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local a = { x } -> x + 1
       return a({ x = 1 })
     ]])
@@ -65,44 +85,44 @@ describe('arrow function #5.1+', function()
   end)
 
   spec('implicit return', function()
-    assert.run(1, [[
+    assert_run(1, [[
       local a = () -> 1
       return a()
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = (x) -> x
       return a(1)
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local a = (x, y) -> x + y
       return a(1, 2)
     ]])
-    assert.run({ 1, 2 }, [[
+    assert_run({ 1, 2 }, [[
       local a = (x, y) -> ({ x, y })
       return a(1, 2)
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local a = () -> (1, 2)
       local b, c = a()
       return b + c
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = x -> ({ x = x }).x
       return a(1)
     ]])
   end)
 
   spec('skinny', function()
-    assert.eval('function', 'type(() -> {})')
-    assert.run(1, [[
+    assert_eval('function', 'type(() -> {})')
+    assert_run(1, [[
       local a = () -> { return 1 }
       return a()
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = x -> { return x }
       return a(1)
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = x -> { return x }
       return a(1)
     ]])
@@ -111,13 +131,13 @@ describe('arrow function #5.1+', function()
   end)
 
   spec('fat', function()
-    assert.eval('function', 'type(() => {})')
-    assert.run(1, [[
+    assert_eval('function', 'type(() => {})')
+    assert_run(1, [[
       local a = { b = 1 }
       a.c = () => { return self.b }
       return a:c()
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local a = { b = 1 }
       a.c = x => { return self.b + x }
       return a:c(2)
@@ -127,37 +147,37 @@ describe('arrow function #5.1+', function()
   end)
 
   spec('iife', function()
-    assert.eval(1, '(() -> { return 1 })()')
-    assert.eval(1, '(() -> 1)()')
+    assert_eval(1, '(() -> { return 1 })()')
+    assert_eval(1, '(() -> 1)()')
   end)
 end)
 
 describe('index chain #5.1+', function()
   spec('dot', function()
-    assert.eval(1, '({ x = 1 }).x')
-    assert.run(1, [[
+    assert_eval(1, '({ x = 1 }).x')
+    assert_run(1, [[
       local a = { b = 1 }
       return a.b
     ]])
   end)
 
   spec('bracket', function()
-    assert.eval(2, '({ 2 })[1]')
-    assert.run(1, [[
+    assert_eval(2, '({ 2 })[1]')
+    assert_run(1, [[
       local a = { [5] = 1 }
       return a[2 + 3]
     ]])
   end)
 
   spec('function call', function()
-    assert.run(3, [[
+    assert_run(3, [[
       local a = (x, y) -> x + y
       return a(1, 2)
     ]])
   end)
 
   spec('method call', function()
-    assert.run(3, [[
+    assert_run(3, [[
       local a = {
         b = (self, x) -> self.c + x,
         c = 1,
@@ -170,70 +190,70 @@ describe('index chain #5.1+', function()
   end)
 
   spec('chain', function()
-    assert.run(2, [[
+    assert_run(2, [[
       local a = { b = { 2 } }
       return a.b[1]
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local a = { { b = 2 } }
       return a[1].b
     ]])
   end)
 
   spec('nested parens', function()
-    assert.eval(1, '((({ x = 1 }))).x')
+    assert_eval(1, '((({ x = 1 }))).x')
   end)
 
   spec('string base', function()
-    assert.eval('yourstring', '"mystring":gsub("my", "your")')
-    assert.eval('yourstring', "'mystring':gsub('my', 'your')")
-    assert.eval('yourstring', "[[mystring]]:gsub('my', 'your')")
+    assert_eval('yourstring', '"mystring":gsub("my", "your")')
+    assert_eval('yourstring', "'mystring':gsub('my', 'your')")
+    assert_eval('yourstring', "[[mystring]]:gsub('my', 'your')")
   end)
 end)
 
 describe('strings #5.1+', function()
   spec('single quote', function()
-    assert.eval('', "''")
-    assert.eval('hello', "'hello'")
-    assert.eval('hello\nworld', "'hello\\nworld'")
-    assert.eval('\\', "'\\\\'")
+    assert_eval('', "''")
+    assert_eval('hello', "'hello'")
+    assert_eval('hello\nworld', "'hello\\nworld'")
+    assert_eval('\\', "'\\\\'")
   end)
 
   spec('double quote', function()
-    assert.eval('', '""')
-    assert.eval('hello', '"hello"')
-    assert.eval('hello\nworld', '"hello\\nworld"')
-    assert.eval('\\', '"\\\\"')
+    assert_eval('', '""')
+    assert_eval('hello', '"hello"')
+    assert_eval('hello\nworld', '"hello\\nworld"')
+    assert_eval('\\', '"\\\\"')
   end)
 
   spec('block', function()
-    assert.eval('hello world', '[[hello world]]')
-    assert.eval(' hello\nworld', '[[ hello\nworld]]')
-    assert.eval('a{bc}d', '[[a\\{bc}d]]')
-    assert.eval('a[[b', '[=[a[[b]=]')
-    assert.eval('a', '[[\na]]')
-    assert.eval('3\na', '[[{1 + 2}\na]]')
+    assert_eval('hello world', '[[hello world]]')
+    assert_eval(' hello\nworld', '[[ hello\nworld]]')
+    assert_eval('a{bc}d', '[[a\\{bc}d]]')
+    assert_eval('a[[b', '[=[a[[b]=]')
+    assert_eval('a', '[[\na]]')
+    assert_eval('3\na', '[[{1 + 2}\na]]')
   end)
 
   spec('interpolation', function()
-    assert.eval('hello {1 + 2}', "'hello {1 + 2}'")
-    assert.eval('hello 3', '"hello {1 + 2}"')
-    assert.eval('hello 3', '[[hello {1 + 2}]]')
+    assert_eval('hello {1 + 2}', "'hello {1 + 2}'")
+    assert_eval('hello 3', '"hello {1 + 2}"')
+    assert_eval('hello 3', '[[hello {1 + 2}]]')
   end)
 end)
 
 spec('tables #5.1+', function()
-  assert.eval({ 10 }, '{ 10 }')
-  assert.eval({ x = 2 }, '{ x = 2 }')
-  assert.eval({ [3] = 1 }, '{ [1 + 2] = 1 }')
-  assert.eval({ x = { y = 1 } }, '{ x = { y = 1 } }')
+  assert_eval({ 10 }, '{ 10 }')
+  assert_eval({ x = 2 }, '{ x = 2 }')
+  assert_eval({ [3] = 1 }, '{ [1 + 2] = 1 }')
+  assert_eval({ x = { y = 1 } }, '{ x = { y = 1 } }')
 end)
 
 describe('unop', function()
   spec('arithmetic ops #5.1+', function()
-    assert.eval(-6, '-6')
-    assert.eval(5, '#("hello")')
-    assert.eval(false, '!true')
+    assert_eval(-6, '-6')
+    assert_eval(5, '#("hello")')
+    assert_eval(false, '!true')
   end)
 
   if config.lua_target == '5.1+' or config.lua_target == '5.2+' then
@@ -242,16 +262,16 @@ describe('unop', function()
     end)
   else
     spec('bitops', function()
-      assert.eval(-5, '~4')
+      assert_eval(-5, '~4')
     end)
   end
 end)
 
 describe('binop #5.1+', function()
   spec('arithmetic ops', function()
-    assert.eval(-6, '2 * -3')
-    assert.eval(-6, '-2 * 3')
-    assert.eval(-8, '-2 ^ 3')
+    assert_eval(-6, '2 * -3')
+    assert_eval(-6, '-2 * 3')
+    assert_eval(-8, '-2 ^ 3')
   end)
 
   if config.lua_target == '5.1+' or config.lua_target == '5.2+' then
@@ -264,27 +284,27 @@ describe('binop #5.1+', function()
     end)
   else
     spec('bitops', function()
-      assert.eval(6, '4 | 2')
-      assert.eval(5, '6 ~ 3')
-      assert.eval(2, '6 & 3')
-      assert.eval(2, '1 << 1')
-      assert.eval(1, '2 >> 1')
+      assert_eval(6, '4 | 2')
+      assert_eval(5, '6 ~ 3')
+      assert_eval(2, '6 & 3')
+      assert_eval(2, '1 << 1')
+      assert_eval(1, '2 >> 1')
     end)
   end
 
   spec('left associative', function()
-    assert.eval(5, '1 * 2 + 3')
-    assert.eval(7, '1 + 2 * 3')
-    assert.eval(11, '1 + 2 * 3 + 4')
+    assert_eval(5, '1 * 2 + 3')
+    assert_eval(7, '1 + 2 * 3')
+    assert_eval(11, '1 + 2 * 3 + 4')
   end)
 
   spec('right associative', function()
-    assert.eval(512, '2 ^ 3 ^ 2')
-    assert.eval(7, '2 ^ 2 + 3')
+    assert_eval(512, '2 ^ 3 ^ 2')
+    assert_eval(7, '2 ^ 2 + 3')
   end)
 
   spec('parens', function()
-    assert.eval(25, '5 * (2 + 3)')
+    assert_eval(25, '5 * (2 + 3)')
   end)
 end)
 
@@ -293,43 +313,43 @@ end)
 -- -----------------------------------------------------------------------------
 
 spec('assignment #5.1+', function()
-  assert.run(1, [[
+  assert_run(1, [[
     local a
     a = 1
     return a
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = {}
     a.b = 1
     return a.b
   ]])
-  assert.run(3, [[
+  assert_run(3, [[
     local a, b
     a, b = 1, 2
     return a + b
   ]])
-  assert.run(3, [[
+  assert_run(3, [[
     local a, b = {}, {}
     a.c, b.d = 1, 2
     return a.c + b.d
   ]])
-  assert.run(3, [[
+  assert_run(3, [[
     local a = 1
     a += 2
     return a
   ]])
-  assert.run(8, [[
+  assert_run(8, [[
     local a, b = 1, 2
     a, b += 2, 3
     return a + b
   ]])
-  assert.run({ 1, 2 }, [[
+  assert_run({ 1, 2 }, [[
     local function test() { return 1, 2 }
     local x, y = 0, 0
     x, y += test()
     return { x, y }
   ]])
-  assert.run({ 1, 2, 3 }, [[
+  assert_run({ 1, 2, 3 }, [[
     local function test() { return 2, 3 }
     local x, y, z = 0, 0, 0
     x, y, z += 1, test()
@@ -338,7 +358,7 @@ spec('assignment #5.1+', function()
 end)
 
 spec('break #5.1+', function()
-  assert.run(6, [[
+  assert_run(6, [[
     local x = 0
     while x < 10 {
       x += 2
@@ -348,7 +368,7 @@ spec('break #5.1+', function()
     }
     return x
   ]])
-  assert.run(100, [[
+  assert_run(100, [[
     local x = 0
     for i = 1, 10 {
       for j = 1, 10 {
@@ -363,7 +383,7 @@ spec('break #5.1+', function()
 end)
 
 spec('continue #5.1+', function()
-  assert.run(30, [[
+  assert_run(30, [[
     local x = 0
     for i = 1, 10 {
       if i % 2 == 1 {
@@ -373,7 +393,7 @@ spec('continue #5.1+', function()
     }
     return x
   ]])
-  assert.run(250, [[
+  assert_run(250, [[
     local x = 0
     for i = 1, 10 {
       for j = 1, 10 {
@@ -389,62 +409,62 @@ end)
 
 describe('declaration #5.1+', function()
   spec('local', function()
-    assert.run(1, [[
+    assert_run(1, [[
       local a = 1
       return a
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = { x = 1 }
       local { x } = a
       return x
     ]])
-    assert.run('hello', [[
+    assert_run('hello', [[
       local a = { 'hello', 'world' }
       local [ hello ] = a
       return hello
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local a, b = 1, 2
       return a + b
     ]])
   end)
 
   spec('global', function()
-    assert.run(1, [[
+    assert_run(1, [[
       global a = 1
       local result = _G.a
       _G.a = nil
       return result
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = 1
       global a = 2
       local result = a
       _G.a = nil
       return result
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local a = 1
       global a = 2
       local result = _G.a
       _G.a = nil
       return result
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = { x = 1 }
       global { x } = a
       local result = _G.x
       _G.x = nil
       return result
     ]])
-    assert.run('hello', [[
+    assert_run('hello', [[
       local a = { 'hello', 'world' }
       global [ hello ] = a
       local result = _G.hello
       _G.hello = nil
       return result
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local a = { 'hello', 'world' }
       global b, [ hello ] = 1, a
       local result = _G.b
@@ -455,16 +475,16 @@ describe('declaration #5.1+', function()
   end)
 
   spec('module', function()
-    assert.run({ a = 1 }, 'module a = 1')
-    assert.run({ b = 1 }, [[
+    assert_run({ a = 1 }, 'module a = 1')
+    assert_run({ b = 1 }, [[
       local a = { b = 1 }
       module { b } = a
     ]])
-    assert.run({ x = 1 }, [[
+    assert_run({ x = 1 }, [[
       local a = { x = 1 }
       module { x } = a
     ]])
-    assert.run({ hello = 'hello' }, [[
+    assert_run({ hello = 'hello' }, [[
       local a = { 'hello', 'world' }
       module [ hello ] = a
     ]])
@@ -472,14 +492,14 @@ describe('declaration #5.1+', function()
 end)
 
 spec('do block #5.1+', function()
-  assert.run(1, [[
+  assert_run(1, [[
     local x
     do {
       x = 1
     }
     return x
   ]])
-  assert.run(nil, [[
+  assert_run(nil, [[
     do {
       local x
       x = 1
@@ -490,14 +510,14 @@ end)
 
 describe('for loop #5.1+', function()
   spec('numeric', function()
-    assert.run(10, [[
+    assert_run(10, [[
       local x = 0
       for i = 1, 4 {
         x += i
       }
       return x
     ]])
-    assert.run(4, [[
+    assert_run(4, [[
       local x = 0
       for i = 1, 4, 2 {
         x += i
@@ -506,21 +526,21 @@ describe('for loop #5.1+', function()
     ]])
   end)
   spec('generic', function()
-    assert.run(10, [[
+    assert_run(10, [[
       local x = 0
       for i, value in ipairs({ 1, 2, 8, 1 }) {
         x += i
       }
       return x
     ]])
-    assert.run(12, [[
+    assert_run(12, [[
       local x = 0
       for i, value in ipairs({ 1, 2, 8, 1 }) {
         x += value
       }
       return x
     ]])
-    assert.run(11, [[
+    assert_run(11, [[
       local x = 0
       for i, [a, b] in ipairs({{5, 6}}) {
         x += a + b
@@ -532,67 +552,67 @@ end)
 
 describe('function declaration #5.1+', function()
   spec('params', function()
-    assert.run(1, [[
+    assert_run(1, [[
       local function a(x) {
         return x
       }
       return a(1)
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local function a(x, y = 2) {
         return x + y
       }
       return a(1)
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       local function a(x = 3, y) {
         return x + y
       }
       return a(1, 2)
     ]])
-    assert.run({ 1, 2 }, [[
+    assert_run({ 1, 2 }, [[
       local function a(...) {
         return { ... }
       }
       return a(1, 2)
     ]])
-    assert.run({ 2, 3 }, [[
+    assert_run({ 2, 3 }, [[
       local function a(x, ...) {
         return { ... }
       }
       return a(1, 2, 3)
     ]])
-    assert.run({ 1, 2 }, [[
+    assert_run({ 1, 2 }, [[
       local function a(...x) {
         return x
       }
       return a(1, 2)
     ]])
-    assert.run({ 2, 3 }, [[
+    assert_run({ 2, 3 }, [[
       local function a(x, ...y) {
         return y
       }
       return a(1, 2, 3)
     ]])
-    assert.run({ 1, 2, { 3, 4 } }, [[
+    assert_run({ 1, 2, { 3, 4 } }, [[
       local function a(x, y = 2, ...) {
         return { x, y, { ... } }
       }
       return a(1, 2, 3, 4)
     ]])
-    assert.run({ 1, 2, { 3, 4 } }, [[
+    assert_run({ 1, 2, { 3, 4 } }, [[
       local function a(x, y = 2, ...z) {
         return { x, y, z }
       }
       return a(1, 2, 3, 4)
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local function a([ x ]) {
         return x + 1
       }
       return a({ 1 })
     ]])
-    assert.run(2, [[
+    assert_run(2, [[
       local function a({ x }) {
         return x + 1
       }
@@ -601,7 +621,7 @@ describe('function declaration #5.1+', function()
   end)
 
   spec('local', function()
-    assert.run(2, [[
+    assert_run(2, [[
       local function test() {
         return 2
       }
@@ -614,7 +634,7 @@ describe('function declaration #5.1+', function()
 
       return test()
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local function test() {
         return 2
       }
@@ -633,7 +653,7 @@ describe('function declaration #5.1+', function()
   end)
 
   spec('global', function()
-    assert.run(2, [[
+    assert_run(2, [[
       local function test() {
         return 2
       }
@@ -648,7 +668,7 @@ describe('function declaration #5.1+', function()
       _G.test = nil
       return result
     ]])
-    assert.run(1, [[
+    assert_run(1, [[
       local function test() {
         return 2
       }
@@ -678,7 +698,7 @@ describe('function declaration #5.1+', function()
   end)
 
   spec('method', function()
-    assert.run(1, [[
+    assert_run(1, [[
       local a = { x = 1 }
 
       function a:test() {
@@ -691,7 +711,7 @@ describe('function declaration #5.1+', function()
 end)
 
 spec('goto #jit #5.2+', function()
-  assert.run(1, [[
+  assert_run(1, [[
     local x
     x = 1
     goto test
@@ -703,12 +723,12 @@ end)
 
 describe('if else #5.1+', function()
   spec('if', function()
-    assert.run(1, 'if true { return 1 }')
-    assert.run(nil, 'if false { return 1 }')
+    assert_run(1, 'if true { return 1 }')
+    assert_run(nil, 'if false { return 1 }')
   end)
 
   spec('if + elseif', function()
-    assert.run(2, [[
+    assert_run(2, [[
       if false {
         return 1
       } elseif true {
@@ -718,7 +738,7 @@ describe('if else #5.1+', function()
   end)
 
   spec('if + else', function()
-    assert.run(2, [[
+    assert_run(2, [[
       if false {
         return 1
       } else {
@@ -728,7 +748,7 @@ describe('if else #5.1+', function()
   end)
 
   spec('if + elseif + else', function()
-    assert.run(2, [[
+    assert_run(2, [[
       if false {
         return 1
       } elseif true {
@@ -737,7 +757,7 @@ describe('if else #5.1+', function()
         return 3
       }
     ]])
-    assert.run(3, [[
+    assert_run(3, [[
       if false {
         return 1
       } elseif false {
@@ -750,7 +770,7 @@ describe('if else #5.1+', function()
 end)
 
 spec('repeat until #5.1+', function()
-  assert.run(12, [[
+  assert_run(12, [[
     local x = 0
     repeat {
       x += 2
@@ -760,10 +780,10 @@ spec('repeat until #5.1+', function()
 end)
 
 spec('return #5.1+', function()
-  assert.run(nil, 'return')
-  assert.run(1, 'return 1')
-  assert.run(1, 'return (1, 2)')
-  assert.run(1, [[
+  assert_run(nil, 'return')
+  assert_run(1, 'return 1')
+  assert_run(1, 'return (1, 2)')
+  assert_run(1, [[
     return (
       1,
       2,
@@ -783,7 +803,7 @@ spec('return #5.1+', function()
 end)
 
 spec('while loop  #5.1+', function()
-  assert.run(10, [[
+  assert_run(10, [[
     local x = 0
     while x < 10 {
       x += 2
@@ -797,23 +817,23 @@ end)
 -- -----------------------------------------------------------------------------
 
 spec('ambiguous syntax #5.1+', function()
-  assert.run(1, [[
+  assert_run(1, [[
     local a = 1
     local x = a;(() -> 2)()
     return x
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = 1
     local x = a
     (() -> 2)()
     return x
   ]])
-  assert.run(2, [[
+  assert_run(2, [[
     local a = f -> f
     local x = a(() -> 2)()
     return x
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = 1
     local b = a
     (() -> { local c = 2 })()
@@ -837,12 +857,12 @@ spec('no varargs outside vararg function #5.1+', function()
 end)
 
 spec('retain throwaway parens #5.1+', function()
-  assert.run(true, [[
+  assert_run(true, [[
     local a = () -> (1, 2)
     local x, y = (a())
     return x == 1
   ]])
-  assert.run(false, [[
+  assert_run(false, [[
     local a = () -> (1, 2)
     local x, y = (a())
     return y == 2
@@ -850,51 +870,51 @@ spec('retain throwaway parens #5.1+', function()
 end)
 
 spec('_MODULE #5.1+', function()
-  assert.run(nil, [[ return _MODULE ]])
-  assert.run({ x = 1, y = 2 }, [[
+  assert_run(nil, [[ return _MODULE ]])
+  assert_run({ x = 1, y = 2 }, [[
     module y = 2
     _MODULE.x = 1
   ]])
 end)
 
 spec('Lua keywords that are not Erde keywords #5.1+', function()
-  assert.run(1, [[
+  assert_run(1, [[
     local end = 1
     return end
   ]])
-  assert.eval({ ['end'] = 1 }, "{ end = 1 }")
-  assert.run(1, [[
+  assert_eval({ ['end'] = 1 }, "{ end = 1 }")
+  assert_run(1, [[
     local t = {}
     t.end = 1
     return t.end
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local t = { end = 1 }
     local key = 'end'
     return t[key]
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local t = { end = () -> 1 }
     return t.end()
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = { b = { end = () -> 1 } }
     return a.b.end()
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = { x = 1, end = () => self.x }
     return a:end()
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = { b = { x = 1, end = () => self.x } }
     return a.b:end()
   ]])
-  assert.run(2, [[
+  assert_run(2, [[
     local a = { end = 1 }
     local b = { end = 2 }
     return (b || a).end
   ]])
-  assert.run(1, [[
+  assert_run(1, [[
     local a = { end = 1 }
     local { end } = a
     return end

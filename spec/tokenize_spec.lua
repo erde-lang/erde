@@ -12,7 +12,7 @@ end
 
 local function assert_tokens(expected, text)
   local tokenize_state = tokenize(text)
-  assert.subtable(expected, tokenize_state.tokens)
+  assert.are.same(expected, tokenize_state.tokens)
 end
 
 local function assert_num_tokens(expected, text)
@@ -22,7 +22,7 @@ end
 
 local function assert_token_lines(expected, text)
   local tokenize_state = tokenize(text)
-  assert.subtable(expected, tokenize_state.token_lines)
+  assert.are.same(expected, tokenize_state.token_lines)
 end
 
 -- -----------------------------------------------------------------------------
