@@ -230,3 +230,18 @@ for byte = string.byte('g'), string.byte('z') {
 	WORD_HEAD[char] = true
 	WORD_BODY[char] = true
 }
+
+-- -----------------------------------------------------------------------------
+-- Token Types
+-- -----------------------------------------------------------------------------
+
+local TOKEN_TYPE = {
+  SHEBANG = 1,
+  SYMBOL = 2,
+  WORD = 3,
+  NUMBER = 4,
+  SINGLE_QUOTE_STRING = 5,
+  DOUBLE_QUOTE_STRING = 6,
+  STRING_CONTENT = 7,
+  INTERPOLATION = 8,
+}

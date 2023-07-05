@@ -279,6 +279,260 @@ local function variable()
 		return name()
 	end
 end
+local function interpolation_string(start_quote, end_quote)
+	local compile_lines = {}
+	local content_line, content = current_line, consume()
+	local is_block_string = start_quote:sub(1, 1) == "["
+	if current_token == end_quote then
+		insert(compile_lines, content .. consume())
+		return compile_lines
+	end
+	repeat
+		if current_token == "{" then
+			if content ~= start_quote then
+				insert(compile_lines, content_line)
+				insert(compile_lines, content .. end_quote)
+			end
+			insert(compile_lines, {
+				"tostring(",
+				surround("{", "}", expression),
+				")",
+			})
+			content_line, content = current_line, start_quote
+			if is_block_string and current_token:sub(1, 1) == "\n" then
+				content = content .. "\n" .. consume()
+			end
+		else
+			content = content .. consume()
+		end
+	until current_token == end_quote
+	if content ~= start_quote then
+		insert(compile_lines, content_line)
+		insert(compile_lines, content .. end_quote)
+	end
+	consume()
+	return weave(compile_lines, "..")
+end
+local function single_quote_string()
+	local content_line, content = current_line, consume()
+	if current_token ~= "'" then
+		content = content .. consume()
+	end
+	content = content .. consume()
+	return {
+		content_line,
+		content,
+	}
+end
+local function double_quote_string()
+	return interpolation_string('"', '"')
+end
+local function block_string()
+	return interpolation_string(current_token, current_token:gsub("%[", "]"))
+end
+local function table_constructor()
+	local compile_lines = {}
+	surround_list("{", "}", function()
+		if current_token == "[" then
+			insert(compile_lines, "[")
+			insert(compile_lines, surround("[", "]", expression))
+			insert(compile_lines, "]")
+			insert(compile_lines, expect("="))
+		elseif look_ahead(1) == "=" then
+			local key = name(true)
+			if LUA_KEYWORDS[key] then
+				insert(compile_lines, ("['" .. tostring(key) .. "']") .. consume())
+			else
+				insert(compile_lines, key .. consume())
+			end
+		end
+		insert(compile_lines, expression())
+		insert(compile_lines, ",")
+	end, true)
+	return {
+		"{",
+		compile_lines,
+		"}",
+	}
+end
+local function return_list(require_list_parens)
+	local compile_lines = {}
+	if current_token ~= "(" then
+		insert(compile_lines, require_list_parens and expression() or weave(list(expression)))
+	else
+		local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
+		if look_ahead_limit_token == "->" or look_ahead_limit_token == "=>" then
+			insert(compile_lines, expression())
+		else
+			local is_list = false
+			for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
+				local look_ahead_token = tokens[look_ahead_token_index]
+				if SURROUND_ENDS[look_ahead_token] then
+					look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
+				end
+				if look_ahead_token == "," then
+					is_list = true
+					break
+				end
+			end
+			insert(compile_lines, is_list and weave(surround_list("(", ")", expression)) or expression())
+		end
+	end
+	return compile_lines
+end
+local function return_statement()
+	local compile_lines = {
+		current_line,
+		consume(),
+	}
+	if is_module_return_block then
+		has_module_return = true
+	end
+	if block_depth == 1 then
+		if current_token then
+			insert(compile_lines, return_list())
+		end
+		if current_token then
+			throw(("expected '<eof>', got '%s'"):format(current_token))
+		end
+	else
+		if current_token ~= "}" then
+			insert(compile_lines, return_list())
+		end
+		if current_token ~= "}" then
+			throw(("expected '}', got '%s'"):format(current_token))
+		end
+	end
+	return compile_lines
+end
+local function parameters()
+	local compile_lines = {}
+	local names = {}
+	local has_varargs = false
+	surround_list("(", ")", function()
+		if branch("...") then
+			has_varargs = true
+			insert(names, "...")
+			if current_token ~= ")" then
+				insert(compile_lines, ("local " .. tostring(name()) .. " = { ... }"))
+			end
+			branch(",")
+			expect(")", true)
+		else
+			local var = variable()
+			local name = type(var) == "string" and var or var.compile_name
+			insert(names, name)
+			if branch("=") then
+				insert(compile_lines, ("if " .. tostring(name) .. " == nil then " .. tostring(name) .. " = "))
+				insert(compile_lines, expression())
+				insert(compile_lines, "end")
+			end
+			if type(var) == "table" then
+				insert(compile_lines, "local " .. table.concat(var.names, ","))
+				insert(compile_lines, var.compile_lines)
+			end
+		end
+	end, true)
+	return {
+		names = names,
+		compile_lines = compile_lines,
+		has_varargs = has_varargs,
+	}
+end
+local function arrow_function_expression()
+	local compile_lines = {}
+	local param_names = {}
+	local old_is_varargs_block = is_varargs_block
+	if current_token == "(" then
+		local params = parameters()
+		is_varargs_block = params.has_varargs
+		param_names = params.names
+		insert(compile_lines, params.compile_lines)
+	else
+		local var = variable()
+		is_varargs_block = false
+		if type(var) == "string" then
+			insert(param_names, var)
+		else
+			insert(param_names, var.compile_name)
+			insert(compile_lines, "local " .. table.concat(var.names, ","))
+			insert(compile_lines, var.compile_lines)
+		end
+	end
+	if current_token == "->" then
+		consume()
+	elseif current_token == "=>" then
+		insert(param_names, 1, "self")
+		consume()
+	elseif current_token == nil then
+		throw("unexpected eof (expected '->' or '=>')", token_lines[current_token_index - 1])
+	else
+		throw(("unexpected token '" .. tostring(current_token) .. "' (expected '->' or '=>')"))
+	end
+	insert(compile_lines, 1, ("function(" .. tostring(concat(param_names, ",")) .. ")"))
+	if current_token == "{" then
+		insert(compile_lines, surround("{", "}", function_block))
+	else
+		insert(compile_lines, {
+			"return",
+			return_list(true),
+		})
+	end
+	is_varargs_block = old_is_varargs_block
+	insert(compile_lines, "end")
+	return compile_lines
+end
+local function function_statement()
+	local compile_lines = {}
+	local scope_line, scope = current_line, nil
+	if current_token == "local" or current_token == "module" then
+		scope = consume()
+		insert(compile_lines, "local")
+		insert(compile_lines, consume())
+	elseif current_token == "global" then
+		scope = consume()
+		insert(compile_lines, consume())
+	elseif current_token == "function" then
+		insert(compile_lines, consume())
+	else
+		throw(("unexpected token '" .. tostring(current_token) .. "' (expected scope)"))
+	end
+	if scope == "module" then
+		if block_depth > 1 then
+			throw("module declarations must appear at the top level", scope_line)
+		end
+		has_module_declarations = true
+	end
+	local signature = name()
+	local is_table_value = current_token == "."
+	if scope == "global" then
+		signature = "_G." .. signature
+		is_table_value = true
+	end
+	while branch(".") do
+		signature = signature .. "." .. name()
+	end
+	if branch(":") then
+		is_table_value = true
+		signature = signature .. ":" .. name()
+	end
+	if is_table_value and (scope == "local" or scope == "module") then
+		throw("cannot use scopes for table values", scope_line)
+	end
+	insert(compile_lines, signature)
+	local params = parameters()
+	insert(compile_lines, "(" .. concat(params.names, ",") .. ")")
+	insert(compile_lines, params.compile_lines)
+	local old_is_varargs_block = is_varargs_block
+	is_varargs_block = params.has_varargs
+	insert(compile_lines, surround("{", "}", function_block))
+	is_varargs_block = old_is_varargs_block
+	insert(compile_lines, "end")
+	if scope == "module" then
+		insert(compile_lines, ("_MODULE." .. tostring(signature) .. " = " .. tostring(signature)))
+	end
+	return compile_lines
+end
 local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 	local chain = {}
 	local is_function_call = false
@@ -398,108 +652,6 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 		block_compile_lines = block_compile_lines,
 	}
 end
-local function return_list(require_list_parens)
-	local compile_lines = {}
-	if current_token ~= "(" then
-		insert(compile_lines, require_list_parens and expression() or weave(list(expression)))
-	else
-		local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
-		if look_ahead_limit_token == "->" or look_ahead_limit_token == "=>" then
-			insert(compile_lines, expression())
-		else
-			local is_list = false
-			for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
-				local look_ahead_token = tokens[look_ahead_token_index]
-				if SURROUND_ENDS[look_ahead_token] then
-					look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
-				end
-				if look_ahead_token == "," then
-					is_list = true
-					break
-				end
-			end
-			insert(compile_lines, is_list and weave(surround_list("(", ")", expression)) or expression())
-		end
-	end
-	return compile_lines
-end
-local function parameters()
-	local compile_lines = {}
-	local names = {}
-	local has_varargs = false
-	surround_list("(", ")", function()
-		if branch("...") then
-			has_varargs = true
-			insert(names, "...")
-			if current_token ~= ")" then
-				insert(compile_lines, ("local " .. tostring(name()) .. " = { ... }"))
-			end
-			branch(",")
-			expect(")", true)
-		else
-			local var = variable()
-			local name = type(var) == "string" and var or var.compile_name
-			insert(names, name)
-			if branch("=") then
-				insert(compile_lines, ("if " .. tostring(name) .. " == nil then " .. tostring(name) .. " = "))
-				insert(compile_lines, expression())
-				insert(compile_lines, "end")
-			end
-			if type(var) == "table" then
-				insert(compile_lines, "local " .. table.concat(var.names, ","))
-				insert(compile_lines, var.compile_lines)
-			end
-		end
-	end, true)
-	return {
-		names = names,
-		compile_lines = compile_lines,
-		has_varargs = has_varargs,
-	}
-end
-local function arrow_function_expression()
-	local compile_lines = {}
-	local param_names = {}
-	local old_is_varargs_block = is_varargs_block
-	if current_token == "(" then
-		local params = parameters()
-		is_varargs_block = params.has_varargs
-		param_names = params.names
-		insert(compile_lines, params.compile_lines)
-	else
-		local var = variable()
-		is_varargs_block = false
-		if type(var) == "string" then
-			insert(param_names, var)
-		else
-			insert(param_names, var.compile_name)
-			insert(compile_lines, "local " .. table.concat(var.names, ","))
-			insert(compile_lines, var.compile_lines)
-		end
-	end
-	if current_token == "->" then
-		consume()
-	elseif current_token == "=>" then
-		insert(param_names, 1, "self")
-		consume()
-	elseif current_token == nil then
-		throw("unexpected eof (expected '->' or '=>')", token_lines[current_token_index - 1])
-	else
-		throw(("unexpected token '" .. tostring(current_token) .. "' (expected '->' or '=>')"))
-	end
-	insert(compile_lines, 1, ("function(" .. tostring(concat(param_names, ",")) .. ")"))
-	if current_token == "{" then
-		insert(compile_lines, surround("{", "}", function_block))
-	else
-		insert(compile_lines, {
-			"return",
-			return_list(true),
-		})
-	end
-	is_varargs_block = old_is_varargs_block
-	insert(compile_lines, "end")
-	return compile_lines
-end
 local function index_chain_expression(...)
 	local index_chain = index_chain(...)
 	if not index_chain.needs_block_compile then
@@ -513,76 +665,6 @@ local function index_chain_expression(...)
 			"end)()",
 		}
 	end
-end
-local function interpolation_string_expression(start_quote, end_quote)
-	local compile_lines = {}
-	local content_line, content = current_line, consume()
-	local is_block_string = start_quote:sub(1, 1) == "["
-	if current_token == end_quote then
-		insert(compile_lines, content .. consume())
-		return compile_lines
-	end
-	repeat
-		if current_token == "{" then
-			if content ~= start_quote then
-				insert(compile_lines, content_line)
-				insert(compile_lines, content .. end_quote)
-			end
-			insert(compile_lines, {
-				"tostring(",
-				surround("{", "}", expression),
-				")",
-			})
-			content_line, content = current_line, start_quote
-			if is_block_string and current_token:sub(1, 1) == "\n" then
-				content = content .. "\n" .. consume()
-			end
-		else
-			content = content .. consume()
-		end
-	until current_token == end_quote
-	if content ~= start_quote then
-		insert(compile_lines, content_line)
-		insert(compile_lines, content .. end_quote)
-	end
-	consume()
-	return weave(compile_lines, "..")
-end
-local function single_quote_string_expression()
-	local content_line, content = current_line, consume()
-	if current_token ~= "'" then
-		content = content .. consume()
-	end
-	content = content .. consume()
-	return {
-		content_line,
-		content,
-	}
-end
-local function table_expression()
-	local compile_lines = {}
-	surround_list("{", "}", function()
-		if current_token == "[" then
-			insert(compile_lines, "[")
-			insert(compile_lines, surround("[", "]", expression))
-			insert(compile_lines, "]")
-			insert(compile_lines, expect("="))
-		elseif look_ahead(1) == "=" then
-			local key = name(true)
-			if LUA_KEYWORDS[key] then
-				insert(compile_lines, ("['" .. tostring(key) .. "']") .. consume())
-			else
-				insert(compile_lines, key .. consume())
-			end
-		end
-		insert(compile_lines, expression())
-		insert(compile_lines, ",")
-	end, true)
-	return {
-		"{",
-		compile_lines,
-		"}",
-	}
 end
 local function terminal_expression()
 	ensure(current_token ~= nil, "unexpected eof")
@@ -601,27 +683,21 @@ local function terminal_expression()
 			consume(),
 		}
 	elseif current_token == "'" then
-		local terminal_line = current_line
-		local string_line, erde_string = current_line, consume()
-		if current_token ~= "'" then
-			erde_string = erde_string .. consume()
-		end
-		erde_string = erde_string .. consume()
 		return index_chain_expression({
 			"(",
-			erde_string,
+			single_quote_string(),
 			")",
 		}, true)
 	elseif current_token == '"' then
 		return index_chain_expression({
 			"(",
-			interpolation_string_expression('"', '"'),
+			double_quote_string(),
 			")",
 		}, false)
 	elseif current_token:match("^%[[[=]") then
 		return index_chain_expression({
 			"(",
-			interpolation_string_expression(current_token, current_token:gsub("%[", "]")),
+			block_string(),
 			")",
 		}, false)
 	end
@@ -634,7 +710,7 @@ local function terminal_expression()
 	if is_arrow_function then
 		return arrow_function_expression()
 	elseif current_token == "{" then
-		return table_expression()
+		return table_constructor()
 	elseif current_token == "(" then
 		return index_chain_expression({
 			"(",
@@ -710,6 +786,126 @@ function expression(min_prec)
 	end
 	return compile_lines
 end
+local function do_statement()
+	local compile_lines = {}
+	insert(compile_lines, consume())
+	insert(compile_lines, surround("{", "}", block))
+	insert(compile_lines, "end")
+	return compile_lines
+end
+local function if_else_statement()
+	local compile_lines = {}
+	insert(compile_lines, consume())
+	insert(compile_lines, expression())
+	insert(compile_lines, "then")
+	insert(compile_lines, surround("{", "}", block))
+	while current_token == "elseif" do
+		insert(compile_lines, consume())
+		insert(compile_lines, expression())
+		insert(compile_lines, "then")
+		insert(compile_lines, surround("{", "}", block))
+	end
+	if current_token == "else" then
+		insert(compile_lines, consume())
+		insert(compile_lines, surround("{", "}", block))
+	end
+	insert(compile_lines, "end")
+	return compile_lines
+end
+local function for_loop_statement()
+	local compile_lines = {
+		consume(),
+	}
+	local pre_body_compile_lines = {}
+	if look_ahead(1) == "=" then
+		insert(compile_lines, current_line)
+		insert(compile_lines, name())
+		insert(compile_lines, current_line)
+		insert(compile_lines, consume())
+		local expr_list_line = current_line
+		local expr_list = list(expression)
+		local expr_list_len = #expr_list
+		if expr_list_len < 2 then
+			throw("missing loop parameters (must supply 2-3 params)", expr_list_line)
+		elseif expr_list_len > 3 then
+			throw("too many loop parameters (must supply 2-3 params)", expr_list_line)
+		end
+		insert(compile_lines, weave(expr_list))
+	else
+		local names = {}
+		for _, var in ipairs(list(variable)) do
+			if type(var) == "string" then
+				insert(names, var)
+			else
+				insert(names, var.compile_name)
+				insert(pre_body_compile_lines, "local " .. table.concat(var.names, ","))
+				insert(pre_body_compile_lines, var.compile_lines)
+			end
+		end
+		insert(compile_lines, weave(names))
+		insert(compile_lines, expect("in"))
+		insert(compile_lines, weave(list(expression)))
+	end
+	insert(compile_lines, "do")
+	insert(compile_lines, pre_body_compile_lines)
+	insert(compile_lines, surround("{", "}", loop_block))
+	insert(compile_lines, "end")
+	return compile_lines
+end
+local function repeat_until_statement()
+	local compile_lines = {}
+	insert(compile_lines, consume())
+	insert(compile_lines, surround("{", "}", loop_block))
+	insert(compile_lines, expect("until"))
+	insert(compile_lines, expression())
+	return compile_lines
+end
+local function while_loop_statement()
+	local compile_lines = {}
+	insert(compile_lines, consume())
+	insert(compile_lines, expression())
+	insert(compile_lines, "do")
+	insert(compile_lines, surround("{", "}", loop_block))
+	insert(compile_lines, "end")
+	return compile_lines
+end
+local function break_statement()
+	ensure(break_name ~= nil, "cannot use 'break' outside of loop")
+	return {
+		current_line,
+		consume(),
+	}
+end
+local function continue_statement()
+	ensure(break_name ~= nil, "cannot use 'continue' outside of loop")
+	has_continue = true
+	consume()
+	return (lua_target == "5.1" or lua_target == "5.1+") and {
+		break_name .. " = false break",
+	} or {
+		"goto " .. break_name,
+	}
+end
+local function goto_jump_statement()
+	local compile_lines = {}
+	if lua_target == "5.1" or lua_target == "5.1+" then
+		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
+	end
+	insert(compile_lines, current_line)
+	insert(compile_lines, consume())
+	insert(compile_lines, current_line)
+	insert(compile_lines, name())
+	return compile_lines
+end
+local function goto_label_statement()
+	local compile_lines = {}
+	if lua_target == "5.1" or lua_target == "5.1+" then
+		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
+	end
+	insert(compile_lines, current_line)
+	insert(compile_lines, consume() .. name() .. expect("::"))
+	return compile_lines
+end
 local function assignment_statement(first_id)
 	local compile_lines = {}
 	local index_chains = {
@@ -778,23 +974,6 @@ local function assignment_statement(first_id)
 	end
 	return compile_lines
 end
-local function break_statement()
-	ensure(break_name ~= nil, "cannot use 'break' outside of loop")
-	return {
-		current_line,
-		consume(),
-	}
-end
-local function continue_statement()
-	ensure(break_name ~= nil, "cannot use 'continue' outside of loop")
-	has_continue = true
-	consume()
-	return (lua_target == "5.1" or lua_target == "5.1+") and {
-		break_name .. " = false break",
-	} or {
-		"goto " .. break_name,
-	}
-end
 local function declaration_statement()
 	local scope = consume()
 	local compile_lines = {}
@@ -854,185 +1033,6 @@ local function declaration_statement()
 			)
 		end
 	end
-	return compile_lines
-end
-local function do_statement()
-	local compile_lines = {}
-	insert(compile_lines, consume())
-	insert(compile_lines, surround("{", "}", block))
-	insert(compile_lines, "end")
-	return compile_lines
-end
-local function for_loop_statement()
-	local compile_lines = {
-		consume(),
-	}
-	local pre_body_compile_lines = {}
-	if look_ahead(1) == "=" then
-		insert(compile_lines, current_line)
-		insert(compile_lines, name())
-		insert(compile_lines, current_line)
-		insert(compile_lines, consume())
-		local expr_list_line = current_line
-		local expr_list = list(expression)
-		local expr_list_len = #expr_list
-		if expr_list_len < 2 then
-			throw("missing loop parameters (must supply 2-3 params)", expr_list_line)
-		elseif expr_list_len > 3 then
-			throw("too many loop parameters (must supply 2-3 params)", expr_list_line)
-		end
-		insert(compile_lines, weave(expr_list))
-	else
-		local names = {}
-		for _, var in ipairs(list(variable)) do
-			if type(var) == "string" then
-				insert(names, var)
-			else
-				insert(names, var.compile_name)
-				insert(pre_body_compile_lines, "local " .. table.concat(var.names, ","))
-				insert(pre_body_compile_lines, var.compile_lines)
-			end
-		end
-		insert(compile_lines, weave(names))
-		insert(compile_lines, expect("in"))
-		insert(compile_lines, weave(list(expression)))
-	end
-	insert(compile_lines, "do")
-	insert(compile_lines, pre_body_compile_lines)
-	insert(compile_lines, surround("{", "}", loop_block))
-	insert(compile_lines, "end")
-	return compile_lines
-end
-local function function_statement()
-	local compile_lines = {}
-	local scope_line, scope = current_line, nil
-	if current_token == "local" or current_token == "module" then
-		scope = consume()
-		insert(compile_lines, "local")
-		insert(compile_lines, consume())
-	elseif current_token == "global" then
-		scope = consume()
-		insert(compile_lines, consume())
-	elseif current_token == "function" then
-		insert(compile_lines, consume())
-	else
-		throw(("unexpected token '" .. tostring(current_token) .. "' (expected scope)"))
-	end
-	if scope == "module" then
-		if block_depth > 1 then
-			throw("module declarations must appear at the top level", scope_line)
-		end
-		has_module_declarations = true
-	end
-	local signature = name()
-	local is_table_value = current_token == "."
-	if scope == "global" then
-		signature = "_G." .. signature
-		is_table_value = true
-	end
-	while branch(".") do
-		signature = signature .. "." .. name()
-	end
-	if branch(":") then
-		is_table_value = true
-		signature = signature .. ":" .. name()
-	end
-	if is_table_value and (scope == "local" or scope == "module") then
-		throw("cannot use scopes for table values", scope_line)
-	end
-	insert(compile_lines, signature)
-	local params = parameters()
-	insert(compile_lines, "(" .. concat(params.names, ",") .. ")")
-	insert(compile_lines, params.compile_lines)
-	local old_is_varargs_block = is_varargs_block
-	is_varargs_block = params.has_varargs
-	insert(compile_lines, surround("{", "}", function_block))
-	is_varargs_block = old_is_varargs_block
-	insert(compile_lines, "end")
-	if scope == "module" then
-		insert(compile_lines, ("_MODULE." .. tostring(signature) .. " = " .. tostring(signature)))
-	end
-	return compile_lines
-end
-local function goto_jump_statement()
-	local compile_lines = {}
-	if lua_target == "5.1" or lua_target == "5.1+" then
-		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
-	end
-	insert(compile_lines, current_line)
-	insert(compile_lines, consume())
-	insert(compile_lines, current_line)
-	insert(compile_lines, name())
-	return compile_lines
-end
-local function goto_label_statement()
-	local compile_lines = {}
-	if lua_target == "5.1" or lua_target == "5.1+" then
-		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
-	end
-	insert(compile_lines, current_line)
-	insert(compile_lines, consume() .. name() .. expect("::"))
-	return compile_lines
-end
-local function if_else_statement()
-	local compile_lines = {}
-	insert(compile_lines, consume())
-	insert(compile_lines, expression())
-	insert(compile_lines, "then")
-	insert(compile_lines, surround("{", "}", block))
-	while current_token == "elseif" do
-		insert(compile_lines, consume())
-		insert(compile_lines, expression())
-		insert(compile_lines, "then")
-		insert(compile_lines, surround("{", "}", block))
-	end
-	if current_token == "else" then
-		insert(compile_lines, consume())
-		insert(compile_lines, surround("{", "}", block))
-	end
-	insert(compile_lines, "end")
-	return compile_lines
-end
-local function repeat_until_statement()
-	local compile_lines = {}
-	insert(compile_lines, consume())
-	insert(compile_lines, surround("{", "}", loop_block))
-	insert(compile_lines, expect("until"))
-	insert(compile_lines, expression())
-	return compile_lines
-end
-local function return_statement()
-	local compile_lines = {
-		current_line,
-		consume(),
-	}
-	if is_module_return_block then
-		has_module_return = true
-	end
-	if block_depth == 1 then
-		if current_token then
-			insert(compile_lines, return_list())
-		end
-		if current_token then
-			throw(("expected '<eof>', got '%s'"):format(current_token))
-		end
-	else
-		if current_token ~= "}" then
-			insert(compile_lines, return_list())
-		end
-		if current_token ~= "}" then
-			throw(("expected '}', got '%s'"):format(current_token))
-		end
-	end
-	return compile_lines
-end
-local function while_loop_statement()
-	local compile_lines = {}
-	insert(compile_lines, consume())
-	insert(compile_lines, expression())
-	insert(compile_lines, "do")
-	insert(compile_lines, surround("{", "}", loop_block))
-	insert(compile_lines, "end")
 	return compile_lines
 end
 local function statement()

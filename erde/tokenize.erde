@@ -1,6 +1,14 @@
 local config = require('erde.config')
-local { DIGIT, HEX, STANDARD_ESCAPE_CHARS, SYMBOLS, WORD_BODY, WORD_HEAD } = require('erde.constants')
-local utils = require('erde.utils')
+local {
+  DIGIT,
+  HEX,
+  STANDARD_ESCAPE_CHARS,
+  SYMBOLS,
+  TOKEN_TYPE,
+  WORD_BODY,
+  WORD_HEAD,
+} = require('erde.constants')
+local { get_source_alias } = require('erde.utils')
 
 -- Foward declare
 local tokenize_token
@@ -9,7 +17,7 @@ local tokenize_token
 -- State
 -- -----------------------------------------------------------------------------
 
--- The source text to tokenize (erde)
+-- The source text to tokenize
 local text = ''
 
 -- The current character we are processing
@@ -21,18 +29,7 @@ local current_char_index = 1
 -- The line number of `current_char` in `text`
 local current_line = 1
 
--- `local text` as an array of tokens
-local tokens = {}
-
--- Equivalent to `#tokens`, but selfd separately purely as optimization.
-local num_tokens = 0
-
--- Table for looking up the line number for any token.
---
--- For example, `token_lines[3]` gives the line number of the third token.
-local token_lines = {}
-
--- The name to use when referencing `store.text`. Used for error reporting.
+-- The name to use when referencing `text`. Used for error reporting.
 local source_name = ''
 
 -- -----------------------------------------------------------------------------
@@ -66,15 +63,130 @@ local function consume(n = 1) {
 }
 
 -- -----------------------------------------------------------------------------
--- Partials
---
--- These functions do not commit anything, and instead have non-trivial returns.
+-- Newline
 -- -----------------------------------------------------------------------------
 
 local function newline() {
   current_line += 1
-  return consume()
+  return consume() -- '\n'
 }
+
+-- -----------------------------------------------------------------------------
+-- Numbers
+-- -----------------------------------------------------------------------------
+
+local function tokenize_binary() {
+  consume(2) -- 0[bB]
+
+  if current_char != '0' && current_char != '1' {
+    throw('malformed binary')
+  }
+
+  local value = 0
+
+  repeat {
+    value = 2 * value + tonumber(consume())
+  } until current_char != '0' && current_char != '1'
+
+  return {
+    type = TOKEN_TYPE.NUMBER,
+    line = current_line,
+    value = tostring(value),
+  }
+}
+
+local function tokenize_decimal() {
+  local value = ''
+
+  while DIGIT[current_char] {
+    value ..= consume()
+  }
+
+  if current_char == '.' && DIGIT[look_ahead(1)] {
+    value ..= consume(2)
+
+    while DIGIT[current_char] {
+      value ..= consume()
+    }
+  }
+
+  if current_char == 'e' || current_char == 'E' {
+    value ..= consume()
+
+    if current_char == '+' || current_char == '-' {
+      value ..= consume()
+    }
+
+    if !DIGIT[current_char] {
+      throw('missing exponent value')
+    }
+
+    while DIGIT[current_char] {
+      value ..= consume()
+    }
+  }
+
+  return {
+    type = TOKEN_TYPE.NUMBER,
+    line = current_line,
+    value = value,
+  }
+}
+
+local function tokenize_hex() {
+  consume(2) -- 0[xX]
+
+  if !HEX[current_char] && !(current_char == '.' && HEX[look_ahead(1)]) {
+    throw('malformed hex')
+  }
+
+  local value = 0
+
+  while HEX[current_char] {
+    value = 16 * value + tonumber(consume(), 16)
+  }
+
+  if current_char == '.' && HEX[look_ahead(1)] {
+    consume()
+
+    local counter = 1
+
+    repeat {
+      value += tonumber(consume(), 16) / (16 ^ counter)
+      counter += 1
+    } until !HEX[current_char]
+  }
+
+  if current_char == 'p' || current_char == 'P' {
+    consume()
+
+    local exponent, sign = 0, 1
+
+    if current_char == '+' || current_char == '-' {
+      sign *= tonumber(consume() .. '1')
+    }
+
+    if !DIGIT[current_char] {
+      throw('missing exponent value')
+    }
+
+    repeat {
+      exponent = 10 * exponent + tonumber(consume())
+    } until !DIGIT[current_char]
+
+    value = value * 2 ^ (sign * exponent)
+  }
+
+  return {
+    type = TOKEN_TYPE.NUMBER,
+    line = current_line,
+    value = tostring(value),
+  }
+}
+
+-- -----------------------------------------------------------------------------
+-- Strings
+-- -----------------------------------------------------------------------------
 
 local function escape_sequence() {
   if STANDARD_ESCAPE_CHARS[current_char] {
@@ -98,11 +210,13 @@ local function escape_sequence() {
 
     return consume(3)
   } elseif current_char == 'u' {
-    local sequence = consume() -- u
-
     if config.lua_target == '5.1' || config.lua_target == '5.1+' || config.lua_target == '5.2' || config.lua_target == '5.2+' {
       throw('escape sequence \\u{XXX} not compatible w/ lua targets 5.1, 5.1+, 5.2, 5.2+')
-    } elseif current_char != '{' {
+    }
+
+    local sequence = consume() -- u
+
+    if current_char != '{' {
       throw('missing { in escape sequence \\u{XXX}')
     }
 
@@ -126,132 +240,42 @@ local function escape_sequence() {
   }
 }
 
--- -----------------------------------------------------------------------------
--- Number Tokenizers
--- -----------------------------------------------------------------------------
-
-local function tokenize_binary() {
-  consume(2) -- 0[bB]
-  local token = 0
-
-  if current_char != '0' && current_char != '1' {
-    throw('malformed binary')
-  }
-
-  repeat {
-    token = 2 * token + tonumber(consume())
-  } until current_char != '0' && current_char != '1'
-
-  commit(tostring(token))
-}
-
-local function tokenize_decimal() {
-  local token = ''
-
-  while DIGIT[current_char] {
-    token ..= consume()
-  }
-
-  if current_char == '.' && DIGIT[look_ahead(1)] {
-    token ..= consume(2)
-    while DIGIT[current_char] {
-      token ..= consume()
-    }
-  }
-
-  if current_char == 'e' || current_char == 'E' {
-    token ..= consume()
-
-    if current_char == '+' || current_char == '-' {
-      token ..= consume()
-    }
-
-    if !DIGIT[current_char] {
-      throw('missing exponent value')
-    }
-
-    while DIGIT[current_char] {
-      token ..= consume()
-    }
-  }
-
-  commit(token)
-}
-
-local function tokenize_hex() {
-  consume(2) -- 0[xX]
-  local token = 0
-
-  if !HEX[current_char] && !(current_char == '.' && HEX[look_ahead(1)]) {
-    throw('malformed hex')
-  }
-
-  while HEX[current_char] {
-    token = 16 * token + tonumber(consume(), 16)
-  }
-
-  if current_char == '.' && HEX[look_ahead(1)] {
-    consume()
-    local counter = 1
-
-    repeat {
-      token += tonumber(consume(), 16) / (16 ^ counter)
-      counter += 1
-    } until !HEX[current_char]
-  }
-
-  if current_char == 'p' || current_char == 'P' {
-    consume()
-    local exponent, sign = 0, 1
-
-    if current_char == '+' || current_char == '-' {
-      sign *= tonumber(consume() .. '1')
-    }
-
-    if !DIGIT[current_char] {
-      throw('missing exponent value')
-    }
-
-    repeat {
-      exponent = 10 * exponent + tonumber(consume())
-    } until !DIGIT[current_char]
-
-    token = token * 2 ^ (sign * exponent)
-  }
-
-  commit(tostring(token))
-}
-
--- -----------------------------------------------------------------------------
--- String Tokenizers
--- -----------------------------------------------------------------------------
-
 local function tokenize_interpolation() {
-  commit(consume()) -- '{'
+  consume() -- '{'
 
-  -- Keep track of brace depth to differentiate end of interpolation from
-  -- nested braces
-  local brace_depth, interpolation_line = 0, current_line
+  local token = { type = TOKEN_TYPE.INTERPOLATION }
+  local interpolation_line = current_line
+  local brace_depth = 0 -- Keep track of brace depth in case of nested braces
 
   while current_char != '}' || brace_depth > 0 {
     if current_char == '{' {
       brace_depth += 1
-      commit(consume())
+
+      table.insert(token, {
+        type = TOKEN_TYPE.SYMBOL,
+        value = consume(),
+      })
     } elseif current_char == '}' {
       brace_depth -= 1
-      commit(consume())
+
+      table.insert(token, {
+        type = TOKEN_TYPE.SYMBOL,
+        value = consume(),
+      })
     } elseif current_char == '' {
       throw('unterminated interpolation', interpolation_line)
     } else {
-      tokenize_token()
+      table.insert(token, tokenize_token())
     }
   }
 
-  commit(consume()) -- '}'
+  consume() -- '}'
+
+  return token
 }
 
 local function tokenize_single_quote_string() {
-  commit(consume()) -- quote
+  consume() -- "'"
 
   local content = ''
 
@@ -265,47 +289,75 @@ local function tokenize_single_quote_string() {
     }
   }
 
-  if content != '' {
-    commit(content)
-  }
+  consume() -- "'"
 
-  commit(consume()) -- quote
+  return {
+    type = TOKEN_TYPE.SINGLE_QUOTE_STRING,
+    line = current_line,
+    value = content,
+  }
 }
 
 local function tokenize_double_quote_string() {
-  commit(consume()) -- quote
+  consume() -- '"'
 
-  -- Keep track of content_line in case interpolation has newline
-  local content_line, content = current_line, ''
+  local token = {
+    type = TOKEN_TYPE.DOUBLE_QUOTE_STRING,
+    line = current_line,
+  }
+
+  local content = ''
 
   while current_char != '"' {
     if current_char == '' || current_char == '\n' {
       throw('unterminated string')
     } elseif current_char == '\\' {
       consume()
-      content ..= ((current_char == '{' || current_char == '}') && consume() || '\\' .. escape_sequence())
+
+      if current_char == '{' || current_char == '}' {
+        content ..= consume()
+      } else {
+        content ..= '\\' .. escape_sequence()
+      }
     } elseif current_char == '{' {
-      if content != '' { commit(content, content_line) }
-      content_line, content = current_line, ''
-      tokenize_interpolation(tokenize_token)
+      if content != '' {
+        table.insert(token, {
+          type = TOKEN_TYPE.STRING_CONTENT,
+          value = content,
+        })
+
+        content = ''
+      }
+
+      table.insert(token, tokenize_interpolation())
     } else {
       content ..= consume()
     }
   }
 
+  consume() -- '"'
+
   if content != '' {
-    commit(content, content_line)
+    table.insert(token, {
+      type = TOKEN_TYPE.STRING_CONTENT,
+      value = content,
+    })
   }
 
-  commit(consume()) -- quote
+  return token
 }
 
 local function tokenize_block_string() {
   consume() -- '['
 
-  local equals = ''
+  local token = {
+    type = TOKEN_TYPE.BLOCK_STRING,
+    line = current_line,
+    equals = '',
+  }
+
   while current_char == '=' {
-    equals ..= consume()
+    token.equals ..= consume()
   }
 
   if current_char != '[' {
@@ -313,35 +365,51 @@ local function tokenize_block_string() {
   }
 
   consume() -- '['
-  commit('[' .. equals .. '[')
 
-  local close_quote = ']' .. equals .. ']'
+  local close_quote = ']' .. token.equals .. ']'
   local close_quote_len = #close_quote
-  local content_line, content = current_line, ''
+  local content = ''
 
   -- Check `current_char ~= ']'` first as slight optimization
   while current_char != ']' || peek(close_quote_len) != close_quote {
     if current_char == '' {
-      throw('unterminated block string', content_line)
+      throw('unterminated block string', token.line)
     } elseif current_char == '\n' {
       content ..= newline()
     } elseif current_char == '\\' {
       consume()
-      content ..= ((current_char == '{' || current_char == '}') && consume() || '\\')
+
+      if current_char == '{' || current_char == '}' {
+        content ..= consume()
+      } else {
+        content ..= '\\' .. escape_sequence()
+      }
     } elseif current_char == '{' {
-      if content != '' { commit(content, content_line) }
-      content_line, content = current_line, ''
-      tokenize_interpolation(tokenize_token)
+      if content != '' {
+        table.insert(token, {
+          type = TOKEN_TYPE.STRING_CONTENT,
+          value = content,
+        })
+
+        content = ''
+      }
+
+      table.insert(token, tokenize_interpolation())
     } else {
       content ..= consume()
     }
   }
 
+  consume(close_quote_len)
+
   if content != '' {
-    commit(content, content_line)
+    table.insert(token, {
+      type = TOKEN_TYPE.STRING_CONTENT,
+      value = content,
+    })
   }
 
-  commit(consume(close_quote_len))
+  return token
 }
 
 -- -----------------------------------------------------------------------------
@@ -349,13 +417,17 @@ local function tokenize_block_string() {
 -- -----------------------------------------------------------------------------
 
 local function tokenize_word() {
-  local token = consume()
+  local word = consume()
 
   while WORD_BODY[current_char] {
-    token ..= consume()
+    word ..= consume()
   }
 
-  commit(token)
+  return {
+    type = TOKEN_TYPE.WORD,
+    line = current_line,
+    value = word,
+  }
 }
 
 local function tokenize_comment() {
@@ -406,29 +478,42 @@ function tokenize_token() {
   } elseif current_char == ' ' || current_char == '\t' {
     consume()
   } elseif WORD_HEAD[current_char] {
-    tokenize_word()
+    return tokenize_word()
   } elseif current_char == "'" {
-    tokenize_single_quote_string()
+    return tokenize_single_quote_string()
   } elseif current_char == '"' {
-    tokenize_double_quote_string(tokenize_token)
+    return tokenize_double_quote_string()
   } else {
     local peek_two = peek(2)
+
     if peek_two == '--' {
       tokenize_comment()
     } elseif peek_two == '0x' || peek_two == '0X' {
-      tokenize_hex()
+      return tokenize_hex()
     } elseif peek_two == '0b' || peek_two == '0B' {
-      tokenize_binary()
+      return tokenize_binary()
     } elseif DIGIT[current_char] || (current_char == '.' && DIGIT[look_ahead(1)]) {
-      tokenize_decimal()
+      return tokenize_decimal()
     } elseif peek_two == '[[' || peek_two == '[=' {
-      tokenize_block_string(tokenize_token)
+      return tokenize_block_string()
     } elseif SYMBOLS[peek(3)] {
-      commit(consume(3))
+      return {
+        type = TOKEN_TYPE.SYMBOL,
+        line = current_line,
+        value = consume(3),
+      }
     } elseif SYMBOLS[peek_two] {
-      commit(consume(2))
+      return {
+        type = TOKEN_TYPE.SYMBOL,
+        line = current_line,
+        value = consume(2),
+      }
     } else {
-      commit(consume())
+      return {
+        type = TOKEN_TYPE.SYMBOL,
+        line = current_line,
+        value = consume(1),
+      }
     }
   }
 }
@@ -442,28 +527,30 @@ return (new_text, new_source_name) -> {
   current_char = text:sub(1, 1)
   current_char_index = 1
   current_line = 1
-  tokens = {}
-  num_tokens = 0
-  token_lines = {}
-  source_name = new_source_name || utils.get_source_alias(text)
+  source_name = new_source_name || get_source_alias(text)
+
+  local tokens = {}
 
   if peek(2) == '#!' {
-    local token = consume(2)
+    local shebang = consume(2)
 
     while current_char != '' && current_char != '\n' {
-      token ..= consume()
+      shebang ..= consume()
     }
 
-    commit(token)
+    table.insert(tokens, {
+      type = TOKEN_TYPE.SHEBANG,
+      value = shebang,
+    })
   }
 
   while current_char != '' {
-    tokenize_token()
+    local token = tokenize_token()
+
+    if token != nil {
+      table.insert(tokens, token)
+    }
   }
 
-  return {
-    tokens = tokens,
-    num_tokens = num_tokens,
-    token_lines = token_lines,
-  }
+  return tokens
 }
