@@ -18,7 +18,7 @@ local tokenize = require('erde.tokenize')
 local { get_source_alias } = require('erde.utils')
 
 -- Foward declare
-local expression, block, loop_block, function_block
+local expression, block
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -56,11 +56,10 @@ local is_varargs_block
 -- Name for the current source being compiled (used in error messages)
 local alias
 
--- Lua target
+-- Lua targets to support when generating compiled code.
 local lua_target
 
--- Resolved bit library to use for compiling bit operations. Undefined when
--- compiling to Lua 5.3+ native operators.
+-- Resolved bit library to use for compiling bit operations.
 local bitlib
 
 -- -----------------------------------------------------------------------------
@@ -495,6 +494,21 @@ local function parameters() {
   return { names = names, compile_lines = compile_lines, has_varargs = has_varargs }
 }
 
+local function function_block() {
+  local old_is_module_return_block = is_module_return_block
+  local old_break_name = break_name
+
+  is_module_return_block = false
+  break_name = nil
+
+  local compile_lines = block()
+
+  is_module_return_block = old_is_module_return_block
+  break_name = old_break_name
+
+  return compile_lines
+}
+
 local function arrow_function_expression() {
   local compile_lines = {}
   local param_names = {}
@@ -853,8 +867,20 @@ function expression(min_prec = 1) {
 }
 
 -- -----------------------------------------------------------------------------
--- Loops
+-- Blocks
 -- -----------------------------------------------------------------------------
+
+function block() {
+  local compile_lines = {}
+  block_depth += 1
+
+  while current_token != '}' {
+    insert(compile_lines, statement())
+  }
+
+  block_depth -= 1
+  return compile_lines
+}
 
 local function do_statement() {
   local compile_lines = {}
@@ -866,27 +892,47 @@ local function do_statement() {
   return compile_lines
 }
 
-local function if_else_statement() {
-  local compile_lines = {}
+-- -----------------------------------------------------------------------------
+-- Loops
+-- -----------------------------------------------------------------------------
 
-  insert(compile_lines, consume())
-  insert(compile_lines, expression())
-  insert(compile_lines, 'then')
-  insert(compile_lines, surround('{', '}', block))
+local function break_statement() {
+  ensure(break_name != nil, "cannot use 'break' outside of loop")
+  return { current_line, consume() }
+}
 
-  while current_token == 'elseif' {
-    insert(compile_lines, consume())
-    insert(compile_lines, expression())
-    insert(compile_lines, 'then')
-    insert(compile_lines, surround('{', '}', block))
+local function continue_statement() {
+  ensure(break_name != nil, "cannot use 'continue' outside of loop")
+
+  has_continue = true
+  consume()
+
+  return (lua_target == '5.1' || lua_target == '5.1+')
+    && { break_name .. ' = false break' }
+    || { 'goto ' .. break_name }
+}
+
+local function loop_block() {
+  local old_break_name = break_name
+  local old_has_continue = has_continue
+
+  break_name = new_tmp_name()
+  has_continue = false
+
+  local compile_lines = block()
+
+  if has_continue {
+    if lua_target == '5.1' || lua_target == '5.1+' {
+      insert(compile_lines, 1, "local { break_name } = true repeat")
+      insert(compile_lines, "{ break_name } = false until true if { break_name } then break end")
+    } else {
+      insert(compile_lines, "::{ break_name }::")
+    }
   }
 
-  if current_token == 'else' {
-    insert(compile_lines, consume())
-    insert(compile_lines, surround('{', '}', block))
-  }
+  break_name = old_break_name
+  has_continue = old_has_continue
 
-  insert(compile_lines, 'end')
   return compile_lines
 }
 
@@ -969,22 +1015,6 @@ local function while_loop_statement() {
 -- Jumps
 -- -----------------------------------------------------------------------------
 
-local function break_statement() {
-  ensure(break_name != nil, "cannot use 'break' outside of loop")
-  return { current_line, consume() }
-}
-
-local function continue_statement() {
-  ensure(break_name != nil, "cannot use 'continue' outside of loop")
-
-  has_continue = true
-  consume()
-
-  return (lua_target == '5.1' || lua_target == '5.1+')
-    && { break_name .. ' = false break' }
-    || { 'goto ' .. break_name }
-}
-
 local function goto_jump_statement() {
   local compile_lines = {}
 
@@ -1010,6 +1040,30 @@ local function goto_label_statement() {
   insert(compile_lines, current_line)
   insert(compile_lines, consume() .. name() .. expect('::'))
 
+  return compile_lines
+}
+
+local function if_else_statement() {
+  local compile_lines = {}
+
+  insert(compile_lines, consume())
+  insert(compile_lines, expression())
+  insert(compile_lines, 'then')
+  insert(compile_lines, surround('{', '}', block))
+
+  while current_token == 'elseif' {
+    insert(compile_lines, consume())
+    insert(compile_lines, expression())
+    insert(compile_lines, 'then')
+    insert(compile_lines, surround('{', '}', block))
+  }
+
+  if current_token == 'else' {
+    insert(compile_lines, consume())
+    insert(compile_lines, surround('{', '}', block))
+  }
+
+  insert(compile_lines, 'end')
   return compile_lines
 }
 
@@ -1158,6 +1212,10 @@ local function declaration_statement() {
   return compile_lines
 }
 
+-- -----------------------------------------------------------------------------
+-- Statement
+-- -----------------------------------------------------------------------------
+
 local function statement() {
   local compile_lines = {}
 
@@ -1216,59 +1274,8 @@ local function statement() {
 }
 
 -- -----------------------------------------------------------------------------
--- Blocks
+-- Module
 -- -----------------------------------------------------------------------------
-
-function block() {
-  local compile_lines = {}
-  block_depth += 1
-
-  while current_token != '}' {
-    insert(compile_lines, statement())
-  }
-
-  block_depth -= 1
-  return compile_lines
-}
-
-function loop_block() {
-  local old_break_name = break_name
-  local old_has_continue = has_continue
-
-  break_name = new_tmp_name()
-  has_continue = false
-
-  local compile_lines = block()
-
-  if has_continue {
-    if lua_target == '5.1' || lua_target == '5.1+' {
-      insert(compile_lines, 1, "local { break_name } = true repeat")
-      insert(compile_lines, "{ break_name } = false until true if { break_name } then break end")
-    } else {
-      insert(compile_lines, "::{ break_name }::")
-    }
-  }
-
-  break_name = old_break_name
-  has_continue = old_has_continue
-
-  return compile_lines
-}
-
-function function_block() {
-  local old_is_module_return_block = is_module_return_block
-  local old_break_name = break_name
-
-  is_module_return_block = false
-  break_name = nil
-
-  local compile_lines = block()
-
-  is_module_return_block = old_is_module_return_block
-  break_name = old_break_name
-
-  return compile_lines
-}
 
 local function module_block(options) {
   local compile_lines = {}
@@ -1296,30 +1303,26 @@ local function module_block(options) {
 -- -----------------------------------------------------------------------------
 
 return (source, options = {}) -> {
-  local tokenize_state = tokenize(source, options.alias)
-  tokens = tokenize_state.tokens
-  token_lines = tokenize_state.token_lines
-  num_tokens = tokenize_state.num_tokens
+  tokens = tokenize(source, options.alias)
+  current_token, current_token_index = tokens[1], 1
+  current_line, last_line = token_lines[1], token_lines[num_tokens]
 
   -- Check for empty file or file w/ only comments
-  if num_tokens == 0 {
+  if tokens[1] == nil {
     return table.concat({
       '-- Compiled with Erde ' .. VERSION,
       COMPILED_FOOTER_COMMENT,
     }, '\n'), {}
   }
 
-  current_token, current_token_index = tokens[1], 1
-  current_line, last_line = token_lines[1], token_lines[num_tokens]
-
   block_depth = 1
+  tmp_name_counter = 1
+  break_name = nil
+  has_continue = false
+  has_module_declarations = false
   is_module_return_block = true
   has_module_return = false
-  has_continue = false
   is_varargs_block = true
-  tmp_name_counter = 1
-  has_module_declarations = false
-
   alias = options.alias || get_source_alias(source)
   lua_target = options.lua_target || config.lua_target
   bitlib = options.bitlib || config.bitlib
@@ -1327,17 +1330,14 @@ return (source, options = {}) -> {
     || (lua_target == 'jit' && 'bit') -- Mike Pall's LuaBitOp
     || (lua_target == '5.2' && 'bit32') -- Lua 5.2's builtin bit32 library
 
-
-  local compile_lines = module_block(options)
-
   local collapsed_compile_lines = {}
   local collapsed_compile_line_counter = 0
   local source_map = {}
 
-  -- Assign compiled lines with no source to the last known source line. We do
-  -- this because Lua may give an error at the line of the _next_ token in
-  -- certain cases. For example, the following will give an error at line 3,
-  -- instead of line 2 where the nil index actually occurs:
+  -- Keep track of the last known source line and assign it to compiled lines
+  -- with no source. We do this because Lua may give an error at the line of the
+  -- _next_ token in certain cases. For example, the following will give an
+  -- error at line 3, instead of line 2 where the nil index actually occurs:
   --   local x = nil
   --   print(x.a
   --   )
@@ -1357,12 +1357,11 @@ return (source, options = {}) -> {
     }
   }
 
+  local compile_lines = module_block(options)
   collect_lines(compile_lines)
+
   insert(collapsed_compile_lines, '-- Compiled with Erde ' .. VERSION)
   insert(collapsed_compile_lines, COMPILED_FOOTER_COMMENT)
-
-  -- Free resources (potentially large tables)
-  tokens, token_lines = nil, nil
 
   return concat(collapsed_compile_lines, '\n'), source_map
 }
