@@ -4,7 +4,7 @@
 local compile = require('erde.compile')
 local config = require('erde.config')
 local { PATH_SEPARATOR, VALID_LUA_TARGETS } = require('erde.constants')
-local utils = require('erde.utils')
+local { echo, file_exists, get_source_alias, read_file, split } = require('erde.utils')
 
 local loadlua = loadstring || load
 local unpack = table.unpack || unpack
@@ -80,7 +80,7 @@ module function traceback(arg1, arg2, arg3) {
     --
     -- Note, we do not remove the very last line of the stack, this is the C
     -- entry point of the Lua VM.
-    local stack = utils.split(stacktrace, '\n')
+    local stack = split(stacktrace, '\n')
     local stacklen = #stack
     for i = 1, 4 { table.remove(stack, stacklen - i) }
     stacktrace = table.concat(stack, '\n')
@@ -135,7 +135,7 @@ module function traceback(arg1, arg2, arg3) {
 -- 2. The call to `__erde_internal_load_source__` itself
 -- 3. The call that invoked `__erde_internal_load_source__`
 module function __erde_internal_load_source__(source, options = {}) {
-  local alias = options.alias || utils.get_source_alias(source)
+  local alias = options.alias || get_source_alias(source)
 
   local erde_source_id = "__erde_source_{ erde_source_id_counter }__"
   erde_source_id_counter = erde_source_id_counter + 1
@@ -185,7 +185,7 @@ module function __erde_internal_load_source__(source, options = {}) {
 -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
 -- `__erde_internal_load_source__`!
 module function run(source, options) {
-  return utils.echo(__erde_internal_load_source__(source, options))
+  return echo(__erde_internal_load_source__(source, options))
 }
 
 -- -----------------------------------------------------------------------------
@@ -198,11 +198,11 @@ local function erde_searcher(module_name) {
   for path in package.path:gmatch('[^;]+') {
     local fullpath = path:gsub('%.lua$', '.erde'):gsub('?', module_path)
 
-    if utils.file_exists(fullpath) {
+    if file_exists(fullpath) {
       -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
       -- `__erde_internal_load_source__`!
       return () -> {
-        local source = utils.read_file(fullpath)
+        local source = read_file(fullpath)
         local result = { __erde_internal_load_source__(source, { alias = fullpath }) }
         return unpack(result)
       }

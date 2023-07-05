@@ -15,7 +15,7 @@ local {
   VERSION,
 } = require('erde.constants')
 local tokenize = require('erde.tokenize')
-local utils = require('erde.utils')
+local { get_source_alias } = require('erde.utils')
 
 -- Foward declare
 local expression, block, loop_block, function_block
@@ -1320,7 +1320,7 @@ return (source, options = {}) -> {
   tmp_name_counter = 1
   has_module_declarations = false
 
-  alias = options.alias || utils.get_source_alias(source)
+  alias = options.alias || get_source_alias(source)
   lua_target = options.lua_target || config.lua_target
   bitlib = options.bitlib || config.bitlib
     || (lua_target == '5.1' && 'bit') -- Mike Pall's LuaBitOp
