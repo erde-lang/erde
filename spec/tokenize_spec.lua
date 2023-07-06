@@ -6,23 +6,23 @@ local tokenize = require('erde.tokenize')
 -- -----------------------------------------------------------------------------
 
 local function assert_token(expected, token)
-  local tokenize_state = tokenize(token or expected)
-  assert.are.equal(expected, tokenize_state.tokens[1])
+  local tokens = tokenize(token or expected)
+  assert.are.equal(expected, tokens[1].value)
 end
 
 local function assert_tokens(expected, text)
-  local tokenize_state = tokenize(text)
-  assert.are.same(expected, tokenize_state.tokens)
+  local token_values = {}
+
+  for _, token in ipairs(tokenize(text)) do
+    table.insert(token_values, token.value)
+  end
+
+  assert.are.same(expected, token_values)
 end
 
 local function assert_num_tokens(expected, text)
-  local tokenize_state = tokenize(text)
-  assert.are.equal(expected, tokenize_state.num_tokens)
-end
-
-local function assert_token_lines(expected, text)
-  local tokenize_state = tokenize(text)
-  assert.are.same(expected, tokenize_state.token_lines)
+  local tokens = tokenize(text)
+  assert.are.equal(expected, #tokens)
 end
 
 -- -----------------------------------------------------------------------------
@@ -131,12 +131,12 @@ end)
 describe('tokenize_escape_sequence', function()
   spec('#5.1+', function()
     for escapeChar in pairs(C.STANDARD_ESCAPE_CHARS) do
-      assert_tokens({ "'", '\\' .. escapeChar, "'" }, "'\\" .. escapeChar .. "'")
+      assert_tokens({ '\\' .. escapeChar }, "'\\" .. escapeChar .. "'")
       assert_tokens({ '"', '\\' .. escapeChar, '"' }, '"\\' .. escapeChar .. '"')
     end
 
-    assert_tokens({ "'", '\\1', "'" }, "'\\1'")
-    assert_tokens({ "'", '\\123', "'" }, "'\\123'")
+    assert_tokens({ '\\1' }, "'\\1'")
+    assert_tokens({ '\\123' }, "'\\123'")
     assert_tokens({ '"', '\\1', '"' }, '"\\1"')
     assert_tokens({ '"', '\\123', '"' }, '"\\123"')
 
@@ -186,11 +186,11 @@ describe('tokenize_escape_sequence', function()
 end)
 
 spec('tokenize_interpolation #5.1+', function()
-  assert_tokens({ "'", 'a{bc}d', "'" }, "'a{bc}d'")
+  assert_tokens({ 'a{bc}d' }, "'a{bc}d'")
   assert_tokens({ '"', 'a', '{', 'bc', '}', 'd', '"' }, '"a{bc}d"')
   assert_tokens({ '[[', 'a', '{', 'bc', '}', 'd', ']]' }, '[[a{bc}d]]')
 
-  assert_tokens({ "'", 'a{ bc  }d', "'" }, "'a{ bc  }d'")
+  assert_tokens({ 'a{ bc  }d' }, "'a{ bc  }d'")
   assert_tokens({ '"', 'a', '{', 'bc', '}', 'd', '"' }, '"a{ bc  }d"')
   assert_tokens({ '[[', 'a', '{', 'bc', '}', 'd', ']]' }, '[[a{ bc  }d]]')
 
@@ -202,15 +202,15 @@ spec('tokenize_interpolation #5.1+', function()
 end)
 
 spec('tokenize_single_quote_string #5.1+', function()
-  assert_tokens({ "'", "'" }, "''")
-  assert_tokens({ "'", ' ', "'" }, "' '")
-  assert_tokens({ "'", '\t', "'" }, "'\t'")
+  assert_tokens({ '' }, "''")
+  assert_tokens({ ' ' }, "' '")
+  assert_tokens({ '\t' }, "'\t'")
 
-  assert_tokens({ "'", 'a', "'" }, "'a'")
-  assert_tokens({ "'", ' a b ', "'" }, "' a b '")
+  assert_tokens({ 'a' }, "'a'")
+  assert_tokens({ ' a b ' }, "' a b '")
 
-  assert_tokens({ "'", "\\'", "'" }, "'\\''")
-  assert_tokens({ "'", '\\n', "'" }, "'\\n'")
+  assert_tokens({ "\\'" }, "'\\''")
+  assert_tokens({ '\\n' }, "'\\n'")
 
   assert.has_error(function() tokenize("'a") end)
   assert.has_error(function() tokenize("'\n'") end)
@@ -270,11 +270,6 @@ spec('tokenize symbols #5.1+', function()
   for symbol in pairs(C.SYMBOLS) do
     assert_token(symbol)
   end
-end)
-
-spec('tokenize_newline #5.1+', function()
-  assert_token_lines({ 1, 2 }, 'a\nb')
-  assert_token_lines({ 1, 1, 2, 2 }, 'hello world\ngoodbye world')
 end)
 
 spec('tokenize_word #5.1+', function()

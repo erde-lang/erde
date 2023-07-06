@@ -10,7 +10,15 @@ do
 	VERSION = __ERDE_TMP_8__["VERSION"]
 end
 local lib = require("erde.lib")
-local utils = require("erde.utils")
+local file_exists, join_paths, read_file, trim
+do
+	local __ERDE_TMP_13__
+	__ERDE_TMP_13__ = require("erde.utils")
+	file_exists = __ERDE_TMP_13__["file_exists"]
+	join_paths = __ERDE_TMP_13__["join_paths"]
+	read_file = __ERDE_TMP_13__["read_file"]
+	trim = __ERDE_TMP_13__["trim"]
+end
 local unpack = table.unpack or unpack
 local pack = table.pack or function(...)
 	return {
@@ -49,11 +57,11 @@ local function parse_option(label)
 end
 local function traverse(paths, pattern, callback)
 	for _, path in ipairs(paths) do
-		local __ERDE_TMP_41__ = true
+		local __ERDE_TMP_42__ = true
 		repeat
 			local attributes = lfs.attributes(path)
 			if attributes == nil then
-				__ERDE_TMP_41__ = false
+				__ERDE_TMP_42__ = false
 				break
 			end
 			if attributes.mode == "file" then
@@ -64,14 +72,14 @@ local function traverse(paths, pattern, callback)
 				local subpaths = {}
 				for filename in lfs.dir(path) do
 					if filename ~= "." and filename ~= ".." then
-						table.insert(subpaths, utils.join_paths(path, filename))
+						table.insert(subpaths, join_paths(path, filename))
 					end
 				end
 				traverse(subpaths, pattern, callback)
 			end
-			__ERDE_TMP_41__ = false
+			__ERDE_TMP_42__ = false
 		until true
-		if __ERDE_TMP_41__ then
+		if __ERDE_TMP_42__ then
 			break
 		end
 	end
@@ -142,7 +150,7 @@ local function run_command()
 	lib.load(cli.target)
 	arg = script_args
 	local ok, result = xpcall(function()
-		local source = utils.read_file(cli.script)
+		local source = read_file(cli.script)
 		local result = lib.__erde_internal_load_source__(source, {
 			alias = cli.script,
 		})
@@ -158,14 +166,14 @@ local function compile_file(path)
 		compile_path = cli.outdir .. "/" .. compile_path
 	end
 	if not cli.print_compiled and not cli.force then
-		if utils.file_exists(compile_path) and not is_compiled_file(compile_path) then
+		if file_exists(compile_path) and not is_compiled_file(compile_path) then
 			print((tostring(path) .. " => ERROR"))
 			print(("Cannot write to " .. tostring(compile_path) .. ": file already exists"))
 			return false
 		end
 	end
 	local ok, result = pcall(function()
-		return compile(utils.read_file(path), {
+		return compile(read_file(path), {
 			alias = path,
 		})
 	end)
@@ -264,7 +272,7 @@ local function sourcemap_command()
 		terminate("Missing line number to map")
 	end
 	local ok, result, sourcemap = pcall(function()
-		return compile(utils.read_file(path), {
+		return compile(read_file(path), {
 			alias = path,
 		})
 	end)
@@ -326,7 +334,7 @@ local function repl()
 			end
 			print(unpack(result))
 		end
-		if HAS_READLINE and utils.trim(source) ~= "" then
+		if HAS_READLINE and trim(source) ~= "" then
 			RL.add_history(source)
 		end
 	end
@@ -398,7 +406,7 @@ elseif cli.subcommand == "sourcemap" then
 	sourcemap_command()
 elseif not cli.script then
 	repl_command()
-elseif not utils.file_exists(cli.script) then
+elseif not file_exists(cli.script) then
 	terminate(("File does not exist: " .. tostring(cli.script)))
 else
 	run_command()

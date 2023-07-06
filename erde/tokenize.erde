@@ -4,7 +4,7 @@ local {
   HEX,
   STANDARD_ESCAPE_CHARS,
   SYMBOLS,
-  TOKEN_TYPE,
+  TOKEN_TYPES,
   WORD_BODY,
   WORD_HEAD,
 } = require('erde.constants')
@@ -16,6 +16,9 @@ local tokenize_token
 -- -----------------------------------------------------------------------------
 -- State
 -- -----------------------------------------------------------------------------
+
+-- Table of tokens
+local tokens = {}
 
 -- The source text to tokenize
 local text = ''
@@ -49,22 +52,12 @@ local function throw(message, line = current_line) {
   error("{ source_name }:{ line }: { message }", 0)
 }
 
-local function commit(token, line) {
-  num_tokens = num_tokens + 1
-  tokens[num_tokens] = token
-  token_lines[num_tokens] = line || current_line
-}
-
 local function consume(n = 1) {
   local consumed = n == 1 && current_char || peek(n)
   current_char_index += n
   current_char = text:sub(current_char_index, current_char_index)
   return consumed
 }
-
--- -----------------------------------------------------------------------------
--- Newline
--- -----------------------------------------------------------------------------
 
 local function newline() {
   current_line += 1
@@ -88,11 +81,11 @@ local function tokenize_binary() {
     value = 2 * value + tonumber(consume())
   } until current_char != '0' && current_char != '1'
 
-  return {
-    type = TOKEN_TYPE.NUMBER,
+  table.insert(tokens, {
+    type = TOKEN_TYPES.NUMBER,
     line = current_line,
     value = tostring(value),
-  }
+  })
 }
 
 local function tokenize_decimal() {
@@ -126,11 +119,11 @@ local function tokenize_decimal() {
     }
   }
 
-  return {
-    type = TOKEN_TYPE.NUMBER,
+  table.insert(tokens, {
+    type = TOKEN_TYPES.NUMBER,
     line = current_line,
     value = value,
-  }
+  })
 }
 
 local function tokenize_hex() {
@@ -177,11 +170,11 @@ local function tokenize_hex() {
     value = value * 2 ^ (sign * exponent)
   }
 
-  return {
-    type = TOKEN_TYPE.NUMBER,
+  table.insert(tokens, {
+    type = TOKEN_TYPES.NUMBER,
     line = current_line,
     value = tostring(value),
-  }
+  })
 }
 
 -- -----------------------------------------------------------------------------
@@ -241,9 +234,12 @@ local function escape_sequence() {
 }
 
 local function tokenize_interpolation() {
-  consume() -- '{'
+  table.insert(tokens, {
+    type = TOKEN_TYPES.INTERPOLATION,
+    line = current_line,
+    value = consume(), -- '{'
+  })
 
-  local token = { type = TOKEN_TYPE.INTERPOLATION }
   local interpolation_line = current_line
   local brace_depth = 0 -- Keep track of brace depth in case of nested braces
 
@@ -251,27 +247,31 @@ local function tokenize_interpolation() {
     if current_char == '{' {
       brace_depth += 1
 
-      table.insert(token, {
-        type = TOKEN_TYPE.SYMBOL,
+      table.insert(tokens, {
+        type = TOKEN_TYPES.SYMBOL,
+        line = current_line,
         value = consume(),
       })
     } elseif current_char == '}' {
       brace_depth -= 1
 
-      table.insert(token, {
-        type = TOKEN_TYPE.SYMBOL,
+      table.insert(tokens, {
+        type = TOKEN_TYPES.SYMBOL,
+        line = current_line,
         value = consume(),
       })
     } elseif current_char == '' {
       throw('unterminated interpolation', interpolation_line)
     } else {
-      table.insert(token, tokenize_token())
+      tokenize_token()
     }
   }
 
-  consume() -- '}'
-
-  return token
+  table.insert(tokens, {
+    type = TOKEN_TYPES.INTERPOLATION,
+    line = current_line,
+    value = consume(), -- '}'
+  })
 }
 
 local function tokenize_single_quote_string() {
@@ -291,22 +291,21 @@ local function tokenize_single_quote_string() {
 
   consume() -- "'"
 
-  return {
-    type = TOKEN_TYPE.SINGLE_QUOTE_STRING,
+  table.insert(tokens, {
+    type = TOKEN_TYPES.SINGLE_QUOTE_STRING,
     line = current_line,
     value = content,
-  }
+  })
 }
 
 local function tokenize_double_quote_string() {
-  consume() -- '"'
-
-  local token = {
-    type = TOKEN_TYPE.DOUBLE_QUOTE_STRING,
+  table.insert(tokens, {
+    type = TOKEN_TYPES.DOUBLE_QUOTE_STRING,
     line = current_line,
-  }
+    value = consume(), -- '"'
+  })
 
-  local content = ''
+  local content, content_line = '', current_line
 
   while current_char != '"' {
     if current_char == '' || current_char == '\n' {
@@ -321,43 +320,42 @@ local function tokenize_double_quote_string() {
       }
     } elseif current_char == '{' {
       if content != '' {
-        table.insert(token, {
-          type = TOKEN_TYPE.STRING_CONTENT,
+        table.insert(tokens, {
+          type = TOKEN_TYPES.STRING_CONTENT,
+          line = content_line,
           value = content,
         })
 
-        content = ''
+        content, content_line = '', current_line
       }
 
-      table.insert(token, tokenize_interpolation())
+      tokenize_interpolation()
     } else {
       content ..= consume()
     }
   }
 
-  consume() -- '"'
-
   if content != '' {
-    table.insert(token, {
-      type = TOKEN_TYPE.STRING_CONTENT,
+    table.insert(tokens, {
+      type = TOKEN_TYPES.STRING_CONTENT,
+      line = content_line,
       value = content,
     })
   }
 
-  return token
+  table.insert(tokens, {
+    type = TOKEN_TYPES.DOUBLE_QUOTE_STRING,
+    line = current_line,
+    value = consume(), -- '"'
+  })
 }
 
 local function tokenize_block_string() {
   consume() -- '['
 
-  local token = {
-    type = TOKEN_TYPE.BLOCK_STRING,
-    line = current_line,
-    equals = '',
-  }
-
+  local equals = ''
   while current_char == '=' {
-    token.equals ..= consume()
+    equals ..= consume()
   }
 
   if current_char != '[' {
@@ -366,14 +364,22 @@ local function tokenize_block_string() {
 
   consume() -- '['
 
-  local close_quote = ']' .. token.equals .. ']'
+  table.insert(tokens, {
+    type = TOKEN_TYPES.BLOCK_STRING,
+    line = current_line,
+    value = '[' .. equals .. '[',
+    equals = equals,
+  })
+
+  local close_quote = ']' .. equals .. ']'
   local close_quote_len = #close_quote
-  local content = ''
+  local block_string_line = current_line
+  local content, content_line = '', current_line
 
   -- Check `current_char ~= ']'` first as slight optimization
   while current_char != ']' || peek(close_quote_len) != close_quote {
     if current_char == '' {
-      throw('unterminated block string', token.line)
+      throw('unterminated block string', block_string_line)
     } elseif current_char == '\n' {
       content ..= newline()
     } elseif current_char == '\\' {
@@ -382,34 +388,38 @@ local function tokenize_block_string() {
       if current_char == '{' || current_char == '}' {
         content ..= consume()
       } else {
-        content ..= '\\' .. escape_sequence()
+        content ..= '\\'
       }
     } elseif current_char == '{' {
       if content != '' {
-        table.insert(token, {
-          type = TOKEN_TYPE.STRING_CONTENT,
+        table.insert(tokens, {
+          type = TOKEN_TYPES.STRING_CONTENT,
+          line = content_line,
           value = content,
         })
 
-        content = ''
+        content, content_line = '', current_line
       }
 
-      table.insert(token, tokenize_interpolation())
+      tokenize_interpolation()
     } else {
       content ..= consume()
     }
   }
 
-  consume(close_quote_len)
-
   if content != '' {
-    table.insert(token, {
-      type = TOKEN_TYPE.STRING_CONTENT,
+    table.insert(tokens, {
+      type = TOKEN_TYPES.STRING_CONTENT,
+      line = content_line,
       value = content,
     })
   }
 
-  return token
+  table.insert(tokens, {
+    type = TOKEN_TYPES.BLOCK_STRING,
+    line = current_line,
+    value = consume(close_quote_len),
+  })
 }
 
 -- -----------------------------------------------------------------------------
@@ -423,11 +433,11 @@ local function tokenize_word() {
     word ..= consume()
   }
 
-  return {
-    type = TOKEN_TYPE.WORD,
+  table.insert(tokens, {
+    type = TOKEN_TYPES.WORD,
     line = current_line,
     value = word,
-  }
+  })
 }
 
 local function tokenize_comment() {
@@ -478,42 +488,42 @@ function tokenize_token() {
   } elseif current_char == ' ' || current_char == '\t' {
     consume()
   } elseif WORD_HEAD[current_char] {
-    return tokenize_word()
+    tokenize_word()
   } elseif current_char == "'" {
-    return tokenize_single_quote_string()
+    tokenize_single_quote_string()
   } elseif current_char == '"' {
-    return tokenize_double_quote_string()
+    tokenize_double_quote_string()
   } else {
     local peek_two = peek(2)
 
     if peek_two == '--' {
       tokenize_comment()
     } elseif peek_two == '0x' || peek_two == '0X' {
-      return tokenize_hex()
+      tokenize_hex()
     } elseif peek_two == '0b' || peek_two == '0B' {
-      return tokenize_binary()
+      tokenize_binary()
     } elseif DIGIT[current_char] || (current_char == '.' && DIGIT[look_ahead(1)]) {
-      return tokenize_decimal()
+      tokenize_decimal()
     } elseif peek_two == '[[' || peek_two == '[=' {
-      return tokenize_block_string()
+      tokenize_block_string()
     } elseif SYMBOLS[peek(3)] {
-      return {
-        type = TOKEN_TYPE.SYMBOL,
+      table.insert(tokens, {
+        type = TOKEN_TYPES.SYMBOL,
         line = current_line,
         value = consume(3),
-      }
+      })
     } elseif SYMBOLS[peek_two] {
-      return {
-        type = TOKEN_TYPE.SYMBOL,
+      table.insert(tokens, {
+        type = TOKEN_TYPES.SYMBOL,
         line = current_line,
         value = consume(2),
-      }
+      })
     } else {
-      return {
-        type = TOKEN_TYPE.SYMBOL,
+      table.insert(tokens, {
+        type = TOKEN_TYPES.SYMBOL,
         line = current_line,
         value = consume(1),
-      }
+      })
     }
   }
 }
@@ -523,13 +533,12 @@ function tokenize_token() {
 -- -----------------------------------------------------------------------------
 
 return (new_text, new_source_name) -> {
+  tokens = {}
   text = new_text
   current_char = text:sub(1, 1)
   current_char_index = 1
   current_line = 1
   source_name = new_source_name || get_source_alias(text)
-
-  local tokens = {}
 
   if peek(2) == '#!' {
     local shebang = consume(2)
@@ -539,18 +548,15 @@ return (new_text, new_source_name) -> {
     }
 
     table.insert(tokens, {
-      type = TOKEN_TYPE.SHEBANG,
+      type = TOKEN_TYPES.SHEBANG,
+      line = current_line,
       value = shebang,
     })
   }
 
   while current_char != '' {
-    local token = tokenize_token()
-
-    if token != nil {
-      table.insert(tokens, token)
-    }
+    tokenize_token()
   }
 
-  return tokens
+  return tokens, current_line
 }

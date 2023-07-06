@@ -273,6 +273,17 @@ for byte = string.byte("g"), string.byte("z") do
 	WORD_HEAD[char] = true
 	WORD_BODY[char] = true
 end
+local TOKEN_TYPES = {
+	SHEBANG = 1,
+	SYMBOL = 2,
+	WORD = 3,
+	NUMBER = 4,
+	SINGLE_QUOTE_STRING = 5,
+	DOUBLE_QUOTE_STRING = 6,
+	STRING_CONTENT = 7,
+	INTERPOLATION = 8,
+}
+_MODULE.TOKEN_TYPES = TOKEN_TYPES
 return _MODULE
 -- Compiled with Erde 0.6.0-1
 -- __ERDE_COMPILED__

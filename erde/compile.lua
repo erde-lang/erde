@@ -1,5 +1,5 @@
 local config = require("erde.config")
-local BINOP_ASSIGNMENT_TOKENS, BINOPS, BITOPS, BITLIB_METHODS, COMPILED_FOOTER_COMMENT, DIGIT, KEYWORDS, LEFT_ASSOCIATIVE, LUA_KEYWORDS, SURROUND_ENDS, TERMINALS, UNOPS, VERSION
+local BINOP_ASSIGNMENT_TOKENS, BINOPS, BITOPS, BITLIB_METHODS, COMPILED_FOOTER_COMMENT, DIGIT, KEYWORDS, LEFT_ASSOCIATIVE, LUA_KEYWORDS, SURROUND_ENDS, TERMINALS, TOKEN_TYPES, UNOPS, VERSION
 do
 	local __ERDE_TMP_4__
 	__ERDE_TMP_4__ = require("erde.constants")
@@ -14,15 +14,22 @@ do
 	LUA_KEYWORDS = __ERDE_TMP_4__["LUA_KEYWORDS"]
 	SURROUND_ENDS = __ERDE_TMP_4__["SURROUND_ENDS"]
 	TERMINALS = __ERDE_TMP_4__["TERMINALS"]
+	TOKEN_TYPES = __ERDE_TMP_4__["TOKEN_TYPES"]
 	UNOPS = __ERDE_TMP_4__["UNOPS"]
 	VERSION = __ERDE_TMP_4__["VERSION"]
 end
 local tokenize = require("erde.tokenize")
-local utils = require("erde.utils")
-local expression, block, loop_block, function_block
-local tokens, token_lines, num_tokens
-local current_token, current_token_index
-local current_line, last_line
+local get_source_alias
+do
+	local __ERDE_TMP_9__
+	__ERDE_TMP_9__ = require("erde.utils")
+	get_source_alias = __ERDE_TMP_9__["get_source_alias"]
+end
+local unpack = table.unpack or unpack
+local expression, block, statement
+local tokens, last_line
+local current_token_index
+local current_token
 local block_depth
 local tmp_name_counter
 local break_name
@@ -45,8 +52,14 @@ end
 local function consume()
 	local consumed_token = current_token
 	current_token_index = current_token_index + 1
-	current_token = tokens[current_token_index]
-	current_line = token_lines[current_token_index]
+	local token = tokens[current_token_index]
+	if token ~= nil then
+		current_token = tokens[current_token_index].value
+		current_line = tokens[current_token_index].line
+	else
+		current_token = nil
+		current_line = last_line
+	end
 	return consumed_token
 end
 local function branch(token)
@@ -68,17 +81,18 @@ local function expect(token, prevent_consume)
 	end
 end
 local function look_ahead(n)
-	return tokens[current_token_index + n]
+	local token = tokens[current_token_index + n]
+	return token and token.value or nil
 end
 local function look_past_surround(token_start_index)
 	if token_start_index == nil then
 		token_start_index = current_token_index
 	end
-	local surround_start = tokens[token_start_index]
+	local surround_start = tokens[token_start_index].value
 	local surround_end = SURROUND_ENDS[surround_start]
 	local surround_depth = 1
 	local look_ahead_token_index = token_start_index + 1
-	local look_ahead_token = tokens[look_ahead_token_index]
+	local look_ahead_token = tokens[look_ahead_token_index].value
 	while surround_depth > 0 do
 		if look_ahead_token == nil then
 			throw(
@@ -88,10 +102,10 @@ local function look_past_surround(token_start_index)
 						.. "' for '"
 						.. tostring(surround_start)
 						.. "' at ["
-						.. tostring(token_lines[token_start_index])
+						.. tostring(tokens[token_start_index].line)
 						.. "]"
 					),
-				token_lines[look_ahead_token_index - 1]
+				tokens[look_ahead_token_index - 1].line
 			)
 		elseif look_ahead_token == surround_start then
 			surround_depth = surround_depth + 1
@@ -99,7 +113,7 @@ local function look_past_surround(token_start_index)
 			surround_depth = surround_depth - 1
 		end
 		look_ahead_token_index = look_ahead_token_index + 1
-		look_ahead_token = tokens[look_ahead_token_index]
+		look_ahead_token = tokens[look_ahead_token_index] and tokens[look_ahead_token_index].value or nil
 	end
 	return look_ahead_token, look_ahead_token_index
 end
@@ -314,14 +328,9 @@ local function interpolation_string(start_quote, end_quote)
 	return weave(compile_lines, "..")
 end
 local function single_quote_string()
-	local content_line, content = current_line, consume()
-	if current_token ~= "'" then
-		content = content .. consume()
-	end
-	content = content .. consume()
 	return {
-		content_line,
-		content,
+		current_line,
+		"'" .. consume() .. "'",
 	}
 end
 local function double_quote_string()
@@ -366,7 +375,7 @@ local function return_list(require_list_parens)
 		else
 			local is_list = false
 			for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
-				local look_ahead_token = tokens[look_ahead_token_index]
+				local look_ahead_token = tokens[look_ahead_token_index].value
 				if SURROUND_ENDS[look_ahead_token] then
 					look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
 				end
@@ -439,6 +448,16 @@ local function parameters()
 		has_varargs = has_varargs,
 	}
 end
+local function function_block()
+	local old_is_module_return_block = is_module_return_block
+	local old_break_name = break_name
+	is_module_return_block = false
+	break_name = nil
+	local compile_lines = block()
+	is_module_return_block = old_is_module_return_block
+	break_name = old_break_name
+	return compile_lines
+end
 local function arrow_function_expression()
 	local compile_lines = {}
 	local param_names = {}
@@ -465,7 +484,7 @@ local function arrow_function_expression()
 		insert(param_names, 1, "self")
 		consume()
 	elseif current_token == nil then
-		throw("unexpected eof (expected '->' or '=>')", token_lines[current_token_index - 1])
+		throw("unexpected eof (expected '->' or '=>')", tokens[current_token_index - 1].line)
 	else
 		throw(("unexpected token '" .. tostring(current_token) .. "' (expected '->' or '=>')"))
 	end
@@ -595,7 +614,7 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 				insert(link, ")")
 			end
 			insert(chain, link)
-		elseif current_token == "(" and current_line == token_lines[current_token_index - 1] then
+		elseif current_token == "(" and current_line == tokens[current_token_index - 1].line then
 			has_trivial_chain = false
 			is_function_call = true
 			local chain_len = #chain
@@ -682,7 +701,7 @@ local function terminal_expression()
 			current_line,
 			consume(),
 		}
-	elseif current_token == "'" then
+	elseif tokens[current_token_index].type == TOKEN_TYPES.SINGLE_QUOTE_STRING then
 		return index_chain_expression({
 			"(",
 			single_quote_string(),
@@ -786,6 +805,15 @@ function expression(min_prec)
 	end
 	return compile_lines
 end
+function block()
+	local compile_lines = {}
+	block_depth = block_depth + 1
+	while current_token ~= "}" do
+		insert(compile_lines, statement())
+	end
+	block_depth = block_depth - 1
+	return compile_lines
+end
 local function do_statement()
 	local compile_lines = {}
 	insert(compile_lines, consume())
@@ -793,23 +821,42 @@ local function do_statement()
 	insert(compile_lines, "end")
 	return compile_lines
 end
-local function if_else_statement()
-	local compile_lines = {}
-	insert(compile_lines, consume())
-	insert(compile_lines, expression())
-	insert(compile_lines, "then")
-	insert(compile_lines, surround("{", "}", block))
-	while current_token == "elseif" do
-		insert(compile_lines, consume())
-		insert(compile_lines, expression())
-		insert(compile_lines, "then")
-		insert(compile_lines, surround("{", "}", block))
+local function break_statement()
+	ensure(break_name ~= nil, "cannot use 'break' outside of loop")
+	return {
+		current_line,
+		consume(),
+	}
+end
+local function continue_statement()
+	ensure(break_name ~= nil, "cannot use 'continue' outside of loop")
+	has_continue = true
+	consume()
+	return (lua_target == "5.1" or lua_target == "5.1+") and {
+		break_name .. " = false break",
+	} or {
+		"goto " .. break_name,
+	}
+end
+local function loop_block()
+	local old_break_name = break_name
+	local old_has_continue = has_continue
+	break_name = new_tmp_name()
+	has_continue = false
+	local compile_lines = block()
+	if has_continue then
+		if lua_target == "5.1" or lua_target == "5.1+" then
+			insert(compile_lines, 1, ("local " .. tostring(break_name) .. " = true repeat"))
+			insert(
+				compile_lines,
+				(tostring(break_name) .. " = false until true if " .. tostring(break_name) .. " then break end")
+			)
+		else
+			insert(compile_lines, ("::" .. tostring(break_name) .. "::"))
+		end
 	end
-	if current_token == "else" then
-		insert(compile_lines, consume())
-		insert(compile_lines, surround("{", "}", block))
-	end
-	insert(compile_lines, "end")
+	break_name = old_break_name
+	has_continue = old_has_continue
 	return compile_lines
 end
 local function for_loop_statement()
@@ -869,23 +916,6 @@ local function while_loop_statement()
 	insert(compile_lines, "end")
 	return compile_lines
 end
-local function break_statement()
-	ensure(break_name ~= nil, "cannot use 'break' outside of loop")
-	return {
-		current_line,
-		consume(),
-	}
-end
-local function continue_statement()
-	ensure(break_name ~= nil, "cannot use 'continue' outside of loop")
-	has_continue = true
-	consume()
-	return (lua_target == "5.1" or lua_target == "5.1+") and {
-		break_name .. " = false break",
-	} or {
-		"goto " .. break_name,
-	}
-end
 local function goto_jump_statement()
 	local compile_lines = {}
 	if lua_target == "5.1" or lua_target == "5.1+" then
@@ -904,6 +934,25 @@ local function goto_label_statement()
 	end
 	insert(compile_lines, current_line)
 	insert(compile_lines, consume() .. name() .. expect("::"))
+	return compile_lines
+end
+local function if_else_statement()
+	local compile_lines = {}
+	insert(compile_lines, consume())
+	insert(compile_lines, expression())
+	insert(compile_lines, "then")
+	insert(compile_lines, surround("{", "}", block))
+	while current_token == "elseif" do
+		insert(compile_lines, consume())
+		insert(compile_lines, expression())
+		insert(compile_lines, "then")
+		insert(compile_lines, surround("{", "}", block))
+	end
+	if current_token == "else" then
+		insert(compile_lines, consume())
+		insert(compile_lines, surround("{", "}", block))
+	end
+	insert(compile_lines, "end")
 	return compile_lines
 end
 local function assignment_statement(first_id)
@@ -983,7 +1032,7 @@ local function declaration_statement()
 	local assignment_names = {}
 	if scope == "module" then
 		if block_depth > 1 then
-			throw("module declarations must appear at the top level", token_lines[current_token_index - 1])
+			throw("module declarations must appear at the top level", tokens[current_token_index - 1].line)
 		end
 		has_module_declarations = true
 	end
@@ -1035,7 +1084,7 @@ local function declaration_statement()
 	end
 	return compile_lines
 end
-local function statement()
+function statement()
 	local compile_lines = {}
 	if current_token == "break" then
 		insert(compile_lines, break_statement())
@@ -1094,46 +1143,6 @@ local function statement()
 	end
 	return compile_lines
 end
-function block()
-	local compile_lines = {}
-	block_depth = block_depth + 1
-	while current_token ~= "}" do
-		insert(compile_lines, statement())
-	end
-	block_depth = block_depth - 1
-	return compile_lines
-end
-function loop_block()
-	local old_break_name = break_name
-	local old_has_continue = has_continue
-	break_name = new_tmp_name()
-	has_continue = false
-	local compile_lines = block()
-	if has_continue then
-		if lua_target == "5.1" or lua_target == "5.1+" then
-			insert(compile_lines, 1, ("local " .. tostring(break_name) .. " = true repeat"))
-			insert(
-				compile_lines,
-				(tostring(break_name) .. " = false until true if " .. tostring(break_name) .. " then break end")
-			)
-		else
-			insert(compile_lines, ("::" .. tostring(break_name) .. "::"))
-		end
-	end
-	break_name = old_break_name
-	has_continue = old_has_continue
-	return compile_lines
-end
-function function_block()
-	local old_is_module_return_block = is_module_return_block
-	local old_break_name = break_name
-	is_module_return_block = false
-	break_name = nil
-	local compile_lines = block()
-	is_module_return_block = old_is_module_return_block
-	break_name = old_break_name
-	return compile_lines
-end
 local function module_block(options)
 	local compile_lines = {}
 	if current_token:match("^#!") then
@@ -1144,7 +1153,8 @@ local function module_block(options)
 	end
 	if has_module_return and has_module_declarations then
 		throw("cannot use 'module' declarations w/ 'return'", last_line)
-	elseif has_module_declarations then
+	end
+	if has_module_declarations then
 		insert(compile_lines, 1, "local _MODULE = {}")
 		insert(compile_lines, "return _MODULE")
 	end
@@ -1154,37 +1164,35 @@ return function(source, options)
 	if options == nil then
 		options = {}
 	end
-	local tokenize_state = tokenize(source, options.alias)
-	tokens = tokenize_state.tokens
-	token_lines = tokenize_state.token_lines
-	num_tokens = tokenize_state.num_tokens
-	if num_tokens == 0 then
+	tokens, last_line = tokenize(source, options.alias)
+	if tokens[1] == nil then
 		return table.concat({
 			"-- Compiled with Erde " .. VERSION,
 			COMPILED_FOOTER_COMMENT,
 		}, "\n"), {}
 	end
-	current_token, current_token_index = tokens[1], 1
-	current_line, last_line = token_lines[1], token_lines[num_tokens]
+	current_token_index = 1
+	current_token = tokens[current_token_index].value
+	current_line = tokens[current_token_index].line
 	block_depth = 1
+	tmp_name_counter = 1
+	break_name = nil
+	has_continue = false
+	has_module_declarations = false
 	is_module_return_block = true
 	has_module_return = false
-	has_continue = false
 	is_varargs_block = true
-	tmp_name_counter = 1
-	has_module_declarations = false
-	alias = options.alias or utils.get_source_alias(source)
+	alias = options.alias or get_source_alias(source)
 	lua_target = options.lua_target or config.lua_target
 	bitlib = options.bitlib
 		or config.bitlib
 		or (lua_target == "5.1" and "bit")
 		or (lua_target == "jit" and "bit")
 		or (lua_target == "5.2" and "bit32")
-	local compile_lines = module_block(options)
 	local collapsed_compile_lines = {}
 	local collapsed_compile_line_counter = 0
 	local source_map = {}
-	local source_line = token_lines[1]
+	local source_line = current_token.line
 	local function collect_lines(lines)
 		for _, line in ipairs(lines) do
 			if type(line) == "number" then
@@ -1198,10 +1206,10 @@ return function(source, options)
 			end
 		end
 	end
+	local compile_lines = module_block(options)
 	collect_lines(compile_lines)
 	insert(collapsed_compile_lines, "-- Compiled with Erde " .. VERSION)
 	insert(collapsed_compile_lines, COMPILED_FOOTER_COMMENT)
-	tokens, token_lines = nil, nil
 	return concat(collapsed_compile_lines, "\n"), source_map
 end
 -- Compiled with Erde 0.6.0-1

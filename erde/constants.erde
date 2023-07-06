@@ -235,7 +235,7 @@ for byte = string.byte('g'), string.byte('z') {
 -- Token Types
 -- -----------------------------------------------------------------------------
 
-local TOKEN_TYPE = {
+module TOKEN_TYPES = {
   SHEBANG = 1,
   SYMBOL = 2,
   WORD = 3,

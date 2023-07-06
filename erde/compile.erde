@@ -11,22 +11,31 @@ local {
   LUA_KEYWORDS,
   SURROUND_ENDS,
   TERMINALS,
+  TOKEN_TYPES,
   UNOPS,
   VERSION,
 } = require('erde.constants')
 local tokenize = require('erde.tokenize')
 local { get_source_alias } = require('erde.utils')
 
+local unpack = table.unpack || unpack
+
 -- Foward declare
-local expression, block
+local expression, block, statement
 
 -- -----------------------------------------------------------------------------
 -- State
 -- -----------------------------------------------------------------------------
 
-local tokens, token_lines, num_tokens
-local current_token, current_token_index
-local current_line, last_line
+-- Tokenization results.
+local tokens, last_line
+
+-- The index in `tokens` of the current token we are processing.
+local current_token_index
+
+-- The current token we are processing. Always equivalent to
+-- `tokens[current_token_index]`.
+local current_token
 
 -- Current block depth during parsing
 local block_depth
@@ -82,8 +91,17 @@ local function throw(message, line = current_line || last_line) {
 local function consume() {
   local consumed_token = current_token
   current_token_index += 1
-  current_token = tokens[current_token_index]
-  current_line = token_lines[current_token_index]
+
+  local token = tokens[current_token_index]
+
+  if token != nil {
+    current_token = tokens[current_token_index].value
+    current_line = tokens[current_token_index].line
+  } else {
+    current_token = nil
+    current_line = last_line
+  }
+
   return consumed_token
 }
 
@@ -107,22 +125,23 @@ local function expect(token, prevent_consume) {
 }
 
 local function look_ahead(n) {
-  return tokens[current_token_index + n]
+  local token = tokens[current_token_index + n]
+  return token && token.value || nil
 }
 
 local function look_past_surround(token_start_index = current_token_index) {
-  local surround_start = tokens[token_start_index]
+  local surround_start = tokens[token_start_index].value
   local surround_end = SURROUND_ENDS[surround_start]
   local surround_depth = 1
 
   local look_ahead_token_index = token_start_index + 1
-  local look_ahead_token = tokens[look_ahead_token_index]
+  local look_ahead_token = tokens[look_ahead_token_index].value
 
   while surround_depth > 0 {
     if look_ahead_token == nil {
       throw(
-        "unexpected eof, missing ending '{ surround_end }' for '{ surround_start }' at [{ token_lines[token_start_index] }]",
-        token_lines[look_ahead_token_index - 1],
+        "unexpected eof, missing ending '{ surround_end }' for '{ surround_start }' at [{ tokens[token_start_index].line }]",
+        tokens[look_ahead_token_index - 1].line,
       )
     } elseif look_ahead_token == surround_start {
       surround_depth += 1
@@ -131,7 +150,7 @@ local function look_past_surround(token_start_index = current_token_index) {
     }
 
     look_ahead_token_index += 1
-    look_ahead_token = tokens[look_ahead_token_index]
+    look_ahead_token = tokens[look_ahead_token_index] && tokens[look_ahead_token_index].value || nil
   }
 
   return look_ahead_token, look_ahead_token_index
@@ -341,14 +360,7 @@ local function interpolation_string(start_quote, end_quote) {
 }
 
 local function single_quote_string() {
-  local content_line, content = current_line, consume()
-
-  if current_token != "'" {
-    content ..= consume()
-  }
-
-  content ..= consume()
-  return { content_line, content }
+  return { current_line, "'" .. consume() .. "'" }
 }
 
 local function double_quote_string() {
@@ -406,7 +418,7 @@ local function return_list(require_list_parens) {
       local is_list = false
 
       for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 {
-        local look_ahead_token = tokens[look_ahead_token_index]
+        local look_ahead_token = tokens[look_ahead_token_index].value
 
         if SURROUND_ENDS[look_ahead_token] {
           look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
@@ -538,7 +550,7 @@ local function arrow_function_expression() {
     insert(param_names, 1, 'self')
     consume()
   } elseif current_token == nil {
-    throw("unexpected eof (expected '->' or '=>')", token_lines[current_token_index - 1])
+    throw("unexpected eof (expected '->' or '=>')", tokens[current_token_index - 1].line)
   } else {
     throw("unexpected token '{ current_token }' (expected '->' or '=>')")
   }
@@ -690,7 +702,7 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain) 
       }
 
       insert(chain, link)
-    } elseif current_token == '(' && current_line == token_lines[current_token_index - 1] {
+    } elseif current_token == '(' && current_line == tokens[current_token_index - 1].line {
       -- Use newlines to infer whether the parentheses belong to a function call
       -- or the next statement.
       has_trivial_chain = false
@@ -789,7 +801,7 @@ local function terminal_expression() {
 
   if DIGIT[current_token:sub(1, 1)] {
     return { current_line, consume() }
-  } elseif current_token == "'" {
+  } elseif tokens[current_token_index].type == TOKEN_TYPES.SINGLE_QUOTE_STRING {
     return index_chain_expression({ '(', single_quote_string(), ')' }, true)
   } elseif current_token == '"' {
     -- TODO: check for interpolation to determine index_chain.has_trivial_base?
@@ -1154,7 +1166,7 @@ local function declaration_statement() {
 
   if scope == 'module' {
     if block_depth > 1 {
-      throw('module declarations must appear at the top level', token_lines[current_token_index - 1])
+      throw('module declarations must appear at the top level', tokens[current_token_index - 1].line)
     }
 
     has_module_declarations = true
@@ -1216,7 +1228,7 @@ local function declaration_statement() {
 -- Statement
 -- -----------------------------------------------------------------------------
 
-local function statement() {
+function statement() {
   local compile_lines = {}
 
   if current_token == 'break' {
@@ -1290,7 +1302,9 @@ local function module_block(options) {
 
   if has_module_return && has_module_declarations {
     throw("cannot use 'module' declarations w/ 'return'", last_line)
-  } elseif has_module_declarations {
+  }
+
+  if has_module_declarations {
     insert(compile_lines, 1, 'local _MODULE = {}')
     insert(compile_lines, 'return _MODULE')
   }
@@ -1303,9 +1317,7 @@ local function module_block(options) {
 -- -----------------------------------------------------------------------------
 
 return (source, options = {}) -> {
-  tokens = tokenize(source, options.alias)
-  current_token, current_token_index = tokens[1], 1
-  current_line, last_line = token_lines[1], token_lines[num_tokens]
+  tokens, last_line = tokenize(source, options.alias)
 
   -- Check for empty file or file w/ only comments
   if tokens[1] == nil {
@@ -1314,6 +1326,10 @@ return (source, options = {}) -> {
       COMPILED_FOOTER_COMMENT,
     }, '\n'), {}
   }
+
+  current_token_index = 1
+  current_token = tokens[current_token_index].value
+  current_line = tokens[current_token_index].line
 
   block_depth = 1
   tmp_name_counter = 1
@@ -1341,7 +1357,7 @@ return (source, options = {}) -> {
   --   local x = nil
   --   print(x.a
   --   )
-  local source_line = token_lines[1]
+  local source_line = current_token.line
 
   local function collect_lines(lines) {
     for _, line in ipairs(lines) {

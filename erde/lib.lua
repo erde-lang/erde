@@ -8,7 +8,16 @@ do
 	PATH_SEPARATOR = __ERDE_TMP_6__["PATH_SEPARATOR"]
 	VALID_LUA_TARGETS = __ERDE_TMP_6__["VALID_LUA_TARGETS"]
 end
-local utils = require("erde.utils")
+local echo, file_exists, get_source_alias, read_file, split
+do
+	local __ERDE_TMP_9__
+	__ERDE_TMP_9__ = require("erde.utils")
+	echo = __ERDE_TMP_9__["echo"]
+	file_exists = __ERDE_TMP_9__["file_exists"]
+	get_source_alias = __ERDE_TMP_9__["get_source_alias"]
+	read_file = __ERDE_TMP_9__["read_file"]
+	split = __ERDE_TMP_9__["split"]
+end
 local loadlua = loadstring or load
 local unpack = table.unpack or unpack
 local native_traceback = debug.traceback
@@ -50,7 +59,7 @@ local function traceback(arg1, arg2, arg3)
 		return stacktrace
 	end
 	if level > -1 and config.is_cli_runtime then
-		local stack = utils.split(stacktrace, "\n")
+		local stack = split(stacktrace, "\n")
 		local stacklen = #stack
 		for i = 1, 4 do
 			table.remove(stack, stacklen - i)
@@ -72,7 +81,7 @@ local function __erde_internal_load_source__(source, options)
 	if options == nil then
 		options = {}
 	end
-	local alias = options.alias or utils.get_source_alias(source)
+	local alias = options.alias or get_source_alias(source)
 	local erde_source_id = ("__erde_source_" .. tostring(erde_source_id_counter) .. "__")
 	erde_source_id_counter = erde_source_id_counter + 1
 	local compiled, sourcemap = compile(source, {
@@ -109,16 +118,16 @@ local function __erde_internal_load_source__(source, options)
 end
 _MODULE.__erde_internal_load_source__ = __erde_internal_load_source__
 local function run(source, options)
-	return utils.echo(__erde_internal_load_source__(source, options))
+	return echo(__erde_internal_load_source__(source, options))
 end
 _MODULE.run = run
 local function erde_searcher(module_name)
 	local module_path = module_name:gsub("%.", PATH_SEPARATOR)
 	for path in package.path:gmatch("[^;]+") do
 		local fullpath = path:gsub("%.lua$", ".erde"):gsub("?", module_path)
-		if utils.file_exists(fullpath) then
+		if file_exists(fullpath) then
 			return function()
-				local source = utils.read_file(fullpath)
+				local source = read_file(fullpath)
 				local result = {
 					__erde_internal_load_source__(source, {
 						alias = fullpath,
