@@ -558,5 +558,11 @@ return (new_text, new_source_name) -> {
     tokenize_token()
   }
 
-  return tokens, current_line
+  table.insert(tokens, {
+    type = TOKEN_TYPES.EOF,
+    line = current_line,
+    value = nil,
+  })
+
+  return tokens
 }

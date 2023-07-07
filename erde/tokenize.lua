@@ -288,6 +288,7 @@ local function tokenize_block_string()
 		type = TOKEN_TYPES.BLOCK_STRING,
 		line = current_line,
 		value = "[" .. equals .. "[",
+		equals = equals,
 	})
 	local close_quote = "]" .. equals .. "]"
 	local close_quote_len = #close_quote
@@ -441,7 +442,12 @@ return function(new_text, new_source_name)
 	while current_char ~= "" do
 		tokenize_token()
 	end
-	return tokens, current_line
+	table.insert(tokens, {
+		type = TOKEN_TYPES.EOF,
+		line = current_line,
+		value = nil,
+	})
+	return tokens
 end
 -- Compiled with Erde 0.6.0-1
 -- __ERDE_COMPILED__

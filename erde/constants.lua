@@ -5,6 +5,18 @@ local PATH_SEPARATOR = package.config:sub(1, 1)
 _MODULE.PATH_SEPARATOR = PATH_SEPARATOR
 local COMPILED_FOOTER_COMMENT = "-- __ERDE_COMPILED__"
 _MODULE.COMPILED_FOOTER_COMMENT = COMPILED_FOOTER_COMMENT
+local TOKEN_TYPES = {
+	EOF = 0,
+	SHEBANG = 1,
+	SYMBOL = 2,
+	WORD = 3,
+	NUMBER = 4,
+	SINGLE_QUOTE_STRING = 5,
+	DOUBLE_QUOTE_STRING = 6,
+	STRING_CONTENT = 7,
+	INTERPOLATION = 8,
+}
+_MODULE.TOKEN_TYPES = TOKEN_TYPES
 local VALID_LUA_TARGETS = {
 	"jit",
 	"5.1",
@@ -21,25 +33,22 @@ for i, target in ipairs(VALID_LUA_TARGETS) do
 	VALID_LUA_TARGETS[target] = true
 end
 local KEYWORDS = {
-	"local",
-	"global",
-	"module",
-	"if",
-	"elseif",
-	"else",
-	"for",
-	"in",
-	"while",
-	"repeat",
-	"until",
-	"do",
-	"function",
-	"false",
-	"true",
-	"nil",
-	"return",
-	"break",
-	"continue",
+	["break"] = true,
+	["continue"] = true,
+	["do"] = true,
+	["else"] = true,
+	["elseif"] = true,
+	["for"] = true,
+	["function"] = true,
+	["global"] = true,
+	["if"] = true,
+	["in"] = true,
+	["local"] = true,
+	["module"] = true,
+	["repeat"] = true,
+	["return"] = true,
+	["until"] = true,
+	["while"] = true,
 }
 _MODULE.KEYWORDS = KEYWORDS
 local LUA_KEYWORDS = {
@@ -51,10 +60,10 @@ local LUA_KEYWORDS = {
 }
 _MODULE.LUA_KEYWORDS = LUA_KEYWORDS
 local TERMINALS = {
-	"true",
-	"false",
-	"nil",
-	"...",
+	["true"] = true,
+	["false"] = true,
+	["nil"] = true,
+	["..."] = true,
 }
 _MODULE.TERMINALS = TERMINALS
 local LEFT_ASSOCIATIVE = -1
@@ -273,17 +282,6 @@ for byte = string.byte("g"), string.byte("z") do
 	WORD_HEAD[char] = true
 	WORD_BODY[char] = true
 end
-local TOKEN_TYPES = {
-	SHEBANG = 1,
-	SYMBOL = 2,
-	WORD = 3,
-	NUMBER = 4,
-	SINGLE_QUOTE_STRING = 5,
-	DOUBLE_QUOTE_STRING = 6,
-	STRING_CONTENT = 7,
-	INTERPOLATION = 8,
-}
-_MODULE.TOKEN_TYPES = TOKEN_TYPES
 return _MODULE
 -- Compiled with Erde 0.6.0-1
 -- __ERDE_COMPILED__
