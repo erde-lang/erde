@@ -58,17 +58,13 @@ local function branch(token)
 		return true
 	end
 end
-local function ensure(is_valid, message)
-	if not is_valid then
-		throw(message)
-	end
-end
 local function expect(token, prevent_consume)
-	ensure(current_token.value ~= nil, ("unexpected eof (expected " .. tostring(token) .. ")"))
-	ensure(
-		token == current_token.value,
-		("expected '" .. tostring(token) .. "' got '" .. tostring(current_token.value) .. "'")
-	)
+	if current_token.type == TOKEN_TYPES.EOF then
+		throw(("unexpected eof (expected " .. tostring(token) .. ")"))
+	end
+	if token ~= current_token.value then
+		throw(("expected '" .. tostring(token) .. "' got '" .. tostring(current_token.value) .. "'"))
+	end
 	if not prevent_consume then
 		return consume()
 	end
@@ -81,34 +77,24 @@ local function look_past_surround(token_start_index)
 	if token_start_index == nil then
 		token_start_index = current_token_index
 	end
-	local surround_start = tokens[token_start_index].value
-	local surround_end = SURROUND_ENDS[surround_start]
+	local surround_start_token = tokens[token_start_index]
+	local surround_end = SURROUND_ENDS[surround_start_token.value]
 	local surround_depth = 1
 	local look_ahead_token_index = token_start_index + 1
-	local look_ahead_token = tokens[look_ahead_token_index].value
-	while surround_depth > 0 do
-		if look_ahead_token == nil then
-			throw(
-				(
-						"unexpected eof, missing ending '"
-						.. tostring(surround_end)
-						.. "' for '"
-						.. tostring(surround_start)
-						.. "' at ["
-						.. tostring(tokens[token_start_index].line)
-						.. "]"
-					),
-				tokens[look_ahead_token_index - 1].line
-			)
-		elseif look_ahead_token == surround_start then
+	local look_ahead_token = tokens[look_ahead_token_index]
+	repeat
+		if look_ahead_token.type == TOKEN_TYPES.EOF then
+			throw(("unexpected eof, missing '" .. tostring(surround_end) .. "'"), surround_start_token.line)
+		end
+		if look_ahead_token.value == surround_start_token.value then
 			surround_depth = surround_depth + 1
-		elseif look_ahead_token == surround_end then
+		elseif look_ahead_token.value == surround_end then
 			surround_depth = surround_depth - 1
 		end
 		look_ahead_token_index = look_ahead_token_index + 1
-		look_ahead_token = tokens[look_ahead_token_index] and tokens[look_ahead_token_index].value or nil
-	end
-	return look_ahead_token, look_ahead_token_index
+		look_ahead_token = tokens[look_ahead_token_index]
+	until surround_depth == 0
+	return look_ahead_token.value, look_ahead_token_index
 end
 local function new_tmp_name()
 	tmp_name_counter = tmp_name_counter + 1
@@ -203,7 +189,7 @@ local function surround(open_char, close_char, callback)
 	expect(close_char)
 	return result
 end
-local function surround_list(open_char, close_char, callback, allow_empty)
+local function surround_list(open_char, close_char, allow_empty, callback)
 	return surround(open_char, close_char, function()
 		if current_token.value ~= close_char or not allow_empty then
 			return list(callback, close_char)
@@ -211,21 +197,23 @@ local function surround_list(open_char, close_char, callback, allow_empty)
 	end)
 end
 local function name(no_transform)
-	ensure(current_token.value ~= nil, "unexpected eof")
-	ensure(
-		current_token.value:match("^[_a-zA-Z][_a-zA-Z0-9]*$"),
-		("unexpected token '" .. tostring(current_token.value) .. "'")
-	)
-	if KEYWORDS[current_token.value] then
+	if current_token.type == TOKEN_TYPES.EOF then
+		throw("unexpected eof")
+	end
+	if current_token.type ~= TOKEN_TYPES.WORD then
+		throw(("unexpected token '" .. tostring(current_token.value) .. "'"))
+	end
+	if KEYWORDS[current_token.value] ~= nil then
 		throw(("unexpected keyword '" .. tostring(current_token.value) .. "'"))
 	end
-	if TERMINALS[current_token.value] then
+	if TERMINALS[current_token.value] ~= nil then
 		throw(("unexpected builtin '" .. tostring(current_token.value) .. "'"))
 	end
 	if LUA_KEYWORDS[current_token.value] and not no_transform then
 		return ("__ERDE_SUBSTITUTE_" .. tostring(consume()) .. "__")
+	else
+		return consume()
 	end
-	return consume()
 end
 local function destructure(scope)
 	local names = {}
@@ -234,7 +222,7 @@ local function destructure(scope)
 	local assignment_prefix = scope == "global" and "_G." or ""
 	if current_token.value == "[" then
 		local array_index = 0
-		surround_list("[", "]", function()
+		surround_list("[", "]", false, function()
 			local name_line, name = current_token.line, name()
 			local assignment_name = assignment_prefix .. name
 			array_index = array_index + 1
@@ -254,7 +242,7 @@ local function destructure(scope)
 			end
 		end)
 	else
-		surround_list("{", "}", function()
+		surround_list("{", "}", false, function()
 			local key_line, raw_key, key = current_token.line, current_token.value, name()
 			local name = branch(":") and name() or key
 			local assignment_name = assignment_prefix .. name
@@ -287,40 +275,6 @@ local function variable()
 		return name()
 	end
 end
-local function interpolation_string(start_quote, end_quote)
-	local compile_lines = {}
-	local content_line, content = current_token.line, consume()
-	local is_block_string = start_quote:sub(1, 1) == "["
-	if current_token.value == end_quote then
-		table.insert(compile_lines, content .. consume())
-		return compile_lines
-	end
-	repeat
-		if current_token.value == "{" then
-			if content ~= start_quote then
-				table.insert(compile_lines, content_line)
-				table.insert(compile_lines, content .. end_quote)
-			end
-			table.insert(compile_lines, {
-				"tostring(",
-				surround("{", "}", expression),
-				")",
-			})
-			content_line, content = current_token.line, start_quote
-			if is_block_string and current_token.value:sub(1, 1) == "\n" then
-				content = content .. "\n" .. consume()
-			end
-		else
-			content = content .. consume()
-		end
-	until current_token.value == end_quote
-	if content ~= start_quote then
-		table.insert(compile_lines, content_line)
-		table.insert(compile_lines, content .. end_quote)
-	end
-	consume()
-	return weave(compile_lines, "..")
-end
 local function single_quote_string()
 	return {
 		current_token.line,
@@ -328,14 +282,73 @@ local function single_quote_string()
 	}
 end
 local function double_quote_string()
-	return interpolation_string('"', '"')
+	consume()
+	if current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING then
+		return '"' .. consume()
+	end
+	local compile_lines = {}
+	local content_line, content = current_token.line, ""
+	repeat
+		if current_token.type == TOKEN_TYPES.INTERPOLATION then
+			if content ~= "" then
+				table.insert(compile_lines, content_line)
+				table.insert(compile_lines, '"' .. content .. '"')
+			end
+			table.insert(compile_lines, {
+				"tostring(",
+				surround("{", "}", expression),
+				")",
+			})
+			content_line, content = current_token.line, ""
+		else
+			content = content .. consume()
+		end
+	until current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING
+	if content ~= "" then
+		table.insert(compile_lines, content_line)
+		table.insert(compile_lines, '"' .. content .. '"')
+	end
+	consume()
+	return weave(compile_lines, "..")
 end
 local function block_string()
-	return interpolation_string(current_token.value, current_token.value:gsub("%[", "]"))
+	local start_quote = "[" .. current_token.equals .. "["
+	local end_quote = "]" .. current_token.equals .. "]"
+	consume()
+	if current_token.type == TOKEN_TYPES.BLOCK_STRING then
+		return start_quote .. end_quote
+	end
+	local compile_lines = {}
+	local content_line, content = current_token.line, ""
+	repeat
+		if current_token.type == TOKEN_TYPES.INTERPOLATION then
+			if content ~= "" then
+				table.insert(compile_lines, content_line)
+				table.insert(compile_lines, start_quote .. content .. end_quote)
+			end
+			table.insert(compile_lines, {
+				"tostring(",
+				surround("{", "}", expression),
+				")",
+			})
+			content_line, content = current_token.line, ""
+			if current_token.value:sub(1, 1) == "\n" then
+				content = content .. "\n" .. consume()
+			end
+		else
+			content = content .. consume()
+		end
+	until current_token.type == TOKEN_TYPES.BLOCK_STRING
+	if content ~= "" then
+		table.insert(compile_lines, content_line)
+		table.insert(compile_lines, start_quote .. content .. end_quote)
+	end
+	consume()
+	return weave(compile_lines, "..")
 end
 local function table_constructor()
 	local compile_lines = {}
-	surround_list("{", "}", function()
+	surround_list("{", "}", true, function()
 		if current_token.value == "[" then
 			table.insert(compile_lines, "[")
 			table.insert(compile_lines, surround("[", "]", expression))
@@ -351,7 +364,7 @@ local function table_constructor()
 		end
 		table.insert(compile_lines, expression())
 		table.insert(compile_lines, ",")
-	end, true)
+	end)
 	return {
 		"{",
 		compile_lines,
@@ -378,7 +391,7 @@ local function return_list(require_list_parens)
 					break
 				end
 			end
-			table.insert(compile_lines, is_list and weave(surround_list("(", ")", expression)) or expression())
+			table.insert(compile_lines, is_list and weave(surround_list("(", ")", false, expression)) or expression())
 		end
 	end
 	return compile_lines
@@ -412,7 +425,7 @@ local function parameters()
 	local compile_lines = {}
 	local names = {}
 	local has_varargs = false
-	surround_list("(", ")", function()
+	surround_list("(", ")", true, function()
 		if branch("...") then
 			has_varargs = true
 			table.insert(names, "...")
@@ -435,7 +448,7 @@ local function parameters()
 				table.insert(compile_lines, var.compile_lines)
 			end
 		end
-	end, true)
+	end)
 	return {
 		names = names,
 		compile_lines = compile_lines,
@@ -478,7 +491,7 @@ local function arrow_function_expression()
 		table.insert(param_names, 1, "self")
 		consume()
 	elseif current_token.value == nil then
-		throw("unexpected eof (expected '->' or '=>')", tokens[current_token_index - 1].line)
+		throw("unexpected eof (expected '->' or '=>')")
 	else
 		throw(("unexpected token '" .. tostring(current_token.value) .. "' (expected '->' or '=>')"))
 	end
@@ -591,7 +604,7 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 			if not LUA_KEYWORDS[method_name] then
 				table.insert(link, ":" .. method_name)
 			else
-				local arg_compile_lines = surround_list("(", ")", expression, true)
+				local arg_compile_lines = surround_list("(", ")", true, expression)
 				if has_trivial_base and has_trivial_chain then
 					table.insert(link, '["' .. method_name .. '"](')
 					table.insert(link, ("['" .. tostring(method_name) .. "']("))
@@ -624,7 +637,7 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 					preceding_compile_lines_len = #preceding_compile_lines
 				end
 			end
-			local arg_compile_lines = surround_list("(", ")", expression, true)
+			local arg_compile_lines = surround_list("(", ")", true, expression)
 			if not arg_compile_lines then
 				preceding_compile_lines[preceding_compile_lines_len] = preceding_compile_lines[preceding_compile_lines_len]
 					.. "()"
@@ -680,37 +693,38 @@ local function index_chain_expression(...)
 	end
 end
 local function terminal_expression()
-	ensure(current_token.value ~= nil, "unexpected eof")
-	ensure(current_token.value ~= "..." or is_varargs_block, "cannot use '...' outside a vararg function")
-	if TERMINALS[current_token.value] then
+	if current_token.type == TOKEN_TYPES.NUMBER then
 		return {
 			current_token.line,
 			consume(),
 		}
-	end
-	if DIGIT[current_token.value:sub(1, 1)] then
-		return {
-			current_token.line,
-			consume(),
-		}
-	elseif tokens[current_token_index].type == TOKEN_TYPES.SINGLE_QUOTE_STRING then
+	elseif current_token.type == TOKEN_TYPES.SINGLE_QUOTE_STRING then
 		return index_chain_expression({
 			"(",
 			single_quote_string(),
 			")",
 		}, true)
-	elseif current_token.value == '"' then
+	elseif current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING then
 		return index_chain_expression({
 			"(",
 			double_quote_string(),
 			")",
 		}, false)
-	elseif current_token.value:match("^%[[[=]") then
+	elseif current_token.type == TOKEN_TYPES.BLOCK_STRING then
 		return index_chain_expression({
 			"(",
 			block_string(),
 			")",
 		}, false)
+	end
+	if TERMINALS[current_token.value] then
+		if current_token.value == "..." and not is_varargs_block then
+			throw("cannot use '...' outside a vararg function")
+		end
+		return {
+			current_token.line,
+			consume(),
+		}
 	end
 	local next_token = look_ahead(1)
 	local is_arrow_function = next_token == "->" or next_token == "=>"
@@ -736,7 +750,6 @@ local function terminal_expression()
 	end
 end
 local function unop_expression()
-	local compile_lines = {}
 	local unop_line, unop = current_token.line, UNOPS[consume()]
 	local operand_line, operand = current_token.line, expression(unop.prec + 1)
 	if unop.token == "~" then
@@ -780,20 +793,19 @@ function expression(min_prec)
 	if min_prec == nil then
 		min_prec = 1
 	end
+	if current_token.type == TOKEN_TYPES.EOF then
+		throw("unexpected eof (expected expression)")
+	end
 	local compile_lines = UNOPS[current_token.value] and unop_expression() or terminal_expression()
-	local binop = BINOPS[current_token.value]
+	local binop, binop_line = BINOPS[current_token.value], current_token.line
 	while binop and binop.prec >= min_prec do
-		local binop_line = current_token.line
-		consume()
-		local rhs_min_prec = binop.prec
-		if binop.assoc == LEFT_ASSOCIATIVE then
-			rhs_min_prec = rhs_min_prec + 1
-		end
 		if BITOPS[binop.token] and (lua_target == "5.1+" or lua_target == "5.2+") and not bitlib then
 			throw("must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+", binop_line)
 		end
-		compile_lines = compile_binop(binop.token, binop_line, compile_lines, expression(rhs_min_prec))
-		binop = BINOPS[current_token.value]
+		consume()
+		local operand = binop.assoc == LEFT_ASSOCIATIVE and expression(binop.prec + 1) or expression(binop.prec)
+		compile_lines = compile_binop(binop.token, binop_line, compile_lines, operand)
+		binop, binop_line = BINOPS[current_token.value], current_token.line
 	end
 	return compile_lines
 end
@@ -857,7 +869,6 @@ local function for_loop_statement()
 	local pre_body_compile_lines = {}
 	table.insert(compile_lines, consume())
 	if look_ahead(1) == "=" then
-		table.insert(compile_lines, current_token.line)
 		table.insert(compile_lines, name() .. consume())
 		local expr_list_line = current_token.line
 		local expr_list = list(expression)
@@ -1131,7 +1142,7 @@ function statement()
 	end
 	return compile_lines
 end
-local function module_block(options)
+local function module_block()
 	local compile_lines = {}
 	if current_token.type == TOKEN_TYPES.SHEBANG then
 		table.insert(compile_lines, consume())
@@ -1147,6 +1158,18 @@ local function module_block(options)
 		table.insert(compile_lines, "return _MODULE")
 	end
 	return compile_lines
+end
+local function collect_compile_lines(lines, state)
+	for _, line in ipairs(lines) do
+		if type(line) == "number" then
+			state.source_line = line
+		elseif type(line) == "string" then
+			table.insert(state.compile_lines, line)
+			table.insert(state.source_map, state.source_line)
+		else
+			collect_compile_lines(line, state)
+		end
+	end
 end
 return function(source, options)
 	if options == nil then
@@ -1170,28 +1193,16 @@ return function(source, options)
 		or (lua_target == "5.1" and "bit")
 		or (lua_target == "jit" and "bit")
 		or (lua_target == "5.2" and "bit32")
-	local source_line = current_token.line
 	local source_map = {}
-	local collapsed_compile_lines = {}
-	local collapsed_compile_line_counter = 0
-	local function collect_compile_lines(lines)
-		for _, line in ipairs(lines) do
-			if type(line) == "number" then
-				source_line = line
-			elseif type(line) == "string" then
-				table.insert(collapsed_compile_lines, line)
-				collapsed_compile_line_counter = collapsed_compile_line_counter + 1
-				source_map[collapsed_compile_line_counter] = source_line
-			else
-				collect_compile_lines(line)
-			end
-		end
-	end
-	local compile_lines = module_block(options)
-	collect_compile_lines(compile_lines)
-	table.insert(collapsed_compile_lines, "-- Compiled with Erde " .. VERSION)
-	table.insert(collapsed_compile_lines, COMPILED_FOOTER_COMMENT)
-	return table.concat(collapsed_compile_lines, "\n"), source_map
+	local compile_lines = {}
+	collect_compile_lines(module_block(), {
+		compile_lines = compile_lines,
+		source_map = source_map,
+		source_line = current_token.line,
+	})
+	table.insert(compile_lines, "-- Compiled with Erde " .. VERSION)
+	table.insert(compile_lines, COMPILED_FOOTER_COMMENT)
+	return table.concat(compile_lines, "\n"), source_map
 end
 -- Compiled with Erde 0.6.0-1
 -- __ERDE_COMPILED__

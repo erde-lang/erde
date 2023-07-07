@@ -14,6 +14,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 
 ### Fixed
 - Fixed allowing keywords as variable names
+- Fixed compilation error for interpolation strings with only an escaped brace
 
 ### Added
 

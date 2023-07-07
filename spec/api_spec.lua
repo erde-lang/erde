@@ -36,7 +36,7 @@ describe('api compile #5.1+', function()
     end)
 
     assert.are.equal(false, ok)
-    assert.are.equal('myalias:1: unexpected eof', result)
+    assert.are.equal('myalias:1: unexpected eof (expected expression)', result)
   end)
   spec('returns code + sourcemap', function()
     local compiled, sourcemap = erde.compile('')
@@ -72,7 +72,7 @@ describe('api run #5.1+', function()
     end)
 
     assert.are.equal(false, ok)
-    assert.are.equal('myalias:1: unexpected eof', result)
+    assert.are.equal('myalias:1: unexpected eof (expected expression)', result)
 
     local ok, result = xpcall(function()
       erde.run('error("myerror")', { alias = 'myalias' })
