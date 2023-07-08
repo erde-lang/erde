@@ -26,7 +26,7 @@ do
 	get_source_alias = __ERDE_TMP_9__["get_source_alias"]
 end
 local unpack = table.unpack or unpack
-local expression, block, statement
+local arrow_function_expression, expression, block, statement
 local tokens
 local current_token_index
 local current_token
@@ -94,7 +94,7 @@ local function look_past_surround(token_start_index)
 		look_ahead_token_index = look_ahead_token_index + 1
 		look_ahead_token = tokens[look_ahead_token_index]
 	until surround_depth == 0
-	return look_ahead_token.value, look_ahead_token_index
+	return look_ahead_token, look_ahead_token_index
 end
 local function new_tmp_name()
 	tmp_name_counter = tmp_name_counter + 1
@@ -215,62 +215,72 @@ local function name(no_transform)
 		return consume()
 	end
 end
-local function destructure(scope)
-	local names = {}
+local function array_destructure(scope)
 	local compile_lines = {}
 	local compile_name = new_tmp_name()
+	local names = {}
 	local assignment_prefix = scope == "global" and "_G." or ""
-	if current_token.value == "[" then
-		local array_index = 0
-		surround_list("[", "]", false, function()
-			local name_line, name = current_token.line, name()
-			local assignment_name = assignment_prefix .. name
-			array_index = array_index + 1
-			table.insert(names, name)
-			table.insert(compile_lines, name_line)
+	local array_index = 0
+	surround_list("[", "]", false, function()
+		array_index = array_index + 1
+		local name_line, name = current_token.line, name()
+		table.insert(names, name)
+		local assignment_name = assignment_prefix .. name
+		table.insert(compile_lines, name_line)
+		table.insert(
+			compile_lines,
+			(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "[" .. tostring(array_index) .. "]")
+		)
+		if branch("=") then
 			table.insert(
 				compile_lines,
-				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "[" .. tostring(array_index) .. "]")
+				("if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = ")
 			)
-			if branch("=") then
-				table.insert(
-					compile_lines,
-					("if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = ")
-				)
-				table.insert(compile_lines, expression())
-				table.insert(compile_lines, "end")
-			end
-		end)
-	else
-		surround_list("{", "}", false, function()
-			local key_line, raw_key, key = current_token.line, current_token.value, name()
-			local name = branch(":") and name() or key
-			local assignment_name = assignment_prefix .. name
-			table.insert(names, name)
-			table.insert(compile_lines, key_line)
-			table.insert(
-				compile_lines,
-				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(raw_key) .. "']")
-			)
-			if branch("=") then
-				table.insert(
-					compile_lines,
-					("if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = ")
-				)
-				table.insert(compile_lines, expression())
-				table.insert(compile_lines, "end")
-			end
-		end)
-	end
+			table.insert(compile_lines, expression())
+			table.insert(compile_lines, "end")
+		end
+	end)
 	return {
-		names = names,
-		compile_name = compile_name,
 		compile_lines = compile_lines,
+		compile_name = compile_name,
+		names = names,
 	}
 end
-local function variable()
-	if current_token.value == "{" or current_token.value == "[" then
-		return destructure()
+local function map_destructure(scope)
+	local compile_lines = {}
+	local compile_name = new_tmp_name()
+	local names = {}
+	local assignment_prefix = scope == "global" and "_G." or ""
+	surround_list("{", "}", false, function()
+		local key_line, raw_key, key = current_token.line, current_token.value, name()
+		local name = branch(":") and name() or key
+		table.insert(names, name)
+		local assignment_name = assignment_prefix .. name
+		table.insert(compile_lines, key_line)
+		table.insert(
+			compile_lines,
+			(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(raw_key) .. "']")
+		)
+		if branch("=") then
+			table.insert(
+				compile_lines,
+				("if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = ")
+			)
+			table.insert(compile_lines, expression())
+			table.insert(compile_lines, "end")
+		end
+	end)
+	return {
+		compile_lines = compile_lines,
+		compile_name = compile_name,
+		names = names,
+	}
+end
+local function variable(scope)
+	if current_token.value == "[" then
+		return array_destructure(scope)
+	elseif current_token.value == "{" then
+		return map_destructure(scope)
 	else
 		return name()
 	end
@@ -371,30 +381,22 @@ local function table_constructor()
 		"}",
 	}
 end
-local function return_list(require_list_parens)
-	local compile_lines = {}
-	if current_token.value ~= "(" then
-		table.insert(compile_lines, require_list_parens and expression() or weave(list(expression)))
-	else
-		local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
-		if look_ahead_limit_token == "->" or look_ahead_limit_token == "=>" then
-			table.insert(compile_lines, expression())
-		else
-			local is_list = false
-			for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
-				local look_ahead_token = tokens[look_ahead_token_index].value
-				if SURROUND_ENDS[look_ahead_token] then
-					look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
-				end
-				if look_ahead_token == "," then
-					is_list = true
-					break
-				end
-			end
-			table.insert(compile_lines, is_list and weave(surround_list("(", ")", false, expression)) or expression())
+local function return_list()
+	local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
+	if look_ahead_limit_token.value == "->" or look_ahead_limit_token.value == "=>" then
+		return arrow_function_expression()
+	end
+	local is_list = false
+	for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
+		local look_ahead_token = tokens[look_ahead_token_index]
+		if look_ahead_token.type == TOKEN_TYPES.SYMBOL and SURROUND_ENDS[look_ahead_token.value] then
+			look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
+		end
+		if look_ahead_token.type == TOKEN_TYPES.SYMBOL and look_ahead_token.value == "," then
+			return weave(surround_list("(", ")", false, expression))
 		end
 	end
-	return compile_lines
+	return expression()
 end
 local function return_statement()
 	if is_module_return_block then
@@ -405,18 +407,26 @@ local function return_statement()
 		consume(),
 	}
 	if block_depth == 1 then
-		if current_token.value then
-			table.insert(compile_lines, return_list())
+		if current_token.type ~= TOKEN_TYPES.EOF then
+			if current_token.value == "(" then
+				table.insert(compile_lines, return_list())
+			else
+				table.insert(compile_lines, weave(list(expression)))
+			end
 		end
-		if current_token.value then
-			throw(("expected '<eof>', got '%s'"):format(current_token.value))
+		if current_token.type ~= TOKEN_TYPES.EOF then
+			throw(("expected '<eof>', got '" .. tostring(current_token.value) .. "'"))
 		end
 	else
 		if current_token.value ~= "}" then
-			table.insert(compile_lines, return_list())
+			if current_token.value == "(" then
+				table.insert(compile_lines, return_list())
+			else
+				table.insert(compile_lines, weave(list(expression)))
+			end
 		end
 		if current_token.value ~= "}" then
-			throw(("expected '}', got '%s'"):format(current_token.value))
+			throw(("expected '}', got '" .. tostring(current_token.value) .. "'"))
 		end
 	end
 	return compile_lines
@@ -465,7 +475,7 @@ local function function_block()
 	break_name = old_break_name
 	return compile_lines
 end
-local function arrow_function_expression()
+function arrow_function_expression()
 	local compile_lines = {}
 	local param_names = {}
 	local old_is_varargs_block = is_varargs_block
@@ -498,10 +508,15 @@ local function arrow_function_expression()
 	table.insert(compile_lines, 1, ("function(" .. tostring(table.concat(param_names, ",")) .. ")"))
 	if current_token.value == "{" then
 		table.insert(compile_lines, surround("{", "}", function_block))
+	elseif current_token.value == "(" then
+		table.insert(compile_lines, {
+			"return",
+			return_list(),
+		})
 	else
 		table.insert(compile_lines, {
 			"return",
-			return_list(true),
+			expression(),
 		})
 	end
 	is_varargs_block = old_is_varargs_block
@@ -726,11 +741,11 @@ local function terminal_expression()
 			consume(),
 		}
 	end
-	local next_token = look_ahead(1)
-	local is_arrow_function = next_token == "->" or next_token == "=>"
+	local next_token_value = look_ahead(1)
+	local is_arrow_function = next_token_value == "->" or next_token_value == "=>"
 	if not is_arrow_function and SURROUND_ENDS[current_token.value] then
 		local past_surround_token = look_past_surround()
-		is_arrow_function = past_surround_token == "->" or past_surround_token == "=>"
+		is_arrow_function = past_surround_token.value == "->" or past_surround_token.value == "=>"
 	end
 	if is_arrow_function then
 		return arrow_function_expression()

@@ -20,8 +20,9 @@ local { get_source_alias } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 
+-- TODO: refactor
 -- Foward declare
-local expression, block, statement
+local arrow_function_expression, expression, block, statement
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -91,7 +92,6 @@ local function consume() {
   return consumed_token_value
 }
 
--- TODO: remove?
 local function branch(token) {
   if token == current_token.value {
     consume()
@@ -142,7 +142,7 @@ local function look_past_surround(token_start_index = current_token_index) {
     look_ahead_token = tokens[look_ahead_token_index]
   } until surround_depth == 0
 
-  return look_ahead_token.value, look_ahead_token_index
+  return look_ahead_token, look_ahead_token_index
 }
 
 -- -----------------------------------------------------------------------------
@@ -247,62 +247,78 @@ local function name(no_transform) {
   }
 }
 
--- TODO: refactor?
-local function destructure(scope) {
-  local names = {}
+local function array_destructure(scope) {
   local compile_lines = {}
   local compile_name = new_tmp_name()
+  local names = {}
+
   local assignment_prefix = scope == 'global' && '_G.' || ''
 
-  if current_token.value == '[' {
-    local array_index = 0
+  local array_index = 0
 
-    surround_list('[', ']', false, () -> {
-      local name_line, name = current_token.line, name()
-      local assignment_name = assignment_prefix .. name
-      array_index += 1
+  surround_list('[', ']', false, () -> {
+    array_index += 1
 
-      table.insert(names, name)
+    local name_line, name = current_token.line, name()
+    table.insert(names, name)
 
-      table.insert(compile_lines, name_line)
-      table.insert(compile_lines, "{ assignment_name } = { compile_name }[{ array_index }]")
+    local assignment_name = assignment_prefix .. name
 
-      if branch('=') {
-        table.insert(compile_lines, "if { assignment_name } == nil then { assignment_name } = ")
-        table.insert(compile_lines, expression())
-        table.insert(compile_lines, 'end')
-      }
-    })
-  } else {
-    surround_list('{', '}', false, () -> {
-      -- Save `raw_key` in case `name()` transforms the word (Lua keywords)
-      local key_line, raw_key, key = current_token.line, current_token.value, name()
-      local name = branch(':') && name() || key
-      local assignment_name = assignment_prefix .. name
+    table.insert(compile_lines, name_line)
+    table.insert(compile_lines, "{ assignment_name } = { compile_name }[{ array_index }]")
 
-      table.insert(names, name)
-
-      table.insert(compile_lines, key_line)
-      table.insert(compile_lines, "{ assignment_name } = { compile_name }['{ raw_key }']")
-
-      if branch('=') {
-        table.insert(compile_lines, "if { assignment_name } == nil then { assignment_name } = ")
-        table.insert(compile_lines, expression())
-        table.insert(compile_lines, 'end')
-      }
-    })
-  }
+    if branch('=') {
+      table.insert(compile_lines, "if { assignment_name } == nil then { assignment_name } = ")
+      table.insert(compile_lines, expression())
+      table.insert(compile_lines, 'end')
+    }
+  })
 
   return {
-    names = names,
-    compile_name = compile_name,
     compile_lines = compile_lines,
+    compile_name = compile_name,
+    names = names,
   }
 }
 
-local function variable() {
-  if current_token.value == '{' || current_token.value == '[' {
-    return destructure()
+local function map_destructure(scope) {
+  local compile_lines = {}
+  local compile_name = new_tmp_name()
+  local names = {}
+
+  local assignment_prefix = scope == 'global' && '_G.' || ''
+
+  surround_list('{', '}', false, () -> {
+    -- Save `raw_key` in case `name()` transforms the word (Lua keywords)
+    local key_line, raw_key, key = current_token.line, current_token.value, name()
+
+    local name = branch(':') && name() || key
+    table.insert(names, name)
+
+    local assignment_name = assignment_prefix .. name
+
+    table.insert(compile_lines, key_line)
+    table.insert(compile_lines, "{ assignment_name } = { compile_name }['{ raw_key }']")
+
+    if branch('=') {
+      table.insert(compile_lines, "if { assignment_name } == nil then { assignment_name } = ")
+      table.insert(compile_lines, expression())
+      table.insert(compile_lines, 'end')
+    }
+  })
+
+  return {
+    compile_lines = compile_lines,
+    compile_name = compile_name,
+    names = names,
+  }
+}
+
+local function variable(scope) {
+  if current_token.value == '[' {
+    return array_destructure(scope)
+  } elseif current_token.value == '{' {
+    return map_destructure(scope)
   } else {
     return name()
   }
@@ -431,40 +447,34 @@ local function table_constructor() {
 
 -- -----------------------------------------------------------------------------
 -- Returns
--- TODO: refactor?
 -- -----------------------------------------------------------------------------
 
-local function return_list(require_list_parens) {
-  local compile_lines = {}
+local function return_list() {
+  local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
 
-  if current_token.value != '(' {
-    table.insert(compile_lines, require_list_parens && expression() || weave(list(expression)))
-  } else {
-    local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
+  if look_ahead_limit_token.value == '->' || look_ahead_limit_token.value == '=>' {
+    return arrow_function_expression()
+  }
 
-    if look_ahead_limit_token == '->' || look_ahead_limit_token == '=>' {
-      table.insert(compile_lines, expression())
-    } else {
-      local is_list = false
+  local is_list = false
 
-      for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 {
-        local look_ahead_token = tokens[look_ahead_token_index].value
+  for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 {
+    local look_ahead_token = tokens[look_ahead_token_index]
 
-        if SURROUND_ENDS[look_ahead_token] {
-          look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
-        }
+    -- Check token type, since we are bypassing all parsing structure here and
+    -- need to be careful for arbitrary string contents.
+    if look_ahead_token.type == TOKEN_TYPES.SYMBOL && SURROUND_ENDS[look_ahead_token.value] {
+      look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
+    }
 
-        if look_ahead_token == ',' {
-          is_list = true
-          break
-        }
-      }
-
-      table.insert(compile_lines, is_list && weave(surround_list('(', ')', false, expression)) || expression())
+    -- Check token type, since we are bypassing all parsing structure here and
+    -- need to be careful for arbitrary string contents.
+    if look_ahead_token.type == TOKEN_TYPES.SYMBOL && look_ahead_token.value == ',' {
+      return weave(surround_list('(', ')', false, expression))
     }
   }
 
-  return compile_lines
+  return expression()
 }
 
 local function return_statement() {
@@ -475,20 +485,28 @@ local function return_statement() {
   local compile_lines = { current_token.line, consume() }
 
   if block_depth == 1 {
-    if current_token.value {
-      table.insert(compile_lines, return_list())
+    if current_token.type != TOKEN_TYPES.EOF {
+      if current_token.value == '(' {
+        table.insert(compile_lines, return_list())
+      } else {
+        table.insert(compile_lines, weave(list(expression)))
+      }
     }
 
-    if current_token.value {
-      throw(("expected '<eof>', got '%s'"):format(current_token.value))
+    if current_token.type != TOKEN_TYPES.EOF {
+      throw("expected '<eof>', got '{ current_token.value }'")
     }
   } else {
     if current_token.value != '}' {
-      table.insert(compile_lines, return_list())
+      if current_token.value == '(' {
+        table.insert(compile_lines, return_list())
+      } else {
+        table.insert(compile_lines, weave(list(expression)))
+      }
     }
 
     if current_token.value != '}' {
-      throw(("expected '}', got '%s'"):format(current_token.value))
+      throw("expected '}', got '{ current_token.value }'")
     }
   }
 
@@ -552,7 +570,7 @@ local function function_block() {
   return compile_lines
 }
 
-local function arrow_function_expression() {
+function arrow_function_expression() {
   local compile_lines = {}
   local param_names = {}
   local old_is_varargs_block = is_varargs_block
@@ -590,8 +608,10 @@ local function arrow_function_expression() {
 
   if current_token.value == '{' {
     table.insert(compile_lines, surround('{', '}', function_block))
+  } elseif current_token.value == '(' {
+    table.insert(compile_lines, { 'return', return_list() })
   } else {
-    table.insert(compile_lines, { 'return', return_list(true) })
+    table.insert(compile_lines, { 'return', expression() })
   }
 
   is_varargs_block = old_is_varargs_block
@@ -842,15 +862,15 @@ local function terminal_expression() {
     return { current_token.line, consume() }
   }
 
-  local next_token = look_ahead(1)
-  local is_arrow_function = next_token == '->' || next_token == '=>'
+  local next_token_value = look_ahead(1)
+  local is_arrow_function = next_token_value == '->' || next_token_value == '=>'
 
   -- First do a quick check for is_arrow_function (in case of implicit params),
   -- otherwise if surround_end is truthy (possible params), need to check the
   -- next token after. This is _much_ faster than backtracking.
   if !is_arrow_function && SURROUND_ENDS[current_token.value] {
     local past_surround_token = look_past_surround()
-    is_arrow_function = past_surround_token == '->' || past_surround_token == '=>'
+    is_arrow_function = past_surround_token.value == '->' || past_surround_token.value == '=>'
   }
 
   if is_arrow_function {
