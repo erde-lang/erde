@@ -20,9 +20,8 @@ local { get_source_alias } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 
--- TODO: refactor
 -- Foward declare
-local arrow_function_expression, expression, block, statement
+local arrow_function, block, expression, statement
 
 -- -----------------------------------------------------------------------------
 -- State
@@ -99,7 +98,7 @@ local function branch(token) {
   }
 }
 
-local function expect(token, prevent_consume) {
+local function expect(token, should_consume) {
   if current_token.type == TOKEN_TYPES.EOF {
     throw("unexpected eof (expected { token })")
   }
@@ -108,15 +107,9 @@ local function expect(token, prevent_consume) {
     throw("expected '{ token }' got '{ current_token.value }'")
   }
 
-  if !prevent_consume {
+  if should_consume {
     return consume()
   }
-}
-
--- TODO: remove?
-local function look_ahead(n) {
-  local token = tokens[current_token_index + n]
-  return token && token.value || nil
 }
 
 local function look_past_surround(token_start_index = current_token_index) {
@@ -205,9 +198,9 @@ local function list(callback, break_token) {
 }
 
 local function surround(open_char, close_char, callback) {
-  expect(open_char)
+  expect(open_char, true)
   local result = callback()
-  expect(close_char)
+  expect(close_char, true)
   return result
 }
 
@@ -215,6 +208,8 @@ local function surround_list(open_char, close_char, allow_empty, callback) {
   return surround(open_char, close_char, () -> {
     if current_token.value != close_char || !allow_empty {
       return list(callback, close_char)
+    } else {
+      return {}
     }
   })
 }
@@ -325,6 +320,144 @@ local function variable(scope) {
 }
 
 -- -----------------------------------------------------------------------------
+-- Index Chain
+-- -----------------------------------------------------------------------------
+
+local function bracket_index(index_chain_state) {
+  table.insert(index_chain_state.compile_lines, current_token.line)
+  table.insert(index_chain_state.compile_lines, '[')
+  table.insert(index_chain_state.compile_lines, surround('[', ']', expression))
+  table.insert(index_chain_state.compile_lines, ']')
+}
+
+local function dot_index(index_chain_state) {
+  table.insert(index_chain_state.compile_lines, current_token.line)
+
+  consume() -- '.'
+
+  local field_name = name(true)
+
+  if LUA_KEYWORDS[field_name] {
+    table.insert(index_chain_state.compile_lines, "['{ field_name }']" )
+  } else {
+    table.insert(index_chain_state.compile_lines, '.' .. field_name)
+  }
+}
+
+local function method_index(index_chain_state) {
+  table.insert(index_chain_state.compile_lines, current_token.line)
+
+  consume() -- ':'
+
+  local method_name_line, method_name = current_token.line, name(true)
+
+  local method_parameters = surround_list('(', ')', true, expression)
+
+  if !LUA_KEYWORDS[method_name] {
+    table.insert(index_chain_state.compile_lines, ":{ method_name }(")
+    table.insert(index_chain_state.compile_lines, weave(method_parameters))
+    table.insert(index_chain_state.compile_lines, ')')
+  } elseif index_chain_state.has_trivial_base && index_chain_state.has_trivial_chain {
+    table.insert(index_chain_state.compile_lines, "['{ method_name }'](")
+
+    -- Need to manually insert self, since we are not using the native ':' operator
+    table.insert(method_parameters, 1, index_chain_state.base_compile_lines)
+
+    table.insert(index_chain_state.compile_lines, weave(method_parameters))
+    table.insert(index_chain_state.compile_lines, ')')
+  } else {
+    index_chain_state.needs_block_compile = true
+
+    table.insert(index_chain_state.block_compile_lines, index_chain_state.block_compile_name .. '=')
+    table.insert(index_chain_state.block_compile_lines, index_chain_state.compile_lines)
+
+    -- Need to manually insert self, since we are not using the native ':' operator
+    table.insert(method_parameters, 1, index_chain_state.block_compile_name)
+
+    index_chain_state.compile_lines = {
+      "{ index_chain_state.block_compile_name }['{ method_name }'](",
+      weave(method_parameters),
+      ')',
+    }
+  }
+}
+
+local function function_call_index(index_chain_state) {
+  local preceding_compile_lines = index_chain_state.compile_lines
+  local preceding_compile_lines_len = #preceding_compile_lines
+
+  while type(preceding_compile_lines[preceding_compile_lines_len]) == 'table' {
+    preceding_compile_lines = preceding_compile_lines[preceding_compile_lines_len]
+    preceding_compile_lines_len = #preceding_compile_lines
+  }
+
+  -- Include function call parens on same line as function name to prevent
+  -- parsing errors in Lua5.1
+  --    `ambiguous syntax (function call x new statement) near '('`
+  preceding_compile_lines[preceding_compile_lines_len] ..= '('
+
+  table.insert(index_chain_state.compile_lines, weave(surround_list('(', ')', true, expression)))
+  table.insert(index_chain_state.compile_lines, ')')
+}
+
+local function index_chain(base_compile_lines, has_trivial_base, require_chain) {
+  local block_compile_name = new_tmp_name()
+
+  local index_chain_state = {
+    base_compile_lines = base_compile_lines,
+    compile_lines = { base_compile_lines },
+    has_trivial_base = has_trivial_base,
+    has_trivial_chain = true,
+
+    -- Variables for when we must compile to a Lua block. This is necessary when
+    -- compiling a method index with a nontrivial base when the method name is a
+    -- Lua keyword, but not an Erde keyword.
+    needs_block_compile = false,
+    block_compile_name = block_compile_name,
+    block_compile_lines = { 'local ' .. block_compile_name },
+  }
+
+  local has_trivial_chain = false
+  local is_function_call = false
+
+  while true {
+    -- Use newlines to infer whether the parentheses belong to a function call or the next statement.
+    if current_token.value == '(' && current_token.line == tokens[current_token_index - 1].line {
+      is_function_call = true
+      function_call_index(index_chain_state)
+    } elseif current_token.value == '[' {
+      is_function_call = false
+      bracket_index(index_chain_state)
+    } elseif current_token.value == '.' {
+      is_function_call = false
+      dot_index(index_chain_state)
+    } elseif current_token.value == ':' {
+      is_function_call = false
+      method_index(index_chain_state)
+    } else {
+      break
+    }
+
+    index_chain_state.has_trivial_chain = false
+  }
+
+  if require_chain && index_chain_state.has_trivial_chain {
+    if current_token.type == TOKEN_TYPES.EOF {
+      throw('unexpected eof')
+    } else {
+      throw("unexpected token '{ current_token.value }'")
+    }
+  }
+
+  return {
+    compile_lines = index_chain_state.compile_lines,
+    is_function_call = is_function_call,
+    needs_block_compile = index_chain_state.needs_block_compile,
+    block_compile_lines = index_chain_state.block_compile_lines,
+  }
+}
+
+-- -----------------------------------------------------------------------------
 -- Strings
 -- -----------------------------------------------------------------------------
 
@@ -427,8 +560,8 @@ local function table_constructor() {
       table.insert(compile_lines, '[')
       table.insert(compile_lines, surround('[', ']', expression))
       table.insert(compile_lines, ']')
-      table.insert(compile_lines, expect('='))
-    } elseif look_ahead(1) == '=' {
+      table.insert(compile_lines, expect('=', true))
+    } elseif tokens[current_token_index + 1].value == '=' {
       local key = name(true)
 
       if LUA_KEYWORDS[key] {
@@ -453,7 +586,7 @@ local function return_list() {
   local look_ahead_limit_token, look_ahead_limit_token_index = look_past_surround()
 
   if look_ahead_limit_token.value == '->' || look_ahead_limit_token.value == '=>' {
-    return arrow_function_expression()
+    return arrow_function()
   }
 
   local is_list = false
@@ -477,7 +610,7 @@ local function return_list() {
   return expression()
 }
 
-local function return_statement() {
+local function block_return() {
   if is_module_return_block {
     module_return_line = current_token.line
   }
@@ -515,27 +648,28 @@ local function return_statement() {
 
 -- -----------------------------------------------------------------------------
 -- Functions
--- TODO: refactor?
 -- -----------------------------------------------------------------------------
 
 local function parameters() {
   local compile_lines = {}
-  local names = {}
   local has_varargs = false
+  local names = {}
 
   surround_list('(', ')', true, () -> {
     if branch('...') {
       has_varargs = true
+
       table.insert(names, '...')
 
-      if current_token.value != ')' {
+      if current_token.type == TOKEN_TYPES.WORD {
         table.insert(compile_lines, "local { name() } = \{ ... }")
       }
 
       branch(',')
-      expect(')', true)
+      expect(')')
     } else {
       local var = variable()
+
       local name = type(var) == 'string' && var || var.compile_name
       table.insert(names, name)
 
@@ -552,7 +686,11 @@ local function parameters() {
     }
   })
 
-  return { names = names, compile_lines = compile_lines, has_varargs = has_varargs }
+  return {
+    compile_lines = compile_lines,
+    has_varargs = has_varargs,
+    names = names,
+  }
 }
 
 local function function_block() {
@@ -570,26 +708,28 @@ local function function_block() {
   return compile_lines
 }
 
-function arrow_function_expression() {
-  local compile_lines = {}
-  local param_names = {}
+function arrow_function() {
   local old_is_varargs_block = is_varargs_block
+
+  local param_compile_lines = {}
+  local param_names = {}
 
   if current_token.value == '(' {
     local params = parameters()
+    table.insert(param_compile_lines, params.compile_lines)
     is_varargs_block = params.has_varargs
     param_names = params.names
-    table.insert(compile_lines, params.compile_lines)
   } else {
-    local var = variable()
     is_varargs_block = false
+
+    local var = variable()
 
     if type(var) == 'string' {
       table.insert(param_names, var)
     } else {
       table.insert(param_names, var.compile_name)
-      table.insert(compile_lines, 'local ' .. table.concat(var.names, ','))
-      table.insert(compile_lines, var.compile_lines)
+      table.insert(param_compile_lines, 'local ' .. table.concat(var.names, ','))
+      table.insert(param_compile_lines, var.compile_lines)
     }
   }
 
@@ -598,58 +738,49 @@ function arrow_function_expression() {
   } elseif current_token.value == '=>' {
     table.insert(param_names, 1, 'self')
     consume()
-  } elseif current_token.value == nil {
+  } elseif current_token.type == TOKEN_TYPES.EOF {
     throw("unexpected eof (expected '->' or '=>')")
   } else {
     throw("unexpected token '{ current_token.value }' (expected '->' or '=>')")
   }
 
-  table.insert(compile_lines, 1, "function({ table.concat(param_names, ',') })")
+  local compile_lines = {
+    "function({ table.concat(param_names, ',') })",
+    param_compile_lines,
+  }
 
   if current_token.value == '{' {
     table.insert(compile_lines, surround('{', '}', function_block))
   } elseif current_token.value == '(' {
-    table.insert(compile_lines, { 'return', return_list() })
+    table.insert(compile_lines, 'return')
+    table.insert(compile_lines, return_list())
   } else {
-    table.insert(compile_lines, { 'return', expression() })
+    table.insert(compile_lines, 'return')
+    table.insert(compile_lines, expression())
   }
 
-  is_varargs_block = old_is_varargs_block
   table.insert(compile_lines, 'end')
+
+  is_varargs_block = old_is_varargs_block
+
   return compile_lines
 }
 
-local function function_statement() {
+local function function_declaration(scope) {
   local compile_lines = {}
-  local scope_line, scope = current_token.line, nil
+  local function_line = current_token.line
 
-  if current_token.value == 'local' || current_token.value == 'module' {
-    scope = consume()
+  if scope == 'local' || scope == 'module' {
     table.insert(compile_lines, 'local')
-    table.insert(compile_lines, consume()) -- 'function'
-  } elseif current_token.value == 'global' {
-    scope = consume()
-    table.insert(compile_lines, consume()) -- 'function'
-  } elseif current_token.value == 'function' {
-    table.insert(compile_lines, consume())
-  } else {
-    throw("unexpected token '{ current_token.value }' (expected scope)")
   }
 
-  if scope == 'module' {
-    if block_depth > 1 {
-      throw('module declarations must appear at the top level', scope_line)
-    }
-
-    has_module_declarations = true
-  }
+  table.insert(compile_lines, consume()) -- 'function'
 
   local signature = name()
   local is_table_value = current_token.value == '.'
 
   if scope == 'global' {
     signature = '_G.' .. signature
-    is_table_value = true
   }
 
   while branch('.') {
@@ -657,13 +788,13 @@ local function function_statement() {
   }
 
   if branch(':') {
-    is_table_value = true
     signature ..= ':' .. name()
+    is_table_value = true
   }
 
   if is_table_value && (scope == 'local' || scope == 'module') {
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    throw('cannot use scopes for table values', scope_line)
+    throw('cannot use scopes for table values', function_line)
   }
 
   table.insert(compile_lines, signature)
@@ -687,159 +818,24 @@ local function function_statement() {
 }
 
 -- -----------------------------------------------------------------------------
--- Index Chain
--- TODO: refactor?
+-- Expressions
 -- -----------------------------------------------------------------------------
-
-local function index_chain(base_compile_lines, has_trivial_base, require_chain) {
-  local chain = {}
-  local is_function_call = false
-  local has_trivial_chain = false
-
-  -- Variables for when we must compile to a Lua block.
-  --
-  -- There are cases where we cannot keep the compiled code as an expression and
-  -- must compile to a block (such as a `do` block or an IIFE). One such case is
-  -- when compiling a method index with a nontrivial base when the method name
-  -- is a Lua keyword, but not an Erde keyword.
-  local needs_block_compile = false
-  local block_compile_name = new_tmp_name()
-  local block_compile_lines = { "local { block_compile_name }" }
-
-  while true {
-    if current_token.value == '[' {
-      has_trivial_chain = false
-      table.insert(chain, { current_token.line, '[', surround('[', ']', expression), ']' })
-    } elseif current_token.value == '.' {
-      has_trivial_chain = false
-
-      local field_line = current_token.line
-      consume()
-      local field_name = name(true)
-
-      if LUA_KEYWORDS[field_name] {
-        table.insert(chain, { field_line, "['{ field_name }']" })
-      } else {
-        table.insert(chain, { field_line, '.' .. field_name })
-      }
-    } elseif branch(':') {
-      has_trivial_chain = false
-      is_function_call = true
-
-      local link = { current_token.line }
-      local method_name = name(true)
-      expect('(', true)
-
-      if !LUA_KEYWORDS[method_name] {
-        table.insert(link, ':' .. method_name)
-      } else {
-        local arg_compile_lines = surround_list('(', ')', true, expression)
-
-        if has_trivial_base && has_trivial_chain {
-          table.insert(link, '["' .. method_name .. '"](')
-          table.insert(link, "['{ method_name }'](")
-          table.insert(link, base_compile_lines)
-        } else {
-          needs_block_compile = true
-          link.needs_intermediate = true
-          table.insert(link, "['{ method_name }']({ block_compile_name }")
-        }
-
-        if arg_compile_lines {
-          table.insert(link, ',')
-          table.insert(link, weave(arg_compile_lines))
-        }
-
-        table.insert(link, ')')
-      }
-
-      table.insert(chain, link)
-    } elseif current_token.value == '(' && current_token.line == tokens[current_token_index - 1].line {
-      -- Use newlines to infer whether the parentheses belong to a function call
-      -- or the next statement.
-      has_trivial_chain = false
-      is_function_call = true
-
-      local chain_len = #chain
-      local preceding_compile_lines, preceding_compile_lines_len
-
-      if chain_len > 0 {
-        preceding_compile_lines = chain[chain_len]
-        preceding_compile_lines_len = #preceding_compile_lines
-      } else {
-        preceding_compile_lines = base_compile_lines
-        preceding_compile_lines_len = #base_compile_lines
-
-        while type(preceding_compile_lines[preceding_compile_lines_len]) == 'table' {
-          preceding_compile_lines = preceding_compile_lines[preceding_compile_lines_len]
-          preceding_compile_lines_len = #preceding_compile_lines
-        }
-      }
-
-      local arg_compile_lines = surround_list('(', ')', true, expression)
-
-      -- Include function call parens on same line as function name to prevent
-      -- parsing errors in Lua5.1
-      --    `ambiguous syntax (function call x new statement) near '('`
-      if !arg_compile_lines {
-        preceding_compile_lines[preceding_compile_lines_len] =
-          preceding_compile_lines[preceding_compile_lines_len] .. '()'
-      } else {
-        preceding_compile_lines[preceding_compile_lines_len] =
-          preceding_compile_lines[preceding_compile_lines_len] .. '('
-        table.insert(chain, { weave(arg_compile_lines), ')' })
-      }
-    } else {
-      break
-    }
-  }
-
-  if require_chain && has_trivial_chain {
-    if !current_token.value {
-      throw('unexpected eof')
-    } else {
-      throw("expected index chain, found '{ current_token.value }'")
-    }
-  }
-
-  for _, link in ipairs(chain) {
-    if link.needs_intermediate {
-      table.insert(block_compile_lines, block_compile_name .. '=')
-      table.insert(block_compile_lines, base_compile_lines)
-      base_compile_lines = { block_compile_name }
-    }
-
-    table.insert(base_compile_lines, link)
-  }
-
-  return {
-    base_compile_lines = base_compile_lines,
-    is_function_call = is_function_call,
-    needs_block_compile = needs_block_compile,
-    block_compile_name  = block_compile_name,
-    block_compile_lines = block_compile_lines,
-  }
-}
 
 local function index_chain_expression(...) {
   local index_chain = index_chain(...)
 
-  if !index_chain.needs_block_compile {
-    return index_chain.base_compile_lines
-  } else {
+  if index_chain.needs_block_compile {
     return {
       '(function()',
       index_chain.block_compile_lines,
       'return',
-      index_chain.base_compile_lines,
+      index_chain.compile_lines,
       'end)()',
     }
+  } else {
+    return index_chain.compile_lines
   }
 }
-
--- -----------------------------------------------------------------------------
--- Expressions
--- -----------------------------------------------------------------------------
 
 local function terminal_expression() {
   if current_token.type == TOKEN_TYPES.NUMBER {
@@ -862,7 +858,7 @@ local function terminal_expression() {
     return { current_token.line, consume() }
   }
 
-  local next_token_value = look_ahead(1)
+  local next_token_value = tokens[current_token_index + 1].value
   local is_arrow_function = next_token_value == '->' || next_token_value == '=>'
 
   -- First do a quick check for is_arrow_function (in case of implicit params),
@@ -874,7 +870,7 @@ local function terminal_expression() {
   }
 
   if is_arrow_function {
-    return arrow_function_expression()
+    return arrow_function()
   } elseif current_token.value == '{' {
     return table_constructor()
   } elseif current_token.value == '(' {
@@ -951,7 +947,7 @@ function block() {
   return compile_lines
 }
 
-local function do_statement() {
+local function do_block() {
   return {
     consume(), -- 'do'
     surround('{', '}', block),
@@ -962,29 +958,6 @@ local function do_statement() {
 -- -----------------------------------------------------------------------------
 -- Loops
 -- -----------------------------------------------------------------------------
-
-local function break_statement() {
-  if break_name == nil {
-    throw("cannot use 'break' outside of loop")
-  }
-
-  return consume()
-}
-
-local function continue_statement() {
-  if break_name == nil {
-    throw("cannot use 'continue' outside of loop")
-  }
-
-  has_continue = true
-  consume()
-
-  if lua_target == '5.1' || lua_target == '5.1+' {
-    return "{ break_name } = false break"
-  } else {
-    return "goto { break_name }"
-  }
-}
 
 local function loop_block() {
   local old_break_name = break_name
@@ -1010,13 +983,36 @@ local function loop_block() {
   return compile_lines
 }
 
-local function for_loop_statement() {
+local function loop_break() {
+  if break_name == nil {
+    throw("cannot use 'break' outside of loop")
+  }
+
+  return consume()
+}
+
+local function loop_continue() {
+  if break_name == nil {
+    throw("cannot use 'continue' outside of loop")
+  }
+
+  has_continue = true
+  consume()
+
+  if lua_target == '5.1' || lua_target == '5.1+' {
+    return "{ break_name } = false break"
+  } else {
+    return "goto { break_name }"
+  }
+}
+
+local function for_loop() {
   local compile_lines = {}
   local pre_body_compile_lines = {}
 
   table.insert(compile_lines, consume()) -- 'for'
 
-  if look_ahead(1) == '=' {
+  if tokens[current_token_index + 1].value == '=' {
     table.insert(compile_lines, name() .. consume())
 
     local expr_list_line = current_token.line
@@ -1042,7 +1038,7 @@ local function for_loop_statement() {
     }
 
     table.insert(compile_lines, weave(names))
-    table.insert(compile_lines, expect('in'))
+    table.insert(compile_lines, expect('in', true))
     table.insert(compile_lines, weave(list(expression)))
   }
 
@@ -1054,16 +1050,16 @@ local function for_loop_statement() {
   return compile_lines
 }
 
-local function repeat_until_statement() {
+local function repeat_until() {
   return {
     consume(), -- 'repeat'
     surround('{', '}', loop_block),
-    expect('until'),
+    expect('until', true),
     expression(),
   }
 }
 
-local function while_loop_statement() {
+local function while_loop() {
   return {
     consume(), -- 'while'
     expression(),
@@ -1077,7 +1073,7 @@ local function while_loop_statement() {
 -- Jumps
 -- -----------------------------------------------------------------------------
 
-local function goto_jump_statement() {
+local function goto_jump() {
   if lua_target == '5.1' || lua_target == '5.1+' {
     throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   }
@@ -1089,15 +1085,15 @@ local function goto_jump_statement() {
   }
 }
 
-local function goto_label_statement() {
+local function goto_label() {
   if lua_target == '5.1' || lua_target == '5.1+' {
     throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   }
 
-  return consume() .. name() .. expect('::')
+  return consume() .. name() .. expect('::', true)
 }
 
-local function if_else_statement() {
+local function if_else() {
   local compile_lines = {}
 
   table.insert(compile_lines, consume()) -- 'if'
@@ -1126,11 +1122,11 @@ local function if_else_statement() {
 -- Statements
 -- -----------------------------------------------------------------------------
 
--- TODO: refactor?
-local function assignment_statement(first_id) {
+local function variable_assignment(first_id) {
   local compile_lines = {}
+
   local index_chains = { first_id }
-  local base_compile_lines = { first_id.base_compile_lines }
+  local base_compile_lines = { first_id.compile_lines }
   local needs_block_compile = first_id.needs_block_compile
 
   while branch(',') {
@@ -1143,9 +1139,9 @@ local function assignment_statement(first_id) {
       throw('cannot assign value to function call', index_chain_line)
     }
 
-    needs_block_compile ||= index_chain.needs_block_compile
     table.insert(index_chains, index_chain)
-    table.insert(base_compile_lines, index_chain.base_compile_lines)
+    table.insert(base_compile_lines, index_chain.compile_lines)
+    needs_block_compile ||= index_chain.needs_block_compile
   }
 
   local op_line, op_token = current_token.line, BINOP_ASSIGNMENT_TOKENS[current_token.value] && consume()
@@ -1153,19 +1149,18 @@ local function assignment_statement(first_id) {
     throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', op_line)
   }
 
-  expect('=')
+  expect('=', true)
   local expr_list = list(expression)
 
-  -- Optimize most common use cases
   if !needs_block_compile && !op_token {
     table.insert(compile_lines, weave(base_compile_lines))
     table.insert(compile_lines, '=')
     table.insert(compile_lines, weave(expr_list))
   } elseif !needs_block_compile && #index_chains == 1 {
-    table.insert(compile_lines, first_id.base_compile_lines)
+    table.insert(compile_lines, first_id.compile_lines)
     table.insert(compile_lines, op_line)
     table.insert(compile_lines, '=')
-    table.insert(compile_lines, compile_binop(op_token, op_line, first_id.base_compile_lines, expr_list[1]))
+    table.insert(compile_lines, compile_binop(op_token, op_line, first_id.compile_lines, expr_list[1]))
   } else {
     local assignment_names = {}
     local assignment_compile_lines = {}
@@ -1178,12 +1173,14 @@ local function assignment_statement(first_id) {
         table.insert(assignment_compile_lines, id.block_compile_lines)
       }
 
-      table.insert(assignment_compile_lines, id.base_compile_lines)
+      table.insert(assignment_compile_lines, id.compile_lines)
       table.insert(assignment_compile_lines, '=')
-      table.insert(assignment_compile_lines, op_token
-        && compile_binop(op_token, op_line, id.base_compile_lines, assignment_name)
-        || assignment_name
-      )
+
+      if op_token != nil {
+        table.insert(assignment_compile_lines, compile_binop(op_token, op_line, id.compile_lines, assignment_name))
+      } else {
+        table.insert(assignment_compile_lines, assignment_name)
+      }
     }
 
     table.insert(compile_lines, 'do')
@@ -1198,24 +1195,13 @@ local function assignment_statement(first_id) {
   return compile_lines
 }
 
--- TODO: refactor?
-local function declaration_statement() {
-  local scope = consume()
-
+local function variable_declaration(scope) {
   local compile_lines = {}
   local destructure_compile_lines = {}
 
   local declaration_names = {}
   local destructure_compile_names = {}
   local assignment_names = {}
-
-  if scope == 'module' {
-    if block_depth > 1 {
-      throw('module declarations must appear at the top level', tokens[current_token_index - 1].line)
-    }
-
-    has_module_declarations = true
-  }
 
   for _, var in ipairs(list(() -> variable(scope))) {
     if type(var) == 'string' {
@@ -1277,59 +1263,64 @@ function statement() {
   local compile_lines = {}
 
   if current_token.value == 'break' {
-    table.insert(compile_lines, break_statement())
+    table.insert(compile_lines, loop_break())
   } elseif current_token.value == 'continue' {
-    table.insert(compile_lines, continue_statement())
+    table.insert(compile_lines, loop_continue())
   } elseif current_token.value == 'goto' {
-    table.insert(compile_lines, goto_jump_statement())
+    table.insert(compile_lines, goto_jump())
   } elseif current_token.value == '::' {
-    table.insert(compile_lines, goto_label_statement())
+    table.insert(compile_lines, goto_label())
   } elseif current_token.value == 'do' {
-    table.insert(compile_lines, do_statement())
+    table.insert(compile_lines, do_block())
   } elseif current_token.value == 'if' {
-    table.insert(compile_lines, if_else_statement())
+    table.insert(compile_lines, if_else())
   } elseif current_token.value == 'for' {
-    table.insert(compile_lines, for_loop_statement())
+    table.insert(compile_lines, for_loop())
   } elseif current_token.value == 'while' {
-    table.insert(compile_lines, while_loop_statement())
+    table.insert(compile_lines, while_loop())
   } elseif current_token.value == 'repeat' {
-    table.insert(compile_lines, repeat_until_statement())
+    table.insert(compile_lines, repeat_until())
   } elseif current_token.value == 'return' {
-    table.insert(compile_lines, return_statement())
+    table.insert(compile_lines, block_return())
   } elseif current_token.value == 'function' {
-    table.insert(compile_lines, function_statement())
+    table.insert(compile_lines, function_declaration())
   } elseif current_token.value == 'local' || current_token.value == 'global' || current_token.value == 'module' {
-    if look_ahead(1) == 'function' {
-      table.insert(compile_lines, function_statement())
+    local scope_line, scope = current_token.line, consume()
+
+    if scope == 'module' {
+      if block_depth > 1 {
+        throw('module declarations must appear at the top level', scope_line)
+      }
+
+      has_module_declarations = true
+    }
+
+    if current_token.value == 'function' {
+      table.insert(compile_lines, function_declaration(scope))
     } else {
-      table.insert(compile_lines, declaration_statement())
+      table.insert(compile_lines, variable_declaration(scope))
     }
   } else {
-    -- TODO: refactor?
     local index_chain = current_token.value == '('
       && index_chain({ current_token.line, '(', surround('(', ')', expression), ')' }, false, true)
       || index_chain({ current_token.line, name() }, true)
 
     if !index_chain.is_function_call {
-      table.insert(compile_lines, assignment_statement(index_chain))
-    } elseif !index_chain.needs_block_compile {
-      table.insert(compile_lines, index_chain.base_compile_lines)
+      table.insert(compile_lines, variable_assignment(index_chain))
+    } elseif index_chain.needs_block_compile {
+      table.insert(compile_lines, 'do')
+      table.insert(compile_lines, index_chain.block_compile_lines)
+      table.insert(compile_lines, index_chain.compile_lines)
+      table.insert(compile_lines, 'end')
     } else {
-      table.insert(compile_lines, {
-        '(function()',
-        index_chain.block_compile_lines,
-        'return',
-        index_chain.base_compile_lines,
-        'end)()',
-      })
+      table.insert(compile_lines, index_chain.compile_lines)
     }
   }
 
   if current_token.value == ';' {
     table.insert(compile_lines, consume())
   } elseif current_token.value == '(' {
-    -- Add semi-colon to prevent ambiguous Lua code
-    table.insert(compile_lines, ';')
+    table.insert(compile_lines, ';') -- Add semi-colon to prevent ambiguous Lua code
   }
 
   return compile_lines

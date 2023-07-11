@@ -15,7 +15,11 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 ### Fixed
 - Fixed allowing keywords as variable names
 - Fixed compilation error for interpolation strings with only an escaped brace
+    - https://github.com/erde-lang/erde/issues/24
 - Fixed return list failing to parse surround chars in strings
+    - https://github.com/erde-lang/erde/issues/21
+- Fixed not being able to assign to the index of a function call result
+    - https://github.com/erde-lang/erde/issues/26
 
 ### Added
 
