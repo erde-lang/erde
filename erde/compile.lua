@@ -255,10 +255,17 @@ local function map_destructure(scope)
 		table.insert(names, name)
 		local assignment_name = assignment_prefix .. name
 		table.insert(compile_lines, key_line)
-		table.insert(
-			compile_lines,
-			(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(raw_key) .. "']")
-		)
+		if LUA_KEYWORDS[raw_key] then
+			table.insert(
+				compile_lines,
+				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(raw_key) .. "']")
+			)
+		else
+			table.insert(
+				compile_lines,
+				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "." .. tostring(raw_key))
+			)
+		end
 		if branch("=") then
 			table.insert(
 				compile_lines,
@@ -336,14 +343,14 @@ local function function_call_index(index_chain_state)
 	table.insert(index_chain_state.compile_lines, weave(surround_list("(", ")", true, expression)))
 	table.insert(index_chain_state.compile_lines, ")")
 end
-local function index_chain(base_compile_lines, has_trivial_base, require_chain)
+local function index_chain(options)
 	local block_compile_name = new_tmp_name()
 	local index_chain_state = {
-		base_compile_lines = base_compile_lines,
+		base_compile_lines = options.base_compile_lines,
 		compile_lines = {
-			base_compile_lines,
+			options.base_compile_lines,
 		},
-		has_trivial_base = has_trivial_base,
+		has_trivial_base = options.has_trivial_base,
 		has_trivial_chain = true,
 		needs_block_compile = false,
 		block_compile_name = block_compile_name,
@@ -351,6 +358,10 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 			"local " .. block_compile_name,
 		},
 	}
+	if options.wrap_base_compile_lines then
+		table.insert(index_chain_state.compile_lines, 1, "(")
+		table.insert(index_chain_state.compile_lines, ")")
+	end
 	local has_trivial_chain = false
 	local is_function_call = false
 	while true do
@@ -371,12 +382,15 @@ local function index_chain(base_compile_lines, has_trivial_base, require_chain)
 		end
 		index_chain_state.has_trivial_chain = false
 	end
-	if require_chain and index_chain_state.has_trivial_chain then
+	if options.require_chain and index_chain_state.has_trivial_chain then
 		if current_token.type == TOKEN_TYPES.EOF then
 			throw("unexpected eof")
 		else
 			throw(("unexpected token '" .. tostring(current_token.value) .. "'"))
 		end
+	end
+	if index_chain_state.has_trivial_chain then
+		index_chain_state.compile_lines = options.base_compile_lines
 	end
 	return {
 		compile_lines = index_chain_state.compile_lines,
@@ -392,14 +406,20 @@ local function single_quote_string()
 	}
 end
 local function double_quote_string()
+	local double_quote_string_line = current_token.line
+	local has_interpolation = false
 	consume()
 	if current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING then
-		return '"' .. consume()
+		return {
+			double_quote_string_line,
+			'"' .. consume(),
+		}, has_interpolation
 	end
 	local compile_lines = {}
 	local content_line, content = current_token.line, ""
 	repeat
 		if current_token.type == TOKEN_TYPES.INTERPOLATION then
+			has_interpolation = true
 			if content ~= "" then
 				table.insert(compile_lines, content_line)
 				table.insert(compile_lines, '"' .. content .. '"')
@@ -419,19 +439,25 @@ local function double_quote_string()
 		table.insert(compile_lines, '"' .. content .. '"')
 	end
 	consume()
-	return weave(compile_lines, "..")
+	return weave(compile_lines, ".."), has_interpolation
 end
 local function block_string()
+	local block_string_line = current_token.line
+	local has_interpolation = false
 	local start_quote = "[" .. current_token.equals .. "["
 	local end_quote = "]" .. current_token.equals .. "]"
 	consume()
 	if current_token.type == TOKEN_TYPES.BLOCK_STRING then
-		return start_quote .. end_quote
+		return {
+			block_string_line,
+			start_quote .. end_quote,
+		}, has_interpolation
 	end
 	local compile_lines = {}
 	local content_line, content = current_token.line, ""
 	repeat
 		if current_token.type == TOKEN_TYPES.INTERPOLATION then
+			has_interpolation = true
 			if content ~= "" then
 				table.insert(compile_lines, content_line)
 				table.insert(compile_lines, start_quote .. content .. end_quote)
@@ -454,7 +480,7 @@ local function block_string()
 		table.insert(compile_lines, start_quote .. content .. end_quote)
 	end
 	consume()
-	return weave(compile_lines, "..")
+	return weave(compile_lines, ".."), has_interpolation
 end
 local function table_constructor()
 	local compile_lines = {}
@@ -658,8 +684,8 @@ local function function_declaration(scope)
 	end
 	return compile_lines
 end
-local function index_chain_expression(...)
-	local index_chain = index_chain(...)
+local function index_chain_expression(options)
+	local index_chain = index_chain(options)
 	if index_chain.needs_block_compile then
 		return {
 			"(function()",
@@ -680,22 +706,24 @@ local function terminal_expression()
 		}
 	elseif current_token.type == TOKEN_TYPES.SINGLE_QUOTE_STRING then
 		return index_chain_expression({
-			"(",
-			single_quote_string(),
-			")",
-		}, true)
+			base_compile_lines = single_quote_string(),
+			has_trivial_base = true,
+			wrap_base_compile_lines = true,
+		})
 	elseif current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING then
+		local compile_lines, has_interpolation = double_quote_string()
 		return index_chain_expression({
-			"(",
-			double_quote_string(),
-			")",
-		}, false)
+			base_compile_lines = compile_lines,
+			has_trivial_base = not has_interpolation,
+			wrap_base_compile_lines = true,
+		})
 	elseif current_token.type == TOKEN_TYPES.BLOCK_STRING then
+		local compile_lines, has_interpolation = block_string()
 		return index_chain_expression({
-			"(",
-			block_string(),
-			")",
-		}, false)
+			base_compile_lines = compile_lines,
+			has_trivial_base = not has_interpolation,
+			wrap_base_compile_lines = true,
+		})
 	end
 	if TERMINALS[current_token.value] then
 		if current_token.value == "..." and not is_varargs_block then
@@ -718,15 +746,20 @@ local function terminal_expression()
 		return table_constructor()
 	elseif current_token.value == "(" then
 		return index_chain_expression({
-			"(",
-			surround("(", ")", expression),
-			")",
-		}, false)
+			base_compile_lines = {
+				"(",
+				surround("(", ")", expression),
+				")",
+			},
+		})
 	else
 		return index_chain_expression({
-			current_token.line,
-			name(),
-		}, true)
+			base_compile_lines = {
+				current_token.line,
+				name(),
+			},
+			has_trivial_base = true,
+		})
 	end
 end
 local function unop_expression()
@@ -930,32 +963,43 @@ local function if_else()
 	table.insert(compile_lines, "end")
 	return compile_lines
 end
+local function index_chain_assignment()
+	if current_token.value == "(" then
+		return index_chain({
+			base_compile_lines = {
+				current_token.line,
+				"(",
+				surround("(", ")", expression),
+				")",
+			},
+			require_chain = true,
+		})
+	else
+		return index_chain({
+			base_compile_lines = {
+				current_token.line,
+				name(),
+			},
+			has_trivial_base = true,
+		})
+	end
+end
 local function variable_assignment(first_id)
-	local compile_lines = {}
-	local index_chains = {
+	local ids = {
 		first_id,
 	}
-	local base_compile_lines = {
+	local id_compile_lines = {
 		first_id.compile_lines,
 	}
 	local needs_block_compile = first_id.needs_block_compile
 	while branch(",") do
-		local index_chain_line = current_token.line
-		local index_chain = current_token.value == "("
-				and index_chain({
-					"(",
-					surround("(", ")", expression),
-					")",
-				}, false, true)
-			or index_chain({
-				name(),
-			}, true)
-		if index_chain.is_function_call then
-			throw("cannot assign value to function call", index_chain_line)
+		local id_line, id = current_token.line, index_chain_assignment()
+		if id.is_function_call then
+			throw("cannot assign value to function call", id_line)
 		end
-		table.insert(index_chains, index_chain)
-		table.insert(base_compile_lines, index_chain.compile_lines)
-		needs_block_compile = needs_block_compile or index_chain.needs_block_compile
+		table.insert(ids, id)
+		table.insert(id_compile_lines, id.compile_lines)
+		needs_block_compile = needs_block_compile or id.needs_block_compile
 	end
 	local op_line, op_token = current_token.line, BINOP_ASSIGNMENT_TOKENS[current_token.value] and consume()
 	if BITOPS[op_token] and (lua_target == "5.1+" or lua_target == "5.2+") and not bitlib then
@@ -964,50 +1008,51 @@ local function variable_assignment(first_id)
 	expect("=", true)
 	local expr_list = list(expression)
 	if not needs_block_compile and not op_token then
-		table.insert(compile_lines, weave(base_compile_lines))
-		table.insert(compile_lines, "=")
-		table.insert(compile_lines, weave(expr_list))
-	elseif not needs_block_compile and #index_chains == 1 then
-		table.insert(compile_lines, first_id.compile_lines)
-		table.insert(compile_lines, op_line)
-		table.insert(compile_lines, "=")
-		table.insert(compile_lines, compile_binop(op_token, op_line, first_id.compile_lines, expr_list[1]))
-	else
-		local assignment_names = {}
-		local assignment_compile_lines = {}
-		for _, id in ipairs(index_chains) do
-			local assignment_name = new_tmp_name()
-			table.insert(assignment_names, assignment_name)
-			if id.needs_block_compile then
-				table.insert(assignment_compile_lines, id.block_compile_lines)
-			end
-			table.insert(assignment_compile_lines, id.compile_lines)
-			table.insert(assignment_compile_lines, "=")
-			if op_token ~= nil then
-				table.insert(
-					assignment_compile_lines,
-					compile_binop(op_token, op_line, id.compile_lines, assignment_name)
-				)
-			else
-				table.insert(assignment_compile_lines, assignment_name)
-			end
-		end
-		table.insert(compile_lines, "do")
-		table.insert(compile_lines, "local")
-		table.insert(compile_lines, table.concat(assignment_names, ","))
-		table.insert(compile_lines, "=")
-		table.insert(compile_lines, weave(expr_list))
-		table.insert(compile_lines, assignment_compile_lines)
-		table.insert(compile_lines, "end")
+		return {
+			weave(id_compile_lines),
+			" = ",
+			weave(expr_list),
+		}
 	end
+	if not needs_block_compile and #ids == 1 then
+		return {
+			first_id.compile_lines,
+			op_line,
+			" = ",
+			compile_binop(op_token, op_line, first_id.compile_lines, expr_list[1]),
+		}
+	end
+	local compile_lines = {}
+	local assignment_names = {}
+	local assignment_compile_lines = {}
+	for _, id in ipairs(ids) do
+		local assignment_name = new_tmp_name()
+		table.insert(assignment_names, assignment_name)
+		if id.needs_block_compile then
+			table.insert(assignment_compile_lines, id.block_compile_lines)
+		end
+		table.insert(assignment_compile_lines, id.compile_lines)
+		table.insert(assignment_compile_lines, "=")
+		if op_token ~= nil then
+			table.insert(assignment_compile_lines, compile_binop(op_token, op_line, id.compile_lines, assignment_name))
+		else
+			table.insert(assignment_compile_lines, assignment_name)
+		end
+	end
+	table.insert(compile_lines, "local")
+	table.insert(compile_lines, table.concat(assignment_names, ","))
+	table.insert(compile_lines, "=")
+	table.insert(compile_lines, weave(expr_list))
+	table.insert(compile_lines, assignment_compile_lines)
 	return compile_lines
 end
 local function variable_declaration(scope)
 	local compile_lines = {}
-	local destructure_compile_lines = {}
 	local declaration_names = {}
-	local destructure_compile_names = {}
 	local assignment_names = {}
+	local assignment_prefix = scope == "global" and "_G." or ""
+	local destructure_compile_names = {}
+	local destructure_compile_lines = {}
 	for _, var in
 		ipairs(list(function()
 			return variable(scope)
@@ -1015,7 +1060,7 @@ local function variable_declaration(scope)
 	do
 		if type(var) == "string" then
 			table.insert(declaration_names, var)
-			table.insert(assignment_names, (scope == "global" and "_G." or "") .. var)
+			table.insert(assignment_names, assignment_prefix .. var)
 		else
 			table.insert(assignment_names, var.compile_name)
 			table.insert(destructure_compile_names, var.compile_name)
@@ -1030,12 +1075,10 @@ local function variable_declaration(scope)
 	end
 	if branch("=") then
 		if #destructure_compile_names > 0 then
-			table.insert(compile_lines, "do")
 			table.insert(compile_lines, "local " .. table.concat(destructure_compile_names, ","))
 			table.insert(compile_lines, table.concat(assignment_names, ",") .. "=")
 			table.insert(compile_lines, weave(list(expression)))
 			table.insert(compile_lines, destructure_compile_lines)
-			table.insert(compile_lines, "end")
 		elseif scope == "global" then
 			table.insert(compile_lines, table.concat(assignment_names, ",") .. "=")
 			table.insert(compile_lines, weave(list(expression)))
@@ -1094,26 +1137,16 @@ function statement()
 			table.insert(compile_lines, variable_declaration(scope))
 		end
 	else
-		local index_chain = current_token.value == "("
-				and index_chain({
-					current_token.line,
-					"(",
-					surround("(", ")", expression),
-					")",
-				}, false, true)
-			or index_chain({
-				current_token.line,
-				name(),
-			}, true)
-		if not index_chain.is_function_call then
-			table.insert(compile_lines, variable_assignment(index_chain))
-		elseif index_chain.needs_block_compile then
+		local chain = index_chain_assignment()
+		if not chain.is_function_call then
+			table.insert(compile_lines, variable_assignment(chain))
+		elseif chain.needs_block_compile then
 			table.insert(compile_lines, "do")
-			table.insert(compile_lines, index_chain.block_compile_lines)
-			table.insert(compile_lines, index_chain.compile_lines)
+			table.insert(compile_lines, chain.block_compile_lines)
+			table.insert(compile_lines, chain.compile_lines)
 			table.insert(compile_lines, "end")
 		else
-			table.insert(compile_lines, index_chain.compile_lines)
+			table.insert(compile_lines, chain.compile_lines)
 		end
 	end
 	if current_token.value == ";" then
