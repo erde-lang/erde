@@ -20,6 +20,8 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - https://github.com/erde-lang/erde/issues/21
 - Fixed not being able to assign to the index of a function call result
     - https://github.com/erde-lang/erde/issues/26
+- Fixed parsing table string entry with only `=`
+    - https://github.com/erde-lang/erde/issues/28
 
 ### Added
 

@@ -212,7 +212,11 @@ local function tokenize_interpolation()
 	})
 end
 local function tokenize_single_quote_string()
-	consume()
+	table.insert(tokens, {
+		type = TOKEN_TYPES.SINGLE_QUOTE_STRING,
+		line = current_line,
+		value = consume(),
+	})
 	local content = ""
 	while current_char ~= "'" do
 		if current_char == "" or current_char == "\n" then
@@ -223,11 +227,17 @@ local function tokenize_single_quote_string()
 			content = content .. consume()
 		end
 	end
-	consume()
+	if content ~= "" then
+		table.insert(tokens, {
+			type = TOKEN_TYPES.STRING_CONTENT,
+			line = current_line,
+			value = content,
+		})
+	end
 	table.insert(tokens, {
 		type = TOKEN_TYPES.SINGLE_QUOTE_STRING,
 		line = current_line,
-		value = content,
+		value = consume(),
 	})
 end
 local function tokenize_double_quote_string()

@@ -131,12 +131,12 @@ end)
 describe('tokenize_escape_sequence', function()
   spec('#5.1+', function()
     for escapeChar in pairs(C.STANDARD_ESCAPE_CHARS) do
-      assert_tokens({ '\\' .. escapeChar }, "'\\" .. escapeChar .. "'")
+      assert_tokens({ "'", '\\' .. escapeChar, "'" }, "'\\" .. escapeChar .. "'")
       assert_tokens({ '"', '\\' .. escapeChar, '"' }, '"\\' .. escapeChar .. '"')
     end
 
-    assert_tokens({ '\\1' }, "'\\1'")
-    assert_tokens({ '\\123' }, "'\\123'")
+    assert_tokens({ "'", '\\1', "'" }, "'\\1'")
+    assert_tokens({ "'", '\\123', "'" }, "'\\123'")
     assert_tokens({ '"', '\\1', '"' }, '"\\1"')
     assert_tokens({ '"', '\\123', '"' }, '"\\123"')
 
@@ -186,11 +186,11 @@ describe('tokenize_escape_sequence', function()
 end)
 
 spec('tokenize_interpolation #5.1+', function()
-  assert_tokens({ 'a{bc}d' }, "'a{bc}d'")
+  assert_tokens({ "'", 'a{bc}d', "'" }, "'a{bc}d'")
   assert_tokens({ '"', 'a', '{', 'bc', '}', 'd', '"' }, '"a{bc}d"')
   assert_tokens({ '[[', 'a', '{', 'bc', '}', 'd', ']]' }, '[[a{bc}d]]')
 
-  assert_tokens({ 'a{ bc  }d' }, "'a{ bc  }d'")
+  assert_tokens({ "'", 'a{ bc  }d', "'" }, "'a{ bc  }d'")
   assert_tokens({ '"', 'a', '{', 'bc', '}', 'd', '"' }, '"a{ bc  }d"')
   assert_tokens({ '[[', 'a', '{', 'bc', '}', 'd', ']]' }, '[[a{ bc  }d]]')
 
@@ -202,15 +202,15 @@ spec('tokenize_interpolation #5.1+', function()
 end)
 
 spec('tokenize_single_quote_string #5.1+', function()
-  assert_tokens({ '' }, "''")
-  assert_tokens({ ' ' }, "' '")
-  assert_tokens({ '\t' }, "'\t'")
+  assert_tokens({ "'", "'" }, "''")
+  assert_tokens({ "'", ' ', "'" }, "' '")
+  assert_tokens({ "'", '\t', "'" }, "'\t'")
 
-  assert_tokens({ 'a' }, "'a'")
-  assert_tokens({ ' a b ' }, "' a b '")
+  assert_tokens({ "'", 'a', "'" }, "'a'")
+  assert_tokens({ "'", ' a b ', "'" }, "' a b '")
 
-  assert_tokens({ "\\'" }, "'\\''")
-  assert_tokens({ '\\n' }, "'\\n'")
+  assert_tokens({ "'", "\\'", "'" }, "'\\''")
+  assert_tokens({ "'", '\\n', "'" }, "'\\n'")
 
   assert.has_error(function() tokenize("'a") end)
   assert.has_error(function() tokenize("'\n'") end)

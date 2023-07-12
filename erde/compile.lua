@@ -400,10 +400,18 @@ local function index_chain(options)
 	}
 end
 local function single_quote_string()
-	return {
-		current_token.line,
-		"'" .. consume() .. "'",
-	}
+	consume()
+	if current_token.type == TOKEN_TYPES.SINGLE_QUOTE_STRING then
+		return {
+			current_token.line,
+			"'" .. consume(),
+		}
+	else
+		return {
+			current_token.line,
+			"'" .. consume() .. consume(),
+		}
+	end
 end
 local function double_quote_string()
 	local double_quote_string_line = current_token.line
@@ -485,12 +493,13 @@ end
 local function table_constructor()
 	local compile_lines = {}
 	surround_list("{", "}", true, function()
+		local next_token = tokens[current_token_index + 1]
 		if current_token.value == "[" then
 			table.insert(compile_lines, "[")
 			table.insert(compile_lines, surround("[", "]", expression))
 			table.insert(compile_lines, "]")
 			table.insert(compile_lines, expect("=", true))
-		elseif tokens[current_token_index + 1].value == "=" then
+		elseif next_token.type == TOKEN_TYPES.SYMBOL and next_token.value == "=" then
 			local key = name(true)
 			if LUA_KEYWORDS[key] then
 				table.insert(compile_lines, ("['" .. tostring(key) .. "']") .. consume())
@@ -734,11 +743,16 @@ local function terminal_expression()
 			consume(),
 		}
 	end
-	local next_token_value = tokens[current_token_index + 1].value
-	local is_arrow_function = next_token_value == "->" or next_token_value == "=>"
+	local next_token = tokens[current_token_index + 1]
+	local is_arrow_function = (
+		next_token.type == TOKEN_TYPES.SYMBOL and (next_token.value == "->" or next_token.value == "=>")
+	)
 	if not is_arrow_function and SURROUND_ENDS[current_token.value] then
 		local past_surround_token = look_past_surround()
-		is_arrow_function = past_surround_token.value == "->" or past_surround_token.value == "=>"
+		is_arrow_function = (
+			past_surround_token.type == TOKEN_TYPES.SYMBOL
+			and (past_surround_token.value == "->" or past_surround_token.value == "=>")
+		)
 	end
 	if is_arrow_function then
 		return arrow_function()
@@ -881,7 +895,8 @@ local function for_loop()
 	local compile_lines = {}
 	local pre_body_compile_lines = {}
 	table.insert(compile_lines, consume())
-	if tokens[current_token_index + 1].value == "=" then
+	local next_token = tokens[current_token_index + 1]
+	if next_token.type == TOKEN_TYPES.SYMBOL and next_token.value == "=" then
 		table.insert(compile_lines, name() .. consume())
 		local expr_list_line = current_token.line
 		local expr_list = list(expression)

@@ -478,7 +478,13 @@ local function index_chain(options) {
 -- -----------------------------------------------------------------------------
 
 local function single_quote_string() {
-  return { current_token.line, "'" .. consume() .. "'" }
+  consume() -- "'"
+
+  if current_token.type == TOKEN_TYPES.SINGLE_QUOTE_STRING {
+    return { current_token.line, "'" .. consume() }
+  } else {
+    return { current_token.line, "'" .. consume() .. consume() }
+  }
 }
 
 local function double_quote_string() {
@@ -585,12 +591,14 @@ local function table_constructor() {
   local compile_lines = {}
 
   surround_list('{', '}', true, () -> {
+    local next_token = tokens[current_token_index + 1]
+
     if current_token.value == '[' {
       table.insert(compile_lines, '[')
       table.insert(compile_lines, surround('[', ']', expression))
       table.insert(compile_lines, ']')
       table.insert(compile_lines, expect('=', true))
-    } elseif tokens[current_token_index + 1].value == '=' {
+    } elseif next_token.type == TOKEN_TYPES.SYMBOL && next_token.value == '=' {
       local key = name(true)
 
       if LUA_KEYWORDS[key] {
@@ -899,15 +907,21 @@ local function terminal_expression() {
     return { current_token.line, consume() }
   }
 
-  local next_token_value = tokens[current_token_index + 1].value
-  local is_arrow_function = next_token_value == '->' || next_token_value == '=>'
+  local next_token = tokens[current_token_index + 1]
+  local is_arrow_function = (
+    next_token.type == TOKEN_TYPES.SYMBOL &&
+    (next_token.value == '->' || next_token.value == '=>')
+  )
 
   -- First do a quick check for is_arrow_function (in case of implicit params),
   -- otherwise if surround_end is truthy (possible params), need to check the
   -- next token after. This is _much_ faster than backtracking.
   if !is_arrow_function && SURROUND_ENDS[current_token.value] {
     local past_surround_token = look_past_surround()
-    is_arrow_function = past_surround_token.value == '->' || past_surround_token.value == '=>'
+    is_arrow_function = (
+      past_surround_token.type == TOKEN_TYPES.SYMBOL &&
+      (past_surround_token.value == '->' || past_surround_token.value == '=>')
+    )
   }
 
   if is_arrow_function {
@@ -1058,7 +1072,9 @@ local function for_loop() {
 
   table.insert(compile_lines, consume()) -- 'for'
 
-  if tokens[current_token_index + 1].value == '=' {
+  local next_token = tokens[current_token_index + 1]
+
+  if next_token.type == TOKEN_TYPES.SYMBOL && next_token.value == '=' {
     table.insert(compile_lines, name() .. consume())
 
     local expr_list_line = current_token.line
