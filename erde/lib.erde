@@ -4,7 +4,7 @@
 local compile = require('erde.compile')
 local config = require('erde.config')
 local { PATH_SEPARATOR, VALID_LUA_TARGETS } = require('erde.constants')
-local { echo, file_exists, get_source_alias, read_file, split } = require('erde.utils')
+local { echo, file_exists, get_source_summary, read_file, split } = require('erde.utils')
 
 local loadlua = loadstring || load
 local unpack = table.unpack || unpack
@@ -14,8 +14,8 @@ local native_traceback = debug.traceback
 -- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 local searchers = package.loaders || package.searchers
 
+local erde_sourcemap_cache = {}
 local erde_source_id_counter = 1
-local erde_source_cache = {}
 
 -- -----------------------------------------------------------------------------
 -- Debug
@@ -28,20 +28,14 @@ module function rewrite(message) {
     return message
   }
 
-  for erde_source_id, compiled_line in message:gmatch('%[string "(__erde_source_%d+__)"]:(%d+)') {
-    local erde_source_alias = "[string \"{ erde_source_id }\"]"
-    local sourcemap = {}
-
-    if erde_source_cache[erde_source_id] {
-      erde_source_alias = erde_source_cache[erde_source_id].alias || erde_source_alias
-      sourcemap = erde_source_cache[erde_source_id].sourcemap || sourcemap
-    }
+  for erde_source_id, alias, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') {
+    local sourcemap = erde_sourcemap_cache[tonumber(erde_source_id)] || {}
 
     message = message:gsub(
-      "%[string \"{ erde_source_id }\"]:{ compiled_line }",
+      "%[string \"erde::{ erde_source_id }::{ alias }\"]:{ compiled_line }",
       -- If we have don't have a sourcemap for erde code, we need to indicate that
       -- the error line is for the generated Lua.
-      erde_source_alias .. ':' .. (sourcemap[tonumber(compiled_line)] || "(compiled:{ compiled_line })"),
+      alias .. ':' .. (sourcemap[tonumber(compiled_line)] || "(compiled:{ compiled_line })"),
     )
   }
 
@@ -101,8 +95,8 @@ module function traceback(arg1, arg2, arg3) {
 -- Source Loaders
 -- -----------------------------------------------------------------------------
 
--- Load a chunk of Erde code. This caches the generated sourcemap / alias
--- (see `erde_source_cache`) so we can fetch them later during error rewrites.
+-- Load a chunk of Erde code. This caches the generated sourcemap
+-- (see `erde_sourcemap_cache`) so we can fetch them later during error rewrites.
 --
 -- The alias is _not_ used as the chunkname in the underlying Lua `load`
 -- call. Instead, a unique ID is generated and inserted instead. During error
@@ -135,31 +129,29 @@ module function traceback(arg1, arg2, arg3) {
 -- 2. The call to `__erde_internal_load_source__` itself
 -- 3. The call that invoked `__erde_internal_load_source__`
 module function __erde_internal_load_source__(source, options = {}) {
-  local alias = options.alias || get_source_alias(source)
-
-  local erde_source_id = "__erde_source_{ erde_source_id_counter }__"
-  erde_source_id_counter = erde_source_id_counter + 1
+  local chunkname = table.concat({
+    'erde',
+    erde_source_id_counter,
+    options.alias || get_source_summary(source),
+  }, '::')
 
   -- No xpcall here, we want the traceback to start from this stack!
   local compiled, sourcemap = compile(source, {
-    alias = alias,
+    alias = options.alias,
     lua_target = options.lua_target,
     bitlib = options.bitlib,
   })
 
-  -- Cache alias. Required for rewriting errors.
-  erde_source_cache[erde_source_id] = { alias = alias }
-
   if !config.disable_source_maps && !options.disable_source_maps {
     -- Cache source maps. Allow user to specify whether to disallow this, as the
     -- source map tables can be potentially large.
-    erde_source_cache[erde_source_id].sourcemap = sourcemap
+    erde_sourcemap_cache[erde_source_id_counter] = sourcemap
   }
 
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
 
-  local loader, load_error = loadlua(compiled, erde_source_id)
+  local loader, load_error = loadlua(compiled, chunkname)
 
   if load_error != nil {
     error(table.concat({
@@ -178,6 +170,8 @@ module function __erde_internal_load_source__(source, options = {}) {
       compiled,
     }, '\n'))
   }
+
+  erde_source_id_counter += 1
 
   return loader()
 }

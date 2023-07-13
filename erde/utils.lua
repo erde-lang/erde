@@ -24,12 +24,16 @@ local function trim(s)
 	return s:gsub("^%s*(.*)%s*$", "%1")
 end
 _MODULE.trim = trim
-local function get_source_alias(source)
+local function get_source_summary(source)
 	local summary = trim(source):sub(1, 5)
 	if #source > 5 then
 		summary = summary .. "..."
 	end
-	return ('[string "' .. tostring(summary) .. '"]')
+	return summary
+end
+_MODULE.get_source_summary = get_source_summary
+local function get_source_alias(source)
+	return ('[string "' .. tostring(get_source_summary(source)) .. '"]')
 end
 _MODULE.get_source_alias = get_source_alias
 local function file_exists(path)

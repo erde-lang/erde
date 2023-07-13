@@ -11,6 +11,8 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 
 ### Changed
 - No longer allow keywords as index fields (generated invalid Lua code)
+- Loaded compiled Lua chunks now have their source names embedded in their chunkname
+    - https://github.com/erde-lang/erde/issues/27
 
 ### Fixed
 - Fixed allowing keywords as variable names

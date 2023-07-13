@@ -8,13 +8,13 @@ do
 	PATH_SEPARATOR = __ERDE_TMP_6__["PATH_SEPARATOR"]
 	VALID_LUA_TARGETS = __ERDE_TMP_6__["VALID_LUA_TARGETS"]
 end
-local echo, file_exists, get_source_alias, read_file, split
+local echo, file_exists, get_source_summary, read_file, split
 do
 	local __ERDE_TMP_9__
 	__ERDE_TMP_9__ = require("erde.utils")
 	echo = __ERDE_TMP_9__["echo"]
 	file_exists = __ERDE_TMP_9__["file_exists"]
-	get_source_alias = __ERDE_TMP_9__["get_source_alias"]
+	get_source_summary = __ERDE_TMP_9__["get_source_summary"]
 	read_file = __ERDE_TMP_9__["read_file"]
 	split = __ERDE_TMP_9__["split"]
 end
@@ -22,24 +22,24 @@ local loadlua = loadstring or load
 local unpack = table.unpack or unpack
 local native_traceback = debug.traceback
 local searchers = package.loaders or package.searchers
+local erde_sourcemap_cache = {}
 local erde_source_id_counter = 1
-local erde_source_cache = {}
 local function rewrite(message)
 	if type(message) ~= "string" then
 		return message
 	end
-	for erde_source_id, compiled_line in message:gmatch('%[string "(__erde_source_%d+__)"]:(%d+)') do
-		local erde_source_alias = ('[string "' .. tostring(erde_source_id) .. '"]')
-		local sourcemap = {}
-		if erde_source_cache[erde_source_id] then
-			erde_source_alias = erde_source_cache[erde_source_id].alias or erde_source_alias
-			sourcemap = erde_source_cache[erde_source_id].sourcemap or sourcemap
-		end
+	for erde_source_id, alias, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') do
+		local sourcemap = erde_sourcemap_cache[tonumber(erde_source_id)] or {}
 		message = message:gsub(
-			('%[string "' .. tostring(erde_source_id) .. '"]:' .. tostring(compiled_line)),
-			erde_source_alias
-				.. ":"
-				.. (sourcemap[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")"))
+			(
+					'%[string "erde::'
+					.. tostring(erde_source_id)
+					.. "::"
+					.. tostring(alias)
+					.. '"]:'
+					.. tostring(compiled_line)
+				),
+			alias .. ":" .. (sourcemap[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")"))
 		)
 	end
 	message = message:gsub("__ERDE_SUBSTITUTE_([a-zA-Z]+)__", "%1")
@@ -81,22 +81,21 @@ local function __erde_internal_load_source__(source, options)
 	if options == nil then
 		options = {}
 	end
-	local alias = options.alias or get_source_alias(source)
-	local erde_source_id = ("__erde_source_" .. tostring(erde_source_id_counter) .. "__")
-	erde_source_id_counter = erde_source_id_counter + 1
+	local chunkname = table.concat({
+		"erde",
+		erde_source_id_counter,
+		options.alias or get_source_summary(source),
+	}, "::")
 	local compiled, sourcemap = compile(source, {
-		alias = alias,
+		alias = options.alias,
 		lua_target = options.lua_target,
 		bitlib = options.bitlib,
 	})
-	erde_source_cache[erde_source_id] = {
-		alias = alias,
-	}
 	if not config.disable_source_maps and not options.disable_source_maps then
-		erde_source_cache[erde_source_id].sourcemap = sourcemap
+		erde_sourcemap_cache[erde_source_id_counter] = sourcemap
 	end
 	compiled = compiled:gsub("^#![^\n]+", "")
-	local loader, load_error = loadlua(compiled, erde_source_id)
+	local loader, load_error = loadlua(compiled, chunkname)
 	if load_error ~= nil then
 		error(table.concat({
 			"Failed to load compiled code:",
@@ -114,6 +113,7 @@ local function __erde_internal_load_source__(source, options)
 			compiled,
 		}, "\n"))
 	end
+	erde_source_id_counter = erde_source_id_counter + 1
 	return loader()
 end
 _MODULE.__erde_internal_load_source__ = __erde_internal_load_source__

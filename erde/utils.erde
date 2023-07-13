@@ -24,14 +24,18 @@ module function trim(s) {
   return (s:gsub('^%s*(.*)%s*$', '%1'))
 }
 
-module function get_source_alias(source) {
+module function get_source_summary(source) {
   local summary = trim(source):sub(1, 5)
 
   if #source > 5 {
     summary ..= '...'
   }
 
-  return "[string \"{ summary }\"]"
+  return summary
+}
+
+module function get_source_alias(source) {
+  return "[string \"{ get_source_summary(source) }\"]"
 }
 
 -- -----------------------------------------------------------------------------
