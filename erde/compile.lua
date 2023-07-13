@@ -867,6 +867,9 @@ function expression(min_prec)
 			throw("must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+", binop_line)
 		end
 		consume()
+		if binop.token == "~" and current_token.value == "=" then
+			throw("unexpected token '~=', did you mean '!='?")
+		end
 		local operand = binop.assoc == LEFT_ASSOCIATIVE and expression(binop.prec + 1) or expression(binop.prec)
 		compile_lines = compile_binop(binop.token, binop_line, compile_lines, operand)
 		binop, binop_line = BINOPS[current_token.value], current_token.line
@@ -1010,6 +1013,9 @@ local function if_else()
 	end
 	if current_token.value == "else" then
 		table.insert(compile_lines, consume())
+		if current_token.value == "if" then
+			throw("unexpected tokens 'else if', did you mean 'elseif'?")
+		end
 		table.insert(compile_lines, surround("{", "}", block))
 	end
 	table.insert(compile_lines, "end")
