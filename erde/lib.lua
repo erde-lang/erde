@@ -22,25 +22,26 @@ local loadlua = loadstring or load
 local unpack = table.unpack or unpack
 local native_traceback = debug.traceback
 local searchers = package.loaders or package.searchers
-local erde_sourcemap_cache = {}
+local erde_source_cache = {}
 local erde_source_id_counter = 1
 local function rewrite(message)
 	if type(message) ~= "string" then
 		return message
 	end
-	for erde_source_id, alias, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') do
-		local sourcemap = erde_sourcemap_cache[tonumber(erde_source_id)] or {}
-		message = message:gsub(
-			(
-					'%[string "erde::'
-					.. tostring(erde_source_id)
-					.. "::"
-					.. tostring(alias)
-					.. '"]:'
-					.. tostring(compiled_line)
-				),
-			alias .. ":" .. (sourcemap[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")"))
+	for erde_source_id, chunkname, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') do
+		local match = (
+			'%[string "erde::'
+			.. tostring(erde_source_id)
+			.. "::"
+			.. tostring(chunkname)
+			.. '"]:'
+			.. tostring(compiled_line)
 		)
+		local cache = erde_source_cache[tonumber(erde_source_id)] or {}
+		local sourcemap = cache.sourcemap or {}
+		local source_line = sourcemap[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")")
+		message = cache.has_alias and message:gsub(match, chunkname .. ":" .. source_line)
+			or message:gsub(match, ('[string "' .. tostring(chunkname) .. '"]:' .. tostring(source_line)))
 	end
 	message = message:gsub("__ERDE_SUBSTITUTE_([a-zA-Z]+)__", "%1")
 	return message
@@ -91,9 +92,6 @@ local function __erde_internal_load_source__(source, options)
 		lua_target = options.lua_target,
 		bitlib = options.bitlib,
 	})
-	if not config.disable_source_maps and not options.disable_source_maps then
-		erde_sourcemap_cache[erde_source_id_counter] = sourcemap
-	end
 	compiled = compiled:gsub("^#![^\n]+", "")
 	local loader, load_error = loadlua(compiled, chunkname)
 	if load_error ~= nil then
@@ -112,6 +110,12 @@ local function __erde_internal_load_source__(source, options)
 			"---",
 			compiled,
 		}, "\n"))
+	end
+	erde_source_cache[erde_source_id_counter] = {
+		has_alias = options.alias ~= nil,
+	}
+	if not config.disable_source_maps and not options.disable_source_maps then
+		erde_source_cache[erde_source_id_counter].sourcemap = sourcemap
 	end
 	erde_source_id_counter = erde_source_id_counter + 1
 	return loader()

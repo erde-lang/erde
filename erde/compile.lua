@@ -657,30 +657,67 @@ function arrow_function()
 	is_varargs_block = old_is_varargs_block
 	return compile_lines
 end
-local function function_declaration(scope)
-	local compile_lines = {}
-	local function_line = current_token.line
-	if scope == "local" or scope == "module" then
-		table.insert(compile_lines, "local")
+local function function_signature(scope)
+	local signature_line, signature = current_token.line, name()
+	if (current_token.value == "." or current_token.value == ":") and (scope == "local" or scope == "module") then
+		throw("cannot use scopes for table values", signature_line)
 	end
-	table.insert(compile_lines, consume())
-	local signature = name()
-	local is_table_value = current_token.value == "."
 	if scope == "global" then
 		signature = "_G." .. signature
 	end
+	local needs_label_assignment = false
+	local needs_self_injection = false
 	while branch(".") do
-		signature = signature .. "." .. name()
+		local field = name(true)
+		if LUA_KEYWORDS[field] then
+			needs_label_assignment = true
+			signature = signature .. ("['" .. tostring(field) .. "']")
+		else
+			signature = signature .. "." .. field
+		end
 	end
 	if branch(":") then
-		signature = signature .. ":" .. name()
-		is_table_value = true
+		local field = name(true)
+		if LUA_KEYWORDS[field] then
+			needs_label_assignment = true
+			needs_self_injection = true
+			signature = signature .. ("['" .. tostring(field) .. "']")
+		else
+			signature = signature .. ":" .. field
+		end
 	end
-	if is_table_value and (scope == "local" or scope == "module") then
-		throw("cannot use scopes for table values", function_line)
+	return {
+		signature = signature,
+		needs_label_assignment = needs_label_assignment,
+		needs_self_injection = needs_self_injection,
+	}
+end
+local function function_declaration(scope)
+	consume()
+	local signature, needs_label_assignment, needs_self_injection
+	do
+		local __ERDE_TMP_919__
+		__ERDE_TMP_919__ = function_signature(scope)
+		signature = __ERDE_TMP_919__["signature"]
+		needs_label_assignment = __ERDE_TMP_919__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_919__["needs_self_injection"]
 	end
-	table.insert(compile_lines, signature)
+	local compile_lines = {}
+	if scope == "local" or scope == "module" then
+		table.insert(compile_lines, "local")
+	end
+	if needs_label_assignment then
+		table.insert(compile_lines, signature)
+		table.insert(compile_lines, "=")
+		table.insert(compile_lines, "function")
+	else
+		table.insert(compile_lines, "function")
+		table.insert(compile_lines, signature)
+	end
 	local params = parameters()
+	if needs_self_injection then
+		table.insert(params.names, "self")
+	end
 	table.insert(compile_lines, "(" .. table.concat(params.names, ",") .. ")")
 	table.insert(compile_lines, params.compile_lines)
 	local old_is_varargs_block = is_varargs_block

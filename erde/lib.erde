@@ -14,7 +14,7 @@ local native_traceback = debug.traceback
 -- https://www.lua.org/manual/5.2/manual.html#pdf-package.searchers
 local searchers = package.loaders || package.searchers
 
-local erde_sourcemap_cache = {}
+local erde_source_cache = {}
 local erde_source_id_counter = 1
 
 -- -----------------------------------------------------------------------------
@@ -28,15 +28,19 @@ module function rewrite(message) {
     return message
   }
 
-  for erde_source_id, alias, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') {
-    local sourcemap = erde_sourcemap_cache[tonumber(erde_source_id)] || {}
+  for erde_source_id, chunkname, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') {
+    local match = "%[string \"erde::{ erde_source_id }::{ chunkname }\"]:{ compiled_line }"
 
-    message = message:gsub(
-      "%[string \"erde::{ erde_source_id }::{ alias }\"]:{ compiled_line }",
-      -- If we have don't have a sourcemap for erde code, we need to indicate that
-      -- the error line is for the generated Lua.
-      alias .. ':' .. (sourcemap[tonumber(compiled_line)] || "(compiled:{ compiled_line })"),
-    )
+    local cache = erde_source_cache[tonumber(erde_source_id)] || {}
+
+    -- If we have don't have a sourcemap for erde code, we need to indicate that
+    -- the error line is for the generated Lua.
+    local sourcemap = cache.sourcemap || {}
+    local source_line = sourcemap[tonumber(compiled_line)] || "(compiled:{ compiled_line })"
+
+    message = cache.has_alias
+      && message:gsub(match, chunkname .. ':' .. source_line)
+      || message:gsub(match, "[string \"{ chunkname }\"]:{ source_line }")
   }
 
   -- When compiling, we translate words that are keywords in Lua but not in
@@ -96,7 +100,7 @@ module function traceback(arg1, arg2, arg3) {
 -- -----------------------------------------------------------------------------
 
 -- Load a chunk of Erde code. This caches the generated sourcemap
--- (see `erde_sourcemap_cache`) so we can fetch them later during error rewrites.
+-- (see `erde_source_cache`) so we can fetch them later during error rewrites.
 --
 -- The alias is _not_ used as the chunkname in the underlying Lua `load`
 -- call. Instead, a unique ID is generated and inserted instead. During error
@@ -142,12 +146,6 @@ module function __erde_internal_load_source__(source, options = {}) {
     bitlib = options.bitlib,
   })
 
-  if !config.disable_source_maps && !options.disable_source_maps {
-    -- Cache source maps. Allow user to specify whether to disallow this, as the
-    -- source map tables can be potentially large.
-    erde_sourcemap_cache[erde_source_id_counter] = sourcemap
-  }
-
   -- Remove the shebang! Lua's `load` function cannot handle shebangs.
   compiled = compiled:gsub('^#![^\n]+', '')
 
@@ -169,6 +167,14 @@ module function __erde_internal_load_source__(source, options = {}) {
       '---',
       compiled,
     }, '\n'))
+  }
+
+  erde_source_cache[erde_source_id_counter] = { has_alias = options.alias != nil }
+
+  if !config.disable_source_maps && !options.disable_source_maps {
+    -- Cache source maps. Allow user to specify whether to disallow this, as the
+    -- source map tables can be potentially large.
+    erde_source_cache[erde_source_id_counter].sourcemap = sourcemap
   }
 
   erde_source_id_counter += 1

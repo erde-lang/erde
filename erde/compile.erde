@@ -803,40 +803,81 @@ function arrow_function() {
   return compile_lines
 }
 
-local function function_declaration(scope) {
-  local compile_lines = {}
-  local function_line = current_token.line
+local function function_signature(scope) {
+  local signature_line, signature = current_token.line, name()
 
-  if scope == 'local' || scope == 'module' {
-    table.insert(compile_lines, 'local')
+  if (current_token.value == '.' || current_token.value == ':') && (scope == 'local' || scope == 'module') {
+    -- Lua does not allow scope for table functions (ex. `local function a.b()`)
+    throw('cannot use scopes for table values', signature_line)
   }
-
-  table.insert(compile_lines, consume()) -- 'function'
-
-  local signature = name()
-  local is_table_value = current_token.value == '.'
 
   if scope == 'global' {
     signature = '_G.' .. signature
   }
 
+  local needs_label_assignment = false
+  local needs_self_injection = false
+
   while branch('.') {
-    signature ..= '.' .. name()
+    local field = name(true)
+
+    if LUA_KEYWORDS[field] {
+      needs_label_assignment = true
+      signature ..= "['{ field }']"
+    } else {
+      signature ..= '.' .. field
+    }
   }
 
   if branch(':') {
-    signature ..= ':' .. name()
-    is_table_value = true
+    local field = name(true)
+
+    if LUA_KEYWORDS[field] {
+      needs_label_assignment = true
+      needs_self_injection = true
+      signature ..= "['{ field }']"
+    } else {
+      signature ..= ':' .. field
+    }
   }
 
-  if is_table_value && (scope == 'local' || scope == 'module') {
-    -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    throw('cannot use scopes for table values', function_line)
+  return {
+    signature = signature,
+    needs_label_assignment = needs_label_assignment,
+    needs_self_injection = needs_self_injection,
+  }
+}
+
+local function function_declaration(scope) {
+  consume() -- 'function'
+
+  local {
+    signature,
+    needs_label_assignment,
+    needs_self_injection,
+  } = function_signature(scope)
+
+  local compile_lines = {}
+
+  if scope == 'local' || scope == 'module' {
+    table.insert(compile_lines, 'local')
   }
 
-  table.insert(compile_lines, signature)
+  if needs_label_assignment {
+    table.insert(compile_lines, signature)
+    table.insert(compile_lines, '=')
+    table.insert(compile_lines, 'function')
+  } else {
+    table.insert(compile_lines, 'function')
+    table.insert(compile_lines, signature)
+  }
 
   local params = parameters()
+
+  if needs_self_injection {
+    table.insert(params.names, 'self')
+  }
+
   table.insert(compile_lines, '(' .. table.concat(params.names, ',') .. ')')
   table.insert(compile_lines, params.compile_lines)
 
