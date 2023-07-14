@@ -1077,7 +1077,11 @@ local function variable_assignment(first_id)
 			first_id.compile_lines,
 			op_line,
 			" = ",
-			compile_binop(op_token, op_line, first_id.compile_lines, expr_list[1]),
+			compile_binop(op_token, op_line, first_id.compile_lines, {
+				"(",
+				expr_list[1],
+				")",
+			}),
 		}
 	end
 	local compile_lines = {}

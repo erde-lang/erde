@@ -29,6 +29,8 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - https://github.com/erde-lang/erde/issues/28
 - Fixed compilation of function declarations with Lua keywords
     - https://github.com/erde-lang/erde/issues/25
+- Fixed operator precedence fighting in operator assignments
+    - https://github.com/erde-lang/erde/issues/20
 
 ### Added
 
