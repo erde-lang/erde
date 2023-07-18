@@ -35,6 +35,8 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - https://github.com/erde-lang/erde/issues/25
 - Fixed operator precedence fighting in operator assignments
     - https://github.com/erde-lang/erde/issues/20
+- Fixed `erde compile` failing when parent directories are not present
+    - parent directories are now created recursively as needed
 
 ### Added
 

@@ -16,13 +16,14 @@ do
 	__ERDE_TMP_13__ = require("erde.stdlib")
 	string = __ERDE_TMP_13__["string"]
 end
-local file_exists, join_paths, read_file
+local file_exists, join_paths, read_file, write_file
 do
 	local __ERDE_TMP_16__
 	__ERDE_TMP_16__ = require("erde.utils")
 	file_exists = __ERDE_TMP_16__["file_exists"]
 	join_paths = __ERDE_TMP_16__["join_paths"]
 	read_file = __ERDE_TMP_16__["read_file"]
+	write_file = __ERDE_TMP_16__["write_file"]
 end
 local unpack = table.unpack or unpack
 local pack = table.pack or function(...)
@@ -196,9 +197,7 @@ local function compile_file(path)
 		print(("-"):rep(#path))
 		print(result)
 	else
-		local dest_file = io.open(compile_path, "w")
-		dest_file:write(result)
-		dest_file:close()
+		write_file(compile_path, result)
 		if cli.watch then
 			print(("[" .. tostring(os.date("%X")) .. "] " .. tostring(path) .. " => " .. tostring(compile_path)))
 		else

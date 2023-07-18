@@ -1,3 +1,4 @@
+local lfs = require('lfs')
 local { PATH_SEPARATOR } = require('erde.constants')
 local { string } = require('erde.stdlib')
 
@@ -26,6 +27,31 @@ module function read_file(path) {
   local contents = file:read('*a')
   file:close()
   return contents
+}
+
+module function write_file(path, content) {
+  local file = io.open(path, 'w')
+
+  if file == nil {
+    local path_parts = string.split(path, PATH_SEPARATOR)
+
+    for i = 1, #path_parts - 1 {
+      local parent_path = table.concat(path_parts, PATH_SEPARATOR, 1, i)
+
+      if !file_exists(parent_path) {
+        lfs.mkdir(parent_path)
+      }
+    }
+
+    file = io.open(path, 'w')
+  }
+
+  if file == nil {
+    error("failed to write file to { path }")
+  } else {
+    file:write(content)
+    file:close()
+  }
 }
 
 -- -----------------------------------------------------------------------------

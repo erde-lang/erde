@@ -4,7 +4,7 @@ local config = require('erde.config')
 local { COMPILED_FOOTER_COMMENT, VALID_LUA_TARGETS, VERSION } = require('erde.constants')
 local lib = require('erde.lib')
 local { string } = require('erde.stdlib')
-local { file_exists, join_paths, read_file } = require('erde.utils')
+local { file_exists, join_paths, read_file, write_file } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 local pack = table.pack || (...) -> ({ n =  select("#", ...), ... })
@@ -217,9 +217,7 @@ local function compile_file(path) {
     print(('-'):rep(#path))
     print(result)
   } else {
-    local dest_file = io.open(compile_path, 'w')
-    dest_file:write(result)
-    dest_file:close()
+    write_file(compile_path, result)
 
     if cli.watch {
       print("[{ os.date('%X') }] { path } => { compile_path }")
