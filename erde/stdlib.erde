@@ -1,0 +1,474 @@
+-- -----------------------------------------------------------------------------
+-- Taken from: https://github.com/bsuth/lua-stdlib
+-- -----------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
+-- Libraries
+--
+-- Forward declared to be accessible anywhere.
+-- -----------------------------------------------------------------------------
+
+local _native_coroutine = coroutine
+module coroutine = {}
+
+local _native_debug = debug
+module debug = {}
+
+local _native_io = io
+module io = {}
+
+local _native_math = math
+module math = {}
+
+local _native_os = os
+module os = {}
+
+local _native_package = package
+module package = {}
+
+local _native_string = string
+module string = {}
+
+local _native_table = table
+module table = {}
+
+-- -----------------------------------------------------------------------------
+-- Load / Unload
+-- -----------------------------------------------------------------------------
+
+module function load() {
+  for key, value in pairs(_MODULE) {
+    local value_type = type(value)
+
+    if value_type == 'function' {
+      if key != 'load' && key != 'unload' {
+        _G[key] = value
+      }
+    } elseif value_type == 'table' {
+      local library = _G[key]
+
+      if type(library) == 'table' {
+        for subkey, subvalue in pairs(value) {
+          library[subkey] = subvalue
+        }
+      }
+    }
+  }
+}
+
+module function unload() {
+  for key, value in pairs(_MODULE) {
+    local value_type = type(value)
+
+    if value_type == 'function' {
+      if _G[key] == value { -- only remove values we injected
+        _G[key] = nil
+      }
+    } elseif value_type == 'table' {
+      local library = _G[key]
+
+      if type(library) == 'table' {
+        for subkey, subvalue in pairs(value) {
+          if library[subkey] == subvalue { -- only remove values we injected
+            library[subkey] = nil
+          }
+        }
+      }
+    }
+  }
+}
+
+-- -----------------------------------------------------------------------------
+-- Globals
+-- -----------------------------------------------------------------------------
+
+local function _kpairs_iter(a, i) {
+  local key, value = i, nil
+
+  repeat {
+    key, value = next(a, key)
+  } until type(key) != 'number'
+
+  return key, value
+}
+
+module function kpairs(t) {
+  return _kpairs_iter, t, nil
+}
+
+-- -----------------------------------------------------------------------------
+-- Coroutine
+-- -----------------------------------------------------------------------------
+
+-- EMPTY
+
+-- -----------------------------------------------------------------------------
+-- Debug
+-- -----------------------------------------------------------------------------
+
+-- EMPTY
+
+-- -----------------------------------------------------------------------------
+-- IO
+-- -----------------------------------------------------------------------------
+
+-- EMPTY
+
+-- -----------------------------------------------------------------------------
+-- Math
+-- -----------------------------------------------------------------------------
+
+function math.clamp(x, min, max) {
+  return math.min(math.max(x, min), max)
+}
+
+function math.round(x) {
+  if x < 0 {
+    return math.ceil(x - 0.5)
+  } else {
+    return math.floor(x + 0.5)
+  }
+}
+
+function math.sign(x) {
+  if x < 0 {
+    return -1
+  } elseif x > 0 {
+    return 1
+  } else {
+    return 0
+  }
+}
+
+-- -----------------------------------------------------------------------------
+-- OS
+-- -----------------------------------------------------------------------------
+
+-- EMPTY
+
+-- -----------------------------------------------------------------------------
+-- Package
+-- -----------------------------------------------------------------------------
+
+function package.cinsert(...) {
+  local templates = package.split(package.cpath)
+  table.insert(templates, ...)
+  package.cpath = package.concat(templates)
+}
+
+function package.concat(templates, i, j) {
+  local template_separator = string.split(package.config, '\n')[2]
+  return table.concat(templates, template_separator, i, j)
+}
+
+function package.cremove(position) {
+  local templates = package.split(package.cpath)
+  local removed = table.remove(templates, position)
+  package.cpath = package.concat(templates)
+  return removed
+}
+
+function package.insert(...) {
+  local templates = package.split(package.path)
+  table.insert(templates, ...)
+  package.path = package.concat(templates)
+}
+
+function package.remove(position) {
+  local templates = package.split(package.path)
+  local removed = table.remove(templates, position)
+  package.path = package.concat(templates)
+  return removed
+}
+
+function package.split(path) {
+  local template_separator = string.split(package.config, '\n')[2]
+  return string.split(path, template_separator)
+}
+
+-- -----------------------------------------------------------------------------
+-- String
+-- -----------------------------------------------------------------------------
+
+local function _string_chars_iter(a, i) {
+  i += 1
+  local char = a:sub(i, i)
+  if char != '' {
+    return i, char
+  }
+}
+
+function string.chars(s) {
+  return _string_chars_iter, s, 0
+}
+
+function string.escape(s) {
+  local result = {}
+
+  for _, part in ipairs(string.split(s, '%%%%')) {
+    part = part:gsub('^([().*?[^$+-])', '%%%1')
+    part = part:gsub('([^%%])([().*?[^$+-])', '%1%%%2')
+    part = part:gsub('%%([^%%().*?[^$+-])', '%%%%%1')
+    part = part:gsub('%%$', '%%%%')
+    table.insert(result, part)
+  }
+
+  return table.concat(result, '%%')
+}
+
+function string.lpad(s, length, padding = ' ') {
+  return padding:rep(math.ceil((length - #s) / #padding)) .. s
+}
+
+function string.ltrim(s, pattern = '%s+') {
+  -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
+  local trimmed = s:gsub("^{pattern}", '')
+  return trimmed
+}
+
+function string.pad(s, length, padding = ' ') {
+  local num_pads = math.ceil(((length - #s) / #padding) / 2)
+  return padding:rep(num_pads) .. s .. padding:rep(num_pads)
+}
+
+function string.rpad(s, length, padding = ' ') {
+  return s .. padding:rep(math.ceil((length - #s) / #padding))
+}
+
+function string.rtrim(s, pattern = '%s+') {
+  -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
+  local trimmed = s:gsub("{pattern}$", '')
+  return trimmed
+}
+
+function string.split(s, separator = '%s+') {
+  local result = {}
+  local i, j = s:find(separator)
+
+  while i != nil {
+    table.insert(result, s:sub(1, i - 1))
+    s = s:sub(j + 1) || ''
+    i, j = s:find(separator)
+  }
+
+  table.insert(result, s)
+  return result
+}
+
+function string.trim(s, pattern = '%s+') {
+  return string.ltrim(string.rtrim(s, pattern), pattern)
+}
+
+-- -----------------------------------------------------------------------------
+-- Table
+-- -----------------------------------------------------------------------------
+
+-- Polyfill `table.pack` and `table.unpack`
+if _VERSION == 'Lua 5.1' {
+  table.pack = (...) -> ({ n =  select('#', ...), ... })
+  table.unpack = unpack
+}
+
+function table.clear(t, callback) {
+  if type(callback) == 'function' {
+    for key, value in kpairs(t) {
+      if callback(value, key) {
+        t[key] = nil
+      }
+    }
+
+    for i = #t, 1, -1 {
+      if callback(t[i], i) {
+        table.remove(t, i)
+      }
+    }
+  } else {
+    for key, value in kpairs(t) {
+      if value == callback {
+        t[key] = nil
+      }
+    }
+
+    for i = #t, 1, -1 {
+      if t[i] == callback {
+        table.remove(t, i)
+      }
+    }
+  }
+}
+
+function table.collect(...) {
+  local result = {}
+
+  for key, value in ... {
+    if value == nil {
+      table.insert(result, key)
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result
+}
+
+function table.deepcopy(t) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    if type(value) == 'table' {
+      result[key] = table.deepcopy(value)
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result
+}
+
+function table.empty(t) {
+  return next(t) == nil
+}
+
+function table.filter(t, callback) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    if callback(value, key) {
+      if type(key) == 'number' {
+        table.insert(result, value)
+      } else {
+        result[key] = value
+      }
+    }
+  }
+
+  return result
+}
+
+function table.find(t, callback) {
+  if type(callback) == 'function' {
+    for key, value in pairs(t) {
+      if callback(value, key) {
+        return value, key
+      }
+    }
+  } else {
+    for key, value in pairs(t) {
+      if value == callback {
+        return value, key
+      }
+    }
+  }
+}
+
+function table.has(t, callback) {
+  local _, key = table.find(t, callback)
+  return key != nil
+}
+
+function table.keys(t) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    table.insert(result, key)
+  }
+
+  return result
+}
+
+function table.map(t, callback) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    local newValue, newKey = callback(value, key)
+
+    if newKey != nil {
+      result[newKey] = newValue
+    } elseif type(key) == 'number' {
+      table.insert(result, newValue)
+    } else {
+      result[key] = newValue
+    }
+  }
+
+  return result
+}
+
+function table.merge(t, ...) {
+  for _, _t in pairs({ ... }) {
+    for key, value in pairs(_t) {
+      if type(key) == 'number' {
+        table.insert(t, value)
+      } else {
+        t[key] = value
+      }
+    }
+  }
+}
+
+function table.reduce(t, initial, callback) {
+  local result = initial
+
+  for key, value in pairs(t) {
+    result = callback(result, value, key)
+  }
+
+  return result
+}
+
+function table.reverse(t) {
+  local len = #t
+
+  for i = 1, math.floor(len / 2) {
+    t[i], t[len - i + 1] = t[len - i + 1], t[i]
+  }
+}
+
+function table.shallowcopy(t) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    result[key] = value
+  }
+
+  return result
+}
+
+function table.slice(t, i = 1, j = #t) {
+  local result, len = {}, #t
+
+  if i < 0 { i = i + len + 1 }
+  if j < 0 { j = j + len + 1 }
+
+  for i = math.max(i, 0), math.min(j, len) {
+    table.insert(result, t[i])
+  }
+
+  return result
+}
+
+function table.values(t) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    table.insert(result, value)
+  }
+
+  return result
+}
+
+-- -----------------------------------------------------------------------------
+-- Library Metatables
+--
+-- Set library metatables. We must do this at the end, since our libraries will
+-- effectively be frozen once the `__newindex` metamethod is set.
+-- -----------------------------------------------------------------------------
+
+setmetatable(coroutine, { __index = _native_coroutine, __newindex = _native_coroutine })
+setmetatable(debug, { __index = _native_debug, __newindex = _native_debug })
+setmetatable(io, { __index = _native_io, __newindex = _native_io })
+setmetatable(math, { __index = _native_math, __newindex = _native_math })
+setmetatable(os, { __index = _native_os, __newindex = _native_os })
+setmetatable(package, { __index = _native_package, __newindex = _native_package })
+setmetatable(string, { __index = _native_string, __newindex = _native_string })
+setmetatable(table, { __index = _native_table, __newindex = _native_table })

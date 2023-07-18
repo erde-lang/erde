@@ -8,15 +8,20 @@ do
 	PATH_SEPARATOR = __ERDE_TMP_6__["PATH_SEPARATOR"]
 	VALID_LUA_TARGETS = __ERDE_TMP_6__["VALID_LUA_TARGETS"]
 end
-local echo, file_exists, get_source_summary, read_file, split
+local string
 do
 	local __ERDE_TMP_9__
-	__ERDE_TMP_9__ = require("erde.utils")
-	echo = __ERDE_TMP_9__["echo"]
-	file_exists = __ERDE_TMP_9__["file_exists"]
-	get_source_summary = __ERDE_TMP_9__["get_source_summary"]
-	read_file = __ERDE_TMP_9__["read_file"]
-	split = __ERDE_TMP_9__["split"]
+	__ERDE_TMP_9__ = require("erde.stdlib")
+	string = __ERDE_TMP_9__["string"]
+end
+local echo, file_exists, get_source_summary, read_file
+do
+	local __ERDE_TMP_12__
+	__ERDE_TMP_12__ = require("erde.utils")
+	echo = __ERDE_TMP_12__["echo"]
+	file_exists = __ERDE_TMP_12__["file_exists"]
+	get_source_summary = __ERDE_TMP_12__["get_source_summary"]
+	read_file = __ERDE_TMP_12__["read_file"]
 end
 local loadlua = loadstring or load
 local unpack = table.unpack or unpack
@@ -60,7 +65,7 @@ local function traceback(arg1, arg2, arg3)
 		return stacktrace
 	end
 	if level > -1 and config.is_cli_runtime then
-		local stack = split(stacktrace, "\n")
+		local stack = string.split(stacktrace, "\n")
 		local stacklen = #stack
 		for i = 1, 4 do
 			table.remove(stack, stacklen - i)

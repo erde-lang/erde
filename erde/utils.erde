@@ -1,54 +1,5 @@
 local { PATH_SEPARATOR } = require('erde.constants')
-
-module function echo(...) {
-  return ...
-}
-
-module function shallowcopy(t) {
-  local result = {}
-
-  for key, value in pairs(t) {
-    result[key] = value
-  }
-
-  return result
-}
-
--- -----------------------------------------------------------------------------
--- Strings
--- -----------------------------------------------------------------------------
-
-module function split(s, separator = '%s') {
-  local parts = {}
-
-  for part in s:gmatch("([^{ separator }]+)") {
-    table.insert(parts, part)
-  }
-
-  return parts
-}
-
--- Remove leading / trailing whitespace from a string.
--- Taken from: https://www.lua.org/pil/20.3.html
-module function trim(s) {
-  -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
-  local trimmed = s:gsub('^%s*(.*)%s*$', '%1')
-  return trimmed
-}
-
-module function get_source_summary(source) {
-  local summary = trim(source):sub(1, 5)
-
-  if #source > 5 {
-    summary ..= '...'
-  }
-
-  return summary
-}
-
-module function get_source_alias(source) {
-  return "[string \"{ get_source_summary(source) }\"]"
-}
+local { string } = require('erde.stdlib')
 
 -- -----------------------------------------------------------------------------
 -- Files
@@ -85,4 +36,26 @@ module function join_paths(...) {
   -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
   local joined = table.concat({ ... }, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. '+', PATH_SEPARATOR)
   return joined
+}
+
+-- -----------------------------------------------------------------------------
+-- Misc
+-- -----------------------------------------------------------------------------
+
+module function echo(...) {
+  return ...
+}
+
+module function get_source_summary(source) {
+  local summary = string.trim(source):sub(1, 5)
+
+  if #source > 5 {
+    summary ..= '...'
+  }
+
+  return summary
+}
+
+module function get_source_alias(source) {
+  return "[string \"{ get_source_summary(source) }\"]"
 }

@@ -5,46 +5,12 @@ do
 	__ERDE_TMP_2__ = require("erde.constants")
 	PATH_SEPARATOR = __ERDE_TMP_2__["PATH_SEPARATOR"]
 end
-local function echo(...)
-	return ...
+local string
+do
+	local __ERDE_TMP_5__
+	__ERDE_TMP_5__ = require("erde.stdlib")
+	string = __ERDE_TMP_5__["string"]
 end
-_MODULE.echo = echo
-local function shallowcopy(t)
-	local result = {}
-	for key, value in pairs(t) do
-		result[key] = value
-	end
-	return result
-end
-_MODULE.shallowcopy = shallowcopy
-local function split(s, separator)
-	if separator == nil then
-		separator = "%s"
-	end
-	local parts = {}
-	for part in s:gmatch(("([^" .. tostring(separator) .. "]+)")) do
-		table.insert(parts, part)
-	end
-	return parts
-end
-_MODULE.split = split
-local function trim(s)
-	local trimmed = s:gsub("^%s*(.*)%s*$", "%1")
-	return trimmed
-end
-_MODULE.trim = trim
-local function get_source_summary(source)
-	local summary = trim(source):sub(1, 5)
-	if #source > 5 then
-		summary = summary .. "..."
-	end
-	return summary
-end
-_MODULE.get_source_summary = get_source_summary
-local function get_source_alias(source)
-	return ('[string "' .. tostring(get_source_summary(source)) .. '"]')
-end
-_MODULE.get_source_alias = get_source_alias
 local function file_exists(path)
 	local file = io.open(path, "r")
 	if file == nil then
@@ -71,6 +37,22 @@ local function join_paths(...)
 	return joined
 end
 _MODULE.join_paths = join_paths
+local function echo(...)
+	return ...
+end
+_MODULE.echo = echo
+local function get_source_summary(source)
+	local summary = string.trim(source):sub(1, 5)
+	if #source > 5 then
+		summary = summary .. "..."
+	end
+	return summary
+end
+_MODULE.get_source_summary = get_source_summary
+local function get_source_alias(source)
+	return ('[string "' .. tostring(get_source_summary(source)) .. '"]')
+end
+_MODULE.get_source_alias = get_source_alias
 return _MODULE
 -- Compiled with Erde 0.6.0-1
 -- __ERDE_COMPILED__

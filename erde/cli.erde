@@ -3,7 +3,8 @@ local compile = require('erde.compile')
 local config = require('erde.config')
 local { COMPILED_FOOTER_COMMENT, VALID_LUA_TARGETS, VERSION } = require('erde.constants')
 local lib = require('erde.lib')
-local { file_exists, join_paths, read_file, trim } = require('erde.utils')
+local { string } = require('erde.stdlib')
+local { file_exists, join_paths, read_file } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 local pack = table.pack || (...) -> ({ n =  select("#", ...), ... })
@@ -387,7 +388,7 @@ local function repl() {
       print(unpack(result))
     }
 
-    if HAS_READLINE && trim(source) != '' {
+    if HAS_READLINE && string.trim(source) != '' {
       RL.add_history(source)
     }
   }

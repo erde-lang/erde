@@ -18,13 +18,18 @@ do
 	UNOPS = __ERDE_TMP_4__["UNOPS"]
 	VERSION = __ERDE_TMP_4__["VERSION"]
 end
-local tokenize = require("erde.tokenize")
-local get_source_alias, shallowcopy
+local table
 do
-	local __ERDE_TMP_9__
-	__ERDE_TMP_9__ = require("erde.utils")
-	get_source_alias = __ERDE_TMP_9__["get_source_alias"]
-	shallowcopy = __ERDE_TMP_9__["shallowcopy"]
+	local __ERDE_TMP_7__
+	__ERDE_TMP_7__ = require("erde.stdlib")
+	table = __ERDE_TMP_7__["table"]
+end
+local tokenize = require("erde.tokenize")
+local get_source_alias
+do
+	local __ERDE_TMP_12__
+	__ERDE_TMP_12__ = require("erde.utils")
+	get_source_alias = __ERDE_TMP_12__["get_source_alias"]
 end
 local unpack = table.unpack or unpack
 local arrow_function, block, expression, statement
@@ -298,7 +303,7 @@ local function bracket_index(index_chain_state)
 		surround("[", "]", expression),
 		"]",
 	}
-	index_chain_state.final_base_compile_lines = shallowcopy(index_chain_state.compile_lines)
+	index_chain_state.final_base_compile_lines = table.shallowcopy(index_chain_state.compile_lines)
 	index_chain_state.final_index_compile_lines = compile_lines
 	table.insert(index_chain_state.compile_lines, compile_lines)
 end
@@ -313,7 +318,7 @@ local function dot_index(index_chain_state)
 	else
 		table.insert(compile_lines, "." .. field_name)
 	end
-	index_chain_state.final_base_compile_lines = shallowcopy(index_chain_state.compile_lines)
+	index_chain_state.final_base_compile_lines = table.shallowcopy(index_chain_state.compile_lines)
 	index_chain_state.final_index_compile_lines = compile_lines
 	table.insert(index_chain_state.compile_lines, compile_lines)
 end
@@ -703,11 +708,11 @@ local function function_declaration(scope)
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_923__
-		__ERDE_TMP_923__ = function_signature(scope)
-		signature = __ERDE_TMP_923__["signature"]
-		needs_label_assignment = __ERDE_TMP_923__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_923__["needs_self_injection"]
+		local __ERDE_TMP_926__
+		__ERDE_TMP_926__ = function_signature(scope)
+		signature = __ERDE_TMP_926__["signature"]
+		needs_label_assignment = __ERDE_TMP_926__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_926__["needs_self_injection"]
 	end
 	local compile_lines = {}
 	if scope == "local" or scope == "module" then

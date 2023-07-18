@@ -15,8 +15,9 @@ local {
   UNOPS,
   VERSION,
 } = require('erde.constants')
+local { table } = require('erde.stdlib')
 local tokenize = require('erde.tokenize')
-local { get_source_alias, shallowcopy } = require('erde.utils')
+local { get_source_alias } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 
@@ -331,7 +332,7 @@ local function variable(scope) {
 local function bracket_index(index_chain_state) {
   local compile_lines = { current_token.line, '[', surround('[', ']', expression), ']' }
 
-  index_chain_state.final_base_compile_lines = shallowcopy(index_chain_state.compile_lines)
+  index_chain_state.final_base_compile_lines = table.shallowcopy(index_chain_state.compile_lines)
   index_chain_state.final_index_compile_lines = compile_lines
 
   table.insert(index_chain_state.compile_lines, compile_lines)
@@ -350,7 +351,7 @@ local function dot_index(index_chain_state) {
     table.insert(compile_lines, '.' .. field_name)
   }
 
-  index_chain_state.final_base_compile_lines = shallowcopy(index_chain_state.compile_lines)
+  index_chain_state.final_base_compile_lines = table.shallowcopy(index_chain_state.compile_lines)
   index_chain_state.final_index_compile_lines = compile_lines
 
   table.insert(index_chain_state.compile_lines, compile_lines)

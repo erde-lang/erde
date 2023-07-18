@@ -10,14 +10,19 @@ do
 	VERSION = __ERDE_TMP_8__["VERSION"]
 end
 local lib = require("erde.lib")
-local file_exists, join_paths, read_file, trim
+local string
 do
 	local __ERDE_TMP_13__
-	__ERDE_TMP_13__ = require("erde.utils")
-	file_exists = __ERDE_TMP_13__["file_exists"]
-	join_paths = __ERDE_TMP_13__["join_paths"]
-	read_file = __ERDE_TMP_13__["read_file"]
-	trim = __ERDE_TMP_13__["trim"]
+	__ERDE_TMP_13__ = require("erde.stdlib")
+	string = __ERDE_TMP_13__["string"]
+end
+local file_exists, join_paths, read_file
+do
+	local __ERDE_TMP_16__
+	__ERDE_TMP_16__ = require("erde.utils")
+	file_exists = __ERDE_TMP_16__["file_exists"]
+	join_paths = __ERDE_TMP_16__["join_paths"]
+	read_file = __ERDE_TMP_16__["read_file"]
 end
 local unpack = table.unpack or unpack
 local pack = table.pack or function(...)
@@ -57,11 +62,11 @@ local function parse_option(label)
 end
 local function traverse(paths, pattern, callback)
 	for _, path in ipairs(paths) do
-		local __ERDE_TMP_42__ = true
+		local __ERDE_TMP_45__ = true
 		repeat
 			local attributes = lfs.attributes(path)
 			if attributes == nil then
-				__ERDE_TMP_42__ = false
+				__ERDE_TMP_45__ = false
 				break
 			end
 			if attributes.mode == "file" then
@@ -77,9 +82,9 @@ local function traverse(paths, pattern, callback)
 				end
 				traverse(subpaths, pattern, callback)
 			end
-			__ERDE_TMP_42__ = false
+			__ERDE_TMP_45__ = false
 		until true
-		if __ERDE_TMP_42__ then
+		if __ERDE_TMP_45__ then
 			break
 		end
 	end
@@ -334,7 +339,7 @@ local function repl()
 			end
 			print(unpack(result))
 		end
-		if HAS_READLINE and trim(source) ~= "" then
+		if HAS_READLINE and string.trim(source) ~= "" then
 			RL.add_history(source)
 		end
 	end

@@ -4,7 +4,8 @@
 local compile = require('erde.compile')
 local config = require('erde.config')
 local { PATH_SEPARATOR, VALID_LUA_TARGETS } = require('erde.constants')
-local { echo, file_exists, get_source_summary, read_file, split } = require('erde.utils')
+local { string } = require('erde.stdlib')
+local { echo, file_exists, get_source_summary, read_file } = require('erde.utils')
 
 local loadlua = loadstring || load
 local unpack = table.unpack || unpack
@@ -78,7 +79,7 @@ module function traceback(arg1, arg2, arg3) {
     --
     -- Note, we do not remove the very last line of the stack, this is the C
     -- entry point of the Lua VM.
-    local stack = split(stacktrace, '\n')
+    local stack = string.split(stacktrace, '\n')
     local stacklen = #stack
     for i = 1, 4 { table.remove(stack, stacklen - i) }
     stacktrace = table.concat(stack, '\n')
