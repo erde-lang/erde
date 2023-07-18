@@ -4,6 +4,16 @@ module function echo(...) {
   return ...
 }
 
+module function shallowcopy(t) {
+  local result = {}
+
+  for key, value in pairs(t) {
+    result[key] = value
+  }
+
+  return result
+}
+
 -- -----------------------------------------------------------------------------
 -- Strings
 -- -----------------------------------------------------------------------------
@@ -21,7 +31,9 @@ module function split(s, separator = '%s') {
 -- Remove leading / trailing whitespace from a string.
 -- Taken from: https://www.lua.org/pil/20.3.html
 module function trim(s) {
-  return (s:gsub('^%s*(.*)%s*$', '%1'))
+  -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
+  local trimmed = s:gsub('^%s*(.*)%s*$', '%1')
+  return trimmed
 }
 
 module function get_source_summary(source) {
@@ -70,5 +82,7 @@ module function read_file(path) {
 -- -----------------------------------------------------------------------------
 
 module function join_paths(...) {
-  return (table.concat({ ... }, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. '+', PATH_SEPARATOR))
+  -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
+  local joined = table.concat({ ... }, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. '+', PATH_SEPARATOR)
+  return joined
 }

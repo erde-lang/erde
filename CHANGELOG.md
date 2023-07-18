@@ -16,6 +16,10 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 - Added specific error checks for common mistakes
     - `~=` vs `!=`
     - `elseif` vs `else if`
+- Operator assignments no longer cause unnecessary duplicate indexing
+    - https://github.com/erde-lang/erde/issues/29
+    - ex) `my_expensive_function().x += 1` will now only call `my_expensive_function` once.
+    - ex) `a.b.c += 1` will only cause `a` to be indexed once.
 
 ### Fixed
 - Fixed allowing keywords as variable names

@@ -9,6 +9,14 @@ local function echo(...)
 	return ...
 end
 _MODULE.echo = echo
+local function shallowcopy(t)
+	local result = {}
+	for key, value in pairs(t) do
+		result[key] = value
+	end
+	return result
+end
+_MODULE.shallowcopy = shallowcopy
 local function split(s, separator)
 	if separator == nil then
 		separator = "%s"
@@ -21,7 +29,8 @@ local function split(s, separator)
 end
 _MODULE.split = split
 local function trim(s)
-	return s:gsub("^%s*(.*)%s*$", "%1")
+	local trimmed = s:gsub("^%s*(.*)%s*$", "%1")
+	return trimmed
 end
 _MODULE.trim = trim
 local function get_source_summary(source)
@@ -56,9 +65,10 @@ local function read_file(path)
 end
 _MODULE.read_file = read_file
 local function join_paths(...)
-	return table.concat({
+	local joined = table.concat({
 		...,
 	}, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. "+", PATH_SEPARATOR)
+	return joined
 end
 _MODULE.join_paths = join_paths
 return _MODULE

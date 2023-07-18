@@ -16,7 +16,7 @@ local {
   VERSION,
 } = require('erde.constants')
 local tokenize = require('erde.tokenize')
-local { get_source_alias } = require('erde.utils')
+local { get_source_alias, shallowcopy } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 
@@ -329,24 +329,31 @@ local function variable(scope) {
 -- -----------------------------------------------------------------------------
 
 local function bracket_index(index_chain_state) {
-  table.insert(index_chain_state.compile_lines, current_token.line)
-  table.insert(index_chain_state.compile_lines, '[')
-  table.insert(index_chain_state.compile_lines, surround('[', ']', expression))
-  table.insert(index_chain_state.compile_lines, ']')
+  local compile_lines = { current_token.line, '[', surround('[', ']', expression), ']' }
+
+  index_chain_state.final_base_compile_lines = shallowcopy(index_chain_state.compile_lines)
+  index_chain_state.final_index_compile_lines = compile_lines
+
+  table.insert(index_chain_state.compile_lines, compile_lines)
 }
 
 local function dot_index(index_chain_state) {
-  table.insert(index_chain_state.compile_lines, current_token.line)
+  local compile_lines = { current_token.line }
 
   consume() -- '.'
 
   local field_name = name(true)
 
   if LUA_KEYWORDS[field_name] {
-    table.insert(index_chain_state.compile_lines, "['{ field_name }']" )
+    table.insert(compile_lines, "['{ field_name }']" )
   } else {
-    table.insert(index_chain_state.compile_lines, '.' .. field_name)
+    table.insert(compile_lines, '.' .. field_name)
   }
+
+  index_chain_state.final_base_compile_lines = shallowcopy(index_chain_state.compile_lines)
+  index_chain_state.final_index_compile_lines = compile_lines
+
+  table.insert(index_chain_state.compile_lines, compile_lines)
 }
 
 local function method_index(index_chain_state) {
@@ -362,7 +369,7 @@ local function method_index(index_chain_state) {
     table.insert(index_chain_state.compile_lines, ":{ method_name }(")
     table.insert(index_chain_state.compile_lines, weave(method_parameters))
     table.insert(index_chain_state.compile_lines, ')')
-  } elseif index_chain_state.has_trivial_base && index_chain_state.has_trivial_chain {
+  } elseif index_chain_state.has_trivial_base && index_chain_state.chain_len == 0 {
     table.insert(index_chain_state.compile_lines, "['{ method_name }'](")
 
     -- Need to manually insert self, since we are not using the native ':' operator
@@ -412,7 +419,8 @@ local function index_chain(options) {
     base_compile_lines = options.base_compile_lines,
     compile_lines = { options.base_compile_lines },
     has_trivial_base = options.has_trivial_base,
-    has_trivial_chain = true,
+    chain_len = 0,
+    is_function_call = false,
 
     -- Variables for when we must compile to a Lua block. This is necessary when
     -- compiling a method index with a nontrivial base when the method name is a
@@ -420,6 +428,13 @@ local function index_chain(options) {
     needs_block_compile = false,
     block_compile_name = block_compile_name,
     block_compile_lines = { 'local ' .. block_compile_name },
+
+    -- Variables for tracking the final table in the index chain, along with its
+    -- ending index. Useful when the index chain must be referenced multiple
+    -- times (such as operator assignments), since repeating the entire chain in compiled code could
+    -- potentially be expensive.
+    final_base_compile_lines = options.base_compile_lines,
+    final_index_compile_lines = {},
   }
 
   if options.wrap_base_compile_lines {
@@ -427,31 +442,28 @@ local function index_chain(options) {
     table.insert(index_chain_state.compile_lines, ')')
   }
 
-  local has_trivial_chain = false
-  local is_function_call = false
-
   while true {
     -- Use newlines to infer whether the parentheses belong to a function call or the next statement.
     if current_token.value == '(' && current_token.line == tokens[current_token_index - 1].line {
-      is_function_call = true
+      index_chain_state.is_function_call = true
       function_call_index(index_chain_state)
     } elseif current_token.value == '[' {
-      is_function_call = false
+      index_chain_state.is_function_call = false
       bracket_index(index_chain_state)
     } elseif current_token.value == '.' {
-      is_function_call = false
+      index_chain_state.is_function_call = false
       dot_index(index_chain_state)
     } elseif current_token.value == ':' {
-      is_function_call = false
+      index_chain_state.is_function_call = true
       method_index(index_chain_state)
     } else {
       break
     }
 
-    index_chain_state.has_trivial_chain = false
+    index_chain_state.chain_len += 1
   }
 
-  if options.require_chain && index_chain_state.has_trivial_chain {
+  if options.require_chain && index_chain_state.chain_len == 0 {
     if current_token.type == TOKEN_TYPES.EOF {
       throw('unexpected eof')
     } else {
@@ -459,18 +471,13 @@ local function index_chain(options) {
     }
   }
 
-  if index_chain_state.has_trivial_chain {
+  if index_chain_state.chain_len == 0 {
     -- Unwrap `index_chain_state.compile_lines` if there is no chain, especially
     -- if we added parentheses w/ `options.wrap_base_compile_lines`
     index_chain_state.compile_lines = options.base_compile_lines
   }
 
-  return {
-    compile_lines = index_chain_state.compile_lines,
-    is_function_call = is_function_call,
-    needs_block_compile = index_chain_state.needs_block_compile,
-    block_compile_lines = index_chain_state.block_compile_lines,
-  }
+  return index_chain_state
 }
 
 -- -----------------------------------------------------------------------------
@@ -1122,15 +1129,15 @@ local function for_loop() {
   if next_token.type == TOKEN_TYPES.SYMBOL && next_token.value == '=' {
     table.insert(compile_lines, name() .. consume())
 
-    local expr_list_line = current_token.line
-    local expr_list = list(expression)
-    local expr_list_len = #expr_list
+    local expressions_line = current_token.line
+    local expressions = list(expression)
+    local num_expressions = #expressions
 
-    if expr_list_len != 2 && expr_list_len != 3 {
-      throw("invalid numeric for, expected 2-3 expressions, got { expr_list_len }", expr_list_line)
+    if num_expressions != 2 && num_expressions != 3 {
+      throw("invalid numeric for, expected 2-3 expressions, got { num_expressions }", expressions_line)
     }
 
-    table.insert(compile_lines, weave(expr_list))
+    table.insert(compile_lines, weave(expressions))
   } else {
     local names = {}
 
@@ -1231,10 +1238,10 @@ local function if_else() {
 }
 
 -- -----------------------------------------------------------------------------
--- Declarations / Assignments
+-- Assignments
 -- -----------------------------------------------------------------------------
 
-local function index_chain_assignment() {
+local function assignment_index_chain() {
   if current_token.value == '(' {
     return index_chain({
       base_compile_lines = { current_token.line, '(', surround('(', ')', expression), ')' },
@@ -1248,23 +1255,105 @@ local function index_chain_assignment() {
   }
 }
 
+local function non_operator_assignment(ids, expressions) {
+  local assignment_ids = {}
+  local assignment_block_compile_names = {}
+  local assignment_block_compile_lines = {}
+
+  for _, id in ipairs(ids) {
+    if !id.needs_block_compile {
+      table.insert(assignment_ids, id.compile_lines)
+    } else {
+      local assignment_name = new_tmp_name()
+
+      table.insert(assignment_ids, assignment_name)
+      table.insert(assignment_block_compile_names, assignment_name)
+
+      table.insert(assignment_block_compile_lines, id.block_compile_lines)
+      table.insert(assignment_block_compile_lines, id.compile_lines)
+      table.insert(assignment_block_compile_lines, '=' .. assignment_name)
+    }
+  }
+
+  local compile_lines = {}
+
+  if #assignment_block_compile_names > 0 {
+    table.insert(compile_lines, 'local')
+    table.insert(compile_lines, weave(assignment_block_compile_names))
+  }
+
+  table.insert(compile_lines, weave(assignment_ids))
+  table.insert(compile_lines, '=')
+  table.insert(compile_lines, weave(expressions))
+  table.insert(compile_lines, assignment_block_compile_lines)
+
+  return compile_lines
+}
+
+local function single_operator_assignment(id, expr, op_token, op_line) {
+  local compile_lines = {}
+  local id_compile_lines = id.compile_lines
+
+  if id.needs_block_compile {
+    table.insert(compile_lines, id.block_compile_lines)
+  }
+
+  if !id.has_trivial_base || id.chain_len > 1 {
+    local final_base_name = new_tmp_name()
+
+    table.insert(compile_lines, "local { final_base_name } =")
+    table.insert(compile_lines, id.final_base_compile_lines)
+
+    id_compile_lines = { final_base_name, id.final_index_compile_lines }
+  }
+
+  table.insert(compile_lines, id_compile_lines)
+  table.insert(compile_lines, '=')
+
+  if type(expr) == 'table' {
+    -- Escape expression w/ parens in case the expression has operators that
+    -- fight the assignment operator's precedence.
+    -- Ex. `mystring ..= true && 'a' || 'b'`
+    expr = { '(', expr, ')' }
+  }
+
+  table.insert(compile_lines, compile_binop(op_token, op_line, id_compile_lines, expr))
+
+  return compile_lines
+}
+
+local function operator_assignment(ids, expressions, op_token, op_line) {
+  if #ids == 1 {
+    return single_operator_assignment(ids[1], expressions[1], op_token, op_line)
+  }
+
+  local assignment_names = {}
+  local assignment_compile_lines = {}
+
+  for _, id in ipairs(ids) {
+    local assignment_name = new_tmp_name()
+    table.insert(assignment_names, assignment_name)
+    table.insert(assignment_compile_lines, single_operator_assignment(id, assignment_name, op_token, op_line))
+  }
+
+  return {
+    "local { table.concat(assignment_names, ',') } =",
+    weave(expressions),
+    assignment_compile_lines
+  }
+}
+
 local function variable_assignment(first_id) {
   local ids = { first_id }
-  local id_compile_lines = { first_id.compile_lines }
-
-  local needs_block_compile = first_id.needs_block_compile
 
   while branch(',') {
-    local id_line, id = current_token.line, index_chain_assignment()
+    local id_line, id = current_token.line, assignment_index_chain()
 
     if id.is_function_call {
       throw('cannot assign value to function call', id_line)
     }
 
     table.insert(ids, id)
-    table.insert(id_compile_lines, id.compile_lines)
-
-    needs_block_compile ||= id.needs_block_compile
   }
 
   local op_line, op_token = current_token.line, BINOP_ASSIGNMENT_TOKENS[current_token.value] && consume()
@@ -1274,63 +1363,18 @@ local function variable_assignment(first_id) {
   }
 
   expect('=', true)
-  local expr_list = list(expression)
+  local expressions = list(expression)
 
-  if !needs_block_compile && !op_token {
-    return {
-      weave(id_compile_lines),
-      -- TODO: Remove padding spaces. Currently required due to a parsing bug.
-      -- https://github.com/erde-lang/erde/issues/28
-      ' = ',
-      weave(expr_list),
-    }
+  if op_token {
+    return operator_assignment(ids, expressions, op_token, op_line)
+  } else {
+    return non_operator_assignment(ids, expressions)
   }
-
-  if !needs_block_compile && #ids == 1 {
-    return {
-      first_id.compile_lines,
-      op_line,
-      -- TODO: Remove padding spaces. Currently required due to a parsing bug.
-      -- https://github.com/erde-lang/erde/issues/28
-      ' = ',
-      -- Escape expression w/ parens in case the expression has operators that
-      -- fight the assignment operator's precedence.
-      -- Ex. `mystring ..= true && 'a' || 'b'`
-      compile_binop(op_token, op_line, first_id.compile_lines, { '(', expr_list[1], ')' }),
-    }
-  }
-
-  local compile_lines = {}
-
-  local assignment_names = {}
-  local assignment_compile_lines = {}
-
-  for _, id in ipairs(ids) {
-    local assignment_name = new_tmp_name()
-    table.insert(assignment_names, assignment_name)
-
-    if id.needs_block_compile {
-      table.insert(assignment_compile_lines, id.block_compile_lines)
-    }
-
-    table.insert(assignment_compile_lines, id.compile_lines)
-    table.insert(assignment_compile_lines, '=')
-
-    if op_token != nil {
-      table.insert(assignment_compile_lines, compile_binop(op_token, op_line, id.compile_lines, assignment_name))
-    } else {
-      table.insert(assignment_compile_lines, assignment_name)
-    }
-  }
-
-  table.insert(compile_lines, 'local')
-  table.insert(compile_lines, table.concat(assignment_names, ','))
-  table.insert(compile_lines, '=')
-  table.insert(compile_lines, weave(expr_list))
-  table.insert(compile_lines, assignment_compile_lines)
-
-  return compile_lines
 }
+
+-- -----------------------------------------------------------------------------
+-- Declarations
+-- -----------------------------------------------------------------------------
 
 local function variable_declaration(scope) {
   local compile_lines = {}
@@ -1440,7 +1484,7 @@ function statement() {
       table.insert(compile_lines, variable_declaration(scope))
     }
   } else {
-    local chain = index_chain_assignment()
+    local chain = assignment_index_chain()
 
     if !chain.is_function_call {
       table.insert(compile_lines, variable_assignment(chain))
