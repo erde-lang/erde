@@ -3,26 +3,6 @@ local config = require('erde.config')
 local lib = require('erde.lib')
 
 -- -----------------------------------------------------------------------------
--- Helpers
--- -----------------------------------------------------------------------------
-
-local function assert_eval(expected, source)
-  if expected == nil then
-    assert.is_nil(lib.run('return ' .. source))
-  else
-    assert.are.same(expected, lib.run('return ' .. source))
-  end
-end
-
-local function assert_run(expected, source)
-  if expected == nil then
-    assert.is_nil(lib.run(source))
-  else
-    assert.are.same(expected, lib.run(source))
-  end
-end
-
--- -----------------------------------------------------------------------------
 -- Expressions
 -- -----------------------------------------------------------------------------
 
@@ -436,7 +416,7 @@ describe('declaration #5.1+', function()
       _G.a = nil
       return result
     ]])
-    assert_run(1, [[
+    assert_run(2, [[
       local a = 1
       global a = 2
       local result = a

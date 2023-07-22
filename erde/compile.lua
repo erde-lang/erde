@@ -43,6 +43,7 @@ local has_continue
 local has_module_declarations
 local is_module_return_block, module_return_line
 local is_varargs_block
+local block_declarations, block_declaration_stack
 local alias
 local lua_target
 local bitlib
@@ -51,6 +52,28 @@ local function throw(message, line)
 		line = current_token.line
 	end
 	error((tostring(alias) .. ":" .. tostring(line) .. ": " .. tostring(message)), 0)
+end
+local function add_block_declaration(var, scope, stack_depth)
+	if stack_depth == nil then
+		stack_depth = block_depth
+	end
+	if block_declaration_stack[stack_depth] == nil then
+		for i = stack_depth - 1, 1, -1 do
+			local parent_block_declarations = block_declaration_stack[i]
+			if parent_block_declarations ~= nil then
+				block_declaration_stack[stack_depth] = table.shallowcopy(parent_block_declarations)
+				break
+			end
+		end
+	end
+	local target_block_declarations = block_declaration_stack[stack_depth]
+	if type(var) == "string" then
+		target_block_declarations[var] = scope
+	else
+		for _, declaration_name in ipairs(var.declaration_names) do
+			target_block_declarations[declaration_name] = scope
+		end
+	end
 end
 local function consume()
 	local consumed_token_value = current_token.value
@@ -101,6 +124,26 @@ end
 local function new_tmp_name()
 	tmp_name_counter = tmp_name_counter + 1
 	return ("__ERDE_TMP_" .. tostring(tmp_name_counter) .. "__")
+end
+local function get_compile_name(name, scope)
+	if scope == "module" then
+		if LUA_KEYWORDS[name] then
+			return ("_MODULE['" .. tostring(name) .. "']")
+		else
+			return "_MODULE." .. name
+		end
+	elseif scope == "global" then
+		if LUA_KEYWORDS[name] then
+			return ("_G['" .. tostring(name) .. "']")
+		else
+			return "_G." .. name
+		end
+	end
+	if LUA_KEYWORDS[name] then
+		return (tostring(name) .. "_")
+	else
+		return name
+	end
 end
 local function weave(t, separator)
 	if separator == nil then
@@ -200,7 +243,7 @@ local function surround_list(open_char, close_char, allow_empty, callback)
 		end
 	end)
 end
-local function name(no_transform)
+local function name()
 	if current_token.type == TOKEN_TYPES.EOF then
 		throw("unexpected eof")
 	end
@@ -213,24 +256,19 @@ local function name(no_transform)
 	if TERMINALS[current_token.value] ~= nil then
 		throw(("unexpected builtin '" .. tostring(current_token.value) .. "'"))
 	end
-	if LUA_KEYWORDS[current_token.value] and not no_transform then
-		return ("__ERDE_SUBSTITUTE_" .. tostring(consume()) .. "__")
-	else
-		return consume()
-	end
+	return consume()
 end
 local function array_destructure(scope)
 	local compile_lines = {}
 	local compile_name = new_tmp_name()
-	local names = {}
-	local assignment_prefix = scope == "global" and "_G." or ""
+	local declaration_names = {}
 	local array_index = 0
 	surround_list("[", "]", false, function()
 		array_index = array_index + 1
-		local name_line, name = current_token.line, name()
-		table.insert(names, name)
-		local assignment_name = assignment_prefix .. name
-		table.insert(compile_lines, name_line)
+		local declaration_line, declaration_name = current_token.line, name()
+		table.insert(declaration_names, declaration_name)
+		local assignment_name = get_compile_name(declaration_name, scope)
+		table.insert(compile_lines, declaration_line)
 		table.insert(
 			compile_lines,
 			(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "[" .. tostring(array_index) .. "]")
@@ -247,29 +285,28 @@ local function array_destructure(scope)
 	return {
 		compile_lines = compile_lines,
 		compile_name = compile_name,
-		names = names,
+		declaration_names = declaration_names,
 	}
 end
 local function map_destructure(scope)
 	local compile_lines = {}
 	local compile_name = new_tmp_name()
-	local names = {}
-	local assignment_prefix = scope == "global" and "_G." or ""
+	local declaration_names = {}
 	surround_list("{", "}", false, function()
-		local key_line, raw_key, key = current_token.line, current_token.value, name()
-		local name = branch(":") and name() or key
-		table.insert(names, name)
-		local assignment_name = assignment_prefix .. name
+		local key_line, key = current_token.line, name()
+		local declaration_name = branch(":") and name() or key
+		table.insert(declaration_names, declaration_name)
+		local assignment_name = get_compile_name(declaration_name, scope)
 		table.insert(compile_lines, key_line)
-		if LUA_KEYWORDS[raw_key] then
+		if LUA_KEYWORDS[declaration_name] then
 			table.insert(
 				compile_lines,
-				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(raw_key) .. "']")
+				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(key) .. "']")
 			)
 		else
 			table.insert(
 				compile_lines,
-				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "." .. tostring(raw_key))
+				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "." .. tostring(key))
 			)
 		end
 		if branch("=") then
@@ -284,7 +321,7 @@ local function map_destructure(scope)
 	return {
 		compile_lines = compile_lines,
 		compile_name = compile_name,
-		names = names,
+		declaration_names = declaration_names,
 	}
 end
 local function variable(scope)
@@ -312,11 +349,11 @@ local function dot_index(index_chain_state)
 		current_token.line,
 	}
 	consume()
-	local field_name = name(true)
-	if LUA_KEYWORDS[field_name] then
-		table.insert(compile_lines, ("['" .. tostring(field_name) .. "']"))
+	local key = name()
+	if LUA_KEYWORDS[key] then
+		table.insert(compile_lines, ("['" .. tostring(key) .. "']"))
 	else
-		table.insert(compile_lines, "." .. field_name)
+		table.insert(compile_lines, "." .. key)
 	end
 	index_chain_state.final_base_compile_lines = table.shallowcopy(index_chain_state.compile_lines)
 	index_chain_state.final_index_compile_lines = compile_lines
@@ -325,7 +362,7 @@ end
 local function method_index(index_chain_state)
 	table.insert(index_chain_state.compile_lines, current_token.line)
 	consume()
-	local method_name_line, method_name = current_token.line, name(true)
+	local method_name_line, method_name = current_token.line, name()
 	local method_parameters = surround_list("(", ")", true, expression)
 	if not LUA_KEYWORDS[method_name] then
 		table.insert(index_chain_state.compile_lines, (":" .. tostring(method_name) .. "("))
@@ -512,7 +549,7 @@ local function table_constructor()
 			table.insert(compile_lines, "]")
 			table.insert(compile_lines, expect("=", true))
 		elseif next_token.type == TOKEN_TYPES.SYMBOL and next_token.value == "=" then
-			local key = name(true)
+			local key = name()
 			if LUA_KEYWORDS[key] then
 				table.insert(compile_lines, ("['" .. tostring(key) .. "']") .. consume())
 			else
@@ -580,36 +617,42 @@ local function block_return()
 end
 local function parameters()
 	local compile_lines = {}
+	local compile_names = {}
 	local has_varargs = false
-	local names = {}
 	surround_list("(", ")", true, function()
 		if branch("...") then
 			has_varargs = true
-			table.insert(names, "...")
+			table.insert(compile_names, "...")
 			if current_token.type == TOKEN_TYPES.WORD then
-				table.insert(compile_lines, ("local " .. tostring(name()) .. " = { ... }"))
+				local varargs_name = name()
+				table.insert(compile_lines, ("local " .. tostring(get_compile_name(varargs_name)) .. " = { ... }"))
+				add_block_declaration(varargs_name, "local", block_depth + 1)
 			end
 			branch(",")
 			expect(")")
 		else
 			local var = variable()
-			local name = type(var) == "string" and var or var.compile_name
-			table.insert(names, name)
+			add_block_declaration(var, "local", block_depth + 1)
+			local compile_name = type(var) == "string" and get_compile_name(var) or var.compile_name
+			table.insert(compile_names, compile_name)
 			if branch("=") then
-				table.insert(compile_lines, ("if " .. tostring(name) .. " == nil then " .. tostring(name) .. " = "))
+				table.insert(
+					compile_lines,
+					("if " .. tostring(compile_name) .. " == nil then " .. tostring(compile_name) .. " = ")
+				)
 				table.insert(compile_lines, expression())
 				table.insert(compile_lines, "end")
 			end
 			if type(var) == "table" then
-				table.insert(compile_lines, "local " .. table.concat(var.names, ","))
+				table.insert(compile_lines, "local " .. table.concat(var.declaration_names, ","))
 				table.insert(compile_lines, var.compile_lines)
 			end
 		end
 	end)
 	return {
 		compile_lines = compile_lines,
+		compile_names = compile_names,
 		has_varargs = has_varargs,
-		names = names,
 	}
 end
 local function function_block()
@@ -625,27 +668,28 @@ end
 function arrow_function()
 	local old_is_varargs_block = is_varargs_block
 	local param_compile_lines = {}
-	local param_names = {}
+	local param_compile_names = {}
 	if current_token.value == "(" then
 		local params = parameters()
 		table.insert(param_compile_lines, params.compile_lines)
 		is_varargs_block = params.has_varargs
-		param_names = params.names
+		param_compile_names = params.compile_names
 	else
 		is_varargs_block = false
 		local var = variable()
+		add_block_declaration(var, "local", block_depth + 1)
 		if type(var) == "string" then
-			table.insert(param_names, var)
+			table.insert(param_compile_names, get_compile_name(var))
 		else
-			table.insert(param_names, var.compile_name)
-			table.insert(param_compile_lines, "local " .. table.concat(var.names, ","))
+			table.insert(param_compile_names, var.compile_name)
+			table.insert(param_compile_lines, "local " .. table.concat(var.declaration_names, ","))
 			table.insert(param_compile_lines, var.compile_lines)
 		end
 	end
 	if current_token.value == "->" then
 		consume()
 	elseif current_token.value == "=>" then
-		table.insert(param_names, 1, "self")
+		table.insert(param_compile_names, 1, "self")
 		consume()
 	elseif current_token.type == TOKEN_TYPES.EOF then
 		throw("unexpected eof (expected '->' or '=>')")
@@ -653,49 +697,59 @@ function arrow_function()
 		throw(("unexpected token '" .. tostring(current_token.value) .. "' (expected '->' or '=>')"))
 	end
 	local compile_lines = {
-		("function(" .. tostring(table.concat(param_names, ",")) .. ")"),
+		("function(" .. tostring(table.concat(param_compile_names, ",")) .. ")"),
 		param_compile_lines,
 	}
 	if current_token.value == "{" then
 		table.insert(compile_lines, surround("{", "}", function_block))
-	elseif current_token.value == "(" then
-		table.insert(compile_lines, "return")
-		table.insert(compile_lines, return_list())
 	else
 		table.insert(compile_lines, "return")
-		table.insert(compile_lines, expression())
+		local old_block_declarations = block_declarations
+		block_depth = block_depth + 1
+		block_declaration_stack[block_depth] = block_declaration_stack[block_depth] or {}
+		block_declarations = block_declaration_stack[block_depth]
+		if current_token.value == "(" then
+			table.insert(compile_lines, return_list())
+		else
+			table.insert(compile_lines, expression())
+		end
+		block_declarations = old_block_declarations
+		block_declaration_stack[block_depth] = nil
+		block_depth = block_depth - 1
 	end
 	table.insert(compile_lines, "end")
 	is_varargs_block = old_is_varargs_block
 	return compile_lines
 end
 local function function_signature(scope)
-	local signature_line, signature = current_token.line, name()
-	if (current_token.value == "." or current_token.value == ":") and (scope == "local" or scope == "module") then
-		throw("cannot use scopes for table values", signature_line)
+	local base_name_line, base_name = current_token.line, name()
+	local is_table_value = current_token.value == "." or current_token.value == ":"
+	if is_table_value and scope ~= nil then
+		throw("cannot use scopes for table values", base_name_line)
 	end
-	if scope == "global" then
-		signature = "_G." .. signature
+	if scope == "module" or scope == "global" then
+		block_declarations[base_name] = scope
 	end
+	local signature = get_compile_name(base_name, scope or block_declarations[base_name])
 	local needs_label_assignment = false
 	local needs_self_injection = false
 	while branch(".") do
-		local field = name(true)
-		if LUA_KEYWORDS[field] then
+		local key = name()
+		if LUA_KEYWORDS[key] then
 			needs_label_assignment = true
-			signature = signature .. ("['" .. tostring(field) .. "']")
+			signature = signature .. ("['" .. tostring(key) .. "']")
 		else
-			signature = signature .. "." .. field
+			signature = signature .. "." .. key
 		end
 	end
 	if branch(":") then
-		local field = name(true)
-		if LUA_KEYWORDS[field] then
+		local key = name()
+		if LUA_KEYWORDS[key] then
 			needs_label_assignment = true
 			needs_self_injection = true
-			signature = signature .. ("['" .. tostring(field) .. "']")
+			signature = signature .. ("['" .. tostring(key) .. "']")
 		else
-			signature = signature .. ":" .. field
+			signature = signature .. ":" .. key
 		end
 	end
 	return {
@@ -708,14 +762,14 @@ local function function_declaration(scope)
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_926__
-		__ERDE_TMP_926__ = function_signature(scope)
-		signature = __ERDE_TMP_926__["signature"]
-		needs_label_assignment = __ERDE_TMP_926__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_926__["needs_self_injection"]
+		local __ERDE_TMP_989__
+		__ERDE_TMP_989__ = function_signature(scope)
+		signature = __ERDE_TMP_989__["signature"]
+		needs_label_assignment = __ERDE_TMP_989__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_989__["needs_self_injection"]
 	end
 	local compile_lines = {}
-	if scope == "local" or scope == "module" then
+	if scope == "local" then
 		table.insert(compile_lines, "local")
 	end
 	if needs_label_assignment then
@@ -728,18 +782,15 @@ local function function_declaration(scope)
 	end
 	local params = parameters()
 	if needs_self_injection then
-		table.insert(params.names, "self")
+		table.insert(params.compile_names, "self")
 	end
-	table.insert(compile_lines, "(" .. table.concat(params.names, ",") .. ")")
+	table.insert(compile_lines, "(" .. table.concat(params.compile_names, ",") .. ")")
 	table.insert(compile_lines, params.compile_lines)
 	local old_is_varargs_block = is_varargs_block
 	is_varargs_block = params.has_varargs
 	table.insert(compile_lines, surround("{", "}", function_block))
 	is_varargs_block = old_is_varargs_block
 	table.insert(compile_lines, "end")
-	if scope == "module" then
-		table.insert(compile_lines, ("_MODULE." .. tostring(signature) .. " = " .. tostring(signature)))
-	end
 	return compile_lines
 end
 local function index_chain_expression(options)
@@ -816,10 +867,11 @@ local function terminal_expression()
 			},
 		})
 	else
+		local base_name_line, base_name = current_token.line, name()
 		return index_chain_expression({
 			base_compile_lines = {
-				current_token.line,
-				name(),
+				base_name_line,
+				get_compile_name(base_name, block_declarations[base_name]),
 			},
 			has_trivial_base = true,
 		})
@@ -889,11 +941,17 @@ function expression(min_prec)
 	return compile_lines
 end
 function block()
-	local compile_lines = {}
+	local old_block_declarations = block_declarations
 	block_depth = block_depth + 1
+	block_declaration_stack[block_depth] = block_declaration_stack[block_depth]
+		or table.shallowcopy(block_declaration_stack[block_depth - 1])
+	block_declarations = block_declaration_stack[block_depth]
+	local compile_lines = {}
 	while current_token.value ~= "}" do
 		table.insert(compile_lines, statement())
 	end
+	block_declarations = old_block_declarations
+	block_declaration_stack[block_depth] = nil
 	block_depth = block_depth - 1
 	return compile_lines
 end
@@ -949,7 +1007,9 @@ local function for_loop()
 	table.insert(compile_lines, consume())
 	local next_token = tokens[current_token_index + 1]
 	if next_token.type == TOKEN_TYPES.SYMBOL and next_token.value == "=" then
-		table.insert(compile_lines, name() .. consume())
+		local loop_name = name()
+		add_block_declaration(loop_name, "local", block_depth + 1)
+		table.insert(compile_lines, get_compile_name(loop_name) .. consume())
 		local expressions_line = current_token.line
 		local expressions = list(expression)
 		local num_expressions = #expressions
@@ -963,11 +1023,12 @@ local function for_loop()
 	else
 		local names = {}
 		for _, var in ipairs(list(variable)) do
+			add_block_declaration(var, "local", block_depth + 1)
 			if type(var) == "string" then
-				table.insert(names, var)
+				table.insert(names, get_compile_name(var))
 			else
 				table.insert(names, var.compile_name)
-				table.insert(pre_body_compile_lines, "local " .. table.concat(var.names, ","))
+				table.insert(pre_body_compile_lines, "local " .. table.concat(var.declaration_names, ","))
 				table.insert(pre_body_compile_lines, var.compile_lines)
 			end
 		end
@@ -1005,14 +1066,14 @@ local function goto_jump()
 	return {
 		consume(),
 		current_token.line,
-		name(),
+		get_compile_name(name()),
 	}
 end
 local function goto_label()
 	if lua_target == "5.1" or lua_target == "5.1+" then
 		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
 	end
-	return consume() .. name() .. expect("::", true)
+	return consume() .. get_compile_name(name()) .. expect("::", true)
 end
 local function if_else()
 	local compile_lines = {}
@@ -1048,10 +1109,11 @@ local function assignment_index_chain()
 			require_chain = true,
 		})
 	else
+		local base_name_line, base_name = current_token.line, name()
 		return index_chain({
 			base_compile_lines = {
-				current_token.line,
-				name(),
+				base_name_line,
+				get_compile_name(base_name, block_declarations[base_name]),
 			},
 			has_trivial_base = true,
 		})
@@ -1152,10 +1214,7 @@ local function variable_assignment(first_id)
 	end
 end
 local function variable_declaration(scope)
-	local compile_lines = {}
-	local declaration_names = {}
 	local assignment_names = {}
-	local assignment_prefix = scope == "global" and "_G." or ""
 	local destructure_compile_names = {}
 	local destructure_compile_lines = {}
 	for _, var in
@@ -1163,44 +1222,27 @@ local function variable_declaration(scope)
 			return variable(scope)
 		end))
 	do
+		add_block_declaration(var, scope)
 		if type(var) == "string" then
-			table.insert(declaration_names, var)
-			table.insert(assignment_names, assignment_prefix .. var)
+			table.insert(assignment_names, get_compile_name(var, scope))
 		else
 			table.insert(assignment_names, var.compile_name)
 			table.insert(destructure_compile_names, var.compile_name)
 			table.insert(destructure_compile_lines, var.compile_lines)
-			for _, name in ipairs(var.names) do
-				table.insert(declaration_names, name)
-			end
 		end
 	end
-	if scope ~= "global" then
-		table.insert(compile_lines, "local " .. table.concat(declaration_names, ","))
+	local compile_lines = {}
+	if scope == "local" then
+		table.insert(compile_lines, "local")
+	elseif #destructure_compile_names > 0 then
+		table.insert(compile_lines, "local " .. table.concat(destructure_compile_names, ","))
 	end
 	if branch("=") then
-		if #destructure_compile_names > 0 then
-			table.insert(compile_lines, "local " .. table.concat(destructure_compile_names, ","))
-			table.insert(compile_lines, table.concat(assignment_names, ",") .. "=")
-			table.insert(compile_lines, weave(list(expression)))
-			table.insert(compile_lines, destructure_compile_lines)
-		elseif scope == "global" then
-			table.insert(compile_lines, table.concat(assignment_names, ",") .. "=")
-			table.insert(compile_lines, weave(list(expression)))
-		else
-			table.insert(compile_lines, "=")
-			table.insert(compile_lines, weave(list(expression)))
-		end
-		if scope == "module" then
-			local module_names = {}
-			for _, declaration_name in ipairs(declaration_names) do
-				table.insert(module_names, "_MODULE." .. declaration_name)
-			end
-			table.insert(
-				compile_lines,
-				("%s = %s"):format(table.concat(module_names, ","), table.concat(declaration_names, ","))
-			)
-		end
+		table.insert(compile_lines, table.concat(assignment_names, ",") .. "=")
+		table.insert(compile_lines, weave(list(expression)))
+		table.insert(compile_lines, destructure_compile_lines)
+	elseif scope == "local" then
+		table.insert(compile_lines, table.concat(assignment_names, ","))
 	end
 	return compile_lines
 end
@@ -1263,6 +1305,8 @@ function statement()
 end
 local function module_block()
 	local compile_lines = {}
+	block_declarations = {}
+	block_declaration_stack[block_depth] = block_declarations
 	if current_token.type == TOKEN_TYPES.SHEBANG then
 		table.insert(compile_lines, consume())
 	end
@@ -1305,6 +1349,8 @@ return function(source, options)
 	is_module_return_block = true
 	module_return_line = nil
 	is_varargs_block = true
+	block_declarations = {}
+	block_declaration_stack = {}
 	alias = options.alias or get_source_alias(source)
 	lua_target = options.lua_target or config.lua_target
 	bitlib = options.bitlib
