@@ -20,6 +20,9 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - https://github.com/erde-lang/erde/issues/29
     - ex) `my_expensive_function().x += 1` will now only call `my_expensive_function` once.
     - ex) `a.b.c += 1` will only cause `a` to be indexed once.
+- Erde now transforms variable names based on the scope they were declared with.
+    - The most recently declared scope will always take precedence
+    - ex) `local x = 0; global x = 1; assert(x == 1)`
 
 ### Fixed
 - Fixed allowing keywords as variable names
@@ -37,6 +40,10 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - https://github.com/erde-lang/erde/issues/20
 - Fixed `erde compile` failing when parent directories are not present
     - parent directories are now created recursively as needed
+- Fixed mismatched names for Lua keywords when accessing `_G` or `_MODULE`
+    - https://github.com/erde-lang/erde/issues/18
+- Fixed `module` declarations not updating `_MODULE`
+    - https://github.com/erde-lang/erde/issues/22
 
 ### Added
 

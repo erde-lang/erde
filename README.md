@@ -1,5 +1,7 @@
 # Erde
 
+[https://erde-lang.github.io/](https://erde-lang.github.io/)
+
 Erde is a programming language that compiles to Lua. It uses a more symbol
 favored syntax (similar to languages such as Rust, Golang, JavaScript, etc) and
 has been designed to map very closely to Lua.
@@ -21,7 +23,7 @@ ERDE_ROOT="$(pwd)/erde"
 export LUA_PATH="$ERDE_ROOT/?.lua;$ERDE_ROOT/?/init.lua;$LUA_PATH"
 
 # To use the CLI:
-alias erde="lua $ERDE_ROOT/cli/init.lua"
+alias erde="lua $ERDE_ROOT/cli.lua"
 ```
 
 You can check whether Erde is installed correctly by running:
@@ -33,7 +35,7 @@ erde -h
 ## Similar Projects
 
 There is a comprehensive list of [languages that compile to Lua](https://github.com/hengestone/lua-languages),
-but the following are some such languages that Erde took inspiration from.
+but the following are some languages that Erde took inspiration from:
 
 - [moonscript](https://moonscript.org): A programmer friendly language that compiles into Lua
 - [fennel](https://fennel-lang.org): A lisp that compiles to Lua
