@@ -1162,11 +1162,21 @@ local function loop_block() {
 }
 
 local function loop_break() {
+  consume()
+
   if break_name == nil {
     throw("cannot use 'break' outside of loop")
   }
 
-  return consume()
+  -- Lua 5.1 / LuaJIT do not allow code to appear in the same block following
+  -- a `break` statement (similar to `return`)
+  if lua_target == '5.1' || lua_target == '5.1+' || lua_target == 'jit' {
+    if current_token.value != '}' {
+      throw("expected '}', got '{ current_token.value }'")
+    }
+  }
+
+  return 'break'
 }
 
 local function loop_continue() {
@@ -1178,7 +1188,9 @@ local function loop_continue() {
   consume()
 
   if lua_target == '5.1' || lua_target == '5.1+' {
-    return "{ break_name } = false break"
+    -- Place `break` in its own block! Lua 5.1 / LuaJIT do not allow code to
+    -- appear in the same block following a `break` statement (similar to `return`)
+    return "{ break_name } = false do break end"
   } else {
     return "goto { break_name }"
   }

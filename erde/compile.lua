@@ -984,10 +984,19 @@ local function loop_block()
 	return compile_lines
 end
 local function loop_break()
+	consume()
 	if break_name == nil then
 		throw("cannot use 'break' outside of loop")
 	end
-	return consume()
+	if lua_target == "5.1" or lua_target == "5.1+" or lua_target == "jit" then
+		if block_depth == 1 and current_token.type ~= TOKEN_TYPES.EOF then
+			throw(("expected '<eof>', got '" .. tostring(current_token.value) .. "'"))
+		end
+		if block_depth > 1 and current_token.value ~= "}" then
+			throw(("expected '}', got '" .. tostring(current_token.value) .. "'"))
+		end
+	end
+	return "break"
 end
 local function loop_continue()
 	if break_name == nil then
@@ -996,7 +1005,7 @@ local function loop_continue()
 	has_continue = true
 	consume()
 	if lua_target == "5.1" or lua_target == "5.1+" then
-		return (tostring(break_name) .. " = false break")
+		return (tostring(break_name) .. " = false do break end")
 	else
 		return ("goto " .. tostring(break_name))
 	end
