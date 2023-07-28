@@ -299,7 +299,7 @@ local function array_destructure(scope) {
     array_index += 1
 
     local declaration_line, declaration_name = current_token.line, name()
-    table.insert(declaration_names, declaration_name)
+    table.insert(declaration_names, get_compile_name(declaration_name))
 
     local assignment_name = get_compile_name(declaration_name, scope)
 
@@ -329,7 +329,7 @@ local function map_destructure(scope) {
     local key_line, key = current_token.line, name()
 
     local declaration_name = branch(':') && name() || key
-    table.insert(declaration_names, declaration_name)
+    table.insert(declaration_names, get_compile_name(declaration_name))
 
     local assignment_name = get_compile_name(declaration_name, scope)
 
@@ -1463,6 +1463,7 @@ local function variable_assignment(first_id) {
 
 local function variable_declaration(scope) {
   local assignment_names = {}
+  local destructure_declaration_names = {}
   local destructure_compile_names = {}
   local destructure_compile_lines = {}
 
@@ -1473,12 +1474,17 @@ local function variable_declaration(scope) {
       table.insert(assignment_names, get_compile_name(var, scope))
     } else {
       table.insert(assignment_names, var.compile_name)
+      table.merge(destructure_declaration_names, var.declaration_names)
       table.insert(destructure_compile_names, var.compile_name)
       table.insert(destructure_compile_lines, var.compile_lines)
     }
   }
 
   local compile_lines = {}
+
+  if #destructure_declaration_names > 0 {
+    table.insert(compile_lines, 'local ' .. table.concat(destructure_declaration_names, ','))
+  }
 
   if scope == 'local' {
     table.insert(compile_lines, 'local')

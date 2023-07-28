@@ -266,7 +266,7 @@ local function array_destructure(scope)
 	surround_list("[", "]", false, function()
 		array_index = array_index + 1
 		local declaration_line, declaration_name = current_token.line, name()
-		table.insert(declaration_names, declaration_name)
+		table.insert(declaration_names, get_compile_name(declaration_name))
 		local assignment_name = get_compile_name(declaration_name, scope)
 		table.insert(compile_lines, declaration_line)
 		table.insert(
@@ -295,7 +295,7 @@ local function map_destructure(scope)
 	surround_list("{", "}", false, function()
 		local key_line, key = current_token.line, name()
 		local declaration_name = branch(":") and name() or key
-		table.insert(declaration_names, declaration_name)
+		table.insert(declaration_names, get_compile_name(declaration_name))
 		local assignment_name = get_compile_name(declaration_name, scope)
 		table.insert(compile_lines, key_line)
 		if LUA_KEYWORDS[declaration_name] then
@@ -765,11 +765,11 @@ local function function_declaration(scope)
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_995__
-		__ERDE_TMP_995__ = function_signature(scope)
-		signature = __ERDE_TMP_995__["signature"]
-		needs_label_assignment = __ERDE_TMP_995__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_995__["needs_self_injection"]
+		local __ERDE_TMP_997__
+		__ERDE_TMP_997__ = function_signature(scope)
+		signature = __ERDE_TMP_997__["signature"]
+		needs_label_assignment = __ERDE_TMP_997__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_997__["needs_self_injection"]
 	end
 	local compile_lines = {}
 	if scope == "local" then
@@ -1224,6 +1224,7 @@ local function variable_assignment(first_id)
 end
 local function variable_declaration(scope)
 	local assignment_names = {}
+	local destructure_declaration_names = {}
 	local destructure_compile_names = {}
 	local destructure_compile_lines = {}
 	for _, var in
@@ -1236,11 +1237,15 @@ local function variable_declaration(scope)
 			table.insert(assignment_names, get_compile_name(var, scope))
 		else
 			table.insert(assignment_names, var.compile_name)
+			table.merge(destructure_declaration_names, var.declaration_names)
 			table.insert(destructure_compile_names, var.compile_name)
 			table.insert(destructure_compile_lines, var.compile_lines)
 		end
 	end
 	local compile_lines = {}
+	if #destructure_declaration_names > 0 then
+		table.insert(compile_lines, "local " .. table.concat(destructure_declaration_names, ","))
+	end
 	if scope == "local" then
 		table.insert(compile_lines, "local")
 	elseif #destructure_compile_names > 0 then

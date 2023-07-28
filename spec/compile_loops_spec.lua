@@ -146,43 +146,43 @@ end)
 
 spec('for loop transform Lua keywords #5.1+', function()
   assert_run(1, [[
-    local x = 0
-    for end = 1, 1 { x = end }
-    return x
+    local a = 0
+    for end = 1, 1 { a = end }
+    return a
   ]])
 
   assert_run(2, [[
-    local x = 0
-    for _, end in ipairs({ 2 }) { x = end }
-    return x
+    local a = 0
+    for _, end in ipairs({ 2 }) { a = end }
+    return a
   ]])
 end)
 
 spec('for loop update block declarations #5.1+', function()
   assert_run(1, [[
-    global x = 1
-    for x = 1, 1 { x = 0 }
-    local result = _G.x
-    _G.x = nil
+    global a = 1
+    for a = 1, 1 { a = 0 }
+    local result = _G.a
+    _G.a = nil
     return result
   ]])
 
   assert_run(2, [[
-    global x = 2
-    for _, x in ipairs({ 0 }) { x = 0 }
-    local result = _G.x
-    _G.x = nil
+    global a = 2
+    for _, a in ipairs({ 0 }) { a = 0 }
+    local result = _G.a
+    _G.a = nil
     return result
   ]])
 
-  assert_run({ x = 3 }, [[
-    module x = 3
-    for x = 1, 1 { x = 0 }
+  assert_run({ a = 3 }, [[
+    module a = 3
+    for a = 1, 1 { a = 0 }
   ]])
 
-  assert_run({ x = 4 }, [[
-    module x = 4
-    for _, x in ipairs({ 0 }) { x = 0 }
+  assert_run({ a = 4 }, [[
+    module a = 4
+    for _, a in ipairs({ 0 }) { a = 0 }
   ]])
 end)
 
