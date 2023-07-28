@@ -1,8 +1,4 @@
 -- -----------------------------------------------------------------------------
--- Taken from: https://github.com/bsuth/lua-stdlib
--- -----------------------------------------------------------------------------
-
--- -----------------------------------------------------------------------------
 -- Libraries
 --
 -- Forward declared to be accessible anywhere.
@@ -112,7 +108,30 @@ module function kpairs(t) {
 -- IO
 -- -----------------------------------------------------------------------------
 
--- EMPTY
+function io.exists(path) {
+  local file = io.open(path, 'r')
+
+  if file == nil {
+    return false
+  }
+
+  file:close()
+
+  return true
+}
+
+function io.readfile(path) {
+  local file = assert(io.open(path, 'r'))
+  local content = assert(file:read('*a'))
+  file:close()
+  return content
+}
+
+function io.writefile(path, content) {
+  local file = assert(io.open(path, 'w'))
+  assert(file:write(content))
+  file:close()
+}
 
 -- -----------------------------------------------------------------------------
 -- Math
@@ -144,7 +163,12 @@ function math.sign(x) {
 -- OS
 -- -----------------------------------------------------------------------------
 
--- EMPTY
+function os.capture(cmd) {
+  local file = assert(io.popen(cmd, 'r'))
+  local stdout = assert(file:read('*a'))
+  file:close()
+  return stdout
+}
 
 -- -----------------------------------------------------------------------------
 -- Package

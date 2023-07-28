@@ -3,8 +3,8 @@ local compile = require('erde.compile')
 local config = require('erde.config')
 local { COMPILED_FOOTER_COMMENT, VALID_LUA_TARGETS, VERSION } = require('erde.constants')
 local lib = require('erde.lib')
-local { string } = require('erde.stdlib')
-local { file_exists, join_paths, read_file, write_file } = require('erde.utils')
+local { io, string } = require('erde.stdlib')
+local { ensure_path_parents, join_paths } = require('erde.utils')
 
 local unpack = table.unpack || unpack
 local pack = table.pack || (...) -> ({ n =  select("#", ...), ... })
@@ -169,7 +169,7 @@ local function run_command() {
   arg = script_args
 
   local ok, result = xpcall(() -> {
-    local source = read_file(cli.script)
+    local source = io.readfile(cli.script)
     local result = lib.__erde_internal_load_source__(source, { alias = cli.script })
     return result
   }, lib.traceback)
@@ -191,14 +191,14 @@ local function compile_file(path) {
   }
 
   if !cli.print_compiled && !cli.force {
-    if file_exists(compile_path) && !is_compiled_file(compile_path) {
+    if io.exists(compile_path) && !is_compiled_file(compile_path) {
       print("{ path } => ERROR")
       print("Cannot write to { compile_path }: file already exists")
       return false
     }
   }
 
-  local ok, result = pcall(() -> compile(read_file(path), { alias = path }))
+  local ok, result = pcall(() -> compile(io.readfile(path), { alias = path }))
 
   if !ok {
     print("{ path } => ERROR")
@@ -217,7 +217,8 @@ local function compile_file(path) {
     print(('-'):rep(#path))
     print(result)
   } else {
-    write_file(compile_path, result)
+    ensure_path_parents(compile_path)
+    io.writefile(compile_path, result)
 
     if cli.watch {
       print("[{ os.date('%X') }] { path } => { compile_path }")
@@ -311,7 +312,7 @@ local function sourcemap_command() {
     terminate('Missing line number to map')
   }
 
-  local ok, result, sourcemap = pcall(() -> compile(read_file(path), { alias = path }))
+  local ok, result, sourcemap = pcall(() -> compile(io.readfile(path), { alias = path }))
 
   if ok {
     print("{ line } => { sourcemap[tonumber(line)] }")
@@ -475,7 +476,7 @@ if cli.subcommand == 'compile' {
   sourcemap_command()
 } elseif !cli.script {
   repl_command()
-} elseif !file_exists(cli.script) {
+} elseif !io.exists(cli.script) {
   terminate("File does not exist: { cli.script }")
 } else {
   run_command()

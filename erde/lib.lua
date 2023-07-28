@@ -8,20 +8,19 @@ do
 	PATH_SEPARATOR = __ERDE_TMP_6__["PATH_SEPARATOR"]
 	VALID_LUA_TARGETS = __ERDE_TMP_6__["VALID_LUA_TARGETS"]
 end
-local string
+local io, string
 do
 	local __ERDE_TMP_9__
 	__ERDE_TMP_9__ = require("erde.stdlib")
+	io = __ERDE_TMP_9__["io"]
 	string = __ERDE_TMP_9__["string"]
 end
-local echo, file_exists, get_source_summary, read_file
+local echo, get_source_summary
 do
 	local __ERDE_TMP_12__
 	__ERDE_TMP_12__ = require("erde.utils")
 	echo = __ERDE_TMP_12__["echo"]
-	file_exists = __ERDE_TMP_12__["file_exists"]
 	get_source_summary = __ERDE_TMP_12__["get_source_summary"]
-	read_file = __ERDE_TMP_12__["read_file"]
 end
 local loadlua = loadstring or load
 local unpack = table.unpack or unpack
@@ -134,9 +133,9 @@ local function erde_searcher(module_name)
 	local module_path = module_name:gsub("%.", PATH_SEPARATOR)
 	for path in package.path:gmatch("[^;]+") do
 		local fullpath = path:gsub("%.lua$", ".erde"):gsub("?", module_path)
-		if file_exists(fullpath) then
+		if io.exists(fullpath) then
 			return function()
-				local source = read_file(fullpath)
+				local source = io.readfile(fullpath)
 				local result = {
 					__erde_internal_load_source__(source, {
 						alias = fullpath,

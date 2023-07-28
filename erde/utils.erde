@@ -1,58 +1,6 @@
 local lfs = require('lfs')
 local { PATH_SEPARATOR } = require('erde.constants')
-local { string } = require('erde.stdlib')
-
--- -----------------------------------------------------------------------------
--- Files
--- -----------------------------------------------------------------------------
-
-module function file_exists(path) {
-  local file = io.open(path, 'r')
-
-  if file == nil {
-    return false
-  }
-
-  file:close()
-  return true
-}
-
-module function read_file(path) {
-  local file = io.open(path)
-
-  if file == nil {
-    error("file does not exist: { path }")
-  }
-
-  local contents = file:read('*a')
-  file:close()
-  return contents
-}
-
-module function write_file(path, content) {
-  local file = io.open(path, 'w')
-
-  if file == nil {
-    local path_parts = string.split(path, PATH_SEPARATOR)
-
-    for i = 1, #path_parts - 1 {
-      local parent_path = table.concat(path_parts, PATH_SEPARATOR, 1, i)
-
-      if !file_exists(parent_path) {
-        lfs.mkdir(parent_path)
-      }
-    }
-
-    file = io.open(path, 'w')
-  }
-
-  if file == nil {
-    error("failed to write file to { path }")
-  } else {
-    file:write(content)
-    file:close()
-  }
-}
+local { io, string } = require('erde.stdlib')
 
 -- -----------------------------------------------------------------------------
 -- Paths
@@ -62,6 +10,18 @@ module function join_paths(...) {
   -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
   local joined = table.concat({ ... }, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. '+', PATH_SEPARATOR)
   return joined
+}
+
+module function ensure_path_parents(path) {
+  local path_parts = string.split(path, PATH_SEPARATOR)
+
+  for i = 1, #path_parts - 1 {
+    local parent_path = table.concat(path_parts, PATH_SEPARATOR, 1, i)
+
+    if !io.exists(parent_path) {
+      lfs.mkdir(parent_path)
+    }
+  }
 }
 
 -- -----------------------------------------------------------------------------

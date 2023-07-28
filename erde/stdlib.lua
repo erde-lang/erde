@@ -72,6 +72,25 @@ local function kpairs(t)
 	return _kpairs_iter, t, nil
 end
 _MODULE.kpairs = kpairs
+function io.exists(path)
+	local file = io.open(path, "r")
+	if file == nil then
+		return false
+	end
+	file:close()
+	return true
+end
+function io.readfile(path)
+	local file = assert(io.open(path, "r"))
+	local content = assert(file:read("*a"))
+	file:close()
+	return content
+end
+function io.writefile(path, content)
+	local file = assert(io.open(path, "w"))
+	assert(file:write(content))
+	file:close()
+end
 function math.clamp(x, min, max)
 	return math.min(math.max(x, min), max)
 end
@@ -90,6 +109,12 @@ function math.sign(x)
 	else
 		return 0
 	end
+end
+function os.capture(cmd)
+	local file = assert(io.popen(cmd, "r"))
+	local stdout = assert(file:read("*a"))
+	file:close()
+	return stdout
 end
 function package.cinsert(...)
 	local templates = package.split(package.cpath)

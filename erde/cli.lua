@@ -10,20 +10,19 @@ do
 	VERSION = __ERDE_TMP_8__["VERSION"]
 end
 local lib = require("erde.lib")
-local string
+local io, string
 do
 	local __ERDE_TMP_13__
 	__ERDE_TMP_13__ = require("erde.stdlib")
+	io = __ERDE_TMP_13__["io"]
 	string = __ERDE_TMP_13__["string"]
 end
-local file_exists, join_paths, read_file, write_file
+local ensure_path_parents, join_paths
 do
 	local __ERDE_TMP_16__
 	__ERDE_TMP_16__ = require("erde.utils")
-	file_exists = __ERDE_TMP_16__["file_exists"]
+	ensure_path_parents = __ERDE_TMP_16__["ensure_path_parents"]
 	join_paths = __ERDE_TMP_16__["join_paths"]
-	read_file = __ERDE_TMP_16__["read_file"]
-	write_file = __ERDE_TMP_16__["write_file"]
 end
 local unpack = table.unpack or unpack
 local pack = table.pack or function(...)
@@ -156,7 +155,7 @@ local function run_command()
 	lib.load(cli.target)
 	arg = script_args
 	local ok, result = xpcall(function()
-		local source = read_file(cli.script)
+		local source = io.readfile(cli.script)
 		local result = lib.__erde_internal_load_source__(source, {
 			alias = cli.script,
 		})
@@ -172,14 +171,14 @@ local function compile_file(path)
 		compile_path = cli.outdir .. "/" .. compile_path
 	end
 	if not cli.print_compiled and not cli.force then
-		if file_exists(compile_path) and not is_compiled_file(compile_path) then
+		if io.exists(compile_path) and not is_compiled_file(compile_path) then
 			print((tostring(path) .. " => ERROR"))
 			print(("Cannot write to " .. tostring(compile_path) .. ": file already exists"))
 			return false
 		end
 	end
 	local ok, result = pcall(function()
-		return compile(read_file(path), {
+		return compile(io.readfile(path), {
 			alias = path,
 		})
 	end)
@@ -197,7 +196,8 @@ local function compile_file(path)
 		print(("-"):rep(#path))
 		print(result)
 	else
-		write_file(compile_path, result)
+		ensure_path_parents(compile_path)
+		io.writefile(compile_path, result)
 		if cli.watch then
 			print(("[" .. tostring(os.date("%X")) .. "] " .. tostring(path) .. " => " .. tostring(compile_path)))
 		else
@@ -276,7 +276,7 @@ local function sourcemap_command()
 		terminate("Missing line number to map")
 	end
 	local ok, result, sourcemap = pcall(function()
-		return compile(read_file(path), {
+		return compile(io.readfile(path), {
 			alias = path,
 		})
 	end)
@@ -410,7 +410,7 @@ elseif cli.subcommand == "sourcemap" then
 	sourcemap_command()
 elseif not cli.script then
 	repl_command()
-elseif not file_exists(cli.script) then
+elseif not io.exists(cli.script) then
 	terminate(("File does not exist: " .. tostring(cli.script)))
 else
 	run_command()

@@ -4,8 +4,8 @@
 local compile = require('erde.compile')
 local config = require('erde.config')
 local { PATH_SEPARATOR, VALID_LUA_TARGETS } = require('erde.constants')
-local { string } = require('erde.stdlib')
-local { echo, file_exists, get_source_summary, read_file } = require('erde.utils')
+local { io, string } = require('erde.stdlib')
+local { echo, get_source_summary } = require('erde.utils')
 
 local loadlua = loadstring || load
 local unpack = table.unpack || unpack
@@ -199,11 +199,11 @@ local function erde_searcher(module_name) {
   for path in package.path:gmatch('[^;]+') {
     local fullpath = path:gsub('%.lua$', '.erde'):gsub('?', module_path)
 
-    if file_exists(fullpath) {
+    if io.exists(fullpath) {
       -- IMPORTANT: THIS IS AN ERDE SOURCE LOADER AND MUST ADHERE TO THE USAGE SPEC OF
       -- `__erde_internal_load_source__`!
       return () -> {
-        local source = read_file(fullpath)
+        local source = io.readfile(fullpath)
         local result = { __erde_internal_load_source__(source, { alias = fullpath }) }
         return unpack(result)
       }
