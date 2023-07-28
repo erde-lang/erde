@@ -1,12 +1,11 @@
 local erde = require('erde')
 local config = require('erde.config')
-local lib = require('erde.lib')
 
 -- -----------------------------------------------------------------------------
 -- Helpers
 -- -----------------------------------------------------------------------------
 
-function make_load_spec(callback)
+local function make_load_spec(callback)
   return function()
     local old_lua_target = config.lua_target
     callback()
@@ -14,179 +13,261 @@ function make_load_spec(callback)
   end
 end
 
+local function assert_rewrite(source, expected)
+  local ok, result = xpcall(function() erde.run(source) end, erde.rewrite)
+  assert.are.equal(false, ok)
+  assert.are.equal(expected, result)
+end
+
 -- -----------------------------------------------------------------------------
 -- API
 -- -----------------------------------------------------------------------------
 
-spec('api errors #5.1+', function()
-  -- There is a separate spec for error rewriting. Here we simply ensure that
-  -- they are available via the API.
-  assert.are.equal(erde.rewrite, lib.rewrite)
-  assert.are.equal(erde.traceback, lib.traceback)
+spec('api #5.1+', function()
+  assert.are.equal(erde.compile, require('erde.compile'))
+  assert.are.equal(erde.rewrite, require('erde.lib').rewrite)
+  assert.are.equal(erde.traceback, require('erde.lib').traceback)
+  assert.are.equal(erde.run, require('erde.lib').run)
+  assert.are.equal(erde.load, require('erde.lib').load)
+  assert.are.equal(erde.unload, require('erde.lib').unload)
 end)
 
-describe('api compile #5.1+', function()
-  spec('can compile', function()
-    assert.has_no.errors(function()
-      erde.compile('')
-      erde.compile('', {})
-      erde.compile('return')
-      erde.compile('return', {})
-    end)
+-- -----------------------------------------------------------------------------
+-- Rewrite
+-- -----------------------------------------------------------------------------
+
+describe('erde.rewrite', function()
+  spec('#jit #5.1 #5.2 #5.3', function()
+    assert_rewrite(
+      [[print('a' + 1)]],
+      [[[string "print..."]:1: attempt to perform arithmetic on a string value]]
+    )
+
+    assert_rewrite(
+      [[
+
+        print('a' + 1)
+      ]],
+      [[[string "print..."]:2: attempt to perform arithmetic on a string value]]
+    )
+
+    assert_rewrite(
+      [[print(
+        'a' + 1)]],
+      [[[string "print..."]:2: attempt to perform arithmetic on a string value]]
+    )
+
+    assert_rewrite(
+      [[
+
+
+
+      error('myerror')
+      ]],
+      [[[string "error..."]:4: myerror]]
+    )
   end)
 
-  spec('can change lua target', function()
-    assert.has.errors(function()
-      erde.compile('goto test', { lua_target = '5.1' })
-    end)
-    assert.has_no.errors(function()
-      erde.compile('goto test', { lua_target = 'jit' })
-    end)
-  end)
+  spec('#5.4', function()
+    assert_rewrite(
+      [[print('a' + 1)]],
+      [[[string "print..."]:1: attempt to add a 'string' with a 'number']]
+    )
 
-  spec('can change bitlib', function()
-    local compiled = erde.compile('print(1 & 1)', { bitlib = 'mybitlib' })
-    assert.is_not.falsy(compiled:find('mybitlib'))
-  end)
+    assert_rewrite(
+      [[
 
-  spec('can specify alias', function()
-    local ok, result = pcall(function()
-      erde.compile('print(', { alias = 'myalias' })
-    end)
+        print('a' + 1)
+      ]],
+      [[[string "print..."]:2: attempt to add a 'string' with a 'number']]
+    )
 
-    assert.are.equal(false, ok)
-    assert.are.equal('myalias:1: unexpected eof (expected expression)', result)
-  end)
+    assert_rewrite(
+      [[print(
+        'a' + 1)]],
+      [[[string "print..."]:2: attempt to add a 'string' with a 'number']]
+    )
 
-  spec('returns code + sourcemap', function()
-    local compiled, sourcemap = erde.compile('')
-    assert.are.equal(type(compiled), 'string')
-    assert.are.equal(type(sourcemap), 'table')
+    assert_rewrite(
+      [[
 
-    local compiled, sourcemap = erde.compile('print("")')
-    assert.are.equal(type(compiled), 'string')
-    assert.are.equal(type(sourcemap), 'table')
-  end)
-end)
 
-describe('api run #5.1+', function()
-  spec('can run', function()
-    assert.has_no.errors(function()
-      erde.run('')
-      erde.run('', {})
-      erde.run('return')
-      erde.run('return', {})
-    end)
-  end)
 
-  spec('can change bitlib', function()
-    local ok, result = pcall(function()
-      return erde.run('print(1 & 1)', { bitlib = 'mybitlib' })
-    end)
-
-    assert.are.equal(false, ok)
-    assert.is_not.falsy(result:find("module 'mybitlib' not found"))
-  end)
-
-  spec('can specify alias', function()
-    local ok, result = pcall(function()
-      erde.run('print(', { alias = 'myalias' })
-    end)
-
-    assert.are.equal(false, ok)
-    assert.are.equal('myalias:1: unexpected eof (expected expression)', result)
-
-    local ok, result = xpcall(function()
-      erde.run('error("myerror")', { alias = 'myalias' })
-    end, erde.rewrite)
-
-    assert.are.equal(false, ok)
-    assert.are.equal('myalias:1: myerror', result)
-  end)
-
-  spec('can disable source maps', function()
-    local ok, result = xpcall(function()
-      erde.run('error("myerror")', {
-        alias = 'myalias',
-        disable_source_maps = true,
-      })
-    end, erde.rewrite)
-
-    assert.are.equal(false, ok)
-    assert.are.equal('myalias:(compiled:1): myerror', result)
-  end)
-
-  spec('handles multiple returns', function()
-    local a, b, c = erde.run('return 1, 2, 3')
-    assert.are.equal(a, 1)
-    assert.are.equal(b, 2)
-    assert.are.equal(c, 3)
+      error('myerror')
+      ]],
+      [[[string "error..."]:4: myerror]]
+    )
   end)
 end)
 
-describe('api load / unload #5.1+', function()
-  local searchers = package.loaders or package.searchers
-  local native_num_searchers = #searchers
-  local native_traceback = debug.traceback
+-- -----------------------------------------------------------------------------
+-- Compile
+-- -----------------------------------------------------------------------------
 
-  spec('can load', make_load_spec(function()
+spec('erde.compile #5.1+', function()
+  assert.has_no.errors(function()
+    erde.compile('')
+    erde.compile('', {})
+    erde.compile('return')
+    erde.compile('return', {})
+  end)
+end)
+
+spec('erde.compile lua target #5.1+', function()
+  assert.has.errors(function()
+    erde.compile('goto test', { lua_target = '5.1' })
+  end)
+  assert.has_no.errors(function()
+    erde.compile('goto test', { lua_target = 'jit' })
+  end)
+end)
+
+spec('erde.compile bitlib #5.1+', function()
+  local compiled = erde.compile('print(1 & 1)', { bitlib = 'mybitlib' })
+  assert.is_not.falsy(compiled:find('mybitlib'))
+end)
+
+spec('erde.compile alias #5.1+', function()
+  local ok, result = pcall(function()
+    erde.compile('print(', { alias = 'myalias' })
+  end)
+
+  assert.are.equal(false, ok)
+  assert.are.equal('myalias:1: unexpected eof (expected expression)', result)
+end)
+
+spec('erde.compile returns #5.1+', function()
+  local compiled, sourcemap = erde.compile('')
+  assert.are.equal(type(compiled), 'string')
+  assert.are.equal(type(sourcemap), 'table')
+
+  local compiled, sourcemap = erde.compile('print("")')
+  assert.are.equal(type(compiled), 'string')
+  assert.are.equal(type(sourcemap), 'table')
+end)
+
+-- -----------------------------------------------------------------------------
+-- Run
+-- -----------------------------------------------------------------------------
+
+spec('erde.run #5.1+', function()
+  assert.has_no.errors(function()
+    erde.run('')
+    erde.run('', {})
+    erde.run('return')
+    erde.run('return', {})
+  end)
+end)
+
+spec('erde.run bitlib #5.1+', function()
+  local ok, result = pcall(function()
+    return erde.run('print(1 & 1)', { bitlib = 'mybitlib' })
+  end)
+
+  assert.are.equal(false, ok)
+  assert.is_not.falsy(result:find("module 'mybitlib' not found"))
+end)
+
+spec('erde.run alias #5.1+', function()
+  local ok, result = pcall(function()
+    erde.run('print(', { alias = 'myalias' })
+  end)
+
+  assert.are.equal(false, ok)
+  assert.are.equal('myalias:1: unexpected eof (expected expression)', result)
+
+  local ok, result = xpcall(function()
+    erde.run('error("myerror")', { alias = 'myalias' })
+  end, erde.rewrite)
+
+  assert.are.equal(false, ok)
+  assert.are.equal('myalias:1: myerror', result)
+end)
+
+spec('erde.run disable source maps #5.1+', function()
+  local ok, result = xpcall(function()
+    erde.run('error("myerror")', {
+      alias = 'myalias',
+      disable_source_maps = true,
+    })
+  end, erde.rewrite)
+
+  assert.are.equal(false, ok)
+  assert.are.equal('myalias:(compiled:1): myerror', result)
+end)
+
+spec('erde.run multiple returns #5.1+', function()
+  local a, b, c = erde.run('return 1, 2, 3')
+  assert.are.equal(a, 1)
+  assert.are.equal(b, 2)
+  assert.are.equal(c, 3)
+end)
+
+-- -----------------------------------------------------------------------------
+-- Load / Unload
+-- -----------------------------------------------------------------------------
+
+local searchers = package.loaders or package.searchers
+local native_num_searchers = #searchers
+local native_traceback = debug.traceback
+
+spec('erde.load #5.1+', make_load_spec(function()
+  erde.load()
+  assert.are.equal(native_num_searchers + 1, #searchers)
+end))
+
+spec('erde.load repeated calls #5.1+', make_load_spec(function()
+  erde.load()
+  assert.are.equal(native_num_searchers + 1, #searchers)
+  erde.load()
+  assert.are.equal(native_num_searchers + 1, #searchers)
+end))
+
+spec('erde.load parameters #5.1+', make_load_spec(function()
+  assert.has_no.errors(function()
     erde.load()
-    assert.are.equal(native_num_searchers + 1, #searchers)
-  end))
-
-  spec('can be called multiple times', make_load_spec(function()
-    erde.load()
-    assert.are.equal(native_num_searchers + 1, #searchers)
-    erde.load()
-    assert.are.equal(native_num_searchers + 1, #searchers)
-  end))
-
-  spec('has flexible args', make_load_spec(function()
-    assert.has_no.errors(function()
-      erde.load()
-      erde.load('5.1')
-      erde.load('5.1', {})
-      erde.load({})
-    end)
-  end))
-
-  spec('can specify Lua target', make_load_spec(function()
     erde.load('5.1')
-    assert.are.equal('5.1', config.lua_target)
+    erde.load('5.1', {})
+    erde.load({})
+  end)
+end))
 
-    assert.has.errors(function()
-      erde.load('5.5') -- invalid target
-    end)
-  end))
+spec('erde.load Lua target #5.1+', make_load_spec(function()
+  erde.load('5.1')
+  assert.are.equal('5.1', config.lua_target)
 
-  spec('can specify keep_traceback', make_load_spec(function()
-    erde.load({ keep_traceback = true })
-    assert.are.equal(native_traceback, debug.traceback)
+  assert.has.errors(function()
+    erde.load('5.5') -- invalid target
+  end)
+end))
 
-    erde.load({ keep_traceback = false })
-    assert.are_not.equal(native_traceback, debug.traceback)
-  end))
+spec('erde.load keep_traceback #5.1+', make_load_spec(function()
+  erde.load({ keep_traceback = true })
+  assert.are.equal(native_traceback, debug.traceback)
 
-  spec('can specify bitlib', make_load_spec(function()
-    erde.load({ bitlib = 'mybitlib' })
-    assert.are.equal(config.bitlib, 'mybitlib')
-  end))
+  erde.load({ keep_traceback = false })
+  assert.are_not.equal(native_traceback, debug.traceback)
+end))
 
-  spec('can specify disable_source_maps', make_load_spec(function()
-    erde.load({ disable_source_maps = true })
-    assert.are.equal(true, config.disable_source_maps)
+spec('erde.load bitlib #5.1+', make_load_spec(function()
+  erde.load({ bitlib = 'mybitlib' })
+  assert.are.equal(config.bitlib, 'mybitlib')
+end))
 
-    local ok, result = xpcall(function()
-      erde.run('error("myerror")', { alias = 'myalias' })
-    end, erde.rewrite)
+spec('erde.load disable_source_maps #5.1+', make_load_spec(function()
+  erde.load({ disable_source_maps = true })
+  assert.are.equal(true, config.disable_source_maps)
 
-    assert.are.equal(false, ok)
-    assert.are.equal('myalias:(compiled:1): myerror', result)
-  end))
+  local ok, result = xpcall(function()
+    erde.run('error("myerror")', { alias = 'myalias' })
+  end, erde.rewrite)
 
-  spec('can unload', make_load_spec(function()
-    erde.load() -- reset any flags
-    erde.unload()
-    assert.are.equal(native_num_searchers, #searchers)
-  end))
-end)
+  assert.are.equal(false, ok)
+  assert.are.equal('myalias:(compiled:1): myerror', result)
+end))
+
+spec('erde.unload #5.1+', make_load_spec(function()
+  erde.load() -- reset any flags
+  erde.unload()
+  assert.are.equal(native_num_searchers, #searchers)
+end))

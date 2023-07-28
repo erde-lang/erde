@@ -505,6 +505,7 @@ local function block_string()
 	local end_quote = "]" .. current_token.equals .. "]"
 	consume()
 	if current_token.type == TOKEN_TYPES.BLOCK_STRING then
+		consume()
 		return {
 			block_string_line,
 			start_quote .. end_quote,
@@ -764,11 +765,11 @@ local function function_declaration(scope)
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_994__
-		__ERDE_TMP_994__ = function_signature(scope)
-		signature = __ERDE_TMP_994__["signature"]
-		needs_label_assignment = __ERDE_TMP_994__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_994__["needs_self_injection"]
+		local __ERDE_TMP_995__
+		__ERDE_TMP_995__ = function_signature(scope)
+		signature = __ERDE_TMP_995__["signature"]
+		needs_label_assignment = __ERDE_TMP_995__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_995__["needs_self_injection"]
 	end
 	local compile_lines = {}
 	if scope == "local" then

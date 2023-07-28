@@ -591,6 +591,7 @@ local function block_string() {
   if current_token.type == TOKEN_TYPES.BLOCK_STRING {
     -- Handle empty string case exceptionally so we can make assumptions at the
     -- end to simplify excluding empty string concatenations.
+    consume() -- `end_quote`
     return { block_string_line, start_quote .. end_quote }, has_interpolation
   }
 
