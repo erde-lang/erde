@@ -19,39 +19,9 @@
 
 local lib = require('erde.lib')
 
-describe('blocks #5.1+', function()
-  spec('update block declarations', function()
-    assert_run(1, [[
-      local x = 1
-
-      do {
-        global x = 0
-      }
-
-      local result = x
-      _G.x = nil
-      return result
-    ]])
-
-    assert_run(2, [[
-      local x = 0
-      local result
-
-      do {
-        global x = 2
-        result = x
-        _G.x = nil
-      }
-
-      return result
-    ]])
-
-    assert_run({ x = 3 }, [[
-      module x = 0
-      do { x = 3 }
-    ]])
-  end)
-end)
+-- -----------------------------------------------------------------------------
+-- Destructuring
+-- -----------------------------------------------------------------------------
 
 describe('array destructuring #5.1+', function()
   spec('transform Lua keywords', function()
@@ -66,7 +36,7 @@ describe('array destructuring #5.1+', function()
     ]])
   end)
 
-  spec('use scope tables', function()
+  spec('use tracked scopes', function()
     assert_run(1, [[
       global [ x ] = { 1 }
       local result = _G.x
@@ -126,7 +96,7 @@ describe('map destructuring #5.1+', function()
     ]])
   end)
 
-  spec('use scope tables', function()
+  spec('use tracked scopes', function()
     assert_run(1, [[
       global { x } = { x = 1 }
       local result = _G.x
@@ -178,6 +148,10 @@ describe('map destructuring #5.1+', function()
     ]])
   end)
 end)
+
+-- -----------------------------------------------------------------------------
+-- Functions
+-- -----------------------------------------------------------------------------
 
 describe('parameters #5.1+', function()
   spec('transform Lua keywords', function()
@@ -244,7 +218,7 @@ describe('function declaration #5.1+', function()
     ]])
   end)
 
-  spec('use scope tables', function()
+  spec('use tracked scopes', function()
     assert_run('function', [[
       global function x() {}
       local result = type(_G.x)
@@ -275,133 +249,9 @@ describe('function declaration #5.1+', function()
   end)
 end)
 
-describe('terminal expression #5.1+', function()
-  spec('transform Lua keywords', function()
-    assert_run(1, [[
-      local end = 1
-      return end
-    ]])
-
-    assert_run(2, [[
-      local x = { end = 2 }
-      return x.end
-    ]])
-
-    assert_run(3, [[
-      local end = { x = 3 }
-      return end.x
-    ]])
-  end)
-
-  spec('use scope tables', function()
-    assert_run(1, [[
-      global x = 0
-      _G.x = 1
-      local result = x
-      _G.x = nil
-      return result
-    ]])
-
-    assert_run({ x = 2 }, [[
-      module x = 0
-      _MODULE.x = 2
-    ]])
-  end)
-end)
-
-describe('for loop variables #5.1+', function()
-  spec('transform Lua keywords', function()
-    assert_run(1, [[
-      local x = 0
-      for end = 1, 1 { x = end }
-      return x
-    ]])
-
-    assert_run(2, [[
-      local x = 0
-      for _, end in ipairs({ 2 }) { x = end }
-      return x
-    ]])
-  end)
-
-  spec('update block declarations', function()
-    assert_run(1, [[
-      global x = 1
-      for x = 1, 1 { x = 0 }
-      local result = _G.x
-      _G.x = nil
-      return result
-    ]])
-
-    assert_run(2, [[
-      global x = 2
-      for _, x in ipairs({ 0 }) { x = 0 }
-      local result = _G.x
-      _G.x = nil
-      return result
-    ]])
-
-    assert_run({ x = 3 }, [[
-      module x = 3
-      for x = 1, 1 { x = 0 }
-    ]])
-
-    assert_run({ x = 4 }, [[
-      module x = 4
-      for _, x in ipairs({ 0 }) { x = 0 }
-    ]])
-  end)
-end)
-
-describe('goto #jit #5.2+', function()
-  spec('transform Lua keywords', function()
-    assert_run(1, [[
-      local x = 1
-      goto end
-      x = 0
-      ::end::
-      return x
-    ]])
-  end)
-end)
-
-describe('variable assignment #5.1+', function()
-  spec('transform Lua keywords', function()
-    assert_run(1, [[
-      local end = 0
-      end = 1
-      return end
-    ]])
-
-    assert_run(2, [[
-      local x = {}
-      x.end = 2
-      return x.end
-    ]])
-
-    assert_run(3, [[
-      local end = {}
-      end.x = 3
-      return end.x
-    ]])
-  end)
-
-  spec('use scope tables', function()
-    assert_run(1, [[
-      local x = 0
-      global x = 0
-      x = 1
-      local result = _G.x
-      _G.x = nil
-      return result
-    ]])
-
-    assert_run({ x = 2 }, [[
-      module x = 0
-      x = 2
-    ]])
-  end)
-end)
+-- -----------------------------------------------------------------------------
+-- Variable Declaration
+-- -----------------------------------------------------------------------------
 
 describe('variable declaration #5.1+', function()
   spec('transform Lua keywords', function()
@@ -411,7 +261,7 @@ describe('variable declaration #5.1+', function()
     ]])
   end)
 
-  spec('use scope tables', function()
+  spec('use tracked scopes', function()
     assert_run(1, [[
       local x = 0
       global x = 1

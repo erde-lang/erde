@@ -20,6 +20,7 @@ describe('error rewriting', function()
       [[print('a' + 1)]],
       [[[string "print..."]:1: attempt to perform arithmetic on a string value]]
     )
+
     assert_rewrite(
       [[
 
@@ -27,11 +28,13 @@ describe('error rewriting', function()
       ]],
       [[[string "print..."]:2: attempt to perform arithmetic on a string value]]
     )
+
     assert_rewrite(
       [[print(
         'a' + 1)]],
       [[[string "print..."]:2: attempt to perform arithmetic on a string value]]
     )
+
     assert_rewrite(
       [[
 
@@ -48,6 +51,7 @@ describe('error rewriting', function()
       [[print('a' + 1)]],
       [[[string "print..."]:1: attempt to add a 'string' with a 'number']]
     )
+
     assert_rewrite(
       [[
 
@@ -55,11 +59,13 @@ describe('error rewriting', function()
       ]],
       [[[string "print..."]:2: attempt to add a 'string' with a 'number']]
     )
+
     assert_rewrite(
       [[print(
         'a' + 1)]],
       [[[string "print..."]:2: attempt to add a 'string' with a 'number']]
     )
+
     assert_rewrite(
       [[
 

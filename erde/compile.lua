@@ -989,10 +989,7 @@ local function loop_break()
 		throw("cannot use 'break' outside of loop")
 	end
 	if lua_target == "5.1" or lua_target == "5.1+" or lua_target == "jit" then
-		if block_depth == 1 and current_token.type ~= TOKEN_TYPES.EOF then
-			throw(("expected '<eof>', got '" .. tostring(current_token.value) .. "'"))
-		end
-		if block_depth > 1 and current_token.value ~= "}" then
+		if current_token.value ~= "}" then
 			throw(("expected '}', got '" .. tostring(current_token.value) .. "'"))
 		end
 	end
