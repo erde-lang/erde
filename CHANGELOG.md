@@ -46,6 +46,8 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - https://github.com/erde-lang/erde/issues/22
 - Fixed `continue` generating invalid code when targeting 5.1(+)
     - https://github.com/erde-lang/erde/issues/34
+- Fixed return lists incorrectly interpreting expression commas as list commas
+    - For example, returning an iife with a comma in the function body
 
 ### Added
 - Erde will now throw a compiler error when targeting `5.1`, `5.1+`, or `jit`, and there are additional statements following a `break`.

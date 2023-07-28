@@ -570,14 +570,16 @@ local function return_list()
 	if look_ahead_limit_token.value == "->" or look_ahead_limit_token.value == "=>" then
 		return arrow_function()
 	end
-	local is_list = false
-	for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 do
-		local look_ahead_token = tokens[look_ahead_token_index]
+	local look_ahead_token_index = current_token_index + 1
+	local look_ahead_token = tokens[look_ahead_token_index]
+	while look_ahead_token_index < look_ahead_limit_token_index do
 		if look_ahead_token.type == TOKEN_TYPES.SYMBOL and SURROUND_ENDS[look_ahead_token.value] then
 			look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
-		end
-		if look_ahead_token.type == TOKEN_TYPES.SYMBOL and look_ahead_token.value == "," then
+		elseif look_ahead_token.type == TOKEN_TYPES.SYMBOL and look_ahead_token.value == "," then
 			return weave(surround_list("(", ")", false, expression))
+		else
+			look_ahead_token_index = look_ahead_token_index + 1
+			look_ahead_token = tokens[look_ahead_token_index]
 		end
 	end
 	return expression()
@@ -762,11 +764,11 @@ local function function_declaration(scope)
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_989__
-		__ERDE_TMP_989__ = function_signature(scope)
-		signature = __ERDE_TMP_989__["signature"]
-		needs_label_assignment = __ERDE_TMP_989__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_989__["needs_self_injection"]
+		local __ERDE_TMP_994__
+		__ERDE_TMP_994__ = function_signature(scope)
+		signature = __ERDE_TMP_994__["signature"]
+		needs_label_assignment = __ERDE_TMP_994__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_994__["needs_self_injection"]
 	end
 	local compile_lines = {}
 	if scope == "local" then

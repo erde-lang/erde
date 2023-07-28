@@ -674,21 +674,19 @@ local function return_list() {
     return arrow_function()
   }
 
-  local is_list = false
+  local look_ahead_token_index = current_token_index + 1
+  local look_ahead_token = tokens[look_ahead_token_index]
 
-  for look_ahead_token_index = current_token_index + 1, look_ahead_limit_token_index - 1 {
-    local look_ahead_token = tokens[look_ahead_token_index]
-
+  while look_ahead_token_index < look_ahead_limit_token_index {
     -- Check token type, since we are bypassing all parsing structure here and
     -- need to be careful for arbitrary string contents.
     if look_ahead_token.type == TOKEN_TYPES.SYMBOL && SURROUND_ENDS[look_ahead_token.value] {
       look_ahead_token, look_ahead_token_index = look_past_surround(look_ahead_token_index)
-    }
-
-    -- Check token type, since we are bypassing all parsing structure here and
-    -- need to be careful for arbitrary string contents.
-    if look_ahead_token.type == TOKEN_TYPES.SYMBOL && look_ahead_token.value == ',' {
+    } elseif look_ahead_token.type == TOKEN_TYPES.SYMBOL && look_ahead_token.value == ',' {
       return weave(surround_list('(', ')', false, expression))
+    } else {
+      look_ahead_token_index += 1
+      look_ahead_token = tokens[look_ahead_token_index]
     }
   }
 
