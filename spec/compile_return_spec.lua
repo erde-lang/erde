@@ -4,6 +4,7 @@ spec('return #5.1+', function()
   assert_run(nil, 'return')
   assert_run(1, 'return 1')
   assert_run(2, 'return (2)')
+  assert_run('{', "return ('{')")
   assert.are.equal('function', type(lib.run('return () -> 1')))
 
   assert_run(3, [[

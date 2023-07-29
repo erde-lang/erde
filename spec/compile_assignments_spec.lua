@@ -29,14 +29,6 @@ spec('single assignment #5.1+', function()
     c:end().b = 4
     return a.b
   ]])
-
-  assert.has_error(function()
-    compile('a() = 0')
-  end)
-
-  assert.has_error(function()
-    compile('a, b() = 0')
-  end)
 end)
 
 spec('multi assignment #5.1+', function()
@@ -94,6 +86,29 @@ spec('assignment use tracked scopes #5.1+', function()
     module a = 0
     a = 2
   ]])
+end)
+
+spec('assignment function call index #5.1+', function()
+  assert_run(1, [[
+    local a = {}
+    a.b = () -> a
+    a.b().c = 1
+    return a.c
+  ]])
+
+  assert_run(2, [[
+    local a = { b = () => self }
+    a:b().c = 2
+    return a.c
+  ]])
+
+  assert.has_error(function()
+    compile('a() = 0')
+  end)
+
+  assert.has_error(function()
+    compile('a, b() = 0')
+  end)
 end)
 
 -- -----------------------------------------------------------------------------

@@ -13,6 +13,9 @@ spec('single quote string #5.1+', function()
 end)
 
 spec('single quote string interpolation #5.1+', function()
+  assert_eval('{', "'{'")
+  assert_eval('}', "'}'")
+
   assert_eval('{1}', "'{1}'")
   assert_eval('a{1}', "'a{1}'")
   assert_eval('{1}b', "'{1}b'")
@@ -37,6 +40,9 @@ spec('double quote string #5.1+', function()
 end)
 
 spec('double quote string interpolation #5.1+', function()
+  assert_eval('{', '"\\{"')
+  assert_eval('}', '"\\}"')
+
   assert_eval('{1}', '"\\{1}"')
   assert_eval('{1}', '"\\{1\\}"')
 
@@ -62,6 +68,9 @@ spec('block string #5.1+', function()
 end)
 
 spec('block string interpolation #5.1+', function()
+  assert_eval('{', '[[\\{]]')
+  assert_eval('}', '[[\\}]]')
+
   assert_eval('{1}', '[[\\{1}]]')
   assert_eval('{1}', '[[\\{1\\}]]')
 
