@@ -1396,7 +1396,10 @@ return function(source, options)
 		source_map = source_map,
 		source_line = current_token.line,
 	})
-	table.insert(compile_lines, "-- Compiled with Erde " .. VERSION)
+	table.insert(
+		compile_lines,
+		("-- Compiled with Erde " .. tostring(VERSION) .. " w/ Lua target " .. tostring(lua_target))
+	)
 	table.insert(compile_lines, COMPILED_FOOTER_COMMENT)
 	return table.concat(compile_lines, "\n"), source_map
 end

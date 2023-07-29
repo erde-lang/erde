@@ -54,6 +54,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
 - Erde will now throw a compiler error when targeting `5.1`, `5.1+`, or `jit`, and there are additional statements following a `break`.
     - Lua 5.1 / LuaJIT do not support statements following `break` (parsing error, similar to `return`)
     - https://github.com/erde-lang/erde/issues/34
+- Compiled files now include the Lua target at the bottom of the compiled file.
 
 ## [0.6.0-1] - June 16, 2023
 
