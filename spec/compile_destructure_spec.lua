@@ -74,18 +74,25 @@ end)
 
 spec('array destructure update block declarations #5.1+', function()
   assert_run(1, [[
-    local a = 0
-    global [ a ] = {}
-    a = 1
-    local result = _G.a
+    global a = 0
+    local [ a ] = { 1 }
+    local result = a
     _G.a = nil
     return result
   ]])
 
-  assert_run({ a = 2 }, [[
+  assert_run(2, [[
+    local a = 0
+    global [ a ] = { 2 }
+    local result = a
+    _G.a = nil
+    return result
+  ]])
+
+  assert_run({ a = 3 }, [[
     local a = 0
     module [ a ] = {}
-    a = 2
+    a = 3
   ]])
 end)
 
@@ -198,17 +205,24 @@ end)
 
 spec('map destructure update block declarations #5.1+', function()
   assert_run(1, [[
-    local a = 0
-    global { a } = {}
-    a = 1
-    local result = _G.a
+    global a = 0
+    local { a } = { a = 1 }
+    local result = a
     _G.a = nil
     return result
   ]])
 
-  assert_run({ a = 2 }, [[
+  assert_run(2, [[
+    local a = 0
+    global { a } = { a = 2 }
+    local result = a
+    _G.a = nil
+    return result
+  ]])
+
+  assert_run({ a = 3 }, [[
     local a = 0
     module { a } = {}
-    a = 2
+    a = 3
   ]])
 end)

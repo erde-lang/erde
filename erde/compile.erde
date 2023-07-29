@@ -299,7 +299,7 @@ local function array_destructure(scope) {
     array_index += 1
 
     local declaration_line, declaration_name = current_token.line, name()
-    table.insert(declaration_names, get_compile_name(declaration_name))
+    table.insert(declaration_names, declaration_name)
 
     local assignment_name = get_compile_name(declaration_name, scope)
 
@@ -329,7 +329,7 @@ local function map_destructure(scope) {
     local key_line, key = current_token.line, name()
 
     local declaration_name = branch(':') && name() || key
-    table.insert(declaration_names, get_compile_name(declaration_name))
+    table.insert(declaration_names, declaration_name)
 
     local assignment_name = get_compile_name(declaration_name, scope)
 
@@ -355,7 +355,7 @@ local function map_destructure(scope) {
   }
 }
 
-local function variable(scope) {
+local function variable(scope = 'local') {
   if current_token.value == '[' {
     return array_destructure(scope)
   } elseif current_token.value == '{' {
@@ -768,7 +768,7 @@ local function parameters() {
       }
 
       if type(var) == 'table' {
-        table.insert(compile_lines, 'local ' .. table.concat(var.declaration_names, ','))
+        table.insert(compile_lines, 'local ' .. table.concat(table.map(var.declaration_names, get_compile_name), ','))
         table.insert(compile_lines, var.compile_lines)
       }
     }
@@ -818,7 +818,7 @@ function arrow_function() {
       table.insert(param_compile_names, get_compile_name(var))
     } else {
       table.insert(param_compile_names, var.compile_name)
-      table.insert(param_compile_lines, 'local ' .. table.concat(var.declaration_names, ','))
+      table.insert(param_compile_lines, 'local ' .. table.concat(table.map(var.declaration_names, get_compile_name), ','))
       table.insert(param_compile_lines, var.compile_lines)
     }
   }
@@ -1229,7 +1229,7 @@ local function for_loop() {
         table.insert(names, get_compile_name(var))
       } else {
         table.insert(names, var.compile_name)
-        table.insert(pre_body_compile_lines, 'local ' .. table.concat(var.declaration_names, ','))
+        table.insert(pre_body_compile_lines, 'local ' .. table.concat(table.map(var.declaration_names, get_compile_name), ','))
         table.insert(pre_body_compile_lines, var.compile_lines)
       }
     }
@@ -1463,8 +1463,9 @@ local function variable_assignment(first_id) {
 
 local function variable_declaration(scope) {
   local assignment_names = {}
+
+  local has_destructure = false
   local destructure_declaration_names = {}
-  local destructure_compile_names = {}
   local destructure_compile_lines = {}
 
   for _, var in ipairs(list(() -> variable(scope))) {
@@ -1473,32 +1474,40 @@ local function variable_declaration(scope) {
     if type(var) == 'string' {
       table.insert(assignment_names, get_compile_name(var, scope))
     } else {
+      has_destructure = true
+
       table.insert(assignment_names, var.compile_name)
-      table.merge(destructure_declaration_names, var.declaration_names)
-      table.insert(destructure_compile_names, var.compile_name)
       table.insert(destructure_compile_lines, var.compile_lines)
+
+      if scope == 'local' {
+        table.merge(destructure_declaration_names, table.map(var.declaration_names, get_compile_name))
+      } else {
+        table.insert(destructure_declaration_names, var.compile_name)
+      }
     }
+  }
+
+  if has_destructure {
+    expect('=', true)
+  } elseif scope == 'local' && current_token.value != '=' {
+    return 'local ' .. table.concat(assignment_names, ',')
+  } elseif !branch('=') {
+    return '' -- nothing to do
   }
 
   local compile_lines = {}
 
-  if #destructure_declaration_names > 0 {
+  if has_destructure {
     table.insert(compile_lines, 'local ' .. table.concat(destructure_declaration_names, ','))
   }
 
   if scope == 'local' {
     table.insert(compile_lines, 'local')
-  } elseif #destructure_compile_names > 0 {
-    table.insert(compile_lines, 'local ' .. table.concat(destructure_compile_names, ','))
   }
 
-  if branch('=') {
-    table.insert(compile_lines, table.concat(assignment_names, ',') .. '=')
-    table.insert(compile_lines, weave(list(expression)))
-    table.insert(compile_lines, destructure_compile_lines)
-  } elseif scope == 'local' {
-    table.insert(compile_lines, table.concat(assignment_names, ','))
-  }
+  table.insert(compile_lines, table.concat(assignment_names, ',') .. '=')
+  table.insert(compile_lines, weave(list(expression)))
+  table.insert(compile_lines, destructure_compile_lines)
 
   return compile_lines
 }
