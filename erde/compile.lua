@@ -160,63 +160,62 @@ local function weave(t, separator)
 	table.insert(woven, t[len])
 	return woven
 end
-local function compile_binop(token, line, lhs, rhs)
-	if bitlib and BITOPS[token] then
-		local bitop = ("require('" .. tostring(bitlib) .. "')." .. tostring(BITLIB_METHODS[token]) .. "(")
+local function compile_binop(op_token, op_line, lhs, rhs)
+	local needs_floor_division_polyfill = (
+		op_token == "//"
+		and lua_target ~= "5.3"
+		and lua_target ~= "5.4"
+		and lua_target ~= "5.3+"
+		and lua_target ~= "5.4+"
+	)
+	if needs_floor_division_polyfill then
 		return {
-			line,
-			bitop,
+			op_line,
+			"math.floor(",
 			lhs,
-			line,
-			",",
+			op_line,
+			"/",
 			rhs,
-			line,
 			")",
 		}
-	elseif token == "!=" then
+	elseif bitlib and BITOPS[op_token] then
+		return {
+			op_line,
+			("(require('" .. tostring(bitlib) .. "')." .. tostring(BITLIB_METHODS[op_token]) .. "("),
+			lhs,
+			",",
+			rhs,
+			"))",
+		}
+	elseif op_token == "!=" then
 		return {
 			lhs,
-			line,
 			"~=",
 			rhs,
 		}
-	elseif token == "||" then
+	elseif op_token == "==" then
 		return {
 			lhs,
-			line,
+			op_token,
+			rhs,
+		}
+	elseif op_token == "||" then
+		return {
+			lhs,
 			"or",
 			rhs,
 		}
-	elseif token == "&&" then
+	elseif op_token == "&&" then
 		return {
 			lhs,
-			line,
 			"and",
 			rhs,
 		}
-	elseif token == "//" then
-		return (lua_target == "5.3" or lua_target == "5.3+" or lua_target == "5.4" or lua_target == "5.4+")
-				and {
-					lhs,
-					line,
-					token,
-					rhs,
-				}
-			or {
-				line,
-				"math.floor(",
-				lhs,
-				line,
-				"/",
-				rhs,
-				line,
-				")",
-			}
 	else
 		return {
 			lhs,
-			line,
-			token,
+			op_line,
+			op_token,
 			rhs,
 		}
 	end
@@ -263,12 +262,12 @@ local function array_destructure(scope)
 	local compile_name = new_tmp_name()
 	local declaration_names = {}
 	local array_index = 0
+	table.insert(compile_lines, current_token.line)
 	surround_list("[", "]", false, function()
 		array_index = array_index + 1
-		local declaration_line, declaration_name = current_token.line, name()
+		local declaration_name = name()
 		table.insert(declaration_names, declaration_name)
 		local assignment_name = get_compile_name(declaration_name, scope)
-		table.insert(compile_lines, declaration_line)
 		table.insert(
 			compile_lines,
 			(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "[" .. tostring(array_index) .. "]")
@@ -292,12 +291,12 @@ local function map_destructure(scope)
 	local compile_lines = {}
 	local compile_name = new_tmp_name()
 	local declaration_names = {}
+	table.insert(compile_lines, current_token.line)
 	surround_list("{", "}", false, function()
-		local key_line, key = current_token.line, name()
+		local key = name()
 		local declaration_name = branch(":") and name() or key
 		table.insert(declaration_names, declaration_name)
 		local assignment_name = get_compile_name(declaration_name, scope)
-		table.insert(compile_lines, key_line)
 		if LUA_KEYWORDS[declaration_name] then
 			table.insert(
 				compile_lines,
@@ -774,11 +773,11 @@ local function function_declaration(scope)
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_1000__
-		__ERDE_TMP_1000__ = function_signature(scope)
-		signature = __ERDE_TMP_1000__["signature"]
-		needs_label_assignment = __ERDE_TMP_1000__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_1000__["needs_self_injection"]
+		local __ERDE_TMP_993__
+		__ERDE_TMP_993__ = function_signature(scope)
+		signature = __ERDE_TMP_993__["signature"]
+		needs_label_assignment = __ERDE_TMP_993__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_993__["needs_self_injection"]
 	end
 	local compile_lines = {}
 	if scope == "local" then
@@ -891,40 +890,31 @@ local function terminal_expression()
 end
 local function unop_expression()
 	local unop_line, unop = current_token.line, UNOPS[consume()]
-	local operand_line, operand = current_token.line, expression(unop.prec + 1)
-	if unop.token == "~" then
-		if bitlib then
-			local bitop = ("require('" .. tostring(bitlib) .. "').bnot(")
-			return {
-				unop_line,
-				bitop,
-				operand_line,
-				operand,
-				unop_line,
-				")",
-			}
-		elseif lua_target == "5.1+" or lua_target == "5.2+" then
-			throw("must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+", unop_line)
-		else
-			return {
-				unop_line,
-				unop.token,
-				operand_line,
-				operand,
-			}
-		end
-	elseif unop.token == "!" then
+	local operand = expression(unop.prec + 1)
+	if unop.token == "!" then
 		return {
-			unop_line,
 			"not",
-			operand_line,
 			operand,
 		}
+	elseif unop.token ~= "~" then
+		return {
+			unop_line,
+			unop.token,
+			operand,
+		}
+	elseif bitlib then
+		return {
+			unop_line,
+			("(require('" .. tostring(bitlib) .. "').bnot("),
+			operand,
+			"))",
+		}
+	elseif lua_target == "5.1+" or lua_target == "5.2+" then
+		throw("must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+", unop_line)
 	else
 		return {
 			unop_line,
 			unop.token,
-			operand_line,
 			operand,
 		}
 	end
@@ -937,7 +927,7 @@ function expression(min_prec)
 		throw("unexpected eof (expected expression)")
 	end
 	local compile_lines = UNOPS[current_token.value] and unop_expression() or terminal_expression()
-	local binop, binop_line = BINOPS[current_token.value], current_token.line
+	local binop_line, binop = current_token.line, BINOPS[current_token.value]
 	while binop and binop.prec >= min_prec do
 		if BITOPS[binop.token] and (lua_target == "5.1+" or lua_target == "5.2+") and not bitlib then
 			throw("must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+", binop_line)
@@ -948,7 +938,7 @@ function expression(min_prec)
 		end
 		local operand = binop.assoc == LEFT_ASSOCIATIVE and expression(binop.prec + 1) or expression(binop.prec)
 		compile_lines = compile_binop(binop.token, binop_line, compile_lines, operand)
-		binop, binop_line = BINOPS[current_token.value], current_token.line
+		binop_line, binop = current_token.line, BINOPS[current_token.value]
 	end
 	return compile_lines
 end

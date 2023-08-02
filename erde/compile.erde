@@ -214,22 +214,37 @@ local function weave(t, separator = ',') {
   return woven
 }
 
-local function compile_binop(token, line, lhs, rhs) {
-  if bitlib && BITOPS[token] {
-    local bitop = "require('{ bitlib }').{ BITLIB_METHODS[token] }("
-    return { line, bitop, lhs, line, ',', rhs, line, ')' }
-  } elseif token == '!=' {
-    return { lhs, line, '~=', rhs }
-  } elseif token == '||' {
-    return { lhs, line, 'or', rhs }
-  } elseif token == '&&' {
-    return { lhs, line, 'and', rhs }
-  } elseif token == '//' {
-    return (lua_target == '5.3' || lua_target == '5.3+' || lua_target == '5.4' || lua_target == '5.4+')
-      && { lhs, line, token, rhs }
-      || { line, 'math.floor(', lhs, line, '/', rhs, line, ')' }
+local function compile_binop(op_token, op_line, lhs, rhs) {
+  local needs_floor_division_polyfill = (
+    op_token == '//' &&
+    lua_target != '5.3' &&
+    lua_target != '5.4' &&
+    lua_target != '5.3+' &&
+    lua_target != '5.4+'
+  )
+
+  if needs_floor_division_polyfill {
+    -- SOURCEMAP: Handle incompatible argument types (`math.floor`)
+    -- SOURCEMAP: Handle incompatible operand types (`/`)
+    return { op_line, 'math.floor(', lhs, op_line, '/', rhs, ')' }
+  } elseif bitlib && BITOPS[op_token] {
+    -- NOTE: We wrap the bitlib call in parentheses to prevent tail calls in
+    -- LuaJIT, since any errors will have a misleading stacktrace.
+    -- see: https://www.freelists.org/post/luajit/Bad-stack-trace-from-lua-getstack-and-lua-getinfo,1
+    --
+    -- SOURCEMAP: Handle incompatible argument types
+    return { op_line, "(require('{ bitlib }').{ BITLIB_METHODS[op_token] }(", lhs, ',', rhs, '))' }
+  } elseif op_token == '!=' {
+    return { lhs, '~=', rhs }
+  } elseif op_token == '==' {
+    return { lhs, op_token, rhs }
+  } elseif op_token == '||' {
+    return { lhs, 'or', rhs }
+  } elseif op_token == '&&' {
+    return { lhs, 'and', rhs }
   } else {
-    return { lhs, line, token, rhs }
+    -- SOURCEMAP: Handle incompatible operand types
+    return { lhs, op_line, op_token, rhs }
   }
 }
 
@@ -295,15 +310,17 @@ local function array_destructure(scope) {
 
   local array_index = 0
 
+  -- SOURCEMAP: Handle destructuring a non-table value
+  table.insert(compile_lines, current_token.line)
+
   surround_list('[', ']', false, () -> {
     array_index += 1
 
-    local declaration_line, declaration_name = current_token.line, name()
+    local declaration_name = name()
     table.insert(declaration_names, declaration_name)
 
     local assignment_name = get_compile_name(declaration_name, scope)
 
-    table.insert(compile_lines, declaration_line)
     table.insert(compile_lines, "{ assignment_name } = { compile_name }[{ array_index }]")
 
     if branch('=') {
@@ -325,15 +342,16 @@ local function map_destructure(scope) {
   local compile_name = new_tmp_name()
   local declaration_names = {}
 
+  -- SOURCEMAP: Handle destructuring a non-table value
+  table.insert(compile_lines, current_token.line)
+
   surround_list('{', '}', false, () -> {
-    local key_line, key = current_token.line, name()
+    local key = name()
 
     local declaration_name = branch(':') && name() || key
     table.insert(declaration_names, declaration_name)
 
     local assignment_name = get_compile_name(declaration_name, scope)
-
-    table.insert(compile_lines, key_line)
 
     if LUA_KEYWORDS[declaration_name] {
       table.insert(compile_lines, "{ assignment_name } = { compile_name }['{ key }']")
@@ -1050,21 +1068,25 @@ local function terminal_expression() {
 local function unop_expression() {
   local unop_line, unop = current_token.line, UNOPS[consume()]
 
-  local operand_line, operand = current_token.line, expression(unop.prec + 1)
+  local operand = expression(unop.prec + 1)
 
-  if unop.token == '~' {
-    if bitlib {
-      local bitop = "require('{ bitlib }').bnot("
-      return { unop_line, bitop, operand_line, operand, unop_line, ')' }
-    } elseif lua_target == '5.1+' || lua_target == '5.2+' {
-      throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', unop_line)
-    } else {
-      return { unop_line, unop.token, operand_line, operand }
-    }
-  } elseif unop.token == '!' {
-    return { unop_line, 'not', operand_line, operand }
+  if unop.token == '!' {
+    return { 'not', operand }
+  } elseif unop.token != '~' {
+    -- SOURCEMAP: Handle incompatible operand types
+    return { unop_line, unop.token, operand }
+  } elseif bitlib {
+    -- NOTE: We wrap the bitlib call in parentheses to prevent tail calls in
+    -- LuaJIT, since any errors will have a misleading stacktrace.
+    -- see: https://www.freelists.org/post/luajit/Bad-stack-trace-from-lua-getstack-and-lua-getinfo,1
+    --
+    -- SOURCEMAP: Handle incompatible argument types
+    return { unop_line, "(require('{ bitlib }').bnot(", operand, '))' }
+  } elseif lua_target == '5.1+' || lua_target == '5.2+' {
+    throw('must specify bitlib for compiling bit operations when targeting 5.1+ or 5.2+', unop_line)
   } else {
-    return { unop_line, unop.token, operand_line, operand }
+    -- SOURCEMAP: Handle incompatible operand types
+    return { unop_line, unop.token, operand }
   }
 }
 
@@ -1075,7 +1097,7 @@ function expression(min_prec = 1) {
 
   local compile_lines = UNOPS[current_token.value] && unop_expression() || terminal_expression()
 
-  local binop, binop_line = BINOPS[current_token.value], current_token.line
+  local binop_line, binop = current_token.line, BINOPS[current_token.value]
 
   while binop && binop.prec >= min_prec {
     if BITOPS[binop.token] && (lua_target == '5.1+' || lua_target == '5.2+') && !bitlib {
@@ -1094,7 +1116,7 @@ function expression(min_prec = 1) {
 
     compile_lines = compile_binop(binop.token, binop_line, compile_lines, operand)
 
-    binop, binop_line = BINOPS[current_token.value], current_token.line
+    binop_line, binop = current_token.line, BINOPS[current_token.value]
   }
 
   return compile_lines

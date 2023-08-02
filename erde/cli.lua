@@ -275,13 +275,13 @@ local function sourcemap_command()
 	elseif line == nil then
 		terminate("Missing line number to map")
 	end
-	local ok, result, sourcemap = pcall(function()
+	local ok, result, source_map = pcall(function()
 		return compile(io.readfile(path), {
 			alias = path,
 		})
 	end)
 	if ok then
-		print((tostring(line) .. " => " .. tostring(sourcemap[tonumber(line)])))
+		print((tostring(line) .. " => " .. tostring(source_map[tonumber(line)])))
 	else
 		print(("Failed to compile " .. tostring(path)))
 		if type(result == "table") and result.line then

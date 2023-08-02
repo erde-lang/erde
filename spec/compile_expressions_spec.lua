@@ -87,6 +87,46 @@ describe('unop precedence #5.1+', function()
   end)
 end)
 
+describe('unop source map', function()
+  spec('#5.1+', function()
+    assert_source_map(2, [[
+      math.floor(0) -- disalign compiled and source lines
+      return -('a')
+    ]])
+
+    assert_source_map(3, [[
+
+      math.floor(0) -- disalign compiled and source lines
+      return ~('a')
+    ]])
+
+    assert_source_map(4, [[
+
+
+      math.floor(0) -- disalign compiled and source lines
+      return ~
+      ('a')
+    ]])
+
+  end)
+
+  spec('#5.1 jit', function()
+    assert_source_map(3, [[
+      math.floor(0) -- disalign compiled and source lines
+      return -
+      ('a')
+    ]])
+  end)
+
+  spec('#5.2+', function()
+    assert_source_map(2, [[
+      math.floor(0) -- disalign compiled and source lines
+      return -
+      ('a')
+    ]])
+  end)
+end)
+
 -- -----------------------------------------------------------------------------
 -- Bit Operators
 -- -----------------------------------------------------------------------------
@@ -135,11 +175,32 @@ if config.lua_target ~= '5.1+' and config.lua_target ~= '5.2+' then
   end)
 end
 
+spec('bitop source map #5.1+', function()
+  assert_source_map(2, [[
+    math.floor(0) -- disalign compiled and source lines
+    return 1 << 'a'
+  ]])
+
+  assert_source_map(3, [[
+    math.floor(0) -- disalign compiled and source lines
+    return 'a'
+    << 1
+  ]])
+
+  assert_source_map(4, [[
+
+    math.floor(0) -- disalign compiled and source lines
+    return 1
+    <<
+    'a'
+  ]])
+end)
+
 -- -----------------------------------------------------------------------------
 -- Binary Operators
 -- -----------------------------------------------------------------------------
 
-spec('binop #5.1+', function()
+spec('binops #5.1+', function()
 	assert_eval(true, 'true || true')
 	assert_eval(true, 'true || false')
 	assert_eval(true, 'false || true')
@@ -206,11 +267,44 @@ spec('binop associativity #5.1+', function()
   assert_eval(64, '(2^3)^2')
 end)
 
+describe('binop source map', function()
+  spec('#5.1+', function()
+    assert_source_map(2, [[
+      math.floor(0) -- disalign compiled and source lines
+      return 1 + 'a'
+    ]])
+
+    assert_source_map(3, [[
+      math.floor(0) -- disalign compiled and source lines
+      return 'a'
+      + 1
+    ]])
+  end)
+
+  spec('#5.1 jit', function()
+    assert_source_map(4, [[
+      math.floor(0) -- disalign compiled and source lines
+      return 1
+      +
+      'a'
+    ]])
+  end)
+
+  spec('#5.2+', function()
+    assert_source_map(3, [[
+      math.floor(0) -- disalign compiled and source lines
+      return 1
+      +
+      'a'
+    ]])
+  end)
+end)
+
 -- -----------------------------------------------------------------------------
--- Expressions
+-- Complex Expressions
 -- -----------------------------------------------------------------------------
 
-spec('expressions #5.1+', function()
+spec('complex expressions #5.1+', function()
   assert_eval(11, '1 + 2 * 3 + 4')
   assert_eval(13, '(5 * 2) + 3')
   assert_eval(25, '5 * (2 + 3)')

@@ -42,8 +42,8 @@ local function rewrite(message)
 			.. tostring(compiled_line)
 		)
 		local cache = erde_source_cache[tonumber(erde_source_id)] or {}
-		local sourcemap = cache.sourcemap or {}
-		local source_line = sourcemap[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")")
+		local source_map = cache.source_map or {}
+		local source_line = source_map[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")")
 		message = cache.has_alias and message:gsub(match, chunkname .. ":" .. source_line)
 			or message:gsub(match, ('[string "' .. tostring(chunkname) .. '"]:' .. tostring(source_line)))
 	end
@@ -91,7 +91,7 @@ local function __erde_internal_load_source__(source, options)
 		erde_source_id_counter,
 		options.alias or get_source_summary(source),
 	}, "::")
-	local compiled, sourcemap = compile(source, {
+	local compiled, source_map = compile(source, {
 		alias = options.alias,
 		lua_target = options.lua_target,
 		bitlib = options.bitlib,
@@ -119,7 +119,7 @@ local function __erde_internal_load_source__(source, options)
 		has_alias = options.alias ~= nil,
 	}
 	if not config.disable_source_maps and not options.disable_source_maps then
-		erde_source_cache[erde_source_id_counter].sourcemap = sourcemap
+		erde_source_cache[erde_source_id_counter].source_map = source_map
 	end
 	erde_source_id_counter = erde_source_id_counter + 1
 	return loader()

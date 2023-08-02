@@ -312,10 +312,10 @@ local function sourcemap_command() {
     terminate('Missing line number to map')
   }
 
-  local ok, result, sourcemap = pcall(() -> compile(io.readfile(path), { alias = path }))
+  local ok, result, source_map = pcall(() -> compile(io.readfile(path), { alias = path }))
 
   if ok {
-    print("{ line } => { sourcemap[tonumber(line)] }")
+    print("{ line } => { source_map[tonumber(line)] }")
   } else {
     print("Failed to compile { path }")
 
