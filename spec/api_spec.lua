@@ -8,8 +8,14 @@ local config = require('erde.config')
 local function make_load_spec(callback)
   return function()
     local old_lua_target = config.lua_target
+    local old_disable_source_maps = config.disable_source_maps
+    local old_bitlib = config.bitlib
+
     callback()
+
     config.lua_target = old_lua_target
+    config.disable_source_maps = old_disable_source_maps
+    config.bitlib = old_bitlib
   end
 end
 
@@ -115,10 +121,10 @@ end)
 
 spec('erde.compile lua target #5.1+', function()
   assert.has.errors(function()
-    erde.compile('goto test', { lua_target = '5.1' })
+    erde.compile('::test::', { lua_target = '5.1' })
   end)
   assert.has_no.errors(function()
-    erde.compile('goto test', { lua_target = 'jit' })
+    erde.compile('::test::', { lua_target = 'jit' })
   end)
 end)
 

@@ -33,17 +33,19 @@ local function rewrite(message)
 		return message
 	end
 	for erde_source_id, chunkname, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') do
-		local match = (
-			'%[string "erde::'
-			.. tostring(erde_source_id)
-			.. "::"
-			.. tostring(chunkname)
-			.. '"]:'
-			.. tostring(compiled_line)
-		)
 		local cache = erde_source_cache[tonumber(erde_source_id)] or {}
 		local source_map = cache.source_map or {}
 		local source_line = source_map[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")")
+		local match = string.escape(
+			(
+					'%[string "erde::'
+					.. tostring(erde_source_id)
+					.. "::"
+					.. tostring(chunkname)
+					.. '"]:'
+					.. tostring(compiled_line)
+				)
+		)
 		message = cache.has_alias and message:gsub(match, chunkname .. ":" .. source_line)
 			or message:gsub(match, ('[string "' .. tostring(chunkname) .. '"]:' .. tostring(source_line)))
 	end

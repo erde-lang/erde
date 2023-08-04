@@ -67,6 +67,10 @@ local is_varargs_block
 -- declaration type.
 local block_declarations, block_declaration_stack
 
+-- Keeps track of the declared `goto` jump and label names. Required since Lua
+-- throws errors at PARSE time if `goto` is used with an unfindable label.
+local goto_jumps, goto_labels
+
 -- Name for the current source being compiled (used in error messages)
 local alias
 
@@ -388,6 +392,7 @@ local function variable(scope = 'local') {
 -- -----------------------------------------------------------------------------
 
 local function bracket_index(index_chain_state) {
+  -- SOURCEMAP: Handle indexing a non-table
   local compile_lines = { current_token.line, '[', surround('[', ']', expression), ']' }
 
   index_chain_state.final_base_compile_lines = table.shallowcopy(index_chain_state.compile_lines)
@@ -397,6 +402,7 @@ local function bracket_index(index_chain_state) {
 }
 
 local function dot_index(index_chain_state) {
+  -- SOURCEMAP: Handle indexing a non-table
   local compile_lines = { current_token.line }
 
   consume() -- '.'
@@ -416,11 +422,14 @@ local function dot_index(index_chain_state) {
 }
 
 local function method_index(index_chain_state) {
+  -- SOURCEMAP: Handle indexing a non-table
+  -- SOURCEMAP: Handle calling a non-function value
+  -- SOURCEMAP: Handle incompatible argument types
   table.insert(index_chain_state.compile_lines, current_token.line)
 
   consume() -- ':'
 
-  local method_name_line, method_name = current_token.line, name()
+  local method_name = name()
 
   local method_parameters = surround_list('(', ')', true, expression)
 
@@ -547,8 +556,10 @@ local function single_quote_string() {
   consume() -- "'"
 
   if current_token.type == TOKEN_TYPES.SINGLE_QUOTE_STRING {
+    -- SOURCEMAP: expression
     return { current_token.line, "'" .. consume() }
   } else {
+    -- SOURCEMAP: expression
     return { current_token.line, "'" .. consume() .. consume() }
   }
 }
@@ -563,37 +574,38 @@ local function double_quote_string() {
   if current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING {
     -- Handle empty string case exceptionally so we can make assumptions at the
     -- end to simplify excluding empty string concatenations.
+
+    -- SOURCEMAP: expression
     return { double_quote_string_line, '"' .. consume() }, has_interpolation
   }
 
   local compile_lines = {}
-  local content_line, content = current_token.line, ''
+  local content = ''
 
   repeat {
     if current_token.type == TOKEN_TYPES.INTERPOLATION {
       has_interpolation = true
 
       if content != '' { -- only if nonempty
-        table.insert(compile_lines, content_line)
         table.insert(compile_lines, '"' .. content .. '"')
       }
 
       table.insert(compile_lines, { 'tostring(', surround('{', '}', expression), ')' })
 
-      content_line, content = current_token.line, ''
+      content = ''
     } else {
       content ..= consume()
     }
   } until current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING
 
   if content != '' { -- only if nonempty
-    table.insert(compile_lines, content_line)
     table.insert(compile_lines, '"' .. content .. '"')
   }
 
   consume() -- '"'
 
-  return weave(compile_lines, '..'), has_interpolation
+  -- SOURCEMAP: expression
+  return { double_quote_string_line, weave(compile_lines, '..') }, has_interpolation
 }
 
 local function block_string() {
@@ -609,24 +621,26 @@ local function block_string() {
   if current_token.type == TOKEN_TYPES.BLOCK_STRING {
     -- Handle empty string case exceptionally so we can make assumptions at the
     -- end to simplify excluding empty string concatenations.
+
     consume() -- `end_quote`
+
+    -- SOURCEMAP: expression
     return { block_string_line, start_quote .. end_quote }, has_interpolation
   }
 
   local compile_lines = {}
-  local content_line, content = current_token.line, ''
+  local content = ''
 
   repeat {
     if current_token.type == TOKEN_TYPES.INTERPOLATION {
       has_interpolation = true
 
       if content != '' { -- only if nonempty
-        table.insert(compile_lines, content_line)
         table.insert(compile_lines, start_quote .. content .. end_quote)
       }
 
       table.insert(compile_lines, { 'tostring(', surround('{', '}', expression), ')' })
-      content_line, content = current_token.line, ''
+      content = ''
 
       if current_token.value:sub(1, 1) == '\n' {
         -- Lua ignores the first character in block strings when it is a
@@ -641,13 +655,13 @@ local function block_string() {
   } until current_token.type == TOKEN_TYPES.BLOCK_STRING
 
   if content != '' { -- only if nonempty
-    table.insert(compile_lines, content_line)
     table.insert(compile_lines, start_quote .. content .. end_quote)
   }
 
   consume() -- `end_quote`
 
-  return weave(compile_lines, '..'), has_interpolation
+  -- SOURCEMAP: expression
+  return { block_string_line, weave(compile_lines, '..') }, has_interpolation
 }
 
 -- -----------------------------------------------------------------------------
@@ -655,6 +669,7 @@ local function block_string() {
 -- -----------------------------------------------------------------------------
 
 local function table_constructor() {
+  local table_constructor_line = current_token.line
   local compile_lines = {}
 
   surround_list('{', '}', true, () -> {
@@ -679,7 +694,8 @@ local function table_constructor() {
     table.insert(compile_lines, ',')
   })
 
-  return { '{', compile_lines, '}' }
+  -- SOURCEMAP: expression
+  return { table_constructor_line, '{', compile_lines, '}' }
 }
 
 -- -----------------------------------------------------------------------------
@@ -717,7 +733,7 @@ local function block_return() {
     module_return_line = current_token.line
   }
 
-  local compile_lines = { current_token.line, consume() }
+  local compile_lines = { consume() }
 
   if block_depth == 1 {
     if current_token.type != TOKEN_TYPES.EOF {
@@ -817,6 +833,7 @@ local function function_block() {
 function arrow_function() {
   local old_is_varargs_block = is_varargs_block
 
+  local arrow_function_line = current_token.line
   local param_compile_lines = {}
   local param_compile_names = {}
 
@@ -853,6 +870,7 @@ function arrow_function() {
   }
 
   local compile_lines = {
+    arrow_function_line, -- SOURCEMAP: expression
     "function({ table.concat(param_compile_names, ',') })",
     param_compile_lines,
   }
@@ -888,12 +906,11 @@ function arrow_function() {
 }
 
 local function function_signature(scope) {
-  local base_name_line, base_name = current_token.line, name()
-  local is_table_value = current_token.value == '.' || current_token.value == ':'
+  local base_name = name()
 
-  if is_table_value && scope != nil {
+  if (current_token.value == '.' || current_token.value == ':') && scope != nil {
     -- Lua does not allow scope for table functions (ex. `local function a.b()`)
-    throw('cannot use scopes for table values', base_name_line)
+    throw('cannot use scopes for table values', current_token.line)
   }
 
   if scope == 'module' || scope == 'global' {
@@ -935,6 +952,11 @@ local function function_signature(scope) {
 }
 
 local function function_declaration(scope) {
+  -- SOURCEMAP: Handle indexing a non-table
+  -- Note that Lua always returns the line of the function declaration in this
+  -- case, not the line of the index
+  local compile_lines = { current_token.line }
+
   consume() -- 'function'
 
   local {
@@ -942,8 +964,6 @@ local function function_declaration(scope) {
     needs_label_assignment,
     needs_self_injection,
   } = function_signature(scope)
-
-  local compile_lines = {}
 
   if scope == 'local' {
     table.insert(compile_lines, 'local')
@@ -999,6 +1019,7 @@ local function index_chain_expression(options) {
 
 local function terminal_expression() {
   if current_token.type == TOKEN_TYPES.NUMBER {
+    -- SOURCEMAP: expression
     return { current_token.line, consume() }
   } elseif current_token.type == TOKEN_TYPES.SINGLE_QUOTE_STRING {
     return index_chain_expression({
@@ -1027,6 +1048,7 @@ local function terminal_expression() {
       throw("cannot use '...' outside a vararg function")
     }
 
+    -- SOURCEMAP: expression
     return { current_token.line, consume() }
   }
 
@@ -1053,12 +1075,14 @@ local function terminal_expression() {
     return table_constructor()
   } elseif current_token.value == '(' {
     return index_chain_expression({
-      base_compile_lines = { '(', surround('(', ')', expression), ')' },
+      -- SOURCEMAP: expression
+      base_compile_lines = { current_token.line, '(', surround('(', ')', expression), ')' },
     })
   } else {
     local base_name_line, base_name = current_token.line, name()
 
     return index_chain_expression({
+      -- SOURCEMAP: expression
       base_compile_lines = { base_name_line, get_compile_name(base_name, block_declarations[base_name]) },
       has_trivial_base = true,
     })
@@ -1297,11 +1321,12 @@ local function goto_jump() {
     throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   }
 
-  return {
-    consume(), -- 'goto'
-    current_token.line,
-    get_compile_name(name()),
-  }
+  consume() -- 'goto'
+
+  local label_line, label = current_token.line, name()
+  table.insert(goto_jumps, { label = label, line = label_line })
+
+  return 'goto ' .. get_compile_name(label)
 }
 
 local function goto_label() {
@@ -1309,7 +1334,12 @@ local function goto_label() {
     throw("'goto' statements only compatibly with lua targets 5.2+, jit")
   }
 
-  return consume() .. get_compile_name(name()) .. expect('::', true)
+  consume() -- '::'
+
+  local label = name()
+  goto_labels[label] = true
+
+  return '::' .. get_compile_name(label) .. expect('::', true)
 }
 
 local function if_else() {
@@ -1671,6 +1701,8 @@ return (source, options = {}) -> {
   is_varargs_block = true
   block_declarations = {}
   block_declaration_stack = {}
+  goto_jumps = {}
+  goto_labels = {}
   alias = options.alias || get_source_alias(source)
   lua_target = options.lua_target || config.lua_target
   bitlib = options.bitlib || config.bitlib
@@ -1686,6 +1718,12 @@ return (source, options = {}) -> {
     source_map = source_map,
     source_line = current_token.line,
   })
+
+  for _, { label, line } in ipairs(goto_jumps) {
+    if goto_labels[label] == nil {
+      throw("failed to find goto label '{ label }'", line)
+    }
+  }
 
   table.insert(compile_lines, "-- Compiled with Erde { VERSION } w/ Lua target { lua_target }")
   table.insert(compile_lines, COMPILED_FOOTER_COMMENT)

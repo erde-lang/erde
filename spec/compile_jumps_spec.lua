@@ -1,3 +1,5 @@
+local compile = require('erde.compile')
+
 -- -----------------------------------------------------------------------------
 -- Goto
 -- -----------------------------------------------------------------------------
@@ -11,6 +13,11 @@ spec('goto #jit #5.2+', function()
     ::test::
     return a
   ]])
+
+  -- Lua throws errors at PARSE time if it cannot find `goto` labels
+  assert.has_error(function()
+    compile('goto test')
+  end)
 end)
 
 spec('goto transform Lua keywords #jit #5.2+', function()

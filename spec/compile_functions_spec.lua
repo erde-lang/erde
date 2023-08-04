@@ -208,6 +208,17 @@ spec('iife #5.1+', function()
   assert_eval(2, '(() -> 2)()')
 end)
 
+spec('arrow function source map #5.1 jit', function()
+  assert_source_map(1, [[
+    local a = 1 + () -> 1
+  ]])
+
+  assert_source_map(2, [[
+    local a = 1 +
+    () -> 1
+  ]])
+end)
+
 -- -----------------------------------------------------------------------------
 -- Function Declarations
 -- -----------------------------------------------------------------------------
@@ -373,6 +384,26 @@ spec('function declaration update block declarations #5.1+', function()
     local a = 0
     module function a() {}
     a = 2
+  ]])
+end)
+
+spec('function declaration source map #5.1+', function()
+  assert_source_map(1, [[
+    function a.b() {}
+  ]])
+
+  assert_source_map(2, [[
+
+    function a
+    .b() {}
+  ]])
+
+  assert_source_map(3, [[
+
+
+    function
+    a
+    :b() {}
   ]])
 end)
 

@@ -27,6 +27,17 @@ spec('single quote string interpolation #5.1+', function()
   end)
 end)
 
+spec('single quote string source map #5.1 jit', function()
+  assert_source_map(1, [[
+    local a = 1 + 'a'
+  ]])
+
+  assert_source_map(2, [[
+    local a = 1 +
+    'a'
+  ]])
+end)
+
 -- -----------------------------------------------------------------------------
 -- Double Quote String
 -- -----------------------------------------------------------------------------
@@ -51,6 +62,17 @@ spec('double quote string interpolation #5.1+', function()
   assert_eval('1b', '"{1}b"')
   assert_eval('a1b', '"a{1}b"')
   assert_eval('a3b', '"a{1 + 2}b"')
+end)
+
+spec('double quote string source map #5.1 jit', function()
+  assert_source_map(1, [[
+    local a = 1 + "a"
+  ]])
+
+  assert_source_map(2, [[
+    local a = 1 +
+    "a"
+  ]])
 end)
 
 -- -----------------------------------------------------------------------------
@@ -79,6 +101,17 @@ spec('block string interpolation #5.1+', function()
   assert_eval('1b', '[[{1}b]]')
   assert_eval('a1b', '[[a{1}b]]')
   assert_eval('a3b', '[[a{1 + 2}b]]')
+end)
+
+spec('block string source map #5.1 jit', function()
+  assert_source_map(1, [[
+    local a = 1 + [=[a]=]
+  ]])
+
+  assert_source_map(2, [[
+    local a = 1 +
+    [=[a]=]
+  ]])
 end)
 
 spec('block string leading newline #5.1+', function()

@@ -16,6 +16,17 @@ spec('dot index #5.1+', function()
   ]])
 end)
 
+spec('dot index source map #5.1+', function()
+  assert_source_map(1, [[
+    math.round(a.b)
+  ]])
+
+  assert_source_map(2, [[
+    math.round(a
+    .b)
+  ]])
+end)
+
 -- -----------------------------------------------------------------------------
 -- Bracket Index
 -- -----------------------------------------------------------------------------
@@ -32,6 +43,17 @@ spec('bracket index #5.1+', function()
     local a = { end = 3 }
     local key = 'end'
     return a[key]
+  ]])
+end)
+
+spec('bracket index source map #5.1+', function()
+  assert_source_map(1, [[
+    math.round(a['b'])
+  ]])
+
+  assert_source_map(2, [[
+    math.round(a
+    ['b'])
   ]])
 end)
 
@@ -54,6 +76,49 @@ spec('method call #5.1+', function()
 
   assert.has_error(function()
     compile('a:b')
+  end)
+end)
+
+describe('method call source map', function()
+  spec('#5.1+', function()
+    assert_source_map(1, [[
+      math.round(a:b())
+    ]])
+
+    assert_source_map(2, [[
+      math.round(a
+      :b())
+    ]])
+  end)
+
+  spec('#5.1 jit', function()
+    assert_source_map(3, [[
+      local a = {}
+      a
+      :b(4)
+    ]])
+
+    assert_source_map(4, [[
+
+      local a = 'a'
+      a
+      :gsub(4)
+    ]])
+  end)
+
+  spec('#5.2+', function()
+    assert_source_map(2, [[
+      local a = {}
+      a
+      :b(4)
+    ]])
+
+    assert_source_map(3, [[
+
+      local a = 'a'
+      a
+      :gsub(4)
+    ]])
   end)
 end)
 
@@ -102,4 +167,28 @@ spec('string base #5.1+', function()
   assert_eval('bbb', '"aaa":gsub("a", "b")')
   assert_eval('bbb', "'aaa':gsub('a', 'b')")
   assert_eval('bbb', "[[aaa]]:gsub('a', 'b')")
+end)
+
+spec('index chain base source map #5.1+', function()
+  assert_source_map(1, [[
+    (nil)()
+  ]])
+
+  assert_source_map(2, [[
+
+    my_fake_function()
+  ]])
+
+  assert_source_map(3, [[
+
+    local a =
+    my_fake_function()
+  ]])
+
+  assert_source_map(4, [[
+
+
+    local a =
+    (nil)()
+  ]])
 end)

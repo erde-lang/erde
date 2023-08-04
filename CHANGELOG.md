@@ -24,6 +24,7 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - The most recently declared scope will always take precedence
     - ex) `local x = 0; global x = 1; assert(x == 1)`
 - Erde now throws a parsing error when declaring a destructured variable with no value (ex. `local { a };`)
+- Erde now throws a parsing error when using `goto` with an undefined label (same behavior as Lua)
 
 ### Fixed
 - Fixed allowing keywords as variable names

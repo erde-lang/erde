@@ -214,7 +214,56 @@ spec('operator assignment use tracked scopes #5.1+', function()
   ]])
 end)
 
-spec('operator assignment mixed precedence', function()
+spec('operator assignment source map #5.1+', function()
+  assert_source_map(1, [[
+    local { a } = b
+  ]])
+
+  assert_source_map(2, [[
+
+    local { a }
+    = b
+  ]])
+end)
+
+describe('operator assignment source map', function()
+  spec('#5.1+', function()
+    assert_source_map(1, [[
+      local a; a += 1
+    ]])
+
+    assert_source_map(2, [[
+      local a = 'a'
+      a += 1
+    ]])
+
+    assert_source_map(3, [[
+      local a = 0
+      a
+      += 'a'
+    ]])
+  end)
+
+  spec('#5.1 jit', function()
+    assert_source_map(4, [[
+      local a = 0
+      a
+      +=
+      'a'
+    ]])
+  end)
+
+  spec('#5.2+', function()
+    assert_source_map(3, [[
+      local a = 0
+      a
+      +=
+      'a'
+    ]])
+  end)
+end)
+
+spec('operator assignment mixed precedence #5.1+', function()
   assert_run(1, [[
     local a = -1
     a += true && 2 || 0

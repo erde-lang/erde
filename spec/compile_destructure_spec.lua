@@ -96,6 +96,18 @@ spec('array destructure update block declarations #5.1+', function()
   ]])
 end)
 
+spec('array destructure source map #5.1+', function()
+  assert_source_map(1, [[
+    local [ a ] = b
+  ]])
+
+  assert_source_map(2, [[
+
+    local [ a ]
+    = b
+  ]])
+end)
+
 -- -----------------------------------------------------------------------------
 -- Map Destructure
 -- -----------------------------------------------------------------------------
@@ -224,5 +236,17 @@ spec('map destructure update block declarations #5.1+', function()
     local a = 0
     module { a } = {}
     a = 3
+  ]])
+end)
+
+spec('map destructure source map #5.1+', function()
+  assert_source_map(1, [[
+    local { a } = b
+  ]])
+
+  assert_source_map(2, [[
+
+    local { a }
+    = b
   ]])
 end)

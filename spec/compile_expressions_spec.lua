@@ -309,3 +309,25 @@ spec('complex expressions #5.1+', function()
   assert_eval(13, '(5 * 2) + 3')
   assert_eval(25, '5 * (2 + 3)')
 end)
+
+describe('numbers source map #5.1 jit', function()
+  assert_source_map(1, [[
+    local a = 'a' > 1
+  ]])
+
+  assert_source_map(2, [[
+    local a = 'a' >
+    1
+  ]])
+end)
+
+spec('terminals source map #5.1 jit', function()
+  assert_source_map(1, [[
+    local a = 1 + nil
+  ]])
+
+  assert_source_map(2, [[
+    local a = 1 +
+    nil
+  ]])
+end)

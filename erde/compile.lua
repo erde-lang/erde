@@ -44,6 +44,7 @@ local has_module_declarations
 local is_module_return_block, module_return_line
 local is_varargs_block
 local block_declarations, block_declaration_stack
+local goto_jumps, goto_labels
 local alias
 local lua_target
 local bitlib
@@ -364,7 +365,7 @@ end
 local function method_index(index_chain_state)
 	table.insert(index_chain_state.compile_lines, current_token.line)
 	consume()
-	local method_name_line, method_name = current_token.line, name()
+	local method_name = name()
 	local method_parameters = surround_list("(", ")", true, expression)
 	if not LUA_KEYWORDS[method_name] then
 		table.insert(index_chain_state.compile_lines, (":" .. tostring(method_name) .. "("))
@@ -475,12 +476,11 @@ local function double_quote_string()
 		}, has_interpolation
 	end
 	local compile_lines = {}
-	local content_line, content = current_token.line, ""
+	local content = ""
 	repeat
 		if current_token.type == TOKEN_TYPES.INTERPOLATION then
 			has_interpolation = true
 			if content ~= "" then
-				table.insert(compile_lines, content_line)
 				table.insert(compile_lines, '"' .. content .. '"')
 			end
 			table.insert(compile_lines, {
@@ -488,17 +488,19 @@ local function double_quote_string()
 				surround("{", "}", expression),
 				")",
 			})
-			content_line, content = current_token.line, ""
+			content = ""
 		else
 			content = content .. consume()
 		end
 	until current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING
 	if content ~= "" then
-		table.insert(compile_lines, content_line)
 		table.insert(compile_lines, '"' .. content .. '"')
 	end
 	consume()
-	return weave(compile_lines, ".."), has_interpolation
+	return {
+		double_quote_string_line,
+		weave(compile_lines, ".."),
+	}, has_interpolation
 end
 local function block_string()
 	local block_string_line = current_token.line
@@ -514,12 +516,11 @@ local function block_string()
 		}, has_interpolation
 	end
 	local compile_lines = {}
-	local content_line, content = current_token.line, ""
+	local content = ""
 	repeat
 		if current_token.type == TOKEN_TYPES.INTERPOLATION then
 			has_interpolation = true
 			if content ~= "" then
-				table.insert(compile_lines, content_line)
 				table.insert(compile_lines, start_quote .. content .. end_quote)
 			end
 			table.insert(compile_lines, {
@@ -527,7 +528,7 @@ local function block_string()
 				surround("{", "}", expression),
 				")",
 			})
-			content_line, content = current_token.line, ""
+			content = ""
 			if current_token.value:sub(1, 1) == "\n" then
 				content = content .. "\n" .. consume()
 			end
@@ -536,13 +537,16 @@ local function block_string()
 		end
 	until current_token.type == TOKEN_TYPES.BLOCK_STRING
 	if content ~= "" then
-		table.insert(compile_lines, content_line)
 		table.insert(compile_lines, start_quote .. content .. end_quote)
 	end
 	consume()
-	return weave(compile_lines, ".."), has_interpolation
+	return {
+		block_string_line,
+		weave(compile_lines, ".."),
+	}, has_interpolation
 end
 local function table_constructor()
+	local table_constructor_line = current_token.line
 	local compile_lines = {}
 	surround_list("{", "}", true, function()
 		local next_token = tokens[current_token_index + 1]
@@ -563,6 +567,7 @@ local function table_constructor()
 		table.insert(compile_lines, ",")
 	end)
 	return {
+		table_constructor_line,
 		"{",
 		compile_lines,
 		"}",
@@ -592,7 +597,6 @@ local function block_return()
 		module_return_line = current_token.line
 	end
 	local compile_lines = {
-		current_token.line,
 		consume(),
 	}
 	if block_depth == 1 then
@@ -675,6 +679,7 @@ local function function_block()
 end
 function arrow_function()
 	local old_is_varargs_block = is_varargs_block
+	local arrow_function_line = current_token.line
 	local param_compile_lines = {}
 	local param_compile_names = {}
 	if current_token.value == "(" then
@@ -708,6 +713,7 @@ function arrow_function()
 		throw(("unexpected token '" .. tostring(current_token.value) .. "' (expected '->' or '=>')"))
 	end
 	local compile_lines = {
+		arrow_function_line,
 		("function(" .. tostring(table.concat(param_compile_names, ",")) .. ")"),
 		param_compile_lines,
 	}
@@ -733,10 +739,9 @@ function arrow_function()
 	return compile_lines
 end
 local function function_signature(scope)
-	local base_name_line, base_name = current_token.line, name()
-	local is_table_value = current_token.value == "." or current_token.value == ":"
-	if is_table_value and scope ~= nil then
-		throw("cannot use scopes for table values", base_name_line)
+	local base_name = name()
+	if (current_token.value == "." or current_token.value == ":") and scope ~= nil then
+		throw("cannot use scopes for table values", current_token.line)
 	end
 	if scope == "module" or scope == "global" then
 		block_declarations[base_name] = scope
@@ -770,16 +775,18 @@ local function function_signature(scope)
 	}
 end
 local function function_declaration(scope)
+	local compile_lines = {
+		current_token.line,
+	}
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
 	do
-		local __ERDE_TMP_993__
-		__ERDE_TMP_993__ = function_signature(scope)
-		signature = __ERDE_TMP_993__["signature"]
-		needs_label_assignment = __ERDE_TMP_993__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_993__["needs_self_injection"]
+		local __ERDE_TMP_979__
+		__ERDE_TMP_979__ = function_signature(scope)
+		signature = __ERDE_TMP_979__["signature"]
+		needs_label_assignment = __ERDE_TMP_979__["needs_label_assignment"]
+		needs_self_injection = __ERDE_TMP_979__["needs_self_injection"]
 	end
-	local compile_lines = {}
 	if scope == "local" then
 		table.insert(compile_lines, "local")
 	end
@@ -872,6 +879,7 @@ local function terminal_expression()
 	elseif current_token.value == "(" then
 		return index_chain_expression({
 			base_compile_lines = {
+				current_token.line,
 				"(",
 				surround("(", ")", expression),
 				")",
@@ -1074,17 +1082,22 @@ local function goto_jump()
 	if lua_target == "5.1" or lua_target == "5.1+" then
 		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
 	end
-	return {
-		consume(),
-		current_token.line,
-		get_compile_name(name()),
-	}
+	consume()
+	local label_line, label = current_token.line, name()
+	table.insert(goto_jumps, {
+		label = label,
+		line = label_line,
+	})
+	return "goto " .. get_compile_name(label)
 end
 local function goto_label()
 	if lua_target == "5.1" or lua_target == "5.1+" then
 		throw("'goto' statements only compatibly with lua targets 5.2+, jit")
 	end
-	return consume() .. get_compile_name(name()) .. expect("::", true)
+	consume()
+	local label = name()
+	goto_labels[label] = true
+	return "::" .. get_compile_name(label) .. expect("::", true)
 end
 local function if_else()
 	local compile_lines = {}
@@ -1372,6 +1385,8 @@ return function(source, options)
 	is_varargs_block = true
 	block_declarations = {}
 	block_declaration_stack = {}
+	goto_jumps = {}
+	goto_labels = {}
 	alias = options.alias or get_source_alias(source)
 	lua_target = options.lua_target or config.lua_target
 	bitlib = options.bitlib
@@ -1386,6 +1401,14 @@ return function(source, options)
 		source_map = source_map,
 		source_line = current_token.line,
 	})
+	for _, __ERDE_TMP_1927__ in ipairs(goto_jumps) do
+		local label, line
+		label = __ERDE_TMP_1927__["label"]
+		line = __ERDE_TMP_1927__["line"]
+		if goto_labels[label] == nil then
+			throw(("cannot goto invisible label '" .. tostring(label) .. "'"), line)
+		end
+	end
 	table.insert(
 		compile_lines,
 		("-- Compiled with Erde " .. tostring(VERSION) .. " w/ Lua target " .. tostring(lua_target))
