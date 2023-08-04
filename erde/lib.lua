@@ -38,7 +38,7 @@ local function rewrite(message)
 		local source_line = source_map[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")")
 		local match = string.escape(
 			(
-					'%[string "erde::'
+					'[string "erde::'
 					.. tostring(erde_source_id)
 					.. "::"
 					.. tostring(chunkname)

@@ -227,17 +227,9 @@ function string.chars(s) {
 }
 
 function string.escape(s) {
-  local result = {}
-
-  for _, part in ipairs(string.split(s, '%%%%')) {
-    part = part:gsub('^([().*?[^$+-])', '%%%1')
-    part = part:gsub('([^%%])([().*?[^$+-])', '%1%%%2')
-    part = part:gsub('%%([^%%().*?[^$+-])', '%%%%%1')
-    part = part:gsub('%%$', '%%%%')
-    table.insert(result, part)
-  }
-
-  return table.concat(result, '%%')
+  -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
+  local escaped = s:gsub('[().%%+%-*?[^$]', '%%%1')
+  return escaped
 }
 
 function string.lpad(s, length, padding = ' ') {

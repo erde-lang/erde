@@ -157,15 +157,8 @@ function string.chars(s)
 	return _string_chars_iter, s, 0
 end
 function string.escape(s)
-	local result = {}
-	for _, part in ipairs(string.split(s, "%%%%")) do
-		part = part:gsub("^([().*?[^$+-])", "%%%1")
-		part = part:gsub("([^%%])([().*?[^$+-])", "%1%%%2")
-		part = part:gsub("%%([^%%().*?[^$+-])", "%%%%%1")
-		part = part:gsub("%%$", "%%%%")
-		table.insert(result, part)
-	end
-	return table.concat(result, "%%")
+	local escaped = s:gsub("[().%%+%-*?[^$]", "%%%1")
+	return escaped
 end
 function string.lpad(s, length, padding)
 	if padding == nil then

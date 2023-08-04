@@ -38,7 +38,7 @@ module function rewrite(message) {
     local source_line = source_map[tonumber(compiled_line)] || "(compiled:{ compiled_line })"
 
     -- Escape the match in case the chunkname contains parentheses!
-    local match = string.escape("%[string \"erde::{ erde_source_id }::{ chunkname }\"]:{ compiled_line }")
+    local match = string.escape("[string \"erde::{ erde_source_id }::{ chunkname }\"]:{ compiled_line }")
 
     message = cache.has_alias
       && message:gsub(match, chunkname .. ':' .. source_line)

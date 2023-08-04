@@ -1406,7 +1406,7 @@ return function(source, options)
 		label = __ERDE_TMP_1927__["label"]
 		line = __ERDE_TMP_1927__["line"]
 		if goto_labels[label] == nil then
-			throw(("cannot goto invisible label '" .. tostring(label) .. "'"), line)
+			throw(("failed to find goto label '" .. tostring(label) .. "'"), line)
 		end
 	end
 	table.insert(
