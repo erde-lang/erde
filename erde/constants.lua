@@ -1,5 +1,5 @@
 local _MODULE = {}
-local VERSION = "0.6.0-1"
+local VERSION = "1.0.0-1"
 _MODULE.VERSION = VERSION
 local PATH_SEPARATOR = package.config:sub(1, 1)
 _MODULE.PATH_SEPARATOR = PATH_SEPARATOR

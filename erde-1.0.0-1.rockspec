@@ -1,5 +1,5 @@
 package = 'erde'
-version = '0.6.0-1'
+version = '1.0.0-1'
 rockspec_format = '3.0'
 
 description = {
@@ -20,7 +20,7 @@ dependencies = {
 
 source = {
    url = 'git://github.com/erde-lang/erde',
-   tag = '0.6.0-1',
+   tag = '1.0.0-1',
 }
 
 build = {
