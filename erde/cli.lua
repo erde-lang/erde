@@ -1,3 +1,4 @@
+local _MODULE = {}
 local lfs = require("lfs")
 local compile = require("erde.compile")
 local config = require("erde.config")
@@ -60,13 +61,23 @@ local function parse_option(label)
 	end
 	return arg_value
 end
+local function ensure_path_parents(path)
+	local path_parts = string.split(path, PATH_SEPARATOR)
+	for i = 1, #path_parts - 1 do
+		local parent_path = table.concat(path_parts, PATH_SEPARATOR, 1, i)
+		if not io.exists(parent_path) then
+			lfs.mkdir(parent_path)
+		end
+	end
+end
+_MODULE.ensure_path_parents = ensure_path_parents
 local function traverse(paths, pattern, callback)
 	for _, path in ipairs(paths) do
-		local __ERDE_TMP_45__ = true
+		local __ERDE_TMP_58__ = true
 		repeat
 			local attributes = lfs.attributes(path)
 			if attributes == nil then
-				__ERDE_TMP_45__ = false
+				__ERDE_TMP_58__ = false
 				break
 			end
 			if attributes.mode == "file" then
@@ -82,9 +93,9 @@ local function traverse(paths, pattern, callback)
 				end
 				traverse(subpaths, pattern, callback)
 			end
-			__ERDE_TMP_45__ = false
+			__ERDE_TMP_58__ = false
 		until true
-		if __ERDE_TMP_45__ then
+		if __ERDE_TMP_58__ then
 			break
 		end
 	end
@@ -415,5 +426,6 @@ elseif not io.exists(cli.script) then
 else
 	run_command()
 end
+return _MODULE
 -- Compiled with Erde 0.6.0-1
 -- __ERDE_COMPILED__

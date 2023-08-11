@@ -1,35 +1,14 @@
-local lfs = require('lfs')
 local { PATH_SEPARATOR } = require('erde.constants')
 local { io, string } = require('erde.stdlib')
 
--- -----------------------------------------------------------------------------
--- Paths
--- -----------------------------------------------------------------------------
+module function echo(...) {
+  return ...
+}
 
 module function join_paths(...) {
   -- Store in local variable to ensure we return only 1 (stylua will remove wrapping parens)
   local joined = table.concat({ ... }, PATH_SEPARATOR):gsub(PATH_SEPARATOR .. '+', PATH_SEPARATOR)
   return joined
-}
-
-module function ensure_path_parents(path) {
-  local path_parts = string.split(path, PATH_SEPARATOR)
-
-  for i = 1, #path_parts - 1 {
-    local parent_path = table.concat(path_parts, PATH_SEPARATOR, 1, i)
-
-    if !io.exists(parent_path) {
-      lfs.mkdir(parent_path)
-    }
-  }
-}
-
--- -----------------------------------------------------------------------------
--- Misc
--- -----------------------------------------------------------------------------
-
-module function echo(...) {
-  return ...
 }
 
 module function get_source_summary(source) {
