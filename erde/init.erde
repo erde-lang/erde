@@ -1,6 +1,8 @@
 local lib = require('erde.lib')
+local { VERSION } = require('erde.constants')
 
 return {
+  version = VERSION,
 	compile = require('erde.compile'),
 	rewrite = lib.rewrite,
 	traceback = lib.traceback,

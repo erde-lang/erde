@@ -1,5 +1,12 @@
 local lib = require("erde.lib")
+local VERSION
+do
+	local __ERDE_TMP_4__
+	__ERDE_TMP_4__ = require("erde.constants")
+	VERSION = __ERDE_TMP_4__["VERSION"]
+end
 return {
+	version = VERSION,
 	compile = require("erde.compile"),
 	rewrite = lib.rewrite,
 	traceback = lib.traceback,

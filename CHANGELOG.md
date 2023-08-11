@@ -5,17 +5,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning based on [Semantic Versioning](https://semver.org/), with suffix
 based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspec-format).
 
-## [1.0.0-1] - UNRELEASED
-
-### Removed
+## [1.0.0-1] - August 11, 2023
 
 ### Changed
 - No longer allow keywords as index fields (generated invalid Lua code)
 - Loaded compiled Lua chunks now have their source names embedded in their chunkname
     - https://github.com/erde-lang/erde/issues/27
-- Added specific error checks for common mistakes
-    - `~=` vs `!=`
-    - `elseif` vs `else if`
 - Operator assignments no longer cause unnecessary duplicate indexing
     - https://github.com/erde-lang/erde/issues/29
     - ex) `my_expensive_function().x += 1` will now only call `my_expensive_function` once.
@@ -58,6 +53,10 @@ based on [rockspec versioning](https://github.com/luarocks/luarocks/wiki/Rockspe
     - Lua 5.1 / LuaJIT do not support statements following `break` (parsing error, similar to `return`)
     - https://github.com/erde-lang/erde/issues/34
 - Compiled files now include the Lua target at the bottom of the compiled file.
+- Added specific error checks for common mistakes
+    - `~=` vs `!=`
+    - `elseif` vs `else if`
+- The Erde version is available via the API using `erde.version`
 
 ## [0.6.0-1] - June 16, 2023
 

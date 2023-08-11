@@ -30,6 +30,7 @@ end
 -- -----------------------------------------------------------------------------
 
 spec('api #5.1+', function()
+  assert.are.equal(erde.version, '1.0.0-1')
   assert.are.equal(erde.compile, require('erde.compile'))
   assert.are.equal(erde.rewrite, require('erde.lib').rewrite)
   assert.are.equal(erde.traceback, require('erde.lib').traceback)
