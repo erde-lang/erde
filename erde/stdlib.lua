@@ -1,29 +1,21 @@
 local _MODULE = {}
 local _native_coroutine = coroutine
-local coroutine = {}
-_MODULE.coroutine = coroutine
+_MODULE.coroutine = {}
 local _native_debug = debug
-local debug = {}
-_MODULE.debug = debug
+_MODULE.debug = {}
 local _native_io = io
-local io = {}
-_MODULE.io = io
+_MODULE.io = {}
 local _native_math = math
-local math = {}
-_MODULE.math = math
+_MODULE.math = {}
 local _native_os = os
-local os = {}
-_MODULE.os = os
+_MODULE.os = {}
 local _native_package = package
-local package = {}
-_MODULE.package = package
+_MODULE.package = {}
 local _native_string = string
-local string = {}
-_MODULE.string = string
+_MODULE.string = {}
 local _native_table = table
-local table = {}
-_MODULE.table = table
-local function load()
+_MODULE.table = {}
+function _MODULE.load()
 	for key, value in pairs(_MODULE) do
 		local value_type = type(value)
 		if value_type == "function" then
@@ -40,8 +32,7 @@ local function load()
 		end
 	end
 end
-_MODULE.load = load
-local function unload()
+function _MODULE.unload()
 	for key, value in pairs(_MODULE) do
 		local value_type = type(value)
 		if value_type == "function" then
@@ -60,7 +51,6 @@ local function unload()
 		end
 	end
 end
-_MODULE.unload = unload
 local function _kpairs_iter(a, i)
 	local key, value = i, nil
 	repeat
@@ -68,40 +58,39 @@ local function _kpairs_iter(a, i)
 	until type(key) ~= "number"
 	return key, value
 end
-local function kpairs(t)
+function _MODULE.kpairs(t)
 	return _kpairs_iter, t, nil
 end
-_MODULE.kpairs = kpairs
-function io.exists(path)
-	local file = io.open(path, "r")
+function _MODULE.io.exists(path)
+	local file = _MODULE.io.open(path, "r")
 	if file == nil then
 		return false
 	end
 	file:close()
 	return true
 end
-function io.readfile(path)
-	local file = assert(io.open(path, "r"))
+function _MODULE.io.readfile(path)
+	local file = assert(_MODULE.io.open(path, "r"))
 	local content = assert(file:read("*a"))
 	file:close()
 	return content
 end
-function io.writefile(path, content)
-	local file = assert(io.open(path, "w"))
+function _MODULE.io.writefile(path, content)
+	local file = assert(_MODULE.io.open(path, "w"))
 	assert(file:write(content))
 	file:close()
 end
-function math.clamp(x, min, max)
-	return math.min(math.max(x, min), max)
+function _MODULE.math.clamp(x, min, max)
+	return _MODULE.math.min(_MODULE.math.max(x, min), max)
 end
-function math.round(x)
+function _MODULE.math.round(x)
 	if x < 0 then
-		return math.ceil(x - 0.5)
+		return _MODULE.math.ceil(x - 0.5)
 	else
-		return math.floor(x + 0.5)
+		return _MODULE.math.floor(x + 0.5)
 	end
 end
-function math.sign(x)
+function _MODULE.math.sign(x)
 	if x < 0 then
 		return -1
 	elseif x > 0 then
@@ -110,41 +99,41 @@ function math.sign(x)
 		return 0
 	end
 end
-function os.capture(cmd)
-	local file = assert(io.popen(cmd, "r"))
+function _MODULE.os.capture(cmd)
+	local file = assert(_MODULE.io.popen(cmd, "r"))
 	local stdout = assert(file:read("*a"))
 	file:close()
 	return stdout
 end
-function package.cinsert(...)
-	local templates = package.split(package.cpath)
-	table.insert(templates, ...)
-	package.cpath = package.concat(templates)
+function _MODULE.package.cinsert(...)
+	local templates = _MODULE.package.split(_MODULE.package.cpath)
+	_MODULE.table.insert(templates, ...)
+	_MODULE.package.cpath = _MODULE.package.concat(templates)
 end
-function package.concat(templates, i, j)
-	local template_separator = string.split(package.config, "\n")[2]
-	return table.concat(templates, template_separator, i, j)
+function _MODULE.package.concat(templates, i, j)
+	local template_separator = _MODULE.string.split(_MODULE.package.config, "\n")[2]
+	return _MODULE.table.concat(templates, template_separator, i, j)
 end
-function package.cremove(position)
-	local templates = package.split(package.cpath)
-	local removed = table.remove(templates, position)
-	package.cpath = package.concat(templates)
+function _MODULE.package.cremove(position)
+	local templates = _MODULE.package.split(_MODULE.package.cpath)
+	local removed = _MODULE.table.remove(templates, position)
+	_MODULE.package.cpath = _MODULE.package.concat(templates)
 	return removed
 end
-function package.insert(...)
-	local templates = package.split(package.path)
-	table.insert(templates, ...)
-	package.path = package.concat(templates)
+function _MODULE.package.insert(...)
+	local templates = _MODULE.package.split(_MODULE.package.path)
+	_MODULE.table.insert(templates, ...)
+	_MODULE.package.path = _MODULE.package.concat(templates)
 end
-function package.remove(position)
-	local templates = package.split(package.path)
-	local removed = table.remove(templates, position)
-	package.path = package.concat(templates)
+function _MODULE.package.remove(position)
+	local templates = _MODULE.package.split(_MODULE.package.path)
+	local removed = _MODULE.table.remove(templates, position)
+	_MODULE.package.path = _MODULE.package.concat(templates)
 	return removed
 end
-function package.split(path)
-	local template_separator = string.split(package.config, "\n")[2]
-	return string.split(path, template_separator)
+function _MODULE.package.split(path)
+	local template_separator = _MODULE.string.split(_MODULE.package.config, "\n")[2]
+	return _MODULE.string.split(path, template_separator)
 end
 local function _string_chars_iter(a, i)
 	i = i + 1
@@ -153,131 +142,131 @@ local function _string_chars_iter(a, i)
 		return i, char
 	end
 end
-function string.chars(s)
+function _MODULE.string.chars(s)
 	return _string_chars_iter, s, 0
 end
-function string.escape(s)
+function _MODULE.string.escape(s)
 	local escaped = s:gsub("[().%%+%-*?[^$]", "%%%1")
 	return escaped
 end
-function string.lpad(s, length, padding)
+function _MODULE.string.lpad(s, length, padding)
 	if padding == nil then
 		padding = " "
 	end
-	return padding:rep(math.ceil((length - #s) / #padding)) .. s
+	return padding:rep(_MODULE.math.ceil((length - #s) / #padding)) .. s
 end
-function string.ltrim(s, pattern)
+function _MODULE.string.ltrim(s, pattern)
 	if pattern == nil then
 		pattern = "%s+"
 	end
-	local trimmed = s:gsub(("^" .. tostring(pattern)), "")
+	local trimmed = s:gsub("^" .. tostring(pattern), "")
 	return trimmed
 end
-function string.pad(s, length, padding)
+function _MODULE.string.pad(s, length, padding)
 	if padding == nil then
 		padding = " "
 	end
-	local num_pads = math.ceil(((length - #s) / #padding) / 2)
+	local num_pads = _MODULE.math.ceil(((length - #s) / #padding) / 2)
 	return padding:rep(num_pads) .. s .. padding:rep(num_pads)
 end
-function string.rpad(s, length, padding)
+function _MODULE.string.rpad(s, length, padding)
 	if padding == nil then
 		padding = " "
 	end
-	return s .. padding:rep(math.ceil((length - #s) / #padding))
+	return s .. padding:rep(_MODULE.math.ceil((length - #s) / #padding))
 end
-function string.rtrim(s, pattern)
+function _MODULE.string.rtrim(s, pattern)
 	if pattern == nil then
 		pattern = "%s+"
 	end
-	local trimmed = s:gsub((tostring(pattern) .. "$"), "")
+	local trimmed = s:gsub(tostring(pattern) .. "$", "")
 	return trimmed
 end
-function string.split(s, separator)
+function _MODULE.string.split(s, separator)
 	if separator == nil then
 		separator = "%s+"
 	end
 	local result = {}
 	local i, j = s:find(separator)
 	while i ~= nil do
-		table.insert(result, s:sub(1, i - 1))
+		_MODULE.table.insert(result, s:sub(1, i - 1))
 		s = s:sub(j + 1) or ""
 		i, j = s:find(separator)
 	end
-	table.insert(result, s)
+	_MODULE.table.insert(result, s)
 	return result
 end
-function string.trim(s, pattern)
+function _MODULE.string.trim(s, pattern)
 	if pattern == nil then
 		pattern = "%s+"
 	end
-	return string.ltrim(string.rtrim(s, pattern), pattern)
+	return _MODULE.string.ltrim(_MODULE.string.rtrim(s, pattern), pattern)
 end
 if _VERSION == "Lua 5.1" then
-	table.pack = function(...)
+	_MODULE.table.pack = function(...)
 		return {
 			n = select("#", ...),
 			...,
 		}
 	end
-	table.unpack = unpack
+	_MODULE.table.unpack = unpack
 end
-function table.clear(t, callback)
+function _MODULE.table.clear(t, callback)
 	if type(callback) == "function" then
-		for key, value in kpairs(t) do
+		for key, value in _MODULE.kpairs(t) do
 			if callback(value, key) then
 				t[key] = nil
 			end
 		end
 		for i = #t, 1, -1 do
 			if callback(t[i], i) then
-				table.remove(t, i)
+				_MODULE.table.remove(t, i)
 			end
 		end
 	else
-		for key, value in kpairs(t) do
+		for key, value in _MODULE.kpairs(t) do
 			if value == callback then
 				t[key] = nil
 			end
 		end
 		for i = #t, 1, -1 do
 			if t[i] == callback then
-				table.remove(t, i)
+				_MODULE.table.remove(t, i)
 			end
 		end
 	end
 end
-function table.collect(...)
+function _MODULE.table.collect(...)
 	local result = {}
 	for key, value in ... do
 		if value == nil then
-			table.insert(result, key)
+			_MODULE.table.insert(result, key)
 		else
 			result[key] = value
 		end
 	end
 	return result
 end
-function table.deepcopy(t)
+function _MODULE.table.deepcopy(t)
 	local result = {}
 	for key, value in pairs(t) do
 		if type(value) == "table" then
-			result[key] = table.deepcopy(value)
+			result[key] = _MODULE.table.deepcopy(value)
 		else
 			result[key] = value
 		end
 	end
 	return result
 end
-function table.empty(t)
+function _MODULE.table.empty(t)
 	return next(t) == nil
 end
-function table.filter(t, callback)
+function _MODULE.table.filter(t, callback)
 	local result = {}
 	for key, value in pairs(t) do
 		if callback(value, key) then
 			if type(key) == "number" then
-				table.insert(result, value)
+				_MODULE.table.insert(result, value)
 			else
 				result[key] = value
 			end
@@ -285,7 +274,7 @@ function table.filter(t, callback)
 	end
 	return result
 end
-function table.find(t, callback)
+function _MODULE.table.find(t, callback)
 	if type(callback) == "function" then
 		for key, value in pairs(t) do
 			if callback(value, key) then
@@ -300,65 +289,65 @@ function table.find(t, callback)
 		end
 	end
 end
-function table.has(t, callback)
-	local _, key = table.find(t, callback)
+function _MODULE.table.has(t, callback)
+	local _, key = _MODULE.table.find(t, callback)
 	return key ~= nil
 end
-function table.keys(t)
+function _MODULE.table.keys(t)
 	local result = {}
 	for key, value in pairs(t) do
-		table.insert(result, key)
+		_MODULE.table.insert(result, key)
 	end
 	return result
 end
-function table.map(t, callback)
+function _MODULE.table.map(t, callback)
 	local result = {}
 	for key, value in pairs(t) do
 		local newValue, newKey = callback(value, key)
 		if newKey ~= nil then
 			result[newKey] = newValue
 		elseif type(key) == "number" then
-			table.insert(result, newValue)
+			_MODULE.table.insert(result, newValue)
 		else
 			result[key] = newValue
 		end
 	end
 	return result
 end
-function table.merge(t, ...)
+function _MODULE.table.merge(t, ...)
 	for _, _t in pairs({
 		...,
 	}) do
 		for key, value in pairs(_t) do
 			if type(key) == "number" then
-				table.insert(t, value)
+				_MODULE.table.insert(t, value)
 			else
 				t[key] = value
 			end
 		end
 	end
 end
-function table.reduce(t, initial, callback)
+function _MODULE.table.reduce(t, initial, callback)
 	local result = initial
 	for key, value in pairs(t) do
 		result = callback(result, value, key)
 	end
 	return result
 end
-function table.reverse(t)
+function _MODULE.table.reverse(t)
 	local len = #t
-	for i = 1, math.floor(len / 2) do
+	for i = 1, _MODULE.math.floor(len / 2) do
 		t[i], t[len - i + 1] = t[len - i + 1], t[i]
 	end
 end
-function table.shallowcopy(t)
+function _MODULE.table.shallowcopy(t)
 	local result = {}
 	for key, value in pairs(t) do
 		result[key] = value
 	end
 	return result
 end
-function table.slice(t, i, j)
+function _MODULE.table.slice(t, i, j)
 	if i == nil then
 		i = 1
 	end
@@ -372,50 +361,50 @@ function table.slice(t, i, j)
 	if j < 0 then
 		j = j + len + 1
 	end
-	for i = math.max(i, 0), math.min(j, len) do
-		table.insert(result, t[i])
+	for i = _MODULE.math.max(i, 0), _MODULE.math.min(j, len) do
+		_MODULE.table.insert(result, t[i])
 	end
 	return result
 end
-function table.values(t)
+function _MODULE.table.values(t)
 	local result = {}
 	for key, value in pairs(t) do
-		table.insert(result, value)
+		_MODULE.table.insert(result, value)
 	end
 	return result
 end
-setmetatable(coroutine, {
+setmetatable(_MODULE.coroutine, {
 	__index = _native_coroutine,
 	__newindex = _native_coroutine,
 })
-setmetatable(debug, {
+setmetatable(_MODULE.debug, {
 	__index = _native_debug,
 	__newindex = _native_debug,
 })
-setmetatable(io, {
+setmetatable(_MODULE.io, {
 	__index = _native_io,
 	__newindex = _native_io,
 })
-setmetatable(math, {
+setmetatable(_MODULE.math, {
 	__index = _native_math,
 	__newindex = _native_math,
 })
-setmetatable(os, {
+setmetatable(_MODULE.os, {
 	__index = _native_os,
 	__newindex = _native_os,
 })
-setmetatable(package, {
+setmetatable(_MODULE.package, {
 	__index = _native_package,
 	__newindex = _native_package,
 })
-setmetatable(string, {
+setmetatable(_MODULE.string, {
 	__index = _native_string,
 	__newindex = _native_string,
 })
-setmetatable(table, {
+setmetatable(_MODULE.table, {
 	__index = _native_table,
 	__newindex = _native_table,
 })
 return _MODULE
--- Compiled with Erde 0.6.0-1
+-- Compiled with Erde 1.0.0-1 w/ Lua target 5.1+
 -- __ERDE_COMPILED__

@@ -1,36 +1,27 @@
 local config = require("erde.config")
 local BINOP_ASSIGNMENT_TOKENS, BINOPS, BITOPS, BITLIB_METHODS, COMPILED_FOOTER_COMMENT, DIGIT, KEYWORDS, LEFT_ASSOCIATIVE, LUA_KEYWORDS, SURROUND_ENDS, TERMINALS, TOKEN_TYPES, UNOPS, VERSION
-do
-	local __ERDE_TMP_4__
-	__ERDE_TMP_4__ = require("erde.constants")
-	BINOP_ASSIGNMENT_TOKENS = __ERDE_TMP_4__["BINOP_ASSIGNMENT_TOKENS"]
-	BINOPS = __ERDE_TMP_4__["BINOPS"]
-	BITOPS = __ERDE_TMP_4__["BITOPS"]
-	BITLIB_METHODS = __ERDE_TMP_4__["BITLIB_METHODS"]
-	COMPILED_FOOTER_COMMENT = __ERDE_TMP_4__["COMPILED_FOOTER_COMMENT"]
-	DIGIT = __ERDE_TMP_4__["DIGIT"]
-	KEYWORDS = __ERDE_TMP_4__["KEYWORDS"]
-	LEFT_ASSOCIATIVE = __ERDE_TMP_4__["LEFT_ASSOCIATIVE"]
-	LUA_KEYWORDS = __ERDE_TMP_4__["LUA_KEYWORDS"]
-	SURROUND_ENDS = __ERDE_TMP_4__["SURROUND_ENDS"]
-	TERMINALS = __ERDE_TMP_4__["TERMINALS"]
-	TOKEN_TYPES = __ERDE_TMP_4__["TOKEN_TYPES"]
-	UNOPS = __ERDE_TMP_4__["UNOPS"]
-	VERSION = __ERDE_TMP_4__["VERSION"]
-end
+local __ERDE_TMP_4__ = require("erde.constants")
+BINOP_ASSIGNMENT_TOKENS = __ERDE_TMP_4__.BINOP_ASSIGNMENT_TOKENS
+BINOPS = __ERDE_TMP_4__.BINOPS
+BITOPS = __ERDE_TMP_4__.BITOPS
+BITLIB_METHODS = __ERDE_TMP_4__.BITLIB_METHODS
+COMPILED_FOOTER_COMMENT = __ERDE_TMP_4__.COMPILED_FOOTER_COMMENT
+DIGIT = __ERDE_TMP_4__.DIGIT
+KEYWORDS = __ERDE_TMP_4__.KEYWORDS
+LEFT_ASSOCIATIVE = __ERDE_TMP_4__.LEFT_ASSOCIATIVE
+LUA_KEYWORDS = __ERDE_TMP_4__.LUA_KEYWORDS
+SURROUND_ENDS = __ERDE_TMP_4__.SURROUND_ENDS
+TERMINALS = __ERDE_TMP_4__.TERMINALS
+TOKEN_TYPES = __ERDE_TMP_4__.TOKEN_TYPES
+UNOPS = __ERDE_TMP_4__.UNOPS
+VERSION = __ERDE_TMP_4__.VERSION
 local table
-do
-	local __ERDE_TMP_7__
-	__ERDE_TMP_7__ = require("erde.stdlib")
-	table = __ERDE_TMP_7__["table"]
-end
+local __ERDE_TMP_7__ = require("erde.stdlib")
+table = __ERDE_TMP_7__.table
 local tokenize = require("erde.tokenize")
 local get_source_alias
-do
-	local __ERDE_TMP_12__
-	__ERDE_TMP_12__ = require("erde.utils")
-	get_source_alias = __ERDE_TMP_12__["get_source_alias"]
-end
+local __ERDE_TMP_12__ = require("erde.utils")
+get_source_alias = __ERDE_TMP_12__.get_source_alias
 local unpack = table.unpack or unpack
 local arrow_function, block, expression, statement
 local tokens
@@ -52,7 +43,7 @@ local function throw(message, line)
 	if line == nil then
 		line = current_token.line
 	end
-	error((tostring(alias) .. ":" .. tostring(line) .. ": " .. tostring(message)), 0)
+	error(tostring(alias) .. ":" .. tostring(line) .. ": " .. tostring(message), 0)
 end
 local function add_block_declaration(var, scope, stack_depth)
 	if stack_depth == nil then
@@ -90,10 +81,10 @@ local function branch(token)
 end
 local function expect(token, should_consume)
 	if current_token.type == TOKEN_TYPES.EOF then
-		throw(("unexpected eof (expected " .. tostring(token) .. ")"))
+		throw("unexpected eof (expected " .. tostring(token) .. ")")
 	end
 	if token ~= current_token.value then
-		throw(("expected '" .. tostring(token) .. "' got '" .. tostring(current_token.value) .. "'"))
+		throw("expected '" .. tostring(token) .. "' got '" .. tostring(current_token.value) .. "'")
 	end
 	if should_consume then
 		return consume()
@@ -110,7 +101,7 @@ local function look_past_surround(token_start_index)
 	local look_ahead_token = tokens[look_ahead_token_index]
 	repeat
 		if look_ahead_token.type == TOKEN_TYPES.EOF then
-			throw(("unexpected eof, missing '" .. tostring(surround_end) .. "'"), surround_start_token.line)
+			throw("unexpected eof, missing '" .. tostring(surround_end) .. "'", surround_start_token.line)
 		end
 		if look_ahead_token.value == surround_start_token.value then
 			surround_depth = surround_depth + 1
@@ -124,24 +115,24 @@ local function look_past_surround(token_start_index)
 end
 local function new_tmp_name()
 	tmp_name_counter = tmp_name_counter + 1
-	return ("__ERDE_TMP_" .. tostring(tmp_name_counter) .. "__")
+	return "__ERDE_TMP_" .. tostring(tmp_name_counter) .. "__"
 end
 local function get_compile_name(name, scope)
 	if scope == "module" then
 		if LUA_KEYWORDS[name] then
-			return ("_MODULE['" .. tostring(name) .. "']")
+			return "_MODULE['" .. tostring(name) .. "']"
 		else
 			return "_MODULE." .. name
 		end
 	elseif scope == "global" then
 		if LUA_KEYWORDS[name] then
-			return ("_G['" .. tostring(name) .. "']")
+			return "_G['" .. tostring(name) .. "']"
 		else
 			return "_G." .. name
 		end
 	end
 	if LUA_KEYWORDS[name] then
-		return (tostring(name) .. "_")
+		return tostring(name) .. "_"
 	else
 		return name
 	end
@@ -182,7 +173,7 @@ local function compile_binop(op_token, op_line, lhs, rhs)
 	elseif bitlib and BITOPS[op_token] then
 		return {
 			op_line,
-			("(require('" .. tostring(bitlib) .. "')." .. tostring(BITLIB_METHODS[op_token]) .. "("),
+			"(require('" .. tostring(bitlib) .. "')." .. tostring(BITLIB_METHODS[op_token]) .. "(",
 			lhs,
 			",",
 			rhs,
@@ -248,13 +239,13 @@ local function name()
 		throw("unexpected eof")
 	end
 	if current_token.type ~= TOKEN_TYPES.WORD then
-		throw(("unexpected token '" .. tostring(current_token.value) .. "'"))
+		throw("unexpected token '" .. tostring(current_token.value) .. "'")
 	end
 	if KEYWORDS[current_token.value] ~= nil then
-		throw(("unexpected keyword '" .. tostring(current_token.value) .. "'"))
+		throw("unexpected keyword '" .. tostring(current_token.value) .. "'")
 	end
 	if TERMINALS[current_token.value] ~= nil then
-		throw(("unexpected builtin '" .. tostring(current_token.value) .. "'"))
+		throw("unexpected builtin '" .. tostring(current_token.value) .. "'")
 	end
 	return consume()
 end
@@ -271,12 +262,12 @@ local function array_destructure(scope)
 		local assignment_name = get_compile_name(declaration_name, scope)
 		table.insert(
 			compile_lines,
-			(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "[" .. tostring(array_index) .. "]")
+			tostring(assignment_name) .. " = " .. tostring(compile_name) .. "[" .. tostring(array_index) .. "]"
 		)
 		if branch("=") then
 			table.insert(
 				compile_lines,
-				("if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = ")
+				"if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = "
 			)
 			table.insert(compile_lines, expression())
 			table.insert(compile_lines, "end")
@@ -301,18 +292,18 @@ local function map_destructure(scope)
 		if LUA_KEYWORDS[declaration_name] then
 			table.insert(
 				compile_lines,
-				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(key) .. "']")
+				tostring(assignment_name) .. " = " .. tostring(compile_name) .. "['" .. tostring(key) .. "']"
 			)
 		else
 			table.insert(
 				compile_lines,
-				(tostring(assignment_name) .. " = " .. tostring(compile_name) .. "." .. tostring(key))
+				tostring(assignment_name) .. " = " .. tostring(compile_name) .. "." .. tostring(key)
 			)
 		end
 		if branch("=") then
 			table.insert(
 				compile_lines,
-				("if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = ")
+				"if " .. tostring(assignment_name) .. " == nil then " .. tostring(assignment_name) .. " = "
 			)
 			table.insert(compile_lines, expression())
 			table.insert(compile_lines, "end")
@@ -354,7 +345,7 @@ local function dot_index(index_chain_state)
 	consume()
 	local key = name()
 	if LUA_KEYWORDS[key] then
-		table.insert(compile_lines, ("['" .. tostring(key) .. "']"))
+		table.insert(compile_lines, "['" .. tostring(key) .. "']")
 	else
 		table.insert(compile_lines, "." .. key)
 	end
@@ -368,11 +359,11 @@ local function method_index(index_chain_state)
 	local method_name = name()
 	local method_parameters = surround_list("(", ")", true, expression)
 	if not LUA_KEYWORDS[method_name] then
-		table.insert(index_chain_state.compile_lines, (":" .. tostring(method_name) .. "("))
+		table.insert(index_chain_state.compile_lines, ":" .. tostring(method_name) .. "(")
 		table.insert(index_chain_state.compile_lines, weave(method_parameters))
 		table.insert(index_chain_state.compile_lines, ")")
 	elseif index_chain_state.has_trivial_base and index_chain_state.chain_len == 0 then
-		table.insert(index_chain_state.compile_lines, ("['" .. tostring(method_name) .. "']("))
+		table.insert(index_chain_state.compile_lines, "['" .. tostring(method_name) .. "'](")
 		table.insert(method_parameters, 1, index_chain_state.base_compile_lines)
 		table.insert(index_chain_state.compile_lines, weave(method_parameters))
 		table.insert(index_chain_state.compile_lines, ")")
@@ -382,7 +373,7 @@ local function method_index(index_chain_state)
 		table.insert(index_chain_state.block_compile_lines, index_chain_state.compile_lines)
 		table.insert(method_parameters, 1, index_chain_state.block_compile_name)
 		index_chain_state.compile_lines = {
-			(tostring(index_chain_state.block_compile_name) .. "['" .. tostring(method_name) .. "']("),
+			tostring(index_chain_state.block_compile_name) .. "['" .. tostring(method_name) .. "'](",
 			weave(method_parameters),
 			")",
 		}
@@ -443,7 +434,7 @@ local function index_chain(options)
 		if current_token.type == TOKEN_TYPES.EOF then
 			throw("unexpected eof")
 		else
-			throw(("unexpected token '" .. tostring(current_token.value) .. "'"))
+			throw("unexpected token '" .. tostring(current_token.value) .. "'")
 		end
 	end
 	if index_chain_state.chain_len == 0 then
@@ -490,7 +481,7 @@ local function double_quote_string()
 			})
 			content = ""
 		else
-			content = content .. consume()
+			content = content .. (consume())
 		end
 	until current_token.type == TOKEN_TYPES.DOUBLE_QUOTE_STRING
 	if content ~= "" then
@@ -530,10 +521,10 @@ local function block_string()
 			})
 			content = ""
 			if current_token.value:sub(1, 1) == "\n" then
-				content = content .. "\n" .. consume()
+				content = content .. ("\n" .. consume())
 			end
 		else
-			content = content .. consume()
+			content = content .. (consume())
 		end
 	until current_token.type == TOKEN_TYPES.BLOCK_STRING
 	if content ~= "" then
@@ -558,7 +549,7 @@ local function table_constructor()
 		elseif next_token.type == TOKEN_TYPES.SYMBOL and next_token.value == "=" then
 			local key = name()
 			if LUA_KEYWORDS[key] then
-				table.insert(compile_lines, ("['" .. tostring(key) .. "']") .. consume())
+				table.insert(compile_lines, "['" .. tostring(key) .. "']" .. consume())
 			else
 				table.insert(compile_lines, key .. consume())
 			end
@@ -608,7 +599,7 @@ local function block_return()
 			end
 		end
 		if current_token.type ~= TOKEN_TYPES.EOF then
-			throw(("expected '<eof>', got '" .. tostring(current_token.value) .. "'"))
+			throw("expected '<eof>', got '" .. tostring(current_token.value) .. "'")
 		end
 	else
 		if current_token.value ~= "}" then
@@ -619,7 +610,7 @@ local function block_return()
 			end
 		end
 		if current_token.value ~= "}" then
-			throw(("expected '}', got '" .. tostring(current_token.value) .. "'"))
+			throw("expected '}', got '" .. tostring(current_token.value) .. "'")
 		end
 	end
 	return compile_lines
@@ -634,7 +625,7 @@ local function parameters()
 			table.insert(compile_names, "...")
 			if current_token.type == TOKEN_TYPES.WORD then
 				local varargs_name = name()
-				table.insert(compile_lines, ("local " .. tostring(get_compile_name(varargs_name)) .. " = { ... }"))
+				table.insert(compile_lines, "local " .. tostring(get_compile_name(varargs_name)) .. " = { ... }")
 				add_block_declaration(varargs_name, "local", block_depth + 1)
 			end
 			branch(",")
@@ -647,7 +638,7 @@ local function parameters()
 			if branch("=") then
 				table.insert(
 					compile_lines,
-					("if " .. tostring(compile_name) .. " == nil then " .. tostring(compile_name) .. " = ")
+					"if " .. tostring(compile_name) .. " == nil then " .. tostring(compile_name) .. " = "
 				)
 				table.insert(compile_lines, expression())
 				table.insert(compile_lines, "end")
@@ -710,11 +701,11 @@ function arrow_function()
 	elseif current_token.type == TOKEN_TYPES.EOF then
 		throw("unexpected eof (expected '->' or '=>')")
 	else
-		throw(("unexpected token '" .. tostring(current_token.value) .. "' (expected '->' or '=>')"))
+		throw("unexpected token '" .. tostring(current_token.value) .. "' (expected '->' or '=>')")
 	end
 	local compile_lines = {
 		arrow_function_line,
-		("function(" .. tostring(table.concat(param_compile_names, ",")) .. ")"),
+		"function(" .. tostring(table.concat(param_compile_names, ",")) .. ")",
 		param_compile_lines,
 	}
 	if current_token.value == "{" then
@@ -755,7 +746,7 @@ local function function_signature(scope)
 			needs_label_assignment = true
 			signature = signature .. ("['" .. tostring(key) .. "']")
 		else
-			signature = signature .. "." .. key
+			signature = signature .. ("." .. key)
 		end
 	end
 	if branch(":") then
@@ -765,7 +756,7 @@ local function function_signature(scope)
 			needs_self_injection = true
 			signature = signature .. ("['" .. tostring(key) .. "']")
 		else
-			signature = signature .. ":" .. key
+			signature = signature .. (":" .. key)
 		end
 	end
 	return {
@@ -780,13 +771,10 @@ local function function_declaration(scope)
 	}
 	consume()
 	local signature, needs_label_assignment, needs_self_injection
-	do
-		local __ERDE_TMP_979__
-		__ERDE_TMP_979__ = function_signature(scope)
-		signature = __ERDE_TMP_979__["signature"]
-		needs_label_assignment = __ERDE_TMP_979__["needs_label_assignment"]
-		needs_self_injection = __ERDE_TMP_979__["needs_self_injection"]
-	end
+	local __ERDE_TMP_979__ = function_signature(scope)
+	signature = __ERDE_TMP_979__.signature
+	needs_label_assignment = __ERDE_TMP_979__.needs_label_assignment
+	needs_self_injection = __ERDE_TMP_979__.needs_self_injection
 	if scope == "local" then
 		table.insert(compile_lines, "local")
 	end
@@ -913,7 +901,7 @@ local function unop_expression()
 	elseif bitlib then
 		return {
 			unop_line,
-			("(require('" .. tostring(bitlib) .. "').bnot("),
+			"(require('" .. tostring(bitlib) .. "').bnot(",
 			operand,
 			"))",
 		}
@@ -954,7 +942,7 @@ function block()
 	local old_block_declarations = block_declarations
 	block_depth = block_depth + 1
 	block_declaration_stack[block_depth] = block_declaration_stack[block_depth]
-		or table.shallowcopy(block_declaration_stack[block_depth - 1])
+		or (table.shallowcopy(block_declaration_stack[block_depth - 1]))
 	block_declarations = block_declaration_stack[block_depth]
 	local compile_lines = {}
 	while current_token.value ~= "}" do
@@ -980,13 +968,13 @@ local function loop_block()
 	local compile_lines = block()
 	if has_continue then
 		if lua_target == "5.1" or lua_target == "5.1+" then
-			table.insert(compile_lines, 1, ("local " .. tostring(break_name) .. " = true repeat"))
+			table.insert(compile_lines, 1, "local " .. tostring(break_name) .. " = true repeat")
 			table.insert(
 				compile_lines,
-				(tostring(break_name) .. " = false until true if " .. tostring(break_name) .. " then break end")
+				tostring(break_name) .. " = false until true if " .. tostring(break_name) .. " then break end"
 			)
 		else
-			table.insert(compile_lines, ("::" .. tostring(break_name) .. "::"))
+			table.insert(compile_lines, "::" .. tostring(break_name) .. "::")
 		end
 	end
 	break_name = old_break_name
@@ -1000,7 +988,7 @@ local function loop_break()
 	end
 	if lua_target == "5.1" or lua_target == "5.1+" or lua_target == "jit" then
 		if current_token.value ~= "}" then
-			throw(("expected '}', got '" .. tostring(current_token.value) .. "'"))
+			throw("expected '}', got '" .. tostring(current_token.value) .. "'")
 		end
 	end
 	return "break"
@@ -1012,9 +1000,9 @@ local function loop_continue()
 	has_continue = true
 	consume()
 	if lua_target == "5.1" or lua_target == "5.1+" then
-		return (tostring(break_name) .. " = false do break end")
+		return tostring(break_name) .. " = false do break end"
 	else
-		return ("goto " .. tostring(break_name))
+		return "goto " .. tostring(break_name)
 	end
 end
 local function for_loop()
@@ -1030,10 +1018,7 @@ local function for_loop()
 		local expressions = list(expression)
 		local num_expressions = #expressions
 		if num_expressions ~= 2 and num_expressions ~= 3 then
-			throw(
-				("invalid numeric for, expected 2-3 expressions, got " .. tostring(num_expressions)),
-				expressions_line
-			)
+			throw("invalid numeric for, expected 2-3 expressions, got " .. tostring(num_expressions), expressions_line)
 		end
 		table.insert(compile_lines, weave(expressions))
 	else
@@ -1178,7 +1163,7 @@ local function single_operator_assignment(id, expr, op_token, op_line)
 	end
 	if not id.has_trivial_base or id.chain_len > 1 then
 		local final_base_name = new_tmp_name()
-		table.insert(compile_lines, ("local " .. tostring(final_base_name) .. " ="))
+		table.insert(compile_lines, "local " .. tostring(final_base_name) .. " =")
 		table.insert(compile_lines, id.final_base_compile_lines)
 		id_compile_lines = {
 			final_base_name,
@@ -1209,7 +1194,7 @@ local function operator_assignment(ids, expressions, op_token, op_line)
 		table.insert(assignment_compile_lines, single_operator_assignment(id, assignment_name, op_token, op_line))
 	end
 	return {
-		("local " .. tostring(table.concat(assignment_names, ",")) .. " ="),
+		"local " .. tostring(table.concat(assignment_names, ",")) .. " =",
 		weave(expressions),
 		assignment_compile_lines,
 	}
@@ -1403,18 +1388,18 @@ return function(source, options)
 	})
 	for _, __ERDE_TMP_1927__ in ipairs(goto_jumps) do
 		local label, line
-		label = __ERDE_TMP_1927__["label"]
-		line = __ERDE_TMP_1927__["line"]
+		label = __ERDE_TMP_1927__.label
+		line = __ERDE_TMP_1927__.line
 		if goto_labels[label] == nil then
-			throw(("failed to find goto label '" .. tostring(label) .. "'"), line)
+			throw("failed to find goto label '" .. tostring(label) .. "'", line)
 		end
 	end
 	table.insert(
 		compile_lines,
-		("-- Compiled with Erde " .. tostring(VERSION) .. " w/ Lua target " .. tostring(lua_target))
+		"-- Compiled with Erde " .. tostring(VERSION) .. " w/ Lua target " .. tostring(lua_target)
 	)
 	table.insert(compile_lines, COMPILED_FOOTER_COMMENT)
 	return table.concat(compile_lines, "\n"), source_map
 end
--- Compiled with Erde 0.6.0-1
+-- Compiled with Erde 1.0.0-1 w/ Lua target 5.1+
 -- __ERDE_COMPILED__

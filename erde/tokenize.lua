@@ -1,22 +1,16 @@
 local config = require("erde.config")
 local DIGIT, HEX, STANDARD_ESCAPE_CHARS, SYMBOLS, TOKEN_TYPES, WORD_BODY, WORD_HEAD
-do
-	local __ERDE_TMP_4__
-	__ERDE_TMP_4__ = require("erde.constants")
-	DIGIT = __ERDE_TMP_4__["DIGIT"]
-	HEX = __ERDE_TMP_4__["HEX"]
-	STANDARD_ESCAPE_CHARS = __ERDE_TMP_4__["STANDARD_ESCAPE_CHARS"]
-	SYMBOLS = __ERDE_TMP_4__["SYMBOLS"]
-	TOKEN_TYPES = __ERDE_TMP_4__["TOKEN_TYPES"]
-	WORD_BODY = __ERDE_TMP_4__["WORD_BODY"]
-	WORD_HEAD = __ERDE_TMP_4__["WORD_HEAD"]
-end
+local __ERDE_TMP_4__ = require("erde.constants")
+DIGIT = __ERDE_TMP_4__.DIGIT
+HEX = __ERDE_TMP_4__.HEX
+STANDARD_ESCAPE_CHARS = __ERDE_TMP_4__.STANDARD_ESCAPE_CHARS
+SYMBOLS = __ERDE_TMP_4__.SYMBOLS
+TOKEN_TYPES = __ERDE_TMP_4__.TOKEN_TYPES
+WORD_BODY = __ERDE_TMP_4__.WORD_BODY
+WORD_HEAD = __ERDE_TMP_4__.WORD_HEAD
 local get_source_alias
-do
-	local __ERDE_TMP_7__
-	__ERDE_TMP_7__ = require("erde.utils")
-	get_source_alias = __ERDE_TMP_7__["get_source_alias"]
-end
+local __ERDE_TMP_7__ = require("erde.utils")
+get_source_alias = __ERDE_TMP_7__.get_source_alias
 local tokenize_token
 local tokens = {}
 local text = ""
@@ -34,7 +28,7 @@ local function throw(message, line)
 	if line == nil then
 		line = current_line
 	end
-	error((tostring(source_name) .. ":" .. tostring(line) .. ": " .. tostring(message)), 0)
+	error(tostring(source_name) .. ":" .. tostring(line) .. ": " .. tostring(message), 0)
 end
 local function consume(n)
 	if n == nil then
@@ -67,24 +61,24 @@ end
 local function tokenize_decimal()
 	local value = ""
 	while DIGIT[current_char] do
-		value = value .. consume()
+		value = value .. (consume())
 	end
 	if current_char == "." and DIGIT[look_ahead(1)] then
-		value = value .. consume(2)
+		value = value .. (consume(2))
 		while DIGIT[current_char] do
-			value = value .. consume()
+			value = value .. (consume())
 		end
 	end
 	if current_char == "e" or current_char == "E" then
-		value = value .. consume()
+		value = value .. (consume())
 		if current_char == "+" or current_char == "-" then
-			value = value .. consume()
+			value = value .. (consume())
 		end
 		if not DIGIT[current_char] then
 			throw("missing exponent value")
 		end
 		while DIGIT[current_char] do
-			value = value .. consume()
+			value = value .. (consume())
 		end
 	end
 	table.insert(tokens, {
@@ -106,7 +100,7 @@ local function tokenize_hex()
 		consume()
 		local counter = 1
 		repeat
-			value = value + tonumber(consume(), 16) / (16 ^ counter)
+			value = value + (tonumber(consume(), 16) / (16 ^ counter))
 			counter = counter + 1
 		until not HEX[current_char]
 	end
@@ -114,7 +108,7 @@ local function tokenize_hex()
 		consume()
 		local exponent, sign = 0, 1
 		if current_char == "+" or current_char == "-" then
-			sign = sign * tonumber(consume() .. "1")
+			sign = sign * (tonumber(consume() .. "1"))
 		end
 		if not DIGIT[current_char] then
 			throw("missing exponent value")
@@ -161,19 +155,19 @@ local function escape_sequence()
 		if current_char ~= "{" then
 			throw("missing { in escape sequence \\u{XXX}")
 		end
-		sequence = sequence .. consume()
+		sequence = sequence .. (consume())
 		if not HEX[current_char] then
 			throw("missing hex in escape sequence \\u{XXX}")
 		end
 		while HEX[current_char] do
-			sequence = sequence .. consume()
+			sequence = sequence .. (consume())
 		end
 		if current_char ~= "}" then
 			throw("missing } in escape sequence \\u{XXX}")
 		end
 		return sequence .. consume()
 	else
-		throw(("invalid escape sequence \\" .. tostring(current_char)))
+		throw("invalid escape sequence \\" .. tostring(current_char))
 	end
 end
 local function tokenize_interpolation()
@@ -222,9 +216,9 @@ local function tokenize_single_quote_string()
 		if current_char == "" or current_char == "\n" then
 			throw("unterminated string")
 		elseif current_char == "\\" then
-			content = content .. consume() .. escape_sequence()
+			content = content .. (consume() .. escape_sequence())
 		else
-			content = content .. consume()
+			content = content .. (consume())
 		end
 	end
 	if content ~= "" then
@@ -253,9 +247,9 @@ local function tokenize_double_quote_string()
 		elseif current_char == "\\" then
 			consume()
 			if current_char == "{" or current_char == "}" then
-				content = content .. consume()
+				content = content .. (consume())
 			else
-				content = content .. "\\" .. escape_sequence()
+				content = content .. ("\\" .. escape_sequence())
 			end
 		elseif current_char == "{" then
 			if content ~= "" then
@@ -268,7 +262,7 @@ local function tokenize_double_quote_string()
 			end
 			tokenize_interpolation()
 		else
-			content = content .. consume()
+			content = content .. (consume())
 		end
 	end
 	if content ~= "" then
@@ -288,7 +282,7 @@ local function tokenize_block_string()
 	consume()
 	local equals = ""
 	while current_char == "=" do
-		equals = equals .. consume()
+		equals = equals .. (consume())
 	end
 	if current_char ~= "[" then
 		throw("unterminated block string opening", current_line)
@@ -308,11 +302,11 @@ local function tokenize_block_string()
 		if current_char == "" then
 			throw("unterminated block string", block_string_line)
 		elseif current_char == "\n" then
-			content = content .. newline()
+			content = content .. (newline())
 		elseif current_char == "\\" then
 			consume()
 			if current_char == "{" or current_char == "}" then
-				content = content .. consume()
+				content = content .. (consume())
 			else
 				content = content .. "\\"
 			end
@@ -327,7 +321,7 @@ local function tokenize_block_string()
 			end
 			tokenize_interpolation()
 		else
-			content = content .. consume()
+			content = content .. (consume())
 		end
 	end
 	if content ~= "" then
@@ -346,7 +340,7 @@ end
 local function tokenize_word()
 	local word = consume()
 	while WORD_BODY[current_char] do
-		word = word .. consume()
+		word = word .. (consume())
 	end
 	table.insert(tokens, {
 		type = TOKEN_TYPES.WORD,
@@ -360,7 +354,7 @@ local function tokenize_comment()
 	if current_char == "[" then
 		consume()
 		while current_char == "=" do
-			equals = equals .. consume()
+			equals = equals .. (consume())
 		end
 		if current_char == "[" then
 			consume()
@@ -441,7 +435,7 @@ return function(new_text, new_source_name)
 	if peek(2) == "#!" then
 		local shebang = consume(2)
 		while current_char ~= "" and current_char ~= "\n" do
-			shebang = shebang .. consume()
+			shebang = shebang .. (consume())
 		end
 		table.insert(tokens, {
 			type = TOKEN_TYPES.SHEBANG,
@@ -459,5 +453,5 @@ return function(new_text, new_source_name)
 	})
 	return tokens
 end
--- Compiled with Erde 0.6.0-1
+-- Compiled with Erde 1.0.0-1 w/ Lua target 5.1+
 -- __ERDE_COMPILED__

@@ -58,7 +58,7 @@ local function parse_option(label) {
   return arg_value
 }
 
-module function ensure_path_parents(path) {
+local function ensure_path_parents(path) {
   local path_parts = string.split(path, PATH_SEPARATOR)
 
   for i = 1, #path_parts - 1 {

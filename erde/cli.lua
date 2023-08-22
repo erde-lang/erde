@@ -1,30 +1,20 @@
-local _MODULE = {}
 local lfs = require("lfs")
 local compile = require("erde.compile")
 local config = require("erde.config")
 local COMPILED_FOOTER_COMMENT, VALID_LUA_TARGETS, VERSION
-do
-	local __ERDE_TMP_8__
-	__ERDE_TMP_8__ = require("erde.constants")
-	COMPILED_FOOTER_COMMENT = __ERDE_TMP_8__["COMPILED_FOOTER_COMMENT"]
-	VALID_LUA_TARGETS = __ERDE_TMP_8__["VALID_LUA_TARGETS"]
-	VERSION = __ERDE_TMP_8__["VERSION"]
-end
+local __ERDE_TMP_8__ = require("erde.constants")
+COMPILED_FOOTER_COMMENT = __ERDE_TMP_8__.COMPILED_FOOTER_COMMENT
+VALID_LUA_TARGETS = __ERDE_TMP_8__.VALID_LUA_TARGETS
+VERSION = __ERDE_TMP_8__.VERSION
 local lib = require("erde.lib")
 local io, string
-do
-	local __ERDE_TMP_13__
-	__ERDE_TMP_13__ = require("erde.stdlib")
-	io = __ERDE_TMP_13__["io"]
-	string = __ERDE_TMP_13__["string"]
-end
+local __ERDE_TMP_13__ = require("erde.stdlib")
+io = __ERDE_TMP_13__.io
+string = __ERDE_TMP_13__.string
 local ensure_path_parents, join_paths
-do
-	local __ERDE_TMP_16__
-	__ERDE_TMP_16__ = require("erde.utils")
-	ensure_path_parents = __ERDE_TMP_16__["ensure_path_parents"]
-	join_paths = __ERDE_TMP_16__["join_paths"]
-end
+local __ERDE_TMP_16__ = require("erde.utils")
+ensure_path_parents = __ERDE_TMP_16__.ensure_path_parents
+join_paths = __ERDE_TMP_16__.join_paths
 local unpack = table.unpack or unpack
 local pack = table.pack or function(...)
 	return {
@@ -57,7 +47,7 @@ local function parse_option(label)
 	current_arg_index = current_arg_index + 1
 	local arg_value = arg[current_arg_index]
 	if not arg_value then
-		terminate(("Missing argument for " .. tostring(label)))
+		terminate("Missing argument for " .. tostring(label))
 	end
 	return arg_value
 end
@@ -70,15 +60,16 @@ local function ensure_path_parents(path)
 		end
 	end
 end
-_MODULE.ensure_path_parents = ensure_path_parents
 local function traverse(paths, pattern, callback)
 	for _, path in ipairs(paths) do
-		local __ERDE_TMP_58__ = true
+		local __ERDE_TMP_59__ = true
 		repeat
 			local attributes = lfs.attributes(path)
 			if attributes == nil then
-				__ERDE_TMP_58__ = false
-				break
+				__ERDE_TMP_59__ = false
+				do
+					break
+				end
 			end
 			if attributes.mode == "file" then
 				if path:match(pattern) then
@@ -93,9 +84,9 @@ local function traverse(paths, pattern, callback)
 				end
 				traverse(subpaths, pattern, callback)
 			end
-			__ERDE_TMP_58__ = false
+			__ERDE_TMP_59__ = false
 		until true
-		if __ERDE_TMP_58__ then
+		if __ERDE_TMP_59__ then
 			break
 		end
 	end
@@ -111,8 +102,7 @@ local function is_compiled_file(path)
 	file:close()
 	return not not (footer and footer:find(COMPILED_FOOTER_COMMENT))
 end
-local HELP = (
-	[[
+local HELP = [[
 Usage: erde [command] [args]
 
 Commands:
@@ -125,9 +115,7 @@ Options:
    -v, --version          Show version and exit.
    -b, --bitlib <LIB>     Library to use for bit operations.
    -t, --target <TARGET>  Lua target for version compatability.
-                          Must be one of: ]]
-	.. tostring(table.concat(VALID_LUA_TARGETS, ", "))
-	.. [[
+                          Must be one of: ]] .. tostring(table.concat(VALID_LUA_TARGETS, ", ")) .. [[
 
 
 Compile Options:
@@ -161,7 +149,6 @@ Examples:
    erde sourcemap my_script.erde 114
       Lookup which line in my_script.erde generated line 114 in my_script.lua.
 ]]
-)
 local function run_command()
 	lib.load(cli.target)
 	arg = script_args
@@ -183,8 +170,8 @@ local function compile_file(path)
 	end
 	if not cli.print_compiled and not cli.force then
 		if io.exists(compile_path) and not is_compiled_file(compile_path) then
-			print((tostring(path) .. " => ERROR"))
-			print(("Cannot write to " .. tostring(compile_path) .. ": file already exists"))
+			print(tostring(path) .. " => ERROR")
+			print("Cannot write to " .. tostring(compile_path) .. ": file already exists")
 			return false
 		end
 	end
@@ -194,11 +181,11 @@ local function compile_file(path)
 		})
 	end)
 	if not ok then
-		print((tostring(path) .. " => ERROR"))
+		print(tostring(path) .. " => ERROR")
 		if type(result == "table") and result.line then
-			print(("erde:" .. tostring(result.line) .. ": " .. tostring(result.message)))
+			print("erde:" .. tostring(result.line) .. ": " .. tostring(result.message))
 		else
-			print(("erde: " .. tostring(result)))
+			print("erde: " .. tostring(result))
 		end
 		return false
 	end
@@ -210,9 +197,9 @@ local function compile_file(path)
 		ensure_path_parents(compile_path)
 		io.writefile(compile_path, result)
 		if cli.watch then
-			print(("[" .. tostring(os.date("%X")) .. "] " .. tostring(path) .. " => " .. tostring(compile_path)))
+			print("[" .. tostring(os.date("%X")) .. "] " .. tostring(path) .. " => " .. tostring(compile_path))
 		else
-			print((tostring(path) .. " => " .. tostring(compile_path)))
+			print(tostring(path) .. " => " .. tostring(compile_path))
 		end
 	end
 	return true
@@ -275,7 +262,7 @@ local function clean_command()
 	traverse(cli, "%.lua$", function(path)
 		if is_compiled_file(path) then
 			os.remove(path)
-			print((tostring(path) .. " => DELETED"))
+			print(tostring(path) .. " => DELETED")
 		end
 	end)
 end
@@ -292,13 +279,13 @@ local function sourcemap_command()
 		})
 	end)
 	if ok then
-		print((tostring(line) .. " => " .. tostring(source_map[tonumber(line)])))
+		print(tostring(line) .. " => " .. tostring(source_map[tonumber(line)]))
 	else
-		print(("Failed to compile " .. tostring(path)))
+		print("Failed to compile " .. tostring(path))
 		if type(result == "table") and result.line then
-			print(("erde:" .. tostring(result.line) .. ": " .. tostring(result.message)))
+			print("erde:" .. tostring(result.line) .. ": " .. tostring(result.message))
 		else
-			print(("erde: " .. tostring(result)))
+			print("erde: " .. tostring(result))
 		end
 	end
 end
@@ -311,7 +298,7 @@ local function readline(prompt)
 	end
 end
 local function repl()
-	print(("Erde " .. tostring(VERSION) .. " on " .. tostring(_VERSION) .. " -- Copyright (C) 2021-2023 bsuth"))
+	print("Erde " .. tostring(VERSION) .. " on " .. tostring(_VERSION) .. " -- Copyright (C) 2021-2023 bsuth")
 	if not HAS_READLINE then
 		print("Install the `readline` Lua library to get support for arrow keys, keyboard shortcuts, history, etc.")
 	end
@@ -323,7 +310,7 @@ local function repl()
 		end
 		repeat
 			ok, result = pcall(function()
-				return pack(lib.run(("return " .. tostring(source)), {
+				return pack(lib.run("return " .. tostring(source), {
 					alias = "stdin",
 				}))
 			end)
@@ -337,7 +324,7 @@ local function repl()
 			if not ok and type(result) == "string" and result:find("unexpected eof") then
 				repeat
 					local subsource = readline(REPL_SUB_PROMPT)
-					source = source .. subsource or ""
+					source = source .. (subsource or "")
 				until subsource
 			end
 		until ok or type(result) ~= "string" or not result:find("unexpected eof")
@@ -392,8 +379,8 @@ while current_arg_index <= num_args do
 		config.lua_target = cli.target
 		if not VALID_LUA_TARGETS[config.lua_target] then
 			terminate(table.concat({
-				("Invalid Lua target: " .. tostring(config.lua_target)),
-				("Must be one of: " .. tostring(table.concat(VALID_LUA_TARGETS, ", "))),
+				"Invalid Lua target: " .. tostring(config.lua_target),
+				"Must be one of: " .. tostring(table.concat(VALID_LUA_TARGETS, ", ")),
 			}, "\n"))
 		end
 	elseif arg_value == "-o" or arg_value == "--outdir" then
@@ -401,7 +388,7 @@ while current_arg_index <= num_args do
 	elseif arg_value == "-b" or arg_value == "--bitlib" then
 		config.bitlib = parse_option(arg_value)
 	elseif arg_value:sub(1, 1) == "-" then
-		terminate(("Unrecognized option: " .. tostring(arg_value)))
+		terminate("Unrecognized option: " .. tostring(arg_value))
 	elseif not cli.subcommand and arg_value:match("%.erde$") then
 		cli.script = arg_value
 		script_args[-current_arg_index] = "erde"
@@ -422,10 +409,9 @@ elseif cli.subcommand == "sourcemap" then
 elseif not cli.script then
 	repl_command()
 elseif not io.exists(cli.script) then
-	terminate(("File does not exist: " .. tostring(cli.script)))
+	terminate("File does not exist: " .. tostring(cli.script))
 else
 	run_command()
 end
-return _MODULE
--- Compiled with Erde 0.6.0-1
+-- Compiled with Erde 1.0.0-1 w/ Lua target 5.1+
 -- __ERDE_COMPILED__

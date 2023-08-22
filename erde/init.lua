@@ -1,10 +1,7 @@
 local lib = require("erde.lib")
 local VERSION
-do
-	local __ERDE_TMP_4__
-	__ERDE_TMP_4__ = require("erde.constants")
-	VERSION = __ERDE_TMP_4__["VERSION"]
-end
+local __ERDE_TMP_4__ = require("erde.constants")
+VERSION = __ERDE_TMP_4__.VERSION
 return {
 	version = VERSION,
 	compile = require("erde.compile"),
@@ -14,5 +11,5 @@ return {
 	load = lib.load,
 	unload = lib.unload,
 }
--- Compiled with Erde 0.6.0-1
+-- Compiled with Erde 1.0.0-1 w/ Lua target 5.1+
 -- __ERDE_COMPILED__

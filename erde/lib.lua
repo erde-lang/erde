@@ -2,58 +2,46 @@ local _MODULE = {}
 local compile = require("erde.compile")
 local config = require("erde.config")
 local PATH_SEPARATOR, VALID_LUA_TARGETS
-do
-	local __ERDE_TMP_6__
-	__ERDE_TMP_6__ = require("erde.constants")
-	PATH_SEPARATOR = __ERDE_TMP_6__["PATH_SEPARATOR"]
-	VALID_LUA_TARGETS = __ERDE_TMP_6__["VALID_LUA_TARGETS"]
-end
+local __ERDE_TMP_6__ = require("erde.constants")
+PATH_SEPARATOR = __ERDE_TMP_6__.PATH_SEPARATOR
+VALID_LUA_TARGETS = __ERDE_TMP_6__.VALID_LUA_TARGETS
 local io, string
-do
-	local __ERDE_TMP_9__
-	__ERDE_TMP_9__ = require("erde.stdlib")
-	io = __ERDE_TMP_9__["io"]
-	string = __ERDE_TMP_9__["string"]
-end
+local __ERDE_TMP_9__ = require("erde.stdlib")
+io = __ERDE_TMP_9__.io
+string = __ERDE_TMP_9__.string
 local echo, get_source_summary
-do
-	local __ERDE_TMP_12__
-	__ERDE_TMP_12__ = require("erde.utils")
-	echo = __ERDE_TMP_12__["echo"]
-	get_source_summary = __ERDE_TMP_12__["get_source_summary"]
-end
+local __ERDE_TMP_12__ = require("erde.utils")
+echo = __ERDE_TMP_12__.echo
+get_source_summary = __ERDE_TMP_12__.get_source_summary
 local loadlua = loadstring or load
 local unpack = table.unpack or unpack
 local native_traceback = debug.traceback
 local searchers = package.loaders or package.searchers
 local erde_source_cache = {}
 local erde_source_id_counter = 1
-local function rewrite(message)
+function _MODULE.rewrite(message)
 	if type(message) ~= "string" then
 		return message
 	end
 	for erde_source_id, chunkname, compiled_line in message:gmatch('%[string "erde::(%d+)::([^\n]+)"]:(%d+)') do
 		local cache = erde_source_cache[tonumber(erde_source_id)] or {}
 		local source_map = cache.source_map or {}
-		local source_line = source_map[tonumber(compiled_line)] or ("(compiled:" .. tostring(compiled_line) .. ")")
+		local source_line = source_map[tonumber(compiled_line)] or "(compiled:" .. tostring(compiled_line) .. ")"
 		local match = string.escape(
-			(
-					'[string "erde::'
-					.. tostring(erde_source_id)
-					.. "::"
-					.. tostring(chunkname)
-					.. '"]:'
-					.. tostring(compiled_line)
-				)
+			'[string "erde::'
+				.. tostring(erde_source_id)
+				.. "::"
+				.. tostring(chunkname)
+				.. '"]:'
+				.. tostring(compiled_line)
 		)
 		message = cache.has_alias and message:gsub(match, chunkname .. ":" .. source_line)
-			or message:gsub(match, ('[string "' .. tostring(chunkname) .. '"]:' .. tostring(source_line)))
+			or message:gsub(match, '[string "' .. tostring(chunkname) .. '"]:' .. tostring(source_line))
 	end
 	message = message:gsub("__ERDE_SUBSTITUTE_([a-zA-Z]+)__", "%1")
 	return message
 end
-_MODULE.rewrite = rewrite
-local function traceback(arg1, arg2, arg3)
+function _MODULE.traceback(arg1, arg2, arg3)
 	local stacktrace, level
 	if type(arg1) == "thread" then
 		level = arg3 or 1
@@ -81,10 +69,9 @@ local function traceback(arg1, arg2, arg3)
 		}),
 		""
 	)
-	return rewrite(stacktrace)
+	return _MODULE.rewrite(stacktrace)
 end
-_MODULE.traceback = traceback
-local function __erde_internal_load_source__(source, options)
+function _MODULE.__erde_internal_load_source__(source, options)
 	if options == nil then
 		options = {}
 	end
@@ -126,11 +113,9 @@ local function __erde_internal_load_source__(source, options)
 	erde_source_id_counter = erde_source_id_counter + 1
 	return loader()
 end
-_MODULE.__erde_internal_load_source__ = __erde_internal_load_source__
-local function run(source, options)
-	return echo(__erde_internal_load_source__(source, options))
+function _MODULE.run(source, options)
+	return echo(_MODULE.__erde_internal_load_source__(source, options))
 end
-_MODULE.run = run
 local function erde_searcher(module_name)
 	local module_path = module_name:gsub("%.", PATH_SEPARATOR)
 	for path in package.path:gmatch("[^;]+") do
@@ -139,7 +124,7 @@ local function erde_searcher(module_name)
 			return function()
 				local source = io.readfile(fullpath)
 				local result = {
-					__erde_internal_load_source__(source, {
+					_MODULE.__erde_internal_load_source__(source, {
 						alias = fullpath,
 					}),
 				}
@@ -148,7 +133,7 @@ local function erde_searcher(module_name)
 		end
 	end
 end
-local function load(arg1, arg2)
+function _MODULE.load(arg1, arg2)
 	local new_lua_target, options = nil, {}
 	if type(arg1) == "string" then
 		new_lua_target = arg1
@@ -160,14 +145,14 @@ local function load(arg1, arg2)
 	end
 	config.bitlib = options.bitlib
 	config.disable_source_maps = options.disable_source_maps
-	debug.traceback = options.keep_traceback == true and native_traceback or traceback
+	debug.traceback = options.keep_traceback == true and native_traceback or _MODULE.traceback
 	if new_lua_target ~= nil then
 		if VALID_LUA_TARGETS[new_lua_target] then
 			config.lua_target = new_lua_target
 		else
 			error(table.concat({
-				("Invalid Lua target: " .. tostring(new_lua_target)),
-				("Must be one of: " .. tostring(table.concat(VALID_LUA_TARGETS, ", "))),
+				"Invalid Lua target: " .. tostring(new_lua_target),
+				"Must be one of: " .. tostring(table.concat(VALID_LUA_TARGETS, ", ")),
 			}, "\n"))
 		end
 	elseif jit ~= nil then
@@ -177,7 +162,7 @@ local function load(arg1, arg2)
 		if VALID_LUA_TARGETS[new_lua_target] then
 			config.lua_target = new_lua_target
 		else
-			error(("Unsupported Lua version: " .. tostring(_VERSION)))
+			error("Unsupported Lua version: " .. tostring(_VERSION))
 		end
 	end
 	for _, searcher in ipairs(searchers) do
@@ -187,8 +172,7 @@ local function load(arg1, arg2)
 	end
 	table.insert(searchers, 2, erde_searcher)
 end
-_MODULE.load = load
-local function unload()
+function _MODULE.unload()
 	debug.traceback = native_traceback
 	for i, searcher in ipairs(searchers) do
 		if searcher == erde_searcher then
@@ -197,7 +181,6 @@ local function unload()
 		end
 	end
 end
-_MODULE.unload = unload
 return _MODULE
--- Compiled with Erde 0.6.0-1
+-- Compiled with Erde 1.0.0-1 w/ Lua target 5.1+
 -- __ERDE_COMPILED__
